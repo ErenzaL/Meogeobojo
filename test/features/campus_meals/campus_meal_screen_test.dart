@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meogeobojo/core/config/app_assets.dart';
 import 'package:meogeobojo/features/campus_meals/models/campus_meal_models.dart';
 import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
 import 'package:meogeobojo/features/campus_meals/screens/campus_meal_screen.dart';
@@ -105,7 +106,17 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byIcon(Icons.food_bank_rounded), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((w) {
+          if (w is! Image) return false;
+          final p = w.image is ResizeImage
+              ? (w.image as ResizeImage).imageProvider
+              : w.image;
+          return p is AssetImage &&
+              p.assetName == AppAssets.categoryCampusMeals;
+        }),
+        findsOneWidget,
+      );
       // every restaurant category is visible next to it, nothing is hidden
       for (final c in ['전체', '한식', '양식', '중식', '세계 음식', '기타']) {
         expect(

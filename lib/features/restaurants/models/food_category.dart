@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_assets.dart';
 import '../../../l10n/app_localizations.dart';
 import 'restaurant.dart';
 
@@ -17,15 +18,21 @@ import 'restaurant.dart';
 /// function: e.g. "치킨" alone returned only 2 chicken places in its 15
 /// results, while "치킨집" returned 15 of 15, so chicken uses the latter.
 enum FoodCategory {
-  all(Icons.restaurant_rounded, ['음식점']),
-  korean(Icons.rice_bowl_rounded, ['한식']),
-  western(Icons.local_pizza_rounded, ['양식']),
-  chinese(Icons.ramen_dining_rounded, ['중식']),
-  japanese(Icons.set_meal_rounded, ['일식']),
-  snack(Icons.tapas_rounded, ['분식']),
-  cafe(Icons.local_cafe_rounded, ['카페', '디저트']),
-  chicken(Icons.kebab_dining_rounded, ['치킨집', '양념치킨']),
-  fastFood(Icons.fastfood_rounded, ['패스트푸드', '햄버거']),
+  all(Icons.restaurant_rounded, ['음식점'], image: AppAssets.categoryAll),
+  korean(Icons.rice_bowl_rounded, ['한식'], image: AppAssets.categoryKorean),
+  western(Icons.local_pizza_rounded, ['양식'], image: AppAssets.categoryWestern),
+  chinese(Icons.ramen_dining_rounded, ['중식'], image: AppAssets.categoryChinese),
+  japanese(Icons.set_meal_rounded, ['일식'], image: AppAssets.categoryJapanese),
+  snack(Icons.tapas_rounded, ['분식'], image: AppAssets.categorySnack),
+  cafe(Icons.local_cafe_rounded, ['카페', '디저트'], image: AppAssets.categoryCafe),
+  chicken(Icons.kebab_dining_rounded, [
+    '치킨집',
+    '양념치킨',
+  ], image: AppAssets.categoryChicken),
+  fastFood(Icons.fastfood_rounded, [
+    '패스트푸드',
+    '햄버거',
+  ], image: AppAssets.categoryFastFood),
 
   /// 세계 음식: what Kakao files under 아시아음식 (Vietnamese, Thai, Indian,
   /// Turkish, ...) plus 양식 > 멕시칸. See [GlobalCuisine] for the optional
@@ -37,14 +44,14 @@ enum FoodCategory {
     '인도음식',
     '멕시칸',
     '튀르키예음식',
-  ]),
+  ], image: AppAssets.categoryGlobal),
 
   /// Everything else Kakao lists under 음식점 (snacks & bakeries, buffet,
   /// lunch boxes, salad ...): anything not covered above. Asian / global
   /// places live under [global], so a place is never listed in both.
   etc(Icons.more_horiz_rounded, ['간식', '뷔페', '샐러드', '도시락']);
 
-  const FoodCategory(this.icon, this.queries);
+  const FoodCategory(this.icon, this.queries, {this.image});
 
   /// Label for the active language. (The Korean [queries] below are what is
   /// sent to Kakao and never change with the interface language.)
@@ -62,7 +69,11 @@ enum FoodCategory {
     etc => l10n.categoryEtc,
   };
 
+  /// Fallback glyph, used when [image] is null (기타 has no artwork).
   final IconData icon;
+
+  /// Asset path of the category artwork, if there is one.
+  final String? image;
 
   /// Keyword queries issued to the Edge Function for this category.
   final List<String> queries;

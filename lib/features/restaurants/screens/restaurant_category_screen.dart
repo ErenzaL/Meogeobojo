@@ -93,6 +93,7 @@ class _RestaurantCategoryScreenState
                           width: w,
                           child: CategoryTile(
                             icon: cat.icon,
+                            image: cat.image,
                             label: cat.label(l10n),
                             selected: cat == _category,
                             onTap: () => Navigator.of(ctx).pop(cat),

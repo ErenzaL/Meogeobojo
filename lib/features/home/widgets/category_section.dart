@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_assets.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../campus_meals/screens/campus_meal_screen.dart';
@@ -43,6 +44,7 @@ class CategorySection extends StatelessWidget {
                 width: w,
                 child: CategoryTile(
                   icon: Icons.food_bank_rounded,
+                  image: AppAssets.categoryCampusMeals,
                   label: l10n.homeCampusMeals,
                   highlighted: true,
                   onTap: () => Navigator.of(context).push<void>(
@@ -57,6 +59,7 @@ class CategorySection extends StatelessWidget {
                   width: w,
                   child: CategoryTile(
                     icon: c.icon,
+                    image: c.image,
                     label: c.label(l10n),
                     onTap: () => _open(context, c),
                   ),

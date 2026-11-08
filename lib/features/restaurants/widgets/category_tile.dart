@@ -12,6 +12,7 @@ class CategoryTile extends StatelessWidget {
   const CategoryTile({
     super.key,
     required this.icon,
+    this.image,
     required this.label,
     required this.onTap,
     this.selected = false,
@@ -20,7 +21,11 @@ class CategoryTile extends StatelessWidget {
     this.semanticLabel,
   });
 
+  /// Fallback glyph, used when [image] is null.
   final IconData icon;
+
+  /// Asset path of colour artwork shown instead of [icon].
+  final String? image;
   final String label;
   final VoidCallback onTap;
 
@@ -69,7 +74,18 @@ class CategoryTile extends StatelessWidget {
                         width: selected ? 1.5 : 1,
                       ),
                     ),
-                    child: Icon(icon, size: box * 0.5, color: p.accent),
+                    child: image == null
+                        ? Icon(icon, size: box * 0.5, color: p.accent)
+                        : Padding(
+                            padding: EdgeInsets.all(box * 0.12),
+                            child: Image.asset(
+                              image!,
+                              fit: BoxFit.contain,
+                              cacheWidth: 192,
+                              filterQuality: FilterQuality.medium,
+                              excludeFromSemantics: true,
+                            ),
+                          ),
                   ),
                   const SizedBox(height: 6),
                   FittedBox(

@@ -1,0 +1,5 @@
+action,university_id,cafeteria_id,meal_date,meal_type,option_name,option_order,menu_items,price_krw,start_time,end_time,status,source_url,verified_at
+upsert,<university uuid>,<cafeteria uuid>,2026-11-03,lunch,,0,main:<menu item>|side:<menu item>|soup:<menu item>|rice:<menu item>,,11:30,13:30,published,https://<official page>,2026-11-03T09:00:00+09:00
+upsert,<university uuid>,<cafeteria uuid>,2026-11-03,lunch,<option label from the source>,1,<menu item>|<menu item>,,,,published,https://<official page>,2026-11-03T09:00:00+09:00
+upsert,<university uuid>,<cafeteria uuid>,2026-11-04,dinner,,0,,,,,closed,https://<official page>,2026-11-03T09:00:00+09:00
+delete,<university uuid>,<cafeteria uuid>,2026-11-05,breakfast,,,,,,,,,

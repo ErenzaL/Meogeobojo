@@ -1544,4 +1544,138 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mealDayTomorrow => '明天';
+
+  @override
+  String get myTitle => '我的主页';
+
+  @override
+  String get myConditionsTitle => '我的条件';
+
+  @override
+  String get myConditionsEmpty => '还没有选择条件。先从预算和距离开始吧。';
+
+  @override
+  String get myRestart => '重新设置';
+
+  @override
+  String myOriginHint(int count) {
+    return '距离基准位置 · 已保存$count个标记';
+  }
+
+  @override
+  String get myActivityTitle => '我的活动';
+
+  @override
+  String get recordsPageTitle => '我的记录';
+
+  @override
+  String get recordsSubtitle => '只有你能看到的美食日记';
+
+  @override
+  String get recordsAdd => '添加记录';
+
+  @override
+  String recordsReportTitle(int month) {
+    return '$month月报告';
+  }
+
+  @override
+  String get recordsReportBasis => '以本月记录为准';
+
+  @override
+  String get recordsStatMeals => '外出就餐';
+
+  @override
+  String get recordsStatSpend => '餐费合计';
+
+  @override
+  String get recordsStatAvg => '每餐均价';
+
+  @override
+  String get recordsReportHint => '记录你吃过的地方，我们会整理本月餐费和常去的店。';
+
+  @override
+  String recordsTabEaten(String count) {
+    return '吃过 $count';
+  }
+
+  @override
+  String recordsTabWant(String count) {
+    return '想去 $count';
+  }
+
+  @override
+  String get recordsNoRecordsTitle => '还没有记录';
+
+  @override
+  String get recordsNoRecordsBody => '记录地点、菜品、金额和同行的人，就能形成你的美食日记。';
+
+  @override
+  String get recordsFirst => '添加第一条记录';
+
+  @override
+  String communitySubtitle(String campus) {
+    return '$campus学生社区';
+  }
+
+  @override
+  String get communityMyActivity => '我的活动';
+
+  @override
+  String get communityFilterAll => '全部';
+
+  @override
+  String get communityFilterReviews => '餐厅评价';
+
+  @override
+  String get communityFilterMeets => '一起吃';
+
+  @override
+  String get communityFilterQuestions => '提问';
+
+  @override
+  String get communityComposerTitle => '分享一下今天吃的菜吧？';
+
+  @override
+  String get communityWriteReview => '写评价';
+
+  @override
+  String get communityStartMeet => '发起一起吃';
+
+  @override
+  String get communityAsk => '提问';
+
+  @override
+  String get communityFeedTitle => '校园周边';
+
+  @override
+  String get communitySortLatest => '最新';
+
+  @override
+  String get communityEmptyTitle => '还没有帖子';
+
+  @override
+  String get communityEmptyBody => '发布今天吃的菜，或找人一起吃吧。';
+
+  @override
+  String get communityComposeSoon => '美食交流发帖功能正在准备中。';
+
+  @override
+  String get mapPageTitle => '周边餐厅';
+
+  @override
+  String get mapOpenNowChip => '现在可点单';
+
+  @override
+  String mapMatchCount(int count) {
+    return '符合条件的$count家';
+  }
+
+  @override
+  String mapSortHint(String origin) {
+    return '以$origin为准 · 步行时间按直线距离估算';
+  }
+
+  @override
+  String get mapRecenter => '回到出发位置';
 }

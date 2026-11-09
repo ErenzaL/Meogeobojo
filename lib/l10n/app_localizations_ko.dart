@@ -1554,4 +1554,138 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mealDayTomorrow => '내일';
+
+  @override
+  String get myTitle => '마이페이지';
+
+  @override
+  String get myConditionsTitle => '내 조건';
+
+  @override
+  String get myConditionsEmpty => '아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.';
+
+  @override
+  String get myRestart => '처음부터 다시 설정';
+
+  @override
+  String myOriginHint(int count) {
+    return '거리 계산 기준 위치 · 저장한 핀 $count개';
+  }
+
+  @override
+  String get myActivityTitle => '내 활동';
+
+  @override
+  String get recordsPageTitle => '내 기록';
+
+  @override
+  String get recordsSubtitle => '나만 볼 수 있는 맛집 일기예요';
+
+  @override
+  String get recordsAdd => '기록하기';
+
+  @override
+  String recordsReportTitle(int month) {
+    return '$month월 리포트';
+  }
+
+  @override
+  String get recordsReportBasis => '이번 달 기록 기준';
+
+  @override
+  String get recordsStatMeals => '외식';
+
+  @override
+  String get recordsStatSpend => '식비 합계';
+
+  @override
+  String get recordsStatAvg => '한 끼 평균';
+
+  @override
+  String get recordsReportHint => '먹은 곳을 남기면 이번 달 식비와 단골집을 정리해 드려요.';
+
+  @override
+  String recordsTabEaten(String count) {
+    return '먹은 기록 $count';
+  }
+
+  @override
+  String recordsTabWant(String count) {
+    return '가고 싶은 곳 $count';
+  }
+
+  @override
+  String get recordsNoRecordsTitle => '아직 남긴 기록이 없어요';
+
+  @override
+  String get recordsNoRecordsBody => '먹은 곳·메뉴·금액·함께한 사람을 남기면 나만의 맛집 일기가 돼요.';
+
+  @override
+  String get recordsFirst => '첫 기록 남기기';
+
+  @override
+  String communitySubtitle(String campus) {
+    return '$campus 학생 커뮤니티';
+  }
+
+  @override
+  String get communityMyActivity => '내 활동';
+
+  @override
+  String get communityFilterAll => '전체';
+
+  @override
+  String get communityFilterReviews => '맛집 리뷰';
+
+  @override
+  String get communityFilterMeets => '같이 먹어요';
+
+  @override
+  String get communityFilterQuestions => '질문';
+
+  @override
+  String get communityComposerTitle => '오늘 먹은 메뉴를 나눠볼까요?';
+
+  @override
+  String get communityWriteReview => '리뷰 쓰기';
+
+  @override
+  String get communityStartMeet => '같이 먹기 모집';
+
+  @override
+  String get communityAsk => '질문 남기기';
+
+  @override
+  String get communityFeedTitle => '학교 근처 이야기';
+
+  @override
+  String get communitySortLatest => '최신순';
+
+  @override
+  String get communityEmptyTitle => '아직 올라온 이야기가 없어요';
+
+  @override
+  String get communityEmptyBody => '오늘 먹은 메뉴나 같이 먹을 사람을 첫 글로 올려 보세요.';
+
+  @override
+  String get communityComposeSoon => '밥수다 글쓰기는 준비 중이에요.';
+
+  @override
+  String get mapPageTitle => '주변 맛집';
+
+  @override
+  String get mapOpenNowChip => '지금 주문 가능';
+
+  @override
+  String mapMatchCount(int count) {
+    return '조건에 맞는 $count곳';
+  }
+
+  @override
+  String mapSortHint(String origin) {
+    return '$origin 기준 · 이동 시간은 직선거리로 추정한 값이에요';
+  }
+
+  @override
+  String get mapRecenter => '기준 위치로 이동';
 }

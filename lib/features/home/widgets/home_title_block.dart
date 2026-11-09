@@ -68,7 +68,7 @@ class HomeChipRow extends ConsumerWidget {
       spacing: 10,
       runSpacing: 10,
       children: [
-        _Chip(
+        HomeChip(
           onTap: () => showOriginSheet(context),
           background: p.card,
           children: [
@@ -95,7 +95,7 @@ class HomeChipRow extends ConsumerWidget {
         ),
         Semantics(
           label: active > 0 ? l10n.homeConditionsActive(active) : null,
-          child: _Chip(
+          child: HomeChip(
             onTap: () => showConditionsSheet(context),
             background: p.card,
             children: [
@@ -137,8 +137,10 @@ class HomeChipRow extends ConsumerWidget {
   }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
+/// The rounded chip used by Home and the map header.
+class HomeChip extends StatelessWidget {
+  const HomeChip({
+    super.key,
     required this.onTap,
     required this.background,
     required this.children,

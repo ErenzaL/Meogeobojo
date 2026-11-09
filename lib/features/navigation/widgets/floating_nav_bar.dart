@@ -215,6 +215,7 @@ class _NavButton extends StatelessWidget {
         type: MaterialType.transparency,
         child: InkWell(
           borderRadius: BorderRadius.zero,
+          hoverColor: Colors.transparent,
           splashColor: palette.selectedFg.withValues(alpha: 0.12),
           highlightColor: palette.selectedFg.withValues(alpha: 0.06),
           onTap: onTap,

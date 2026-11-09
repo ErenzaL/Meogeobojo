@@ -1009,5 +1009,94 @@
       }
     }
   },
-  "mealDayTomorrow": "내일"
+  "mealDayTomorrow": "내일",
+  "myTitle": "마이페이지",
+  "myConditionsTitle": "내 조건",
+  "myConditionsEmpty": "아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.",
+  "myRestart": "처음부터 다시 설정",
+  "myOriginHint": "거리 계산 기준 위치 · 저장한 핀 {count}개",
+  "@myOriginHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "myActivityTitle": "내 활동",
+  "recordsPageTitle": "내 기록",
+  "recordsSubtitle": "나만 볼 수 있는 맛집 일기예요",
+  "recordsAdd": "기록하기",
+  "recordsReportTitle": "{month}월 리포트",
+  "@recordsReportTitle": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "recordsReportBasis": "이번 달 기록 기준",
+  "recordsStatMeals": "외식",
+  "recordsStatSpend": "식비 합계",
+  "recordsStatAvg": "한 끼 평균",
+  "recordsReportHint": "먹은 곳을 남기면 이번 달 식비와 단골집을 정리해 드려요.",
+  "recordsTabEaten": "먹은 기록 {count}",
+  "@recordsTabEaten": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "recordsTabWant": "가고 싶은 곳 {count}",
+  "@recordsTabWant": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "recordsNoRecordsTitle": "아직 남긴 기록이 없어요",
+  "recordsNoRecordsBody": "먹은 곳·메뉴·금액·함께한 사람을 남기면 나만의 맛집 일기가 돼요.",
+  "recordsFirst": "첫 기록 남기기",
+  "communitySubtitle": "{campus} 학생 커뮤니티",
+  "@communitySubtitle": {
+    "placeholders": {
+      "campus": {
+        "type": "String"
+      }
+    }
+  },
+  "communityMyActivity": "내 활동",
+  "communityFilterAll": "전체",
+  "communityFilterReviews": "맛집 리뷰",
+  "communityFilterMeets": "같이 먹어요",
+  "communityFilterQuestions": "질문",
+  "communityComposerTitle": "오늘 먹은 메뉴를 나눠볼까요?",
+  "communityWriteReview": "리뷰 쓰기",
+  "communityStartMeet": "같이 먹기 모집",
+  "communityAsk": "질문 남기기",
+  "communityFeedTitle": "학교 근처 이야기",
+  "communitySortLatest": "최신순",
+  "communityEmptyTitle": "아직 올라온 이야기가 없어요",
+  "communityEmptyBody": "오늘 먹은 메뉴나 같이 먹을 사람을 첫 글로 올려 보세요.",
+  "communityComposeSoon": "밥수다 글쓰기는 준비 중이에요.",
+  "mapPageTitle": "주변 맛집",
+  "mapOpenNowChip": "지금 주문 가능",
+  "mapMatchCount": "조건에 맞는 {count}곳",
+  "@mapMatchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "mapSortHint": "{origin} 기준 · 이동 시간은 직선거리로 추정한 값이에요",
+  "@mapSortHint": {
+    "placeholders": {
+      "origin": {
+        "type": "String"
+      }
+    }
+  },
+  "mapRecenter": "기준 위치로 이동"
 }

@@ -201,7 +201,7 @@ void main() {
     });
 
     testWidgets(
-      'records tab: guests get a gate, login returns to the records tab',
+      'records tab: guests see the page, adding asks to sign in, login returns to it',
       (tester) async {
         final h = await buildHarness(
           profiles: FakeProfileRepository(onboardingCompleted: true),
@@ -209,14 +209,15 @@ void main() {
         await pumpApp(tester, h);
         await tester.tap(find.text('기록'));
         await tester.pumpAndSettle();
-        expect(find.text('로그인하면 먹은 음식을 기록할 수 있어요'), findsOneWidget);
+        // V5: the page is open to guests; writing a record needs an account.
+        expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
 
-        await tester.tap(find.text('로그인').last);
+        await tester.tap(find.text('기록하기'));
         await tester.pumpAndSettle();
         await emailSignIn(tester);
 
         expect(h.container.read(shellTabProvider), ShellTabs.records);
-        expect(find.text('아직 기록이 없어요'), findsOneWidget);
+        expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
       },
     );
 
@@ -227,7 +228,7 @@ void main() {
         await pumpApp(tester, h);
         await tester.tap(find.text('기록'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('로그인').last);
+        await tester.tap(find.text('기록하기'));
         await tester.pumpAndSettle();
         await emailSignIn(tester);
         expect(find.byType(PreferencesScreen), findsOneWidget);

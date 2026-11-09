@@ -425,6 +425,9 @@ void main() {
       await pumpApp(tester, h, home: const AppShell());
       await tester.tap(find.text('MY'));
       await tester.pumpAndSettle();
+      // The row sits below the fold on a phone: bring it into view first.
+      await tester.ensureVisible(find.text('계정 설정'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('계정 설정'));
       await tester.pumpAndSettle();
       return (h, profiles);

@@ -2805,6 +2805,246 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'내일'**
   String get mealDayTomorrow;
+
+  /// No description provided for @myTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'마이페이지'**
+  String get myTitle;
+
+  /// No description provided for @myConditionsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 조건'**
+  String get myConditionsTitle;
+
+  /// No description provided for @myConditionsEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.'**
+  String get myConditionsEmpty;
+
+  /// No description provided for @myRestart.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음부터 다시 설정'**
+  String get myRestart;
+
+  /// No description provided for @myOriginHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'거리 계산 기준 위치 · 저장한 핀 {count}개'**
+  String myOriginHint(int count);
+
+  /// No description provided for @myActivityTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 활동'**
+  String get myActivityTitle;
+
+  /// No description provided for @recordsPageTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 기록'**
+  String get recordsPageTitle;
+
+  /// No description provided for @recordsSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'나만 볼 수 있는 맛집 일기예요'**
+  String get recordsSubtitle;
+
+  /// No description provided for @recordsAdd.
+  ///
+  /// In ko, this message translates to:
+  /// **'기록하기'**
+  String get recordsAdd;
+
+  /// No description provided for @recordsReportTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{month}월 리포트'**
+  String recordsReportTitle(int month);
+
+  /// No description provided for @recordsReportBasis.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 달 기록 기준'**
+  String get recordsReportBasis;
+
+  /// No description provided for @recordsStatMeals.
+  ///
+  /// In ko, this message translates to:
+  /// **'외식'**
+  String get recordsStatMeals;
+
+  /// No description provided for @recordsStatSpend.
+  ///
+  /// In ko, this message translates to:
+  /// **'식비 합계'**
+  String get recordsStatSpend;
+
+  /// No description provided for @recordsStatAvg.
+  ///
+  /// In ko, this message translates to:
+  /// **'한 끼 평균'**
+  String get recordsStatAvg;
+
+  /// No description provided for @recordsReportHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹은 곳을 남기면 이번 달 식비와 단골집을 정리해 드려요.'**
+  String get recordsReportHint;
+
+  /// No description provided for @recordsTabEaten.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹은 기록 {count}'**
+  String recordsTabEaten(String count);
+
+  /// No description provided for @recordsTabWant.
+  ///
+  /// In ko, this message translates to:
+  /// **'가고 싶은 곳 {count}'**
+  String recordsTabWant(String count);
+
+  /// No description provided for @recordsNoRecordsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 남긴 기록이 없어요'**
+  String get recordsNoRecordsTitle;
+
+  /// No description provided for @recordsNoRecordsBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹은 곳·메뉴·금액·함께한 사람을 남기면 나만의 맛집 일기가 돼요.'**
+  String get recordsNoRecordsBody;
+
+  /// No description provided for @recordsFirst.
+  ///
+  /// In ko, this message translates to:
+  /// **'첫 기록 남기기'**
+  String get recordsFirst;
+
+  /// No description provided for @communitySubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{campus} 학생 커뮤니티'**
+  String communitySubtitle(String campus);
+
+  /// No description provided for @communityMyActivity.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 활동'**
+  String get communityMyActivity;
+
+  /// No description provided for @communityFilterAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체'**
+  String get communityFilterAll;
+
+  /// No description provided for @communityFilterReviews.
+  ///
+  /// In ko, this message translates to:
+  /// **'맛집 리뷰'**
+  String get communityFilterReviews;
+
+  /// No description provided for @communityFilterMeets.
+  ///
+  /// In ko, this message translates to:
+  /// **'같이 먹어요'**
+  String get communityFilterMeets;
+
+  /// No description provided for @communityFilterQuestions.
+  ///
+  /// In ko, this message translates to:
+  /// **'질문'**
+  String get communityFilterQuestions;
+
+  /// No description provided for @communityComposerTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 먹은 메뉴를 나눠볼까요?'**
+  String get communityComposerTitle;
+
+  /// No description provided for @communityWriteReview.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 쓰기'**
+  String get communityWriteReview;
+
+  /// No description provided for @communityStartMeet.
+  ///
+  /// In ko, this message translates to:
+  /// **'같이 먹기 모집'**
+  String get communityStartMeet;
+
+  /// No description provided for @communityAsk.
+  ///
+  /// In ko, this message translates to:
+  /// **'질문 남기기'**
+  String get communityAsk;
+
+  /// No description provided for @communityFeedTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'학교 근처 이야기'**
+  String get communityFeedTitle;
+
+  /// No description provided for @communitySortLatest.
+  ///
+  /// In ko, this message translates to:
+  /// **'최신순'**
+  String get communitySortLatest;
+
+  /// No description provided for @communityEmptyTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 올라온 이야기가 없어요'**
+  String get communityEmptyTitle;
+
+  /// No description provided for @communityEmptyBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 먹은 메뉴나 같이 먹을 사람을 첫 글로 올려 보세요.'**
+  String get communityEmptyBody;
+
+  /// No description provided for @communityComposeSoon.
+  ///
+  /// In ko, this message translates to:
+  /// **'밥수다 글쓰기는 준비 중이에요.'**
+  String get communityComposeSoon;
+
+  /// No description provided for @mapPageTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'주변 맛집'**
+  String get mapPageTitle;
+
+  /// No description provided for @mapOpenNowChip.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 주문 가능'**
+  String get mapOpenNowChip;
+
+  /// No description provided for @mapMatchCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 {count}곳'**
+  String mapMatchCount(int count);
+
+  /// No description provided for @mapSortHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'{origin} 기준 · 이동 시간은 직선거리로 추정한 값이에요'**
+  String mapSortHint(String origin);
+
+  /// No description provided for @mapRecenter.
+  ///
+  /// In ko, this message translates to:
+  /// **'기준 위치로 이동'**
+  String get mapRecenter;
 }
 
 class _AppLocalizationsDelegate

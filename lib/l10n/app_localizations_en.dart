@@ -1637,4 +1637,142 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mealDayTomorrow => 'Tomorrow';
+
+  @override
+  String get myTitle => 'My page';
+
+  @override
+  String get myConditionsTitle => 'My conditions';
+
+  @override
+  String get myConditionsEmpty =>
+      'No conditions chosen yet. Start with budget and distance.';
+
+  @override
+  String get myRestart => 'Start over';
+
+  @override
+  String myOriginHint(int count) {
+    return 'Distance reference · $count saved pins';
+  }
+
+  @override
+  String get myActivityTitle => 'My activity';
+
+  @override
+  String get recordsPageTitle => 'My records';
+
+  @override
+  String get recordsSubtitle => 'A food diary only you can see';
+
+  @override
+  String get recordsAdd => 'Add record';
+
+  @override
+  String recordsReportTitle(int month) {
+    return '$month report';
+  }
+
+  @override
+  String get recordsReportBasis => 'Based on this month\'s records';
+
+  @override
+  String get recordsStatMeals => 'Meals out';
+
+  @override
+  String get recordsStatSpend => 'Total spent';
+
+  @override
+  String get recordsStatAvg => 'Avg per meal';
+
+  @override
+  String get recordsReportHint =>
+      'Log places you ate and we\'ll sum up this month\'s spending and favorites.';
+
+  @override
+  String recordsTabEaten(String count) {
+    return 'Eaten $count';
+  }
+
+  @override
+  String recordsTabWant(String count) {
+    return 'Want to go $count';
+  }
+
+  @override
+  String get recordsNoRecordsTitle => 'No records yet';
+
+  @override
+  String get recordsNoRecordsBody =>
+      'Log where, what, how much and with whom you ate to build your own food diary.';
+
+  @override
+  String get recordsFirst => 'Add your first record';
+
+  @override
+  String communitySubtitle(String campus) {
+    return '$campus student community';
+  }
+
+  @override
+  String get communityMyActivity => 'My activity';
+
+  @override
+  String get communityFilterAll => 'All';
+
+  @override
+  String get communityFilterReviews => 'Reviews';
+
+  @override
+  String get communityFilterMeets => 'Eat together';
+
+  @override
+  String get communityFilterQuestions => 'Questions';
+
+  @override
+  String get communityComposerTitle => 'Want to share what you ate today?';
+
+  @override
+  String get communityWriteReview => 'Write a review';
+
+  @override
+  String get communityStartMeet => 'Invite to eat';
+
+  @override
+  String get communityAsk => 'Ask a question';
+
+  @override
+  String get communityFeedTitle => 'Around campus';
+
+  @override
+  String get communitySortLatest => 'Newest';
+
+  @override
+  String get communityEmptyTitle => 'No stories yet';
+
+  @override
+  String get communityEmptyBody =>
+      'Post what you ate or look for someone to eat with.';
+
+  @override
+  String get communityComposeSoon => 'Posting on Food Talk is coming soon.';
+
+  @override
+  String get mapPageTitle => 'Nearby places';
+
+  @override
+  String get mapOpenNowChip => 'Open now';
+
+  @override
+  String mapMatchCount(int count) {
+    return '$count matching places';
+  }
+
+  @override
+  String mapSortHint(String origin) {
+    return 'From $origin · walking times are estimated from straight-line distance';
+  }
+
+  @override
+  String get mapRecenter => 'Go to starting point';
 }

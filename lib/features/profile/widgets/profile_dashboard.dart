@@ -3,16 +3,16 @@ import 'package:flutter/material.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/v5_widgets.dart';
 import '../../university/models/university.dart';
 import '../../university/models/university_display.dart';
 
 /// Hairline-bordered card surface shared by the MY dashboard cards, matching
 /// the existing menu groups (card colour, subtle border, card radius).
 class _DashboardCard extends StatelessWidget {
-  const _DashboardCard({required this.child, this.borderColor, this.onTap});
+  const _DashboardCard({required this.child, this.onTap});
 
   final Widget child;
-  final Color? borderColor;
   final VoidCallback? onTap;
 
   @override
@@ -23,7 +23,7 @@ class _DashboardCard extends StatelessWidget {
       color: p.card,
       shape: RoundedRectangleBorder(
         borderRadius: r,
-        side: BorderSide(color: borderColor ?? p.border),
+        side: BorderSide(color: p.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(onTap: onTap, child: child),
@@ -53,7 +53,6 @@ class ProfileGreetingCard extends StatelessWidget {
     final p = context.palette;
     final hasEmail = email != null && email!.isNotEmpty;
     return _DashboardCard(
-      borderColor: p.accent.withValues(alpha: 0.4),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 8, 6),
         child: Column(
@@ -71,12 +70,15 @@ class ProfileGreetingCard extends StatelessWidget {
                         l10n.profileGreeting(nickname),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.title.copyWith(fontSize: 18),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       const SizedBox(height: 3),
                       Text(
                         l10n.profileGreetingSub,
-                        style: AppText.caption(context).copyWith(fontSize: 13),
+                        style: TextStyle(fontSize: 15, color: p.textSecondary),
                       ),
                     ],
                   ),
@@ -106,15 +108,15 @@ class ProfileGreetingCard extends StatelessWidget {
                     style: TextButton.styleFrom(
                       minimumSize: const Size(0, 40),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
-                      foregroundColor: p.accentStrong,
+                      foregroundColor: p.textPrimary,
                     ),
                     child: Text(
                       l10n.profileEditProfile,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -144,7 +146,6 @@ class ProfileCampusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final p = context.palette;
     final u = university;
     final locale = Localizations.localeOf(context);
     final name = u == null
@@ -160,39 +161,11 @@ class ProfileCampusCard extends StatelessWidget {
       excludeSemantics: true,
       child: _DashboardCard(
         onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                Icon(Icons.school_outlined, color: p.accentStrong),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.title.copyWith(fontSize: 15.5),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption(context)
-                            .copyWith(fontSize: 12.5),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(Icons.chevron_right_rounded, color: p.placeholderIcon),
-              ],
-            ),
-          ),
+        child: V5Row(
+          icon: Icons.school_outlined,
+          title: name,
+          subtitle: subtitle,
+          onTap: onTap,
         ),
       ),
     );
@@ -265,41 +238,31 @@ class _StatCell extends StatelessWidget {
       child: InkWell(
         onTap: stat.onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Fixed height so labels line up whether the value is a big
               // number or the smaller "준비 중" text.
               SizedBox(
-                height: 28,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      stat.icon,
-                      size: 16,
-                      color: available ? p.accentStrong : p.placeholderIcon,
+                height: 36,
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      style: available
+                          ? const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                            )
+                          : TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: p.textMuted,
+                            ),
                     ),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          text,
-                          style: available
-                              ? AppText.title.copyWith(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                )
-                              : AppText.caption(context).copyWith(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
@@ -308,7 +271,7 @@ class _StatCell extends StatelessWidget {
                 maxLines: 2,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: AppText.caption(context).copyWith(fontSize: 12),
+                style: TextStyle(fontSize: 14, color: p.textMuted),
               ),
             ],
           ),

@@ -73,11 +73,11 @@ void main() {
 
     await tester.tap(find.text('밥수다'));
     await tester.pumpAndSettle();
-    expect(find.text('밥수다는 준비 중이에요'), findsOneWidget);
+    expect(find.text('아직 올라온 이야기가 없어요'), findsOneWidget);
     await tester.tap(find.text('기록'));
     await tester.pumpAndSettle();
-    // Food records are account-only: guests get a sign-in gate, not a fake list.
-    expect(find.text('로그인하면 먹은 음식을 기록할 수 있어요'), findsOneWidget);
+    // V5: the page is open to guests (no fake list); only adding needs an account.
+    expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
     await tester.tap(find.text('MY'));
     await tester.pumpAndSettle();
     expect(find.text('로그인 / 회원가입'), findsOneWidget);

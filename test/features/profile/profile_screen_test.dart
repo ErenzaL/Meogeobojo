@@ -169,20 +169,21 @@ void main() {
       expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     });
 
-    testWidgets('keeps 계정 and 앱 설정 sections with every row, then logout', (
-      tester,
-    ) async {
-      final h = await signedIn();
-      await openMy(tester, h);
-      await tester.scrollUntilVisible(
-        find.text('로그아웃'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      for (final t in ['계정', '앱 설정', '언어 설정', '화면 테마', '로그아웃']) {
-        expect(find.text(t), findsWidgets, reason: t);
-      }
-    });
+    testWidgets(
+      'keeps the 내 활동 and 앱 설정 sections with every row, then logout',
+      (tester) async {
+        final h = await signedIn();
+        await openMy(tester, h);
+        await tester.scrollUntilVisible(
+          find.text('로그아웃'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        for (final t in ['내 활동', '앱 설정', '언어 설정', '화면 테마', '로그아웃']) {
+          expect(find.text(t), findsWidgets, reason: t);
+        }
+      },
+    );
 
     for (final (lang, mode) in [
       ('ko', 'light'),

@@ -524,7 +524,7 @@ void main() {
         );
         h.container.read(shellTabProvider.notifier).select(ShellTabs.profile);
         await tester.pumpAndSettle();
-        final yAccount = tester.getTopLeft(find.text('계정').first).dy;
+        final yAccount = tester.getTopLeft(find.text('내 활동').first).dy;
         final yApp = tester.getTopLeft(find.text('앱 설정')).dy;
         final yLogout = tester.getTopLeft(find.text('로그아웃')).dy;
         expect(find.text('안녕하세요, 민수님'), findsOneWidget);

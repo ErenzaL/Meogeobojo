@@ -12,9 +12,13 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/mascot_message.dart';
 import '../../origin/providers/origin_providers.dart';
+import '../../search/screens/search_screen.dart';
+import '../../university/widgets/university_sheet.dart';
+import '../../../core/widgets/v5_widgets.dart';
+import '../widgets/map_filter_bar.dart';
+import '../widgets/map_places_sheet.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/restaurant.dart';
-import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../university/providers/university_providers.dart';
 import '../../../core/l10n/l10n.dart';
@@ -196,7 +200,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Keep the map synchronised with the selected university.
+    // Keep the map synchronised with the selected origin.
     ref.listen(originProvider, (prev, next) {
       if (next != null && next != prev) {
         _moveTo(next.latitude, next.longitude);
@@ -213,111 +217,122 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       );
     }
 
+    final l10n = context.l10n;
+    final p = context.palette;
     final init = ref.watch(kakaoMapInitProvider);
     final univ = ref.watch(selectedUniversityProvider).value;
-    final places = ref.watch(filteredRestaurantsProvider);
+    final origin = ref.watch(originProvider);
+    final campus =
+        univ?.displayName(Localizations.localeOf(context)) ??
+        l10n.universityFallbackName;
 
     return Scaffold(
-      body: init.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) =>
-            _MapError(onRetry: () => ref.invalidate(kakaoMapInitProvider)),
-        data: (_) {
-          if (univ == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Stack(
-            children: [
-              KakaoMap(
-                onMapCreated: _onMapCreated,
-                initialPosition: LatLng(
-                  latitude: univ.latitude,
-                  longitude: univ.longitude,
-                ),
-                initialLevel: 14,
-              ),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _StatusPill(
-                      text: places.when(
-                        loading: () => context.l10n.mapStatusLoading(
-                          univ.displayName(Localizations.localeOf(context)),
-                        ),
-                        error: (_, _) => context.l10n.mapStatusError(
-                          univ.displayName(Localizations.localeOf(context)),
-                        ),
-                        data: (l) => context.l10n.mapStatusCount(
-                          univ.displayName(Localizations.localeOf(context)),
-                          l.length,
-                        ),
-                      ),
-                      onRetry: places.hasError
-                          ? () => ref.invalidate(allNearbyRestaurantsProvider)
-                          : null,
+      backgroundColor: p.background,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: V5Header(
+                title: l10n.mapPageTitle,
+                trailing: IconButton(
+                  tooltip: l10n.homeSearchLabel,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SearchScreen(),
                     ),
                   ),
+                  icon: const Icon(Icons.search_rounded),
                 ),
               ),
-              if (_selected != null)
-                Positioned(
-                  left: AppSpacing.screenH,
-                  right: AppSpacing.screenH,
-                  // Above the floating navigation bar.
-                  bottom: 16 + MediaQuery.paddingOf(context).bottom,
-                  child: _SelectedCard(
-                    restaurant: _selected!,
-                    onClose: () => setState(() => _selected = null),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              child: InkWell(
+                onTap: () => showUniversitySheet(context),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          campus,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.keyboard_arrow_down_rounded),
+                    ],
                   ),
                 ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.text, this.onRetry});
-
-  final String text;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: context.palette.card,
-      elevation: 3,
-      shape: const StadiumBorder(),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onRetry,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.title.copyWith(fontSize: 13.5),
-                ),
               ),
-              if (onRetry != null) ...[
-                const SizedBox(width: 6),
-                Icon(
-                  Icons.refresh_rounded,
-                  size: 18,
-                  color: context.palette.accent,
-                ),
-              ],
-            ],
-          ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: MapFilterBar(),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: init.when(
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => _MapError(
+                        onRetry: () => ref.invalidate(kakaoMapInitProvider),
+                      ),
+                      data: (_) => univ == null
+                          ? const Center(child: CircularProgressIndicator())
+                          : KakaoMap(
+                              onMapCreated: _onMapCreated,
+                              initialPosition: LatLng(
+                                latitude: origin?.latitude ?? univ.latitude,
+                                longitude: origin?.longitude ?? univ.longitude,
+                              ),
+                              initialLevel: 14,
+                            ),
+                    ),
+                  ),
+                  if (_selected != null)
+                    Positioned(
+                      left: AppSpacing.screenH,
+                      right: AppSpacing.screenH,
+                      top: 12,
+                      child: _SelectedCard(
+                        restaurant: _selected!,
+                        onClose: () => setState(() => _selected = null),
+                      ),
+                    ),
+                  if (origin != null)
+                    Positioned(
+                      right: 16,
+                      top: _selected != null ? 92 : 12,
+                      child: Material(
+                        color: p.card,
+                        elevation: 2,
+                        borderRadius: BorderRadius.circular(14),
+                        child: IconButton(
+                          tooltip: l10n.mapRecenter,
+                          onPressed: () =>
+                              _moveTo(origin.latitude, origin.longitude),
+                          icon: const Icon(Icons.my_location_rounded),
+                        ),
+                      ),
+                    ),
+                  const MapPlacesSheet(),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

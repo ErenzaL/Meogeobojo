@@ -810,7 +810,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mealEmptyTitle => 'No campus meal menu has been registered.';
+  String get mealEmptyTitle => 'No menu information has been registered.';
 
   @override
   String get mealNotCollectedWeek =>
@@ -1626,4 +1626,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
     return '₩$priceString';
   }
+
+  @override
+  String get mealBreakfastProgram => 'Breakfast · 1,000-won Breakfast';
+
+  @override
+  String mealHeading(String day, String meal) {
+    return '$day $meal · cafeteria';
+  }
+
+  @override
+  String get mealDayTomorrow => 'Tomorrow';
 }

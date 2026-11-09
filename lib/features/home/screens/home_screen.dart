@@ -34,8 +34,11 @@ class HomeScreen extends ConsumerWidget {
             bottom: 24 + MediaQuery.paddingOf(context).bottom,
           ),
           children: [
-            const Padding(padding: pad, child: HomeTopBar()),
-            const SizedBox(height: 22),
+            // Desktop has the shared header; the in-page brand row is phone-only.
+            if (MediaQuery.sizeOf(context).width < Breakpoints.desktop) ...[
+              const Padding(padding: pad, child: HomeTopBar()),
+              const SizedBox(height: 22),
+            ],
             const Padding(padding: pad, child: HomeTitleBlock()),
             const SizedBox(height: 18),
             const Padding(padding: pad, child: HomeChipRow()),

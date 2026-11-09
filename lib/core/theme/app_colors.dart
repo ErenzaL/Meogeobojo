@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   /// Brand orange used for FILLED controls (buttons, selected circles) in both
   /// themes, so the identity is identical in Light and Dark.
-  static const primary = Color(0xFFF36B21);
+  static const primary = Color(0xFFC2410C);
 
   /// Deeper end of the orange CTA gradient.
-  static const primaryDeep = Color(0xFFC84B0C);
+  static const primaryDeep = Color(0xFF9A3412);
 
   /// Brand peach, used for decorative shapes and accents.
-  static const peach = Color(0xFFFFCA80);
+  static const peach = Color(0xFFF1EDE7);
 
   /// Campus pin on the map (the map tiles are fixed, so pins never change
   /// with the app theme).

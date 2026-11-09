@@ -221,7 +221,7 @@
   "mealKindStaff": "Faculty & staff cafeteria",
   "mealKindOther": "Cafeteria",
   "mealCafeteriaNth": "{kind} {number}",
-  "mealEmptyTitle": "No campus meal menu has been registered.",
+  "mealEmptyTitle": "No menu information has been registered.",
   "mealNotCollectedWeek": "This week's menu hasn't been added yet.",
   "mealNotCollectedHint": "It will appear here once official information is verified.",
   "mealClosedTitle": "Not served at this time",
@@ -447,5 +447,8 @@
   "restaurantAboutTitle": "About",
   "restaurantMenuTitle": "Menu",
   "restaurantMenuSoldOut": "Sold out",
-  "restaurantPriceWon": "₩{price}"
+  "restaurantPriceWon": "₩{price}",
+  "mealBreakfastProgram": "Breakfast · 1,000-won Breakfast",
+  "mealHeading": "{day} {meal} · cafeteria",
+  "mealDayTomorrow": "Tomorrow"
 }

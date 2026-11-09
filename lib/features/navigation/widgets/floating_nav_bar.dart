@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -15,7 +14,11 @@ class FloatingNavMetrics {
     required this.bottomMargin,
     required this.sideMargin,
     required this.contentGap,
+    this.safeBottom = 0,
   });
+
+  /// Device bottom inset the flat bar extends under (home indicator).
+  final double safeBottom;
 
   /// Bar height (grows slightly with the text scale; labels stop growing at
   /// [_maxLabelScale] so the bar stays compact).
@@ -42,11 +45,13 @@ class FloatingNavMetrics {
     final safeBottom = mq.viewPadding.bottom;
     final scale = clampedLabelScale(mq);
     return FloatingNavMetrics(
-      height: 62 + (scale - 1) * 16,
-      // Sits above the iOS home indicator / Android gesture bar, never on it.
-      bottomMargin: math.max(safeBottom - 14, 0) + 12,
-      sideMargin: 16,
-      contentGap: 12,
+      // V5: a flat 64px bar plus the device's bottom inset (icons stay above
+      // the home indicator / gesture bar, the bar itself runs to the edge).
+      height: 64 + (scale - 1) * 16 + safeBottom,
+      bottomMargin: 0,
+      sideMargin: 0,
+      contentGap: 0,
+      safeBottom: safeBottom,
     );
   }
 }
@@ -91,13 +96,14 @@ class _NavItem {
 }
 
 final _items = [
+  // V5 order and icons: 홈 · 지도 · 밥수다 · 기록 · MY (filled when active).
   _NavItem((l) => l.navHome, Icons.home_outlined, Icons.home_rounded),
-  _NavItem((l) => l.navCommunity, Icons.groups_outlined, Icons.groups_rounded),
   _NavItem((l) => l.navMap, Icons.map_outlined, Icons.map_rounded),
+  _NavItem((l) => l.navCommunity, Icons.forum_outlined, Icons.forum_rounded),
   _NavItem(
     (l) => l.navRecords,
-    Icons.bookmark_border_rounded,
-    Icons.bookmark_rounded,
+    Icons.menu_book_outlined,
+    Icons.menu_book_rounded,
   ),
   _NavItem(
     (l) => l.navProfile,
@@ -106,7 +112,7 @@ final _items = [
   ),
 ];
 
-/// Floating capsule navigation for the five tabs. Place it in a [Stack] with
+/// Flat bottom navigation for the five tabs (V5 `.navbar`). Place it in a [Stack] with
 /// [Positioned] using [FloatingNavMetrics]; the shell does that.
 ///
 /// The blur is confined to the capsule, and the surface stays ~93% opaque, so
@@ -124,8 +130,6 @@ class FloatingNavBar extends StatelessWidget {
   final ValueChanged<int> onTap;
   final FloatingNavMetrics metrics;
 
-  static const _radius = BorderRadius.all(Radius.circular(40));
-
   @override
   Widget build(BuildContext context) {
     final p = _NavPalette.of(context);
@@ -140,51 +144,32 @@ class FloatingNavBar extends StatelessWidget {
       child: SizedBox(
         height: metrics.height,
         child: DecoratedBox(
+          // Flat, full width, hairline on top (V5 `.navbar`).
           decoration: BoxDecoration(
-            borderRadius: _radius,
-            boxShadow: [
-              BoxShadow(
-                color: p.shadow,
-                blurRadius: 22,
-                spreadRadius: -2,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: p.surface,
+            border: Border(top: BorderSide(color: p.border)),
           ),
-          child: ClipRRect(
-            borderRadius: _radius,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: p.surface,
-                  borderRadius: _radius,
-                  border: Border.all(color: p.border),
-                ),
-                // Labels keep scaling with the user's setting up to 1.3x; the
-                // bar height grows to match, then labels shrink to fit.
-                child: MediaQuery.withClampedTextScaling(
-                  maxScaleFactor: FloatingNavMetrics._maxLabelScale,
-                  child: Padding(
-                    padding: const EdgeInsets.all(6),
-                    child: Row(
-                      children: [
-                        for (var i = 0; i < _items.length; i++)
-                          Expanded(
-                            child: _NavButton(
-                              label: _items[i].label(l10n),
-                              icon: _items[i].icon,
-                              activeIcon: _items[i].activeIcon,
-                              selected: i == index,
-                              palette: p,
-                              duration: duration,
-                              onTap: () => onTap(i),
-                            ),
-                          ),
-                      ],
+          // Labels keep scaling with the user's setting up to 1.3x; the bar
+          // height grows to match, then labels shrink to fit.
+          child: MediaQuery.withClampedTextScaling(
+            maxScaleFactor: FloatingNavMetrics._maxLabelScale,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: metrics.safeBottom),
+              child: Row(
+                children: [
+                  for (var i = 0; i < _items.length; i++)
+                    Expanded(
+                      child: _NavButton(
+                        label: _items[i].label(l10n),
+                        icon: _items[i].icon,
+                        activeIcon: _items[i].activeIcon,
+                        selected: i == index,
+                        palette: p,
+                        duration: duration,
+                        onTap: () => onTap(i),
+                      ),
                     ),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
@@ -229,7 +214,7 @@ class _NavButton extends StatelessWidget {
       child: Material(
         type: MaterialType.transparency,
         child: InkWell(
-          borderRadius: BorderRadius.circular(32),
+          borderRadius: BorderRadius.zero,
           splashColor: palette.selectedFg.withValues(alpha: 0.12),
           highlightColor: palette.selectedFg.withValues(alpha: 0.06),
           onTap: onTap,
@@ -237,10 +222,7 @@ class _NavButton extends StatelessWidget {
             duration: duration,
             curve: Curves.easeOutCubic,
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            decoration: BoxDecoration(
-              color: selected ? palette.selectedBg : Colors.transparent,
-              borderRadius: BorderRadius.circular(32),
-            ),
+            // V5: the active tab is a filled icon with a bold label, no pill.
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -260,9 +242,9 @@ class _NavButton extends StatelessWidget {
                   child: AnimatedDefaultTextStyle(
                     duration: duration,
                     style: TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 12,
                       height: 1.2,
-                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: color,
                     ),
                     child: Text(label, maxLines: 1),

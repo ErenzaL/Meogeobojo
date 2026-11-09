@@ -7,8 +7,11 @@ import '../theme/app_palette.dart';
 abstract final class Breakpoints {
   static const double tablet = 600;
 
+  /// Desktop browsers: header instead of the bottom bar (V5 `S.wide`).
+  static const double desktop = 960;
+
   /// Width of the centred app column on tablets / desktops.
-  static const double maxAppWidth = 1040;
+  static const double maxAppWidth = 1280;
 
   /// Home switches to two columns at this content width.
   static const double homeTwoColumn = 860;

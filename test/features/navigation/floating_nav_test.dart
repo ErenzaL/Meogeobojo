@@ -63,113 +63,61 @@ Future<Harness> openShell(
 }
 
 void main() {
-  group('floating capsule geometry', () {
-    testWidgets(
-      'floats: clear of the left, right and bottom edges, fully rounded',
-      (tester) async {
-        await openShell(tester);
-        final r = navRect(tester);
-        expect(r.left, 16, reason: 'side margin');
-        expect(r.right, 390 - 16);
-        expect(
-          844 - r.bottom,
-          greaterThanOrEqualTo(12),
-          reason: 'floats above the bottom edge',
-        );
-        expect(r.height, inInclusiveRange(58, 72), reason: 'compact');
-
-        final clip = tester.widget<ClipRRect>(
-          find
-              .descendant(
-                of: find.byType(FloatingNavBar),
-                matching: find.byType(ClipRRect),
-              )
-              .first,
-        );
-        final radius = (clip.borderRadius as BorderRadius).topLeft.x;
-        expect(
-          radius,
-          greaterThanOrEqualTo(r.height / 2),
-          reason: 'capsule / pill shape',
-        );
-      },
-    );
-
-    testWidgets(
-      'has a border, a soft shadow and a restrained blur limited to the bar',
-      (tester) async {
-        await openShell(tester);
-        final deco = tester
-            .widgetList<DecoratedBox>(
-              find.descendant(
-                of: find.byType(FloatingNavBar),
-                matching: find.byType(DecoratedBox),
-              ),
-            )
-            .map((d) => d.decoration)
-            .whereType<BoxDecoration>()
-            .toList();
-        expect(
-          deco.any((d) => d.border != null),
-          isTrue,
-          reason: 'subtle border',
-        );
-        expect(
-          deco.any((d) => (d.boxShadow ?? const []).isNotEmpty),
-          isTrue,
-          reason: 'shadow',
-        );
-
-        final blur = find.descendant(
+  group('flat bottom bar geometry (V5)', () {
+    testWidgets('full width, flush with the bottom edge, hairline on top', (
+      tester,
+    ) async {
+      await openShell(tester);
+      final r = navRect(tester);
+      expect(r.left, 0);
+      expect(r.right, 390);
+      expect(r.bottom, 844, reason: 'the bar runs to the screen edge');
+      final bar = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(
+              of: find.byType(FloatingNavBar),
+              matching: find.byType(DecoratedBox),
+            ),
+          )
+          .map((d) => d.decoration)
+          .whereType<BoxDecoration>()
+          .firstWhere((d) => d.border != null);
+      expect(bar.borderRadius, isNull, reason: 'square, not a capsule');
+      expect(bar.boxShadow, isNull, reason: 'no shadow');
+      expect(bar.color, AppPalette.light.navSurface);
+      expect((bar.border as Border).top.color, AppPalette.light.navBorder);
+      expect(
+        find.descendant(
           of: find.byType(FloatingNavBar),
           matching: find.byType(BackdropFilter),
-        );
-        expect(blur, findsOneWidget);
-        final b = tester.getRect(blur);
-        expect(
-          b.width,
-          lessThan(390),
-          reason: 'blur is confined to the capsule, not full-screen',
-        );
-        expect(b.height, lessThan(80));
-        // Surface stays ~93% opaque: legible even where nothing can be blurred.
-        final surface = deco
-            .firstWhere((d) => d.color != null && d.border != null)
-            .color!;
-        expect(surface.a, inInclusiveRange(0.88, 0.96));
-      },
-    );
+        ),
+        findsNothing,
+        reason: 'no blur',
+      );
+    });
 
-    testWidgets(
-      'safe area: above the iOS home indicator, Android gesture bar and with no inset',
-      (tester) async {
-        for (final (safe, label) in [
-          (34.0, 'iPhone home indicator'),
-          (24.0, 'Android gesture bar'),
-          (0.0, 'no inset'),
-        ]) {
-          final h = await buildHarness();
-          setSafeArea(tester, bottom: safe);
-          await pumpApp(tester, h, home: const AppShell());
-          final r = navRect(tester);
-          final gap = 844 - r.bottom;
-          expect(
-            gap,
-            greaterThanOrEqualTo(12),
-            reason: '$label: visible spacing',
-          );
-          if (safe > 0) {
-            // the indicator / gesture pill lives in the bottom ~13 px of the inset
-            expect(
-              gap,
-              greaterThan(14),
-              reason: '$label: never on the indicator',
-            );
-          }
-          expect(tester.takeException(), isNull, reason: label);
-        }
-      },
-    );
+    for (final (inset, label) in [
+      (34.0, 'iOS home indicator'),
+      (24.0, 'Android gesture bar'),
+      (0.0, 'no inset'),
+    ]) {
+      testWidgets('64px of tabs above the device inset: $label', (
+        tester,
+      ) async {
+        await openShell(tester, safeBottom: inset);
+        final r = navRect(tester);
+        expect(r.height, closeTo(64 + inset, 0.5));
+        expect(r.bottom, 844);
+        // Icons and labels stay above the inset.
+        final label0 = tester.getRect(
+          find.descendant(
+            of: find.byType(FloatingNavBar),
+            matching: find.text('홈'),
+          ),
+        );
+        expect(label0.bottom, lessThanOrEqualTo(844 - inset));
+      });
+    }
 
     testWidgets('small screens: no overflow at 320x568, even at 1.6x text', (
       tester,
@@ -178,14 +126,7 @@ void main() {
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await openShell(tester, size: const Size(320, 568), safeBottom: 0);
       expect(tester.takeException(), isNull);
-      final r = navRect(tester);
-      expect(r.left, 16);
-      expect(r.right, 304);
-      expect(
-        r.height,
-        lessThanOrEqualTo(70),
-        reason: 'bar stays compact (labels stop scaling at 1.3x)',
-      );
+      expect(navRect(tester).right, 320);
     });
   });
 
@@ -223,7 +164,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(FloatingNavBar),
-          matching: find.byIcon(Icons.groups_outlined),
+          matching: find.byIcon(Icons.forum_outlined),
         ),
       );
       await tester.pumpAndSettle();
@@ -513,27 +454,44 @@ void main() {
       }
     });
 
-    testWidgets('the selected tab animates its background', (tester) async {
+    testWidgets('the active tab is a filled icon with a bold label (V5)', (
+      tester,
+    ) async {
       await openShell(tester);
-      Color? bgOf(String label) {
-        final box = tester.widget<AnimatedContainer>(
-          find
-              .ancestor(
-                of: find.text(label),
-                matching: find.byType(AnimatedContainer),
-              )
-              .first,
-        );
-        return (box.decoration as BoxDecoration?)?.color;
-      }
+      FontWeight? weightOf(String label) => tester
+          .widget<AnimatedDefaultTextStyle>(
+            find
+                .ancestor(
+                  of: find.text(label),
+                  matching: find.byType(AnimatedDefaultTextStyle),
+                )
+                .first,
+          )
+          .style
+          .fontWeight;
+      IconData iconIn(String label) => tester
+          .widget<Icon>(
+            find.descendant(
+              of: find
+                  .ancestor(
+                    of: find.text(label),
+                    matching: find.byType(InkWell),
+                  )
+                  .first,
+              matching: find.byType(Icon),
+            ),
+          )
+          .icon!;
 
-      expect(bgOf('홈'), AppPalette.light.navSelectedBg);
-      expect(bgOf('MY'), Colors.transparent);
+      expect(weightOf('홈'), FontWeight.w700);
+      expect(weightOf('MY'), FontWeight.w500);
+      expect(iconIn('홈'), Icons.home_rounded);
+      expect(iconIn('MY'), Icons.person_outline_rounded);
       await tester.tap(find.text('MY'));
-      await tester.pump(const Duration(milliseconds: 110));
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(bgOf('MY'), AppPalette.light.navSelectedBg);
-      expect(bgOf('홈'), Colors.transparent);
+      await tester.pumpAndSettle();
+      expect(weightOf('MY'), FontWeight.w700);
+      expect(iconIn('MY'), Icons.person_rounded);
+      expect(weightOf('홈'), FontWeight.w500);
     });
   });
 
@@ -558,17 +516,18 @@ void main() {
             body: Stack(
               children: [
                 Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: 32,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   child: FloatingNavBar(
                     index: 2,
                     onTap: (_) {},
                     metrics: const FloatingNavMetrics(
-                      height: 62,
-                      bottomMargin: 32,
-                      sideMargin: 16,
-                      contentGap: 12,
+                      height: 98,
+                      bottomMargin: 0,
+                      sideMargin: 0,
+                      contentGap: 0,
+                      safeBottom: 34,
                     ),
                   ),
                 ),
@@ -580,28 +539,17 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    Color? bg(WidgetTester tester, String label) =>
-        (tester
-                    .widget<AnimatedContainer>(
-                      find
-                          .ancestor(
-                            of: find.text(label),
-                            matching: find.byType(AnimatedContainer),
-                          )
-                          .first,
-                    )
-                    .decoration
-                as BoxDecoration?)
-            ?.color;
-
     Color? textColor(WidgetTester tester, String label) =>
-        tester.widget<Text>(find.text(label)).style?.color ??
         DefaultTextStyle.of(tester.element(find.text(label))).style.color;
 
-    testWidgets(
-      'light: white translucent surface, charcoal idle, peach + deep-orange selected',
-      (tester) async {
-        await pumpBar(tester, Brightness.light);
+    for (final (name, b, p) in [
+      ('light', Brightness.light, AppPalette.light),
+      ('dark', Brightness.dark, AppPalette.dark),
+    ]) {
+      testWidgets('$name: V5 surface, idle and selected colours', (
+        tester,
+      ) async {
+        await pumpBar(tester, b);
         final surface = tester
             .widgetList<DecoratedBox>(
               find.descendant(
@@ -612,80 +560,19 @@ void main() {
             .map((d) => d.decoration)
             .whereType<BoxDecoration>()
             .firstWhere((d) => d.border != null);
-        expect(surface.color, AppPalette.light.navSurface);
+        expect(surface.color, p.navSurface);
+        expect((surface.border as Border).top.color, p.navBorder);
+        expect(textColor(tester, '홈'), p.navIdle);
+        expect(textColor(tester, '밥수다'), p.navSelectedFg);
+      });
+
+      test('$name: idle and selected labels reach WCAG AA on the bar', () {
+        expect(contrast(p.navIdle, p.navSurface), greaterThanOrEqualTo(4.5));
         expect(
-          (surface.border as Border).top.color,
-          AppPalette.light.navBorder,
+          contrast(p.navSelectedFg, p.navSurface),
+          greaterThanOrEqualTo(4.5),
         );
-        expect(bg(tester, '지도'), AppPalette.light.navSelectedBg);
-        expect(bg(tester, '홈'), Colors.transparent);
-        expect(textColor(tester, '홈'), AppPalette.light.navIdle);
-      },
-    );
-
-    testWidgets(
-      'dark: #292929 elevated translucent surface, light-gray idle, muted warm selected',
-      (tester) async {
-        await pumpBar(tester, Brightness.dark);
-        final surface = tester
-            .widgetList<DecoratedBox>(
-              find.descendant(
-                of: find.byType(FloatingNavBar),
-                matching: find.byType(DecoratedBox),
-              ),
-            )
-            .map((d) => d.decoration)
-            .whereType<BoxDecoration>()
-            .firstWhere((d) => d.border != null);
-        expect(surface.color, AppPalette.dark.navSurface);
-        expect(AppPalette.dark.navSurface.toARGB32() & 0xFFFFFF, 0x292929);
-        expect((surface.border as Border).top.color, AppPalette.dark.navBorder);
-        expect(bg(tester, '지도'), AppPalette.dark.navSelectedBg);
-        expect(textColor(tester, '홈'), AppPalette.dark.navIdle);
-      },
-    );
-
-    test(
-      'contrast: every text/icon colour reaches WCAG AA (4.5:1) on its surface',
-      () {
-        // light: bar over white and over the ivory page background
-        for (final page in [Colors.white, AppPalette.light.background]) {
-          final surface = over(AppPalette.light.navSurface, page);
-          expect(
-            contrast(AppPalette.light.navIdle, surface),
-            greaterThanOrEqualTo(4.5),
-            reason: 'idle on $page',
-          );
-          final selectedBg = AppPalette.light.navSelectedBg;
-          expect(
-            contrast(AppPalette.light.navSelectedFg, selectedBg),
-            greaterThanOrEqualTo(4.5),
-            reason: 'selected label',
-          );
-        }
-        // dark: bar over near-black and over mid-gray content
-        for (final page in [const Color(0xFF121212), const Color(0xFF3A3A3A)]) {
-          final surface = over(AppPalette.dark.navSurface, page);
-          expect(
-            contrast(AppPalette.dark.navIdle, surface),
-            greaterThanOrEqualTo(4.5),
-            reason: 'idle on $page',
-          );
-          expect(
-            contrast(
-              AppPalette.dark.navSelectedFg,
-              AppPalette.dark.navSelectedBg,
-            ),
-            greaterThanOrEqualTo(4.5),
-            reason: 'selected label',
-          );
-          expect(
-            contrast(AppPalette.dark.navIdle, AppPalette.dark.navSelectedBg),
-            greaterThanOrEqualTo(4.5),
-            reason: 'idle on pill',
-          );
-        }
-      },
-    );
+      });
+    }
   });
 }

@@ -31,6 +31,14 @@ MealType defaultMealTypeAt(DateTime now) {
   return MealType.dinner;
 }
 
+/// The selector shows Monday to Friday, so on a weekend the page opens on the
+/// next Monday instead of a day that cannot be selected.
+DateTime selectableDay(DateTime date) => switch (date.weekday) {
+  DateTime.saturday => DateTime.utc(date.year, date.month, date.day + 2),
+  DateTime.sunday => DateTime.utc(date.year, date.month, date.day + 1),
+  _ => date,
+};
+
 class CampusMealSelection {
   const CampusMealSelection({
     required this.weekStart,
@@ -70,10 +78,10 @@ class CampusMealSelectionController extends Notifier<CampusMealSelection> {
   @override
   CampusMealSelection build() {
     final now = ref.read(campusMealClockProvider)();
-    final today = seoulDate(now);
+    final start = selectableDay(seoulDate(now));
     return CampusMealSelection(
-      weekStart: weekStartOf(today),
-      date: today,
+      weekStart: weekStartOf(start),
+      date: start,
       mealType: defaultMealTypeAt(now),
     );
   }
@@ -101,7 +109,7 @@ class CampusMealSelectionController extends Notifier<CampusMealSelection> {
   /// "오늘": today's week, today's date and the meal for the current time.
   void goToToday() {
     final now = ref.read(campusMealClockProvider)();
-    final t = seoulDate(now);
+    final t = selectableDay(seoulDate(now));
     state = state.copyWith(
       weekStart: weekStartOf(t),
       date: t,

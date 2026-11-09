@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Tab indexes of the persistent shell.
 abstract final class ShellTabs {
   static const home = 0;
-  static const community = 1;
-  static const map = 2;
+  static const map = 1;
+  static const community = 2;
   static const records = 3;
   static const profile = 4;
 }

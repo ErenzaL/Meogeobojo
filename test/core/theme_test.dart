@@ -87,49 +87,49 @@ Future<void> pumpThemed(
 
 void main() {
   group('palette tokens', () {
-    test('Light: pure white page, scaffold and cards; warm brown text', () {
+    test('Light: V5 warm-neutral page, white cards, ink text, one accent', () {
       const p = AppPalette.light;
-      expect(p.background, const Color(0xFFFFFFFF));
+      expect(p.background, const Color(0xFFF6F5F3));
       expect(p.card, const Color(0xFFFFFFFF));
-      expect(p.surfaceAlt, const Color(0xFFF7F7F7));
-      expect(p.border, const Color(0xFFEAEAEA));
-      expect(p.textPrimary, const Color(0xFF2D201A));
-      expect(
-        p.textPrimary,
-        isNot(const Color(0xFF000000)),
-        reason: 'not harsh black',
-      );
-      expect(p.accent, const Color(0xFFF36B21));
-      expect(p.peach, const Color(0xFFFFCA80));
-      expect(p.accentSoft, const Color(0xFFFFE7C9));
-    });
-
-    test('Dark: charcoal page, cards and elevated surfaces', () {
-      const p = AppPalette.dark;
-      expect(p.background, const Color(0xFF121212));
-      expect(p.card, const Color(0xFF202020));
-      expect(p.surfaceAlt, const Color(0xFF292929));
-      expect(p.border, const Color(0xFF383838));
-      expect(p.textPrimary, const Color(0xFFF5F5F5));
-      expect(p.textSecondary, const Color(0xFFB0B0B0));
-      expect(p.accent, const Color(0xFFFF873F));
-      expect(p.accentSoft, const Color(0xFF483021));
-      expect(p.bannerStart, const Color(0xFF332316));
+      expect(p.surfaceAlt, const Color(0xFFEFEDE9));
+      expect(p.textPrimary, const Color(0xFF1C1A17));
+      expect(p.textSecondary, const Color(0xFF57524B));
+      expect(p.textMuted, const Color(0xFF6F6962));
+      expect(p.accent, const Color(0xFFC2410C));
+      expect(p.accentStrong, const Color(0xFF9A3412));
+      expect(p.accentSoft, const Color(0xFFFBEEE7));
+      expect(p.statusOpen, const Color(0xFF15803D));
+      expect(p.statusWarn, const Color(0xFFB45309));
+      expect(p.error, const Color(0xFFC62828));
+      // Borders are the prototype's opacity-based lines, not solid greys.
+      // .09 and .17 alpha of the ink colour, as 8-bit alpha values.
+      expect(p.border.toARGB32(), 0x171C1A17);
+      expect(p.borderStrong.toARGB32(), 0x2B1C1A17);
     });
 
     test(
-      'orange identity survives in both modes (accent + peach + soft fills)',
+      'Dark: V5 charcoal page, cards, raised surfaces and softened accent',
       () {
-        for (final p in [AppPalette.light, AppPalette.dark]) {
-          expect(HSVColor.fromColor(p.accent).hue, inInclusiveRange(15, 35));
-          expect(
-            HSVColor.fromColor(p.accentSoft).hue,
-            inInclusiveRange(15, 45),
-          );
-          expect(p.peach, const Color(0xFFFFCA80));
-        }
+        const p = AppPalette.dark;
+        expect(p.background, const Color(0xFF151413));
+        expect(p.card, const Color(0xFF1C1B19));
+        expect(p.surfaceAlt, const Color(0xFF272522));
+        expect(p.textPrimary, const Color(0xFFEFEBE4));
+        expect(p.textSecondary, const Color(0xFFB3ADA4));
+        expect(p.textMuted, const Color(0xFF938D84));
+        expect(p.accent, const Color(0xFFEE7A45));
+        expect(p.accentStrong, const Color(0xFFF4A177));
+        expect(p.statusOpen, const Color(0xFF5FC28A));
+        expect(p.border.toARGB32(), 0x17EFEBE4);
       },
     );
+
+    test('orange identity survives in both modes (accent + soft fill)', () {
+      for (final p in [AppPalette.light, AppPalette.dark]) {
+        expect(HSVColor.fromColor(p.accent).hue, inInclusiveRange(15, 35));
+        expect(HSVColor.fromColor(p.accentSoft).hue, inInclusiveRange(15, 45));
+      }
+    });
 
     for (final (name, p) in [
       ('light', AppPalette.light),
@@ -138,27 +138,26 @@ void main() {
       test(
         '$name: every text colour reaches WCAG AA (4.5:1) on the surfaces it is used on',
         () {
+          // Translucent fills are judged on what they look like over a card.
+          final soft = Color.alphaBlend(p.accentSoft, p.card);
           for (final (fg, bg, label) in [
             (p.textPrimary, p.background, 'text on page'),
             (p.textPrimary, p.card, 'text on card'),
-            (p.textPrimary, p.surfaceAlt, 'text on elevated'),
-            (p.textPrimary, p.accentSoft, 'text on selected'),
+            (p.textPrimary, p.surfaceAlt, 'text on raised'),
+            (p.textPrimary, soft, 'text on accent tint'),
             (p.textSecondary, p.background, 'secondary on page'),
             (p.textSecondary, p.card, 'secondary on card'),
-            (p.textSecondary, p.surfaceAlt, 'secondary on elevated'),
+            (p.textSecondary, p.surfaceAlt, 'secondary on raised'),
+            (p.textMuted, p.background, 'muted on page'),
+            (p.textMuted, p.card, 'muted on card'),
             (p.accentStrong, p.background, 'accent text on page'),
             (p.accentStrong, p.card, 'accent text on card'),
-            (p.accentStrong, p.accentSoft, 'accent text on selected'),
-            (p.accentStrong, p.accentFaint, 'accent text on faint'),
-            (p.accentStrong, p.bannerStart, 'accent text on banner'),
-            (p.accentStrong, p.accentTile, 'accent text on tile'),
-            (p.onPeach, p.peach, 'text on peach'),
-            (
-              p.navIdle,
-              Color.alphaBlend(p.navSurface, p.background),
-              'nav idle',
-            ),
-            (p.navSelectedFg, p.navSelectedBg, 'nav selected'),
+            (p.accentStrong, soft, 'accent text on accent tint'),
+            (p.onRust, p.rust, 'button label on accent'),
+            (p.chipSelectedFg, p.chipSelectedBg, 'selected chip'),
+            (p.navIdle, p.navSurface, 'nav idle'),
+            (p.navSelectedFg, p.navSurface, 'nav selected'),
+            (p.statusOpen, p.card, 'status green'),
             (p.error, p.background, 'error text'),
           ]) {
             expect(
@@ -178,13 +177,15 @@ void main() {
         final d = buildDarkTheme();
         expect(l.extension<AppPalette>(), AppPalette.light);
         expect(d.extension<AppPalette>(), AppPalette.dark);
-        expect(l.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
-        expect(d.scaffoldBackgroundColor, const Color(0xFF121212));
-        expect(l.appBarTheme.backgroundColor, const Color(0xFFFFFFFF));
-        expect(d.appBarTheme.backgroundColor, const Color(0xFF121212));
+        expect(l.scaffoldBackgroundColor, AppPalette.light.background);
+        expect(d.scaffoldBackgroundColor, AppPalette.dark.background);
+        expect(l.appBarTheme.backgroundColor, AppPalette.light.background);
+        expect(d.appBarTheme.backgroundColor, AppPalette.dark.background);
         expect(d.colorScheme.brightness, Brightness.dark);
         expect(d.dialogTheme.backgroundColor, AppPalette.dark.card);
-        expect(d.bottomSheetTheme.backgroundColor, AppPalette.dark.background);
+        expect(d.bottomSheetTheme.backgroundColor, AppPalette.dark.card);
+        // V5 typeface.
+        expect(l.textTheme.bodyMedium?.fontFamily, 'Pretendard');
       },
     );
 
@@ -339,8 +340,8 @@ void main() {
     }
 
     for (final (mode, expected, homeExpected) in [
-      ('light', const Color(0xFFFFFFFF), AppPalette.light.pageWarm),
-      ('dark', const Color(0xFF121212), AppPalette.dark.pageWarm),
+      ('light', AppPalette.light.background, AppPalette.light.pageWarm),
+      ('dark', AppPalette.dark.background, AppPalette.dark.pageWarm),
     ]) {
       testWidgets('$mode: Home, MY, Login and Campus Meals backgrounds', (
         tester,
@@ -392,8 +393,8 @@ void main() {
     );
 
     for (final (mode, expected) in [
-      ('light', 0xFFFFFFFF),
-      ('dark', 0xFF121212),
+      ('light', 0xFFF6F5F3),
+      ('dark', 0xFF151413),
     ]) {
       // Regression: a brown-tinted card shadow used to overlap in the gap
       // between cards and render the page cream (#F9F5F2) instead of white.

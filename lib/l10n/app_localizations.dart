@@ -1429,7 +1429,7 @@ abstract class AppLocalizations {
   /// No description provided for @mealEmptyTitle.
   ///
   /// In ko, this message translates to:
-  /// **'등록된 학식 메뉴가 없어요.'**
+  /// **'등록된 식단 정보가 없습니다.'**
   String get mealEmptyTitle;
 
   /// No description provided for @mealNotCollectedWeek.
@@ -2787,6 +2787,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{price}원'**
   String restaurantPriceWon(int price);
+
+  /// No description provided for @mealBreakfastProgram.
+  ///
+  /// In ko, this message translates to:
+  /// **'조식 · 천원의 아침밥'**
+  String get mealBreakfastProgram;
+
+  /// No description provided for @mealHeading.
+  ///
+  /// In ko, this message translates to:
+  /// **'{day} {meal} 학식'**
+  String mealHeading(String day, String meal);
+
+  /// No description provided for @mealDayTomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일'**
+  String get mealDayTomorrow;
 }
 
 class _AppLocalizationsDelegate

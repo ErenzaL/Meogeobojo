@@ -28,57 +28,71 @@ class CampusMealScreen extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, AppSpacing.screenH, 4),
-              child: Row(
-                children: [
-                  BackButton(color: context.palette.textPrimary),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (university != null)
-                          Text(
-                            university.displayName(locale),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.caption(context)
-                                .copyWith(fontSize: 13),
-                          ),
-                        Text(
-                          l10n.mealPageTitle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppText.sectionTitle.copyWith(fontSize: 21),
-                        ),
-                      ],
-                    ),
+        // Readable column on wide screens (the phone layout is unchanged).
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    4,
+                    4,
+                    AppSpacing.screenH,
+                    4,
                   ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: cafeterias.when(
-                loading: () => const _LoadingBody(),
-                error: (_, _) => MascotMessage(
-                  asset: AppAssets.mascotMapConfused,
-                  title: l10n.mealLoadFailed,
-                  message: l10n.mealLoadFailedHint,
-                  actionLabel: l10n.commonRetry,
-                  onAction: () => ref.invalidate(campusCafeteriasProvider),
+                  child: Row(
+                    children: [
+                      BackButton(color: context.palette.textPrimary),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (university != null)
+                              Text(
+                                university.displayName(locale),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppText.caption(context)
+                                    .copyWith(fontSize: 13),
+                              ),
+                            Text(
+                              l10n.mealPageTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.sectionTitle.copyWith(
+                                fontSize: 21,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                data: (list) => list.isEmpty
-                    ? MascotMessage(
-                        asset: AppAssets.mascotSearching,
-                        title: l10n.mealNoCafeteria,
-                        message: l10n.mealNotCollectedHint,
-                      )
-                    : _Body(cafeterias: list),
-              ),
+                Expanded(
+                  child: cafeterias.when(
+                    loading: () => const _LoadingBody(),
+                    error: (_, _) => MascotMessage(
+                      asset: AppAssets.mascotMapConfused,
+                      title: l10n.mealLoadFailed,
+                      message: l10n.mealLoadFailedHint,
+                      actionLabel: l10n.commonRetry,
+                      onAction: () => ref.invalidate(campusCafeteriasProvider),
+                    ),
+                    data: (list) => list.isEmpty
+                        ? MascotMessage(
+                            asset: AppAssets.mascotSearching,
+                            title: l10n.mealNoCafeteria,
+                            message: l10n.mealNotCollectedHint,
+                          )
+                        : _Body(cafeterias: list),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -155,15 +169,17 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: 10),
         MealTabs(selected: sel.mealType, onSelect: ctrl.selectMealType),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.mealSelectedDate(sel.date),
-                style: AppText.sectionTitle.copyWith(fontSize: 18),
-              ),
-            ),
-          ],
+        Text(
+          l10n.mealHeading(
+            sel.date == today
+                ? l10n.mealToday
+                : sel.date ==
+                      DateTime.utc(today.year, today.month, today.day + 1)
+                ? l10n.mealDayTomorrow
+                : l10n.mealSelectedDate(sel.date),
+            sel.mealType.label(l10n),
+          ),
+          style: AppText.heroTitle,
         ),
         if (cafeterias.length == 1) ...[
           const SizedBox(height: 2),
@@ -232,8 +248,21 @@ class _WeekContent extends ConsumerWidget {
             title: l10n.mealEmptyTitle,
           );
         }
+        final published = [
+          for (final m in options)
+            if (m.status == MealStatus.published) m,
+        ];
         return Column(
           children: [
+            if (sel.mealType == MealType.breakfast && published.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: BreakfastProgramCard(
+                  priceKrw: published.first.priceKrw,
+                  start: published.first.startTime,
+                  end: published.first.endTime,
+                ),
+              ),
             for (final m in options)
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),

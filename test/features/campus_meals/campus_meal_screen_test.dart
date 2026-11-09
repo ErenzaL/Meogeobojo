@@ -174,16 +174,20 @@ void main() {
 
   group('week and day display', () {
     testWidgets(
-      'shows the page header, Monday-Sunday and highlights today (Seoul)',
+      'shows the page header, Monday-Friday and highlights today (Seoul)',
       (tester) async {
         await open(tester);
         expect(find.text('순천향대학교'), findsOneWidget);
         expect(find.text('이번 주 학식'), findsOneWidget);
         expect(find.text('11월 2일 – 11월 8일'), findsOneWidget);
-        for (final w in ['월', '화', '수', '목', '금', '토', '일']) {
+        // V5: a five-day (Mon-Fri) selector, no weekend cells.
+        for (final w in ['월', '화', '수', '목', '금']) {
           expect(find.text(w), findsOneWidget, reason: w);
         }
-        for (final n in ['2', '3', '4', '5', '6', '7', '8']) {
+        for (final w in ['토', '일']) {
+          expect(find.text(w), findsNothing, reason: w);
+        }
+        for (final n in ['2', '3', '4', '5', '6']) {
           expect(
             find.descendant(
               of: find.byType(DaySelector),
@@ -193,10 +197,28 @@ void main() {
             reason: n,
           );
         }
+        for (final n in ['7', '8']) {
+          expect(
+            find.descendant(
+              of: find.byType(DaySelector),
+              matching: find.text(n),
+            ),
+            findsNothing,
+            reason: n,
+          );
+        }
         expect(
-          find.text('11월 3일 (화)'),
+          find.text('오늘 중식 학식'),
           findsOneWidget,
-          reason: 'selected date heading',
+          reason: 'heading: day word + meal',
+        );
+        expect(
+          find.descendant(
+            of: find.byType(DaySelector),
+            matching: find.text('오늘'),
+          ),
+          findsOneWidget,
+          reason: 'today is labelled in the selector',
         );
         // "today" is selected on open, so there is no "오늘" shortcut yet
         expect(find.widgetWithText(TextButton, '오늘'), findsNothing);
@@ -208,7 +230,7 @@ void main() {
       (tester) async {
         // 2026-11-02 16:00 UTC is already Tue Nov 3, 01:00 in Seoul
         await open(tester, now: () => DateTime.utc(2026, 11, 2, 16));
-        expect(find.text('11월 3일 (화)'), findsOneWidget);
+        expect(find.text('오늘 조식 학식'), findsOneWidget); // 01:00 Seoul
         expect(find.text('중식'), findsOneWidget);
       },
     );
@@ -219,7 +241,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('11월 9일 – 11월 15일'), findsOneWidget);
       expect(
-        find.text('11월 10일 (화)'),
+        find.text('11월 10일 (화) 중식 학식'),
         findsOneWidget,
         reason: 'same weekday kept',
       );
@@ -233,12 +255,12 @@ void main() {
         findsOneWidget,
         reason: 'month boundary',
       );
-      expect(find.text('10월 27일 (화)'), findsOneWidget);
+      expect(find.text('10월 27일 (화) 중식 학식'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(TextButton, '오늘'));
       await tester.pumpAndSettle();
       expect(find.text('11월 2일 – 11월 8일'), findsOneWidget);
-      expect(find.text('11월 3일 (화)'), findsOneWidget);
+      expect(find.text('오늘 중식 학식'), findsOneWidget);
       expect(
         h.container.read(campusMealSelectionProvider).date,
         DateTime.utc(2026, 11, 3),
@@ -254,11 +276,11 @@ void main() {
       await tester.tap(find.byTooltip('다음 주'));
       await tester.pumpAndSettle();
       expect(find.text('1월 4일 – 1월 10일'), findsOneWidget);
-      expect(find.text('1월 7일 (목)'), findsOneWidget);
+      expect(find.text('1월 7일 (목) 중식 학식'), findsOneWidget);
     });
 
     testWidgets(
-      'selecting another day (even Saturday/Sunday) refreshes the meals',
+      'selecting another weekday refreshes the meals (weekends are not selectable)',
       (tester) async {
         await open(tester);
         expect(find.text('김치찌개'), findsOneWidget);
@@ -269,21 +291,40 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('11월 4일 (수)'), findsOneWidget);
+        expect(find.text('내일 중식 학식'), findsOneWidget);
         expect(find.text('김치찌개'), findsNothing);
-        expect(find.text('등록된 학식 메뉴가 없어요.'), findsOneWidget);
+        expect(find.text('등록된 식단 정보가 없습니다.'), findsOneWidget);
         await tester.tap(
           find.descendant(
             of: find.byType(DaySelector),
-            matching: find.text('8'),
+            matching: find.text('6'),
           ),
         );
         await tester.pumpAndSettle();
-        expect(find.text('11월 8일 (일)'), findsOneWidget);
-        // oldest day first: Monday starts the week
+        expect(find.text('11월 6일 (금) 중식 학식'), findsOneWidget);
         expect(find.text('11월 2일 – 11월 8일'), findsOneWidget);
       },
     );
+
+    testWidgets('switching 조식 / 중식 / 석식 keeps the selected date', (
+      tester,
+    ) async {
+      await open(tester);
+      await tester.tap(
+        find.descendant(of: find.byType(DaySelector), matching: find.text('5')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('11월 5일 (목) 중식 학식'), findsOneWidget);
+      await tester.tap(find.text('석식'));
+      await tester.pumpAndSettle();
+      expect(find.text('11월 5일 (목) 석식 학식'), findsOneWidget);
+      await tester.tap(find.text('조식'));
+      await tester.pumpAndSettle();
+      expect(find.text('11월 5일 (목) 조식 학식'), findsOneWidget);
+      await tester.tap(find.text('중식'));
+      await tester.pumpAndSettle();
+      expect(find.text('11월 5일 (목) 중식 학식'), findsOneWidget);
+    });
   });
 
   group('breakfast / lunch / dinner', () {
@@ -302,7 +343,7 @@ void main() {
         expect(find.text('김치찌개'), findsNothing);
         await tester.tap(find.text('조식'));
         await tester.pumpAndSettle();
-        expect(find.text('등록된 학식 메뉴가 없어요.'), findsOneWidget);
+        expect(find.text('등록된 식단 정보가 없습니다.'), findsOneWidget);
         await tester.tap(find.text('중식'));
         await tester.pumpAndSettle();
         expect(find.text('김치찌개'), findsOneWidget);
@@ -320,7 +361,7 @@ void main() {
         tester,
         now: () => DateTime.utc(2026, 11, 2, 22),
       ); // 07:00 Seoul
-      expect(find.text('11월 3일 (화)'), findsOneWidget);
+      expect(find.text('오늘 조식 학식'), findsOneWidget);
       final tabs = tester.widget<MealTabs>(find.byType(MealTabs));
       expect(tabs.selected, MealType.breakfast);
     });
@@ -336,7 +377,6 @@ void main() {
         expect(find.text('깍두기'), findsOneWidget);
         expect(find.text('5,500원'), findsOneWidget);
         expect(find.text('운영 11:30 – 13:30'), findsOneWidget);
-        expect(find.text('메인'), findsOneWidget);
         expect(find.text('확인 2026년 11월 2일'), findsOneWidget);
         expect(find.text('출처 열기'), findsOneWidget);
       },
@@ -402,7 +442,7 @@ void main() {
       await open(tester, repo: repo);
       expect(find.text('이 주의 학식 정보는 아직 등록되지 않았어요.'), findsOneWidget);
       expect(find.text('이 시간에는 운영하지 않아요'), findsNothing);
-      expect(find.text('등록된 학식 메뉴가 없어요.'), findsNothing);
+      expect(find.text('등록된 식단 정보가 없습니다.'), findsNothing);
     });
 
     testWidgets('week has data but not this meal = no registered menu', (
@@ -411,7 +451,7 @@ void main() {
       await open(tester);
       await tester.tap(find.text('조식'));
       await tester.pumpAndSettle();
-      expect(find.text('등록된 학식 메뉴가 없어요.'), findsOneWidget);
+      expect(find.text('등록된 식단 정보가 없습니다.'), findsOneWidget);
       expect(find.text('이 시간에는 운영하지 않아요'), findsNothing);
     });
 
@@ -445,7 +485,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('이 시간에는 운영하지 않아요'), findsNothing);
       expect(
-        find.text('등록된 학식 메뉴가 없어요.'),
+        find.text('등록된 식단 정보가 없습니다.'),
         findsOneWidget,
         reason: 'unknown, not closed',
       );
@@ -651,10 +691,11 @@ void main() {
       await open(tester, lang: 'en');
       expect(find.text('This Week\'s Campus Meals'), findsOneWidget);
       expect(find.text('Nov 2 – Nov 8'), findsOneWidget);
-      expect(find.text('Tue, Nov 3'), findsOneWidget);
-      for (final w in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
+      expect(find.text('Today Lunch · cafeteria'), findsOneWidget);
+      for (final w in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']) {
         expect(find.text(w), findsOneWidget, reason: w);
       }
+      expect(find.text('Sat'), findsNothing);
       expect(find.text('Breakfast'), findsOneWidget);
       expect(find.text('Lunch'), findsOneWidget);
       expect(find.text('Dinner'), findsOneWidget);
@@ -667,7 +708,7 @@ void main() {
       await tester.tap(find.text('Breakfast'));
       await tester.pumpAndSettle();
       expect(
-        find.text('No campus meal menu has been registered.'),
+        find.text('No menu information has been registered.'),
         findsOneWidget,
       );
     });
@@ -678,12 +719,13 @@ void main() {
       expect(find.text('早餐'), findsOneWidget);
       expect(find.text('午餐'), findsOneWidget);
       expect(find.text('晚餐'), findsOneWidget);
-      for (final w in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']) {
+      for (final w in ['周一', '周二', '周三', '周四', '周五']) {
         expect(find.text(w), findsOneWidget, reason: w);
       }
+      expect(find.text('周六'), findsNothing);
       await tester.tap(find.text('早餐'));
       await tester.pumpAndSettle();
-      expect(find.text('暂无已登记的食堂菜单。'), findsOneWidget);
+      expect(find.text('暂无登记的菜单信息。'), findsOneWidget);
     });
 
     testWidgets('a verified translation is shown; otherwise Korean', (
@@ -711,7 +753,6 @@ void main() {
       await open(tester, repo: repo, lang: 'en');
       expect(find.text('Seaweed soup'), findsOneWidget);
       expect(find.text('쌀밥'), findsOneWidget);
-      expect(find.text('Soup'), findsOneWidget, reason: 'UI label localized');
     });
 
     for (final lang in ['ko', 'en', 'zh-Hans']) {

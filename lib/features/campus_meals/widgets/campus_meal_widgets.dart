@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/l10n.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../models/campus_meal_models.dart';
 import '../utils/seoul_date.dart';
@@ -84,6 +83,8 @@ class WeekNavigator extends StatelessWidget {
 }
 
 /// Monday-Sunday row. Selected day = orange disc; today = dot underneath.
+/// Mon–Fri selector (V5 `.cafe-day`): weekday + date, "오늘" under today, the
+/// selected day filled with ink.
 class DaySelector extends StatelessWidget {
   const DaySelector({
     super.key,
@@ -100,23 +101,20 @@ class DaySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final days = weekDays(weekStart).take(5).toList();
     return Row(
       children: [
-        for (final day in weekDays(weekStart))
+        for (var i = 0; i < days.length; i++) ...[
+          if (i > 0) const SizedBox(width: 8),
           Expanded(
             child: _DayCell(
-              label: l10n.mealWeekdayShort(day),
-              number: '${day.day}',
-              semantics: l10n.mealDayDescription(
-                day,
-                day == today ? l10n.mealToday : '',
-              ),
-              selected: day == selected,
-              isToday: day == today,
-              onTap: () => onSelect(day),
+              date: days[i],
+              selected: days[i] == selected,
+              isToday: days[i] == today,
+              onTap: () => onSelect(days[i]),
             ),
           ),
+        ],
       ],
     );
   }
@@ -124,85 +122,78 @@ class DaySelector extends StatelessWidget {
 
 class _DayCell extends StatelessWidget {
   const _DayCell({
-    required this.label,
-    required this.number,
-    required this.semantics,
+    required this.date,
     required this.selected,
     required this.isToday,
     required this.onTap,
   });
 
-  final String label;
-  final String number;
-  final String semantics;
+  final DateTime date;
   final bool selected;
   final bool isToday;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final fg = selected ? p.chipSelectedFg : p.textPrimary;
     return Semantics(
       button: true,
       selected: selected,
-      label: semantics,
+      label: l10n.mealDayDescription(date, isToday ? l10n.mealToday : ''),
       excludeSemantics: true,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected
-                        ? context.palette.accentStrong
-                        : context.palette.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: selected ? AppColors.primary : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: isToday && !selected
-                      ? Border.all(color: context.palette.accent, width: 1.4)
-                      : null,
-                ),
-                child: FittedBox(
+      child: Material(
+        color: selected ? p.chipSelectedBg : p.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          side: BorderSide(color: selected ? p.chipSelectedBg : p.border),
+        ),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.card),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    number,
+                    l10n.mealWeekdayShort(date),
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: selected
-                          ? Colors.white
-                          : context.palette.textPrimary,
+                      fontSize: 13,
+                      color: selected ? fg : p.textSecondary,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: isToday ? context.palette.accent : Colors.transparent,
-                  shape: BoxShape.circle,
+                const SizedBox(height: 2),
+                Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: fg,
+                  ),
                 ),
-              ),
-            ],
+                SizedBox(
+                  height: 16,
+                  child: isToday
+                      ? FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            l10n.mealToday,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: selected ? fg : p.accentStrong,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -210,71 +201,140 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-/// 조식 | 중식 | 석식
+/// 조식 · 중식 · 석식 as a segmented control (V5 `.seg`). Changing the meal
+/// never changes the selected date.
 class MealTabs extends StatelessWidget {
   const MealTabs({super.key, required this.selected, required this.onSelect});
 
   final MealType selected;
   final ValueChanged<MealType> onSelect;
 
+  static IconData _icon(MealType t) => switch (t) {
+    MealType.breakfast => Icons.wb_twilight_rounded,
+    MealType.lunch => Icons.light_mode_outlined,
+    MealType.dinner => Icons.dark_mode_outlined,
+  };
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Row(
-      children: [
-        for (final t in MealType.values)
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: t == MealType.dinner ? 0 : 8),
+    final p = context.palette;
+    return Container(
+      decoration: BoxDecoration(
+        color: p.card,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        border: Border.all(color: p.borderStrong),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        children: [
+          for (final t in MealType.values)
+            Expanded(
               child: Semantics(
                 button: true,
                 selected: t == selected,
-                label: t.label(l10n),
-                excludeSemantics: true,
-                child: Material(
-                  color: t == selected
-                      ? AppColors.primary
-                      : context.palette.card,
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                    onTap: () => onSelect(t),
-                    child: Container(
-                      height: 44,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppRadius.pill),
-                        border: Border.all(
-                          color: t == selected
-                              ? AppColors.primary
-                              : context.palette.border,
-                        ),
-                      ),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          t.label(l10n),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
+                child: InkWell(
+                  onTap: () => onSelect(t),
+                  child: Container(
+                    height: 44,
+                    color: t == selected
+                        ? p.chipSelectedBg
+                        : Colors.transparent,
+                    alignment: Alignment.center,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _icon(t),
+                            size: 18,
                             color: t == selected
-                                ? Colors.white
-                                : context.palette.textPrimary,
+                                ? p.chipSelectedFg
+                                : p.textSecondary,
                           ),
-                        ),
+                          const SizedBox(width: 6),
+                          Text(
+                            t.label(l10n),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: t == selected
+                                  ? p.chipSelectedFg
+                                  : p.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// Rounded dropdown, only built when a university has several cafeterias.
+/// "조식 · 천원의 아침밥" with the price and hours FROM THE DATA (never an
+/// assumed ₩1,000). Shown on the breakfast tab only.
+class BreakfastProgramCard extends StatelessWidget {
+  const BreakfastProgramCard({super.key, this.priceKrw, this.start, this.end});
+
+  final int? priceKrw;
+  final String? start;
+  final String? end;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: p.accentSoft,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.wb_twilight_rounded, color: p.accentStrong),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.mealBreakfastProgram,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: p.accentStrong,
+                  ),
+                ),
+                if (start != null && end != null)
+                  Text(
+                    l10n.mealServingTime(start!, end!),
+                    style: AppText.caption(context).copyWith(fontSize: 13),
+                  ),
+              ],
+            ),
+          ),
+          if (priceKrw != null)
+            Text(
+              l10n.mealPrice(priceKrw!),
+              style: AppText.numeric(
+                size: 16,
+                weight: FontWeight.w700,
+              ).copyWith(color: p.accentStrong),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class CafeteriaSelector extends StatelessWidget {
   const CafeteriaSelector({
     super.key,
@@ -351,14 +411,6 @@ class MealCard extends StatelessWidget {
   const MealCard({super.key, required this.meal});
 
   final CafeteriaMeal meal;
-
-  String _kindLabel(AppLocalizations l10n, MenuItemKind k) => switch (k) {
-    MenuItemKind.main => l10n.mealKindMain,
-    MenuItemKind.side => l10n.mealKindSide,
-    MenuItemKind.soup => l10n.mealKindSoup,
-    MenuItemKind.rice => l10n.mealKindRice,
-    MenuItemKind.other => '',
-  };
 
   Future<void> _openSource(BuildContext context) async {
     final uri = Uri.tryParse(meal.sourceUrl ?? '');
@@ -442,46 +494,41 @@ class MealCard extends StatelessWidget {
                 ],
               ),
             ),
-          for (final item in meal.items)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (item.kind != MenuItemKind.other)
-                    Container(
-                      margin: const EdgeInsets.only(right: 8, top: 1),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: context.palette.accentFaint,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _kindLabel(l10n, item.kind),
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w700,
-                          color: context.palette.accentStrong,
-                        ),
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      item.displayName(locale),
-                      style: AppText.body.copyWith(
-                        fontSize: 15,
-                        fontWeight: item.kind == MenuItemKind.main
-                            ? FontWeight.w800
-                            : FontWeight.w500,
-                      ),
+          // V5 menu chips: the main dish in the accent tint, sides neutral.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final item in meal.items)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: item.kind == MenuItemKind.main
+                        ? context.palette.accentSoft
+                        : context.palette.fillMuted,
+                    borderRadius: BorderRadius.circular(10),
+                    border: item.kind == MenuItemKind.main
+                        ? null
+                        : Border.all(color: context.palette.border),
+                  ),
+                  child: Text(
+                    item.displayName(locale),
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: item.kind == MenuItemKind.main
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: item.kind == MenuItemKind.main
+                          ? context.palette.accentStrong
+                          : context.palette.textPrimary,
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           Divider(height: 1, color: context.palette.border),
           const SizedBox(height: 8),

@@ -482,7 +482,7 @@
       }
     }
   },
-  "mealEmptyTitle": "등록된 학식 메뉴가 없어요.",
+  "mealEmptyTitle": "등록된 식단 정보가 없습니다.",
   "mealNotCollectedWeek": "이 주의 학식 정보는 아직 등록되지 않았어요.",
   "mealNotCollectedHint": "공식 정보를 확인하면 이곳에 표시돼요.",
   "mealClosedTitle": "이 시간에는 운영하지 않아요",
@@ -996,5 +996,18 @@
         "format": "decimalPattern"
       }
     }
-  }
+  },
+  "mealBreakfastProgram": "조식 · 천원의 아침밥",
+  "mealHeading": "{day} {meal} 학식",
+  "@mealHeading": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealDayTomorrow": "내일"
 }

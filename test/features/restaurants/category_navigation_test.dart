@@ -599,7 +599,7 @@ void main() {
   });
 
   group('Theme and localization', () {
-    testWidgets('light background is pure white, dark is charcoal', (
+    testWidgets('light background is the V5 warm page, dark is charcoal', (
       tester,
     ) async {
       await openHome(
@@ -616,7 +616,7 @@ void main() {
       expect(
         Theme.of(tester.element(find.byType(RestaurantCategoryScreen)))
             .scaffoldBackgroundColor,
-        const Color(0xFFFFFFFF),
+        const Color(0xFFF6F5F3),
       );
       expect(light, isNotNull);
     });
@@ -630,7 +630,7 @@ void main() {
       expect(
         Theme.of(tester.element(find.byType(RestaurantCategoryScreen)))
             .scaffoldBackgroundColor,
-        const Color(0xFF121212),
+        const Color(0xFF151413),
       );
       expect(tester.takeException(), isNull);
     });

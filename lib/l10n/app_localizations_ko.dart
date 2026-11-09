@@ -756,7 +756,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get mealEmptyTitle => '등록된 학식 메뉴가 없어요.';
+  String get mealEmptyTitle => '등록된 식단 정보가 없습니다.';
 
   @override
   String get mealNotCollectedWeek => '이 주의 학식 정보는 아직 등록되지 않았어요.';
@@ -1543,4 +1543,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
     return '$priceString원';
   }
+
+  @override
+  String get mealBreakfastProgram => '조식 · 천원의 아침밥';
+
+  @override
+  String mealHeading(String day, String meal) {
+    return '$day $meal 학식';
+  }
+
+  @override
+  String get mealDayTomorrow => '내일';
 }

@@ -70,7 +70,7 @@ class HomeChipRow extends ConsumerWidget {
       children: [
         _Chip(
           onTap: () => showOriginSheet(context),
-          background: p.fillMuted,
+          background: p.card,
           children: [
             Icon(Icons.place_outlined, size: 19, color: p.rustText),
             const SizedBox(width: 8),
@@ -153,7 +153,7 @@ class _Chip extends StatelessWidget {
     color: background,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: context.palette.hairline),
+      side: BorderSide(color: context.palette.borderStrong),
     ),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),

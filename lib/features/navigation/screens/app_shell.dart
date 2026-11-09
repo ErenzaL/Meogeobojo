@@ -6,7 +6,9 @@ import '../../home/screens/home_screen.dart';
 import '../../map/screens/map_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../records/screens/records_screen.dart';
+import '../../../core/widgets/responsive.dart';
 import '../providers/shell_tab_provider.dart';
+import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
 
 /// Persistent five-tab shell. Tabs live in an [IndexedStack] so each keeps
@@ -22,8 +24,8 @@ class AppShell extends ConsumerStatefulWidget {
 class _AppShellState extends ConsumerState<AppShell> {
   static const _builders = <WidgetBuilder>[
     _home,
-    _community,
     _map,
+    _community,
     _records,
     _profile,
   ];
@@ -45,29 +47,48 @@ class _AppShellState extends ConsumerState<AppShell> {
     final metrics = FloatingNavMetrics.of(mq);
     final keyboardOpen = mq.viewInsets.bottom > 0;
 
+    final tabs = IndexedStack(
+      index: index,
+      children: [
+        for (var i = 0; i < _builders.length; i++)
+          _visited.contains(i)
+              ? _builders[i](context)
+              : const SizedBox.shrink(),
+      ],
+    );
+
+    // Wide windows (desktop browsers): header on top, no bottom bar.
+    if (mq.size.width >= Breakpoints.desktop) {
+      return Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Column(
+          children: [
+            const WebHeader(),
+            Expanded(
+              child: MediaQuery(
+                data: mq.copyWith(padding: mq.padding.copyWith(bottom: 24)),
+                child: tabs,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      // The tab screens extend behind the floating bar; the keyboard must not
-      // resize or push the shell (the bar simply steps aside below).
+      // The tab screens extend behind the bar; the keyboard must not resize or
+      // push the shell (the bar simply steps aside below).
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           // Tab screens see the bar's footprint as bottom padding, so
-          // SafeArea / scroll padding keep content clear of it, while a
-          // screen that wants to (Home, the map) can draw underneath.
+          // SafeArea / scroll padding keep content clear of it.
           Positioned.fill(
             child: MediaQuery(
               data: mq.copyWith(
                 padding: mq.padding.copyWith(bottom: metrics.reservedBottom),
               ),
-              child: IndexedStack(
-                index: index,
-                children: [
-                  for (var i = 0; i < _builders.length; i++)
-                    _visited.contains(i)
-                        ? _builders[i](context)
-                        : const SizedBox.shrink(),
-                ],
-              ),
+              child: tabs,
             ),
           ),
           Positioned(
@@ -83,17 +104,10 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 160),
                   opacity: keyboardOpen ? 0 : 1,
-                  // Capped so the capsule stays phone-sized on wide screens.
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: FloatingNavBar(
-                        index: index,
-                        metrics: metrics,
-                        onTap: (i) =>
-                            ref.read(shellTabProvider.notifier).select(i),
-                      ),
-                    ),
+                  child: FloatingNavBar(
+                    index: index,
+                    metrics: metrics,
+                    onTap: (i) => ref.read(shellTabProvider.notifier).select(i),
                   ),
                 ),
               ),

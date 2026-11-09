@@ -31,7 +31,7 @@ class PillChip extends StatelessWidget {
         color: selected ? p.chipSelectedBg : p.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: selected ? p.chipSelectedBg : p.hairline),
+          side: BorderSide(color: selected ? p.chipSelectedBg : p.borderStrong),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),

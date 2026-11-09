@@ -12,27 +12,30 @@ abstract final class AppSpacing {
 }
 
 abstract final class AppRadius {
-  static const double card = 20;
+  static const double card = 16;
+
+  /// V5 buttons and inputs.
+  static const double control = 12;
   static const double pill = 999;
-  static const double sheet = 28;
+  static const double sheet = 20;
 }
 
 /// Text styles. Colourless ones inherit the theme's text colour; [caption] and
 /// [link] are secondary text, so their colour comes from the palette.
 abstract final class AppText {
   static const heroTitle = TextStyle(
-    fontSize: 30,
+    fontSize: 26,
     height: 1.25,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -0.5,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.4,
   );
   static const sectionTitle = TextStyle(
-    fontSize: 19,
-    fontWeight: FontWeight.w800,
-    letterSpacing: -0.3,
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    letterSpacing: -0.2,
   );
-  static const title = TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
-  static const body = TextStyle(fontSize: 14, height: 1.4);
+  static const title = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+  static const body = TextStyle(fontSize: 15, height: 1.4);
 
   /// Times and prices (19:01, ₩5,100): monospaced, tabular digits so they
   /// line up and do not jitter when a minute ticks over.
@@ -48,17 +51,17 @@ abstract final class AppText {
     );
   }
 
-  static TextStyle caption(BuildContext context) => TextStyle(
-    fontSize: 12,
-    height: 1.3,
-    color: context.palette.textSecondary,
-  );
+  static TextStyle caption(BuildContext context) =>
+      TextStyle(fontSize: 12, height: 1.3, color: context.palette.textMuted);
 
   static TextStyle link(BuildContext context) => TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w600,
     color: context.palette.textSecondary,
   );
+
+  /// Pretendard, the V5 typeface.
+  static const fontFamily = 'Pretendard';
 }
 
 ThemeData buildLightTheme() => _build(Brightness.light, AppPalette.light);
@@ -73,8 +76,8 @@ ThemeData _build(Brightness brightness, AppPalette p) {
         seedColor: AppColors.primary,
         brightness: brightness,
       ).copyWith(
-        primary: p.accent,
-        onPrimary: AppColors.textOnPrimary,
+        primary: p.rust,
+        onPrimary: p.onRust,
         primaryContainer: p.accentSoft,
         onPrimaryContainer: p.accentStrong,
         secondary: p.peach,
@@ -96,6 +99,7 @@ ThemeData _build(Brightness brightness, AppPalette p) {
       );
   final base = ThemeData(brightness: brightness, useMaterial3: true);
   final text = base.textTheme.apply(
+    fontFamily: AppText.fontFamily,
     bodyColor: p.textPrimary,
     displayColor: p.textPrimary,
   );
@@ -104,6 +108,7 @@ ThemeData _build(Brightness brightness, AppPalette p) {
 
   return ThemeData(
     useMaterial3: true,
+    fontFamily: AppText.fontFamily,
     brightness: brightness,
     colorScheme: scheme,
     textTheme: text,
@@ -145,9 +150,9 @@ ThemeData _build(Brightness brightness, AppPalette p) {
       contentTextStyle: AppText.body.copyWith(color: p.textPrimary),
     ),
     bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: p.background,
+      backgroundColor: p.card,
       surfaceTintColor: Colors.transparent,
-      modalBackgroundColor: p.background,
+      modalBackgroundColor: p.card,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.sheet),
@@ -162,16 +167,14 @@ ThemeData _build(Brightness brightness, AppPalette p) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        // The brand orange fill, identical in both themes.
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.textOnPrimary,
-        disabledBackgroundColor: p.surfaceAlt,
-        disabledForegroundColor: p.textSecondary,
+        // V5: filled accent, 48px high, 12px radius (not a pill).
+        backgroundColor: p.rust,
+        foregroundColor: p.onRust,
+        disabledBackgroundColor: p.rust.withValues(alpha: 0.4),
+        disabledForegroundColor: p.onRust.withValues(alpha: 0.9),
         minimumSize: const Size(0, 48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-        ),
-        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        shape: round(AppRadius.control),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -180,19 +183,47 @@ ThemeData _build(Brightness brightness, AppPalette p) {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: p.textPrimary,
-        side: BorderSide(color: p.border),
+        backgroundColor: p.card,
+        side: BorderSide(color: p.borderStrong),
+        minimumSize: const Size(0, 48),
+        shape: round(AppRadius.control),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: p.card,
+      hintStyle: TextStyle(color: p.textMuted),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: p.borderStrong),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: p.borderStrong),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: BorderSide(color: p.rust, width: 1.5),
       ),
     ),
     switchTheme: SwitchThemeData(
-      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      // V5: ink track when on, thumb stays light.
+      thumbColor: WidgetStatePropertyAll(
+        brightness == Brightness.dark ? p.card : Colors.white,
+      ),
       trackColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected) ? p.accent : p.surfaceAlt,
+        (s) =>
+            s.contains(WidgetState.selected) ? p.chipSelectedBg : p.fillMuted,
       ),
       trackOutlineColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.selected) ? p.accent : p.border,
+        (s) => s.contains(WidgetState.selected)
+            ? p.chipSelectedBg
+            : p.borderStrong,
       ),
     ),
-    progressIndicatorTheme: ProgressIndicatorThemeData(color: p.accent),
+    progressIndicatorTheme: ProgressIndicatorThemeData(color: p.rust),
     textSelectionTheme: TextSelectionThemeData(
       cursorColor: p.accent,
       selectionColor: p.accent.withValues(alpha: 0.28),

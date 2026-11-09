@@ -143,7 +143,7 @@ class OutlineActionButton extends StatelessWidget {
         backgroundColor: filled ? p.fillMuted : null,
         foregroundColor: p.textPrimary,
         minimumSize: const Size.fromHeight(52),
-        side: BorderSide(color: filled ? Colors.transparent : p.hairline),
+        side: BorderSide(color: filled ? Colors.transparent : p.borderStrong),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),

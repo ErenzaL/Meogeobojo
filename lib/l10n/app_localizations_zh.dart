@@ -752,7 +752,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get mealEmptyTitle => '暂无已登记的食堂菜单。';
+  String get mealEmptyTitle => '暂无登记的菜单信息。';
 
   @override
   String get mealNotCollectedWeek => '本周的食堂信息尚未登记。';
@@ -1533,4 +1533,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
     return '$priceString韩元';
   }
+
+  @override
+  String get mealBreakfastProgram => '早餐 · 千元早餐';
+
+  @override
+  String mealHeading(String day, String meal) {
+    return '$day$meal食堂';
+  }
+
+  @override
+  String get mealDayTomorrow => '明天';
 }

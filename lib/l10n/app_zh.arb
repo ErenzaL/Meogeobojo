@@ -221,7 +221,7 @@
   "mealKindStaff": "教职工食堂",
   "mealKindOther": "食堂",
   "mealCafeteriaNth": "{kind} {number}",
-  "mealEmptyTitle": "暂无已登记的食堂菜单。",
+  "mealEmptyTitle": "暂无登记的菜单信息。",
   "mealNotCollectedWeek": "本周的食堂信息尚未登记。",
   "mealNotCollectedHint": "确认官方信息后会显示在这里。",
   "mealClosedTitle": "此时段不供餐",
@@ -447,5 +447,8 @@
   "restaurantAboutTitle": "简介",
   "restaurantMenuTitle": "菜单",
   "restaurantMenuSoldOut": "已售罄",
-  "restaurantPriceWon": "{price}韩元"
+  "restaurantPriceWon": "{price}韩元",
+  "mealBreakfastProgram": "早餐 · 千元早餐",
+  "mealHeading": "{day}{meal}食堂",
+  "mealDayTomorrow": "明天"
 }

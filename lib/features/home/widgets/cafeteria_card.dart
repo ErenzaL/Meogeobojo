@@ -18,7 +18,11 @@ import 'price_comparison.dart';
 /// "오늘의 학식": the next meal that has not ended, then how its price
 /// compares with eating outside.
 class CafeteriaCard extends ConsumerWidget {
-  const CafeteriaCard({super.key});
+  const CafeteriaCard({super.key, this.stackButtons = false});
+
+  /// Stack the two buttons vertically (narrow desktop column). Phones keep
+  /// them side by side.
+  final bool stackButtons;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -97,33 +101,40 @@ class CafeteriaCard extends ConsumerWidget {
           const SizedBox(height: 14),
           const PriceComparison(),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: OutlineActionButton(
-                  filled: true,
-                  icon: Icons.calendar_view_week_rounded,
-                  label: l10n.homeMealWeekly,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const CampusMealScreen(),
-                    ),
+          Builder(
+            builder: (context) {
+              final weekly = OutlineActionButton(
+                filled: true,
+                icon: Icons.calendar_view_week_rounded,
+                label: l10n.homeMealWeekly,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CampusMealScreen(),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlineActionButton(
-                  icon: Icons.compare_arrows_rounded,
-                  label: l10n.homeMealCompare,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const OutsideCompareScreen(),
-                    ),
+              );
+              final compare = OutlineActionButton(
+                icon: Icons.compare_arrows_rounded,
+                label: l10n.homeMealCompare,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const OutsideCompareScreen(),
                   ),
                 ),
-              ),
-            ],
+              );
+              if (stackButtons) {
+                return Column(
+                  children: [weekly, const SizedBox(height: 10), compare],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: weekly),
+                  const SizedBox(width: 10),
+                  Expanded(child: compare),
+                ],
+              );
+            },
           ),
         ],
       ),

@@ -22,7 +22,7 @@ class HomeMealSource {
   final List<CafeteriaMeal> meals;
 }
 
-final homeMealSourceProvider = FutureProvider.autoDispose<HomeMealSource>((
+final homeMealSourceProvider = FutureProvider<HomeMealSource>((
   ref,
 ) async {
   // Only the calendar day matters here, so the minute tick does not refetch.
@@ -46,7 +46,7 @@ final homeMealSourceProvider = FutureProvider.autoDispose<HomeMealSource>((
 });
 
 /// The meal the card shows, re-evaluated every minute as meals end.
-final homeNextMealProvider = Provider.autoDispose<AsyncValue<NextMeal?>>((ref) {
+final homeNextMealProvider = Provider<AsyncValue<NextMeal?>>((ref) {
   final now = ref.watch(seoulNowProvider);
   return ref
       .watch(homeMealSourceProvider)
@@ -54,7 +54,7 @@ final homeNextMealProvider = Provider.autoDispose<AsyncValue<NextMeal?>>((ref) {
 });
 
 /// Mean price of the cafeteria's lunches that have a price; null if none.
-final cafeteriaLunchAverageProvider = Provider.autoDispose<int?>((ref) {
+final cafeteriaLunchAverageProvider = Provider<int?>((ref) {
   final source = ref.watch(homeMealSourceProvider).value;
   if (source == null) return null;
   final prices = [

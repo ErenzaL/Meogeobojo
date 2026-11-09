@@ -83,10 +83,17 @@ class _AppShellState extends ConsumerState<AppShell> {
                 child: AnimatedOpacity(
                   duration: const Duration(milliseconds: 160),
                   opacity: keyboardOpen ? 0 : 1,
-                  child: FloatingNavBar(
-                    index: index,
-                    metrics: metrics,
-                    onTap: (i) => ref.read(shellTabProvider.notifier).select(i),
+                  // Capped so the capsule stays phone-sized on wide screens.
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 560),
+                      child: FloatingNavBar(
+                        index: index,
+                        metrics: metrics,
+                        onTap: (i) =>
+                            ref.read(shellTabProvider.notifier).select(i),
+                      ),
+                    ),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/responsive.dart';
 import '../providers/home_providers.dart';
 import '../widgets/alternatives_section.dart';
 import '../widgets/cafeteria_card.dart';
@@ -41,42 +42,66 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             Padding(
               padding: pad,
-              child: recs.when(
-                loading: () => const RecsSkeleton(),
-                error: (e, _) => RecsError(error: e),
-                data: (data) => data == null
-                    ? const RecsEmpty()
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Changing the pick fades the new card in.
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 260),
-                            switchInCurve: Curves.easeOutCubic,
-                            transitionBuilder: (child, animation) =>
-                                FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: Tween(
-                                      begin: const Offset(0.04, 0),
-                                      end: Offset.zero,
-                                    ).animate(animation),
-                                    child: child,
-                                  ),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final recsColumn = recs.when(
+                    loading: () => const RecsSkeleton(),
+                    error: (e, _) => RecsError(error: e),
+                    data: (data) => data == null
+                        ? const RecsEmpty()
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Changing the pick fades the new card in.
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 260),
+                                switchInCurve: Curves.easeOutCubic,
+                                transitionBuilder: (child, animation) =>
+                                    FadeTransition(
+                                      opacity: animation,
+                                      child: SlideTransition(
+                                        position: Tween(
+                                          begin: const Offset(0.04, 0),
+                                          end: Offset.zero,
+                                        ).animate(animation),
+                                        child: child,
+                                      ),
+                                    ),
+                                child: HeroCard(
+                                  key: ValueKey(data.hero.restaurant.kakaoId),
+                                  recs: data,
                                 ),
-                            child: HeroCard(
-                              key: ValueKey(data.hero.restaurant.kakaoId),
-                              recs: data,
-                            ),
+                              ),
+                              const SizedBox(height: 28),
+                              AlternativesSection(recs: data),
+                            ],
                           ),
-                          const SizedBox(height: 28),
-                          AlternativesSection(recs: data),
-                        ],
-                      ),
+                  );
+                  // Tablet / desktop: recommendations left, cafeteria right.
+                  if (box.maxWidth >= Breakpoints.homeTwoColumn - 2 * 20) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 3, child: recsColumn),
+                        const SizedBox(width: 24),
+                        const Expanded(
+                          flex: 2,
+                          child: CafeteriaCard(stackButtons: true),
+                        ),
+                      ],
+                    );
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      recsColumn,
+                      const SizedBox(height: 28),
+                      const CafeteriaCard(),
+                    ],
+                  );
+                },
               ),
             ),
-            const SizedBox(height: 28),
-            const Padding(padding: pad, child: CafeteriaCard()),
           ],
         ),
       ),

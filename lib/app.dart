@@ -7,6 +7,7 @@ import 'core/l10n/language_controller.dart';
 import 'core/l10n/l10n.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/widgets/responsive.dart';
 import 'features/auth/widgets/auth_flow_host.dart';
 import 'features/navigation/screens/app_shell.dart';
 import 'main.dart' show SplashScreen;
@@ -35,7 +36,7 @@ class MeogeobojoApp extends ConsumerWidget {
         value: Theme.of(context).brightness == Brightness.dark
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
-        child: child ?? const SizedBox.shrink(),
+        child: AppFrame(child: child ?? const SizedBox.shrink()),
       ),
       locale: language.locale,
       supportedLocales: AppLocalizations.supportedLocales,

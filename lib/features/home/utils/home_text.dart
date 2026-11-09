@@ -23,7 +23,10 @@ String reasonText(AppLocalizations l10n, RecommendReason r, int walkMinutes) =>
     };
 
 /// The advantage line of an alternative; its own reason when it has none.
-String comparisonText(
+///
+/// Null when the only thing to say is the walking time, which the status line
+/// below already shows.
+String? comparisonText(
   AppLocalizations l10n,
   Comparison c,
   RankedRestaurant other,
@@ -32,6 +35,7 @@ String comparisonText(
   CompareKind.cheaper => l10n.homeCmpCheaper(c.value),
   CompareKind.higherRating => l10n.homeCmpRating,
   CompareKind.opensLater => l10n.homeCmpLater,
+  CompareKind.none when other.reason.kind == ReasonKind.walk => null,
   CompareKind.none => reasonText(l10n, other.reason, other.walkMinutes),
 };
 

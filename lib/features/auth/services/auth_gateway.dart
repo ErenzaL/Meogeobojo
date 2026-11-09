@@ -13,6 +13,15 @@ const kAuthCallbackScheme = 'com.meogeobojo.app';
 
 const _requestTimeout = Duration(seconds: 20);
 
+/// Where Supabase sends the user back to after OAuth, email confirmation and
+/// password recovery. Mobile uses the app's custom scheme; a browser cannot
+/// open that, so web returns to the site itself ([origin] + "/"). The web URL
+/// must be added to Supabase Auth → URL Configuration → Redirect URLs.
+String authRedirectUrl({required bool web, required String origin}) =>
+    web ? (origin.endsWith('/') ? origin : '$origin/') : kAuthRedirectUrl;
+
+String _redirect() => authRedirectUrl(web: kIsWeb, origin: Uri.base.origin);
+
 /// Thin seam over `Supabase.instance.client.auth` so the controller and the
 /// screens can be tested without a network. Deep links are NOT handled here:
 /// supabase_flutter observes them itself and surfaces the result on [events].
@@ -72,11 +81,7 @@ class SupabaseAuthGateway implements AuthGateway {
     required String email,
     required String password,
   }) => _auth
-      .signUp(
-        email: email,
-        password: password,
-        emailRedirectTo: kAuthRedirectUrl,
-      )
+      .signUp(email: email, password: password, emailRedirectTo: _redirect())
       .timeout(_requestTimeout);
 
   @override
@@ -103,23 +108,23 @@ class SupabaseAuthGateway implements AuthGateway {
     // path email-confirmation and password-recovery links use).
     return _auth.signInWithOAuth(
       OAuthProvider.kakao,
-      redirectTo: kAuthRedirectUrl,
-      authScreenLaunchMode: LaunchMode.inAppBrowserView,
+      redirectTo: _redirect(),
+      // Web: leave the page for Kakao in the same tab and come back to the
+      // site; the SDK picks the PKCE code up from the URL on load.
+      authScreenLaunchMode: kIsWeb
+          ? LaunchMode.platformDefault
+          : LaunchMode.inAppBrowserView,
     );
   }
 
   @override
   Future<void> resendSignupEmail(String email) => _auth
-      .resend(
-        type: OtpType.signup,
-        email: email,
-        emailRedirectTo: kAuthRedirectUrl,
-      )
+      .resend(type: OtpType.signup, email: email, emailRedirectTo: _redirect())
       .timeout(_requestTimeout);
 
   @override
   Future<void> sendPasswordReset(String email) => _auth
-      .resetPasswordForEmail(email, redirectTo: kAuthRedirectUrl)
+      .resetPasswordForEmail(email, redirectTo: _redirect())
       .timeout(_requestTimeout);
 
   @override

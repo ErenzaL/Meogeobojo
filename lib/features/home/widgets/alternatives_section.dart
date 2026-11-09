@@ -147,6 +147,7 @@ class _AltRow extends ConsumerWidget {
     final nowMin = minutesOfDay(ref.watch(seoulNowProvider));
     final status = orderStatus(item, nowMin);
     final walk = l10n.homeWalkAbout(item.walkMinutes);
+    final comparison = comparisonText(l10n, compareAgainst(top, item), item);
 
     final (statusText, statusColor) = switch (status.kind) {
       OrderStatusKind.available => (l10n.homeStatusOrderable, p.statusOpen),
@@ -185,13 +186,15 @@ class _AltRow extends ConsumerWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    comparisonText(l10n, compareAgainst(top, item), item),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14.5, color: p.textSecondary),
-                  ),
+                  if (comparison != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      comparison,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 14.5, color: p.textSecondary),
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Text.rich(
                     TextSpan(

@@ -50,8 +50,12 @@ set role authenticated; select set_config('request.jwt.claims','{"sub":"aaaaaaaa
 do $$ begin
   assert (select count(*) from public.cafeteria_meals)=3, 'signed-in can read';
   begin insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, verified_at) values ('c1c1c1c1-0000-4000-8000-000000000001','2026-11-04','lunch','[{"name_ko":"hack"}]',now()); raise exception 'accepted'; exception when insufficient_privilege then null; end;
-  begin update public.campus_cafeterias set name_ko='hack'; raise exception 'accepted'; exception when insufficient_privilege then null; end;
-  begin delete from public.campus_cafeterias; raise exception 'accepted'; exception when insufficient_privilege then null; end;
+  -- Signed-in users hold DML grants since the admin migration, so RLS (not a
+  -- missing grant) stops them: the statements run but touch 0 rows.
+  declare n int; begin
+    update public.campus_cafeterias set name_ko='hack'; get diagnostics n = row_count; assert n = 0, 'update must touch 0 rows';
+    delete from public.campus_cafeterias; get diagnostics n = row_count; assert n = 0, 'delete must touch 0 rows';
+  end;
   raise notice 'OK authenticated: read-only too (only administrators can change menus)';
 end $$;
 reset role;

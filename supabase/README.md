@@ -33,7 +33,8 @@ Apply **in this order** via Dashboard → SQL Editor (paste each file), or `supa
 6. `20261101000400_fix_table_grants.sql` — hosted default privileges grant clients nothing: `SELECT` on `universities`, and removal of unused `TRUNCATE/REFERENCES/TRIGGER/MAINTAIN`
 7. `20261101000500_nickname_and_companions.sql` — `profiles.nickname_is_custom` + `set_nickname()`, `user_preferences.companion_types[]`, `save_user_preferences` re-created with `p_companion_types` (old signature dropped in the same transaction)
 8. `20261101000600_campus_cafeterias.sql` — 학식: `campus_cafeterias`, `cafeteria_meals` (public read-only; administrators write via `supabase/cafeteria/`). **No rows are seeded.**
-9. `20261031000300_phase2_user_tables.sql` — **optional**, future features only (no longer defines `user_preferences`; `restaurant_menus` now has `name_ko/en/zh`, `description_ko/en/zh`)
+9. `20261031000300_phase2_user_tables.sql` — future-feature tables (`student_reviews`, `restaurant_menus`, ...). **Now required** by the admin migration below.
+10. `20261109000100_admin_foundation.sql` — admin roles, audit log, restaurant overrides, menu / cafeteria / university administration, review moderation + reports, account status, app content, `restaurant-images` bucket (see "Admin backend")
 
 All files are additive and idempotent; none drops or rewrites existing data.
 
@@ -54,3 +55,28 @@ Kakao Local API results may not be permanently stored, and their current retenti
 
 ### Email auth
 Favorites need a signed-in user. Enable the Email provider in Auth settings; if "Confirm email" is on, sign-up shows a "check your inbox" message.
+
+
+## Admin backend (`20261109000100_admin_foundation.sql`)
+
+Requires migrations 1, 3 (phase2), 8 and the profiles migration first. Idempotent.
+
+**Roles** (`admin_roles`): `moderator` < `admin` < `super_admin`. Authorization is enforced by RLS through `public.has_role('<min>')`; the React app's route guard is only a convenience. Clients can read only their own role row and can never write it: roles change only through `admin_grant_role` / `admin_revoke_role` (super_admin) or the SQL editor. The last super_admin cannot be revoked.
+
+| Capability | moderator | admin | super_admin |
+|---|---|---|---|
+| Read drafts, reports, all reviews | ✔ | ✔ | ✔ |
+| Moderate reviews / resolve reports (reason required, audited) | ✔ | ✔ | ✔ |
+| Edit restaurants, menus, meals, universities, content | | ✔ | ✔ |
+| Read audit log, list profiles, suspend normal users | | ✔ | ✔ |
+| Delete restaurants / universities, manage roles, act on staff accounts | | | ✔ |
+
+**Bootstrap the first super_admin** (SQL editor, once; the user must already have signed in):
+```sql
+insert into public.admin_roles (user_id, role)
+select id, 'super_admin' from auth.users where email = 'you@example.com';
+```
+
+**Data model notes**: restaurants are not stored; `restaurant_overrides` holds what we add or override per `kakao_place_id` (null for hand-made places). `visibility`: `draft` (admin only), `published`, `hidden` / `archived` (the app must hide the place). Deleting a university removes only its links. `cafeteria_meals.badge` carries labels such as `천원의 아침밥`, only when the source says so. Menu changes and moderation state are public through the existing read policies.
+
+**Tests**: `supabase/tests/admin_test.sql` (run by `run_local.sh`) covers anonymous, ordinary user, moderator, admin and super_admin, including negative cases (self-granting roles, writing data, calling privileged functions, editing moderation columns, reading the audit log).

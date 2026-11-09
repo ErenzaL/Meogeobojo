@@ -109,3 +109,12 @@ describe('restaurant editing', () => {
     expect(await screen.findByText('이미 등록된 카카오 장소 ID예요. 기존 식당을 편집해 주세요.')).toBeInTheDocument()
   })
 })
+
+describe('recommendation monitoring', () => {
+  it('says plainly when no telemetry exists (no invented numbers)', async () => {
+    fake.signInAs('admin')
+    fake.respond('rpc:admin_recommendation_stats', { data: [] })
+    open('/recommendations')
+    expect(await screen.findByText('아직 기록된 추천 요청이 없어요.')).toBeInTheDocument()
+  })
+})

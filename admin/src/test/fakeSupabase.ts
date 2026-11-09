@@ -31,7 +31,7 @@ export function createFake() {
 
   const client = {
     from,
-    rpc: (name: string, args: unknown) => { rpcs.push({ name, args }); return Promise.resolve({ data: null, error: (responses.get(`rpc:${name}`) as Resp | undefined)?.error ?? null }) },
+    rpc: (name: string, args: unknown) => { rpcs.push({ name, args }); const r = responses.get(`rpc:${name}`) as Resp | undefined; return Promise.resolve({ data: r?.data ?? null, error: r?.error ?? null }) },
     storage: { from: () => ({ upload: async () => ({ error: null }), getPublicUrl: () => ({ data: { publicUrl: 'https://x/y.png' } }) }) },
     auth: {
       getSession: async () => ({ data: { session } }),

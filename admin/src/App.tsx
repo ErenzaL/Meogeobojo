@@ -8,6 +8,7 @@ import ContentPage from '@/features/ContentPage'
 import MenusPage from '@/features/MenusPage'
 import ModerationPage from '@/features/ModerationPage'
 import OverviewPage from '@/features/OverviewPage'
+import RecommendationsPage from '@/features/RecommendationsPage'
 import RestaurantFormPage from '@/features/restaurants/RestaurantFormPage'
 import RestaurantsPage from '@/features/restaurants/RestaurantsPage'
 import SettingsPage from '@/features/SettingsPage'
@@ -39,6 +40,7 @@ export function AppRoutes() {
           <Route path="users" element={<UsersPage />} />
           <Route path="content" element={<ContentPage />} />
           <Route path="audit" element={<AuditPage />} />
+          <Route path="recommendations" element={<RecommendationsPage />} />
         </Route>
         <Route path="*" element={<div className="p-8 text-sm text-muted">페이지를 찾을 수 없어요.</div>} />
       </Route>

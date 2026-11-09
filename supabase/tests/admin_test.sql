@@ -178,3 +178,26 @@ do $$ declare u uuid := gen_random_uuid(); begin
   begin insert into public.restaurant_menus (name_ko, source) values ('orphan', 'x'); raise exception 'accepted#30'; exception when check_violation then null; end;
   raise notice 'OK integrity: deleting a university never deletes restaurants; menus need an owner';
 end $$;
+
+-- ===== recommendation telemetry =====
+insert into public.recommendation_requests (model_version, is_mock, status, latency_ms) values
+  ('mock-0', true, 'ok', 100), ('mock-0', true, 'ok', 200), ('mock-0', true, 'error', null);
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-00000000000d","role":"authenticated"}', false);
+do $$ begin
+  assert (select count(*) from public.recommendation_requests) = 0, 'ordinary user reads no telemetry';
+  begin insert into public.recommendation_requests (model_version, status) values ('x', 'ok'); raise exception 'accepted#T1'; exception when insufficient_privilege then null; end;
+  begin perform * from public.admin_recommendation_stats(7); raise exception 'accepted#T2'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"b0000000-0000-4000-8000-00000000000b","role":"authenticated"}', false);
+do $$ declare s record; begin
+  begin insert into public.recommendation_requests (model_version, status) values ('x', 'ok'); raise exception 'accepted#T3'; exception when insufficient_privilege then null; end;  -- even admins cannot fabricate rows
+  select * into s from public.admin_recommendation_stats(7);
+  assert s.total = 3 and s.errors = 1 and s.mock_requests = 3, 'counts';
+  assert s.avg_latency_ms = 150.0, 'average latency over ok requests only';
+  assert s.latest_model_version = 'mock-0' and s.latest_is_mock, 'mock is labelled as a mock';
+  raise notice 'OK recommendation telemetry: server-written only, admin-readable aggregates, mock flagged';
+end $$;
+reset role;

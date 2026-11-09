@@ -26,7 +26,11 @@ import '../../../core/theme/app_colors.dart';
 /// when the map tab is first opened, so an SDK problem can never affect
 /// startup or the Home screen. Invalidate to retry.
 final kakaoMapInitProvider = FutureProvider<void>((ref) async {
-  await KakaoMapsFlutter.init(Env.kakaoNativeAppKey);
+  // Web needs the JavaScript key (and no native key); mobile the opposite.
+  await KakaoMapsFlutter.init(
+    kIsWeb ? null : Env.kakaoNativeAppKey,
+    webAPIKey: Env.kakaoJavascriptKey.isEmpty ? null : Env.kakaoJavascriptKey,
+  );
 });
 
 const _restaurantStyle = 'restaurant_pin';

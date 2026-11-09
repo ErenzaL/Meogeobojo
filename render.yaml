@@ -1,0 +1,21 @@
+# Render Blueprint for the Flutter Web app (static site).
+# Secrets are set in the Render dashboard (sync: false), never committed.
+services:
+  - type: web
+    runtime: static
+    name: meogeobojo-web
+    buildCommand: bash scripts/render_build.sh
+    staticPublishPath: build/web
+    envVars:
+      - key: FLUTTER_VERSION
+        value: 3.47.8
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY   # the publishable/anon key ONLY
+        sync: false
+      - key: KAKAO_JAVASCRIPT_KEY       # web map; register the site domain in Kakao
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

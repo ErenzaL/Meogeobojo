@@ -10,7 +10,11 @@ import 'features/university/providers/university_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: '.env');
+  // Optional: web builds pass values with --dart-define and ship an empty
+  // placeholder `.env`, and tests have none.
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {}
   await Supabase.initialize(
     url: Env.supabaseUrl,
     publishableKey: Env.supabasePublishableKey,

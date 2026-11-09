@@ -1,11 +1,11 @@
 {
-    "name": "meogeobojo",
-    "short_name": "meogeobojo",
+    "name": "먹어보조",
+    "short_name": "먹어보조",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "대학생을 위한 캠퍼스 맛집 가이드",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -5,33 +5,57 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// never be added: it lives in Supabase Secrets and is used by the
 /// `search_restaurants` Edge Function only.
 abstract final class Env {
-  static String get supabaseUrl => _require('SUPABASE_URL');
+  // Compile-time values (`--dart-define`). Used for the web build so that no
+  // `.env` content is published as a static asset; empty when not provided.
+  static const _defSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
+  static const _defSupabaseKey = String.fromEnvironment(
+    'SUPABASE_PUBLISHABLE_KEY',
+  );
+  static const _defKakaoNative = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
+  static const _defKakaoJs = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
+
+  static String get supabaseUrl => _require('SUPABASE_URL', _defSupabaseUrl);
   static String get supabasePublishableKey =>
-      _require('SUPABASE_PUBLISHABLE_KEY');
-  static String get kakaoNativeAppKey =>
-      dotenv.env['KAKAO_NATIVE_APP_KEY'] ?? '';
+      _require('SUPABASE_PUBLISHABLE_KEY', _defSupabaseKey);
+  static String get kakaoNativeAppKey => _defKakaoNative.isNotEmpty
+      ? _defKakaoNative
+      : _env('KAKAO_NATIVE_APP_KEY');
+
+  /// Kakao *JavaScript* key, used only by the web map. Public by design (the
+  /// browser needs it); Kakao restricts it to the domains registered for it.
+  static String get kakaoJavascriptKey =>
+      _defKakaoJs.isNotEmpty ? _defKakaoJs : _env('KAKAO_JAVASCRIPT_KEY');
 
   /// Public legal documents. Optional: when unset the app says the documents
   /// are not published yet instead of linking to an invented URL.
-  static Uri? get termsUrl => _optionalUrl('TERMS_URL');
-  static Uri? get privacyUrl => _optionalUrl('PRIVACY_URL');
+  static Uri? get termsUrl =>
+      _optionalUrl('TERMS_URL', const String.fromEnvironment('TERMS_URL'));
+  static Uri? get privacyUrl =>
+      _optionalUrl('PRIVACY_URL', const String.fromEnvironment('PRIVACY_URL'));
 
-  static Uri? _optionalUrl(String key) {
-    String? v;
-    try {
-      v = dotenv.env[key];
-    } catch (_) {
-      return null; // .env not loaded (tests) -> treated as unset
-    }
-    if (v == null || v.trim().isEmpty) return null;
+  static Uri? _optionalUrl(String key, String compileTime) {
+    final v = compileTime.isNotEmpty ? compileTime : _env(key);
+    if (v.trim().isEmpty) return null;
     final uri = Uri.tryParse(v.trim());
     return uri != null && uri.scheme == 'https' ? uri : null;
   }
 
-  static String _require(String key) {
-    final v = dotenv.env[key];
-    if (v == null || v.isEmpty) {
-      throw StateError('Missing $key in .env');
+  /// Value from the loaded `.env`, or '' when it is not loaded / not set.
+  static String _env(String key) {
+    try {
+      return dotenv.env[key] ?? '';
+    } catch (_) {
+      return ''; // .env not loaded (tests, web builds)
+    }
+  }
+
+  static String _require(String key, String compileTime) {
+    if (compileTime.isNotEmpty) return compileTime;
+    final v = _env(key);
+    if (v.isEmpty) {
+      throw StateError(
+        'Missing $key: set it in .env or pass --dart-define=$key=...',
+      );
     }
     return v;
   }

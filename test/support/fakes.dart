@@ -12,6 +12,8 @@ import 'package:meogeobojo/features/preferences/repositories/preferences_reposit
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
+import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
+import 'package:meogeobojo/features/restaurants/repositories/restaurant_override_repository.dart';
 import 'package:meogeobojo/features/restaurants/repositories/restaurant_repository.dart';
 import 'package:meogeobojo/features/university/models/university.dart';
 import 'package:meogeobojo/features/university/repositories/university_repository.dart';
@@ -350,6 +352,7 @@ CafeteriaMeal fakeMeal(
   String? start,
   String? end,
   String? source,
+  String? badge,
 }) => CafeteriaMeal(
   id: '$cafeteriaId-$date-${type.name}-$option',
   cafeteriaId: cafeteriaId,
@@ -363,6 +366,7 @@ CafeteriaMeal fakeMeal(
   startTime: start,
   endTime: end,
   sourceUrl: source,
+  badge: badge,
   verifiedAt: DateTime.utc(2026, 11, 2, 0),
 );
 
@@ -405,4 +409,27 @@ class FakeCampusMealRepository implements CampusMealRepository {
         )
         .toList();
   }
+}
+
+/// Stands in for what the admin dashboard wrote to `restaurant_overrides` /
+/// `restaurant_menus`. Mutate [overrides] / [menuItems] to simulate an edit.
+class FakeRestaurantOverrideRepository implements RestaurantOverrideRepository {
+  FakeRestaurantOverrideRepository({
+    Map<String, RestaurantOverride>? overrides,
+    Map<String, List<RestaurantMenuItem>>? menuItems,
+  }) : overrides = overrides ?? {},
+       menuItems = menuItems ?? {};
+
+  Map<String, RestaurantOverride> overrides;
+  Map<String, List<RestaurantMenuItem>> menuItems;
+
+  @override
+  Future<Map<String, RestaurantOverride>> forPlaces(List<String> ids) async => {
+    for (final id in ids)
+      if (overrides[id] != null) id: overrides[id]!,
+  };
+
+  @override
+  Future<List<RestaurantMenuItem>> menus(String kakaoId) async =>
+      menuItems[kakaoId] ?? const [];
 }

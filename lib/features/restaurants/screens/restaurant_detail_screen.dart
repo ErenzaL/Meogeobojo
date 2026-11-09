@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../favorites/widgets/favorite_button.dart';
 import '../models/restaurant.dart';
+import '../models/restaurant_override.dart';
+import '../providers/restaurant_providers.dart';
 import '../widgets/restaurant_photo_placeholder.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
@@ -17,7 +20,7 @@ Future<void> openRestaurantDetail(BuildContext context, Restaurant r) {
   );
 }
 
-class RestaurantDetailScreen extends StatelessWidget {
+class RestaurantDetailScreen extends ConsumerWidget {
   const RestaurantDetailScreen({super.key, required this.restaurant});
 
   final Restaurant restaurant;
@@ -33,9 +36,14 @@ class RestaurantDetailScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final r = restaurant;
+    // Admin-entered info (description, menus); null / empty when none.
+    final override = ref.watch(restaurantOverridesProvider).value?[r.kakaoId];
+    final menus =
+        ref.watch(restaurantMenusProvider(r.kakaoId)).value ?? const [];
+    final description = override?.description;
     final phone = r.phone.trim();
     return Scaffold(
       body: CustomScrollView(
@@ -86,11 +94,26 @@ class RestaurantDetailScreen extends StatelessWidget {
                         ? null
                         : () => _open(context, Uri(scheme: 'tel', path: phone)),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    l10n.restaurantDataNotice,
-                    style: AppText.caption(context),
-                  ),
+                  if (description != null) ...[
+                    const SizedBox(height: 16),
+                    Text(l10n.restaurantAboutTitle, style: AppText.title),
+                    const SizedBox(height: 6),
+                    Text(description, style: AppText.body),
+                  ],
+                  if (menus.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(l10n.restaurantMenuTitle, style: AppText.title),
+                    const SizedBox(height: 6),
+                    for (final m in menus) _MenuRow(item: m),
+                  ],
+                  // Only say "not provided" when an admin has added nothing.
+                  if (description == null && menus.isEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.restaurantDataNotice,
+                      style: AppText.caption(context),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: r.placeUrl == null
@@ -141,6 +164,55 @@ class _InfoRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  const _MenuRow({required this.item});
+
+  final RestaurantMenuItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final muted = AppText.caption(context).copyWith(fontSize: 13);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: AppText.body.copyWith(
+                    fontWeight: item.representative
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: item.available
+                        ? null
+                        : context.palette.textSecondary,
+                  ),
+                ),
+                if (item.description != null && item.description!.isNotEmpty)
+                  Text(item.description!, style: muted),
+                if (!item.available)
+                  Text(l10n.restaurantMenuSoldOut, style: muted),
+              ],
+            ),
+          ),
+          if (item.priceKrw != null) ...[
+            const SizedBox(width: 12),
+            Text(
+              l10n.restaurantPriceWon(item.priceKrw!),
+              style: AppText.numeric(size: 14.5, weight: FontWeight.w600),
+            ),
+          ],
+        ],
       ),
     );
   }

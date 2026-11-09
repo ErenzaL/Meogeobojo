@@ -984,5 +984,17 @@
   "condRestartTitle": "처음부터 다시 설정할까요?",
   "condRestartBody": "지금 조건과 출발 위치를 처음 상태로 되돌리고, 취향 설정을 다시 시작해요.",
   "condRestartAction": "다시 설정",
-  "condRestartGuestDone": "조건과 출발 위치를 처음 상태로 되돌렸어요."
+  "condRestartGuestDone": "조건과 출발 위치를 처음 상태로 되돌렸어요.",
+  "restaurantAboutTitle": "소개",
+  "restaurantMenuTitle": "메뉴",
+  "restaurantMenuSoldOut": "품절",
+  "restaurantPriceWon": "{price}원",
+  "@restaurantPriceWon": {
+    "placeholders": {
+      "price": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  }
 }

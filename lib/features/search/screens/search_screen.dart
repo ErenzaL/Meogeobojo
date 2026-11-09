@@ -69,6 +69,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               lng: origin.longitude,
               conditions: conditions,
               insights: insights,
+              hiddenIds: ref.watch(hiddenPlaceIdsProvider),
               nowMinutes: now.hour * 60 + now.minute,
             ))
               r.restaurant,

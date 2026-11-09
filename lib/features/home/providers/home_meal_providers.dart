@@ -22,9 +22,7 @@ class HomeMealSource {
   final List<CafeteriaMeal> meals;
 }
 
-final homeMealSourceProvider = FutureProvider<HomeMealSource>((
-  ref,
-) async {
+final homeMealSourceProvider = FutureProvider<HomeMealSource>((ref) async {
   // Only the calendar day matters here, so the minute tick does not refetch.
   final today = ref.watch(seoulNowProvider.select((n) => seoulDate(n)));
   final all = await ref.watch(campusCafeteriasProvider.future);

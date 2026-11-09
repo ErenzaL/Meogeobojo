@@ -1525,4 +1525,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get condRestartGuestDone => '조건과 출발 위치를 처음 상태로 되돌렸어요.';
+
+  @override
+  String get restaurantAboutTitle => '소개';
+
+  @override
+  String get restaurantMenuTitle => '메뉴';
+
+  @override
+  String get restaurantMenuSoldOut => '품절';
+
+  @override
+  String restaurantPriceWon(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '$priceString원';
+  }
 }

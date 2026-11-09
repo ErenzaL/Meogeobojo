@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../university/providers/university_providers.dart';
 import '../models/food_category.dart';
 import '../models/restaurant.dart';
+import '../models/restaurant_override.dart';
+import '../repositories/restaurant_override_repository.dart';
 import '../repositories/restaurant_repository.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
@@ -71,3 +73,25 @@ final allNearbyRestaurantsProvider = FutureProvider<List<Restaurant>>((
   final university = await ref.watch(selectedUniversityProvider.future);
   return ref.watch(restaurantRepositoryProvider).nearby(university: university);
 });
+
+final restaurantOverrideRepositoryProvider =
+    Provider<RestaurantOverrideRepository>(
+      (ref) => SupabaseRestaurantOverrideRepository(Supabase.instance.client),
+    );
+
+/// Admin-managed data for the places around the selected university, keyed by
+/// Kakao place id. Empty (never an error) when nothing is configured.
+final restaurantOverridesProvider =
+    FutureProvider<Map<String, RestaurantOverride>>((ref) async {
+      final places = await ref.watch(allNearbyRestaurantsProvider.future);
+      return ref.watch(restaurantOverrideRepositoryProvider).forPlaces([
+        for (final r in places) r.kakaoId,
+      ]);
+    });
+
+/// Menus an admin entered for one place (empty when none).
+final restaurantMenusProvider =
+    FutureProvider.family<List<RestaurantMenuItem>, String>(
+      (ref, kakaoId) =>
+          ref.watch(restaurantOverrideRepositoryProvider).menus(kakaoId),
+    );

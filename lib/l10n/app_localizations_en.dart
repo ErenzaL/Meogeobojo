@@ -1608,4 +1608,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get condRestartGuestDone =>
       'Conditions and starting point were reset.';
+
+  @override
+  String get restaurantAboutTitle => 'About';
+
+  @override
+  String get restaurantMenuTitle => 'Menu';
+
+  @override
+  String get restaurantMenuSoldOut => 'Sold out';
+
+  @override
+  String restaurantPriceWon(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '₩$priceString';
+  }
 }

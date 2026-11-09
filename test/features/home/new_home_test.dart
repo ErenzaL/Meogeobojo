@@ -507,6 +507,25 @@ void main() {
       expect(find.text('₩6,000'), findsOneWidget);
     });
 
+    testWidgets('shows the admin-set 천원의 아침밥 badge', (tester) async {
+      await openHome(
+        tester,
+        meals: repo([
+          fakeMeal('2026-11-09', MealType.dinner, start: '17:00', end: '18:30'),
+          fakeMeal(
+            '2026-11-10',
+            MealType.breakfast,
+            price: 1000,
+            badge: '천원의 아침밥',
+            items: const [MenuItem(nameKo: '북엇국', kind: MenuItemKind.main)],
+          ),
+        ]),
+      );
+      await reveal(tester, find.text('이번 주 식단'));
+      expect(find.text('천원의 아침밥'), findsOneWidget);
+      expect(find.text('북엇국'), findsOneWidget);
+    });
+
     testWidgets('after tonight it shows tomorrow morning', (tester) async {
       await openHome(
         tester,

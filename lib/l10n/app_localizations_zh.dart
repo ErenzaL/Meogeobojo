@@ -1515,4 +1515,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get condRestartGuestDone => '已重置条件和出发位置。';
+
+  @override
+  String get restaurantAboutTitle => '简介';
+
+  @override
+  String get restaurantMenuTitle => '菜单';
+
+  @override
+  String get restaurantMenuSoldOut => '已售罄';
+
+  @override
+  String restaurantPriceWon(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '$priceString韩元';
+  }
 }

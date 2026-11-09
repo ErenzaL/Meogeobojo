@@ -443,5 +443,9 @@
   "condRestartTitle": "Start over?",
   "condRestartBody": "This resets your conditions and starting point and reopens your taste setup.",
   "condRestartAction": "Start over",
-  "condRestartGuestDone": "Conditions and starting point were reset."
+  "condRestartGuestDone": "Conditions and starting point were reset.",
+  "restaurantAboutTitle": "About",
+  "restaurantMenuTitle": "Menu",
+  "restaurantMenuSoldOut": "Sold out",
+  "restaurantPriceWon": "₩{price}"
 }

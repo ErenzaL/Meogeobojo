@@ -35,11 +35,23 @@ final seoulNowProvider = Provider.autoDispose<DateTime>(
   (ref) => seoulWall(ref.watch(minuteTickProvider).value ?? DateTime.now()),
 );
 
-/// Price / rating / hours per `kakaoId`. No data source exists yet, so this is
-/// empty and every place counts as "unknown" (shown as "—", never dropped).
-/// Override or replace it when an enrichment source is added.
+/// Price / hours / photo per `kakaoId`, from what admins entered
+/// (`restaurant_overrides`). Places without an entry stay "unknown".
 final restaurantInsightsProvider = Provider<Map<String, RestaurantInsight>>(
-  (ref) => const {},
+  (ref) => {
+    for (final o
+        in (ref.watch(restaurantOverridesProvider).value ?? const {}).values)
+      o.kakaoId: o.insight,
+  },
+);
+
+/// Places an admin hid or archived: never shown in lists.
+final hiddenPlaceIdsProvider = Provider<Set<String>>(
+  (ref) => {
+    for (final o
+        in (ref.watch(restaurantOverridesProvider).value ?? const {}).values)
+      if (o.isHidden) o.kakaoId,
+  },
 );
 
 /// Places that pass the shared conditions, measured from the chosen origin
@@ -52,6 +64,7 @@ final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
   final conditions = ref.watch(conditionsProvider);
   final insights = ref.watch(restaurantInsightsProvider);
   final now = ref.watch(seoulNowProvider);
+  final hidden = ref.watch(hiddenPlaceIdsProvider);
   if (origin == null) {
     // No origin yet: either the campus is still loading, or it failed.
     return places.hasError
@@ -65,6 +78,7 @@ final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
       lng: origin.longitude,
       conditions: conditions,
       insights: insights,
+      hiddenIds: hidden,
       nowMinutes: minutesOfDay(now),
     ),
   );

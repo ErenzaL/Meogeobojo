@@ -46,6 +46,7 @@ Future<Harness> buildHarness({
   FakeRestaurantRepository? restaurants,
   FakeFavoritesRepository? favorites,
   FakeCampusMealRepository? meals,
+  FakeRestaurantOverrideRepository? overridesRepo,
   Stream<DateTime>? clock,
   List<Locale> deviceLocales = const [Locale('ko')],
   List<Override> extraOverrides = const [],
@@ -77,6 +78,9 @@ Future<Harness> buildHarness({
       profileRepositoryProvider.overrideWithValue(p),
       preferencesRepositoryProvider.overrideWithValue(pr),
       favoritesRepositoryProvider.overrideWithValue(fav),
+      restaurantOverrideRepositoryProvider.overrideWithValue(
+        overridesRepo ?? FakeRestaurantOverrideRepository(),
+      ),
       campusMealRepositoryProvider.overrideWithValue(
         meals ?? FakeCampusMealRepository(),
       ),

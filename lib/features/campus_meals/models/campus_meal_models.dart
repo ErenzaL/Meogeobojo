@@ -204,6 +204,7 @@ class CafeteriaMeal {
     this.startTime,
     this.endTime,
     this.sourceUrl,
+    this.badge,
   });
 
   final String id;
@@ -222,6 +223,10 @@ class CafeteriaMeal {
   final String? startTime;
   final String? endTime;
   final String? sourceUrl;
+
+  /// Program label such as "천원의 아침밥", set by an admin only when the
+  /// source says so.
+  final String? badge;
   final DateTime verifiedAt;
 
   static CafeteriaMeal? fromJson(Map<String, dynamic> j) {
@@ -249,6 +254,9 @@ class CafeteriaMeal {
       startTime: hhmm(j['start_time']),
       endTime: hhmm(j['end_time']),
       sourceUrl: j['source_url'] as String?,
+      badge: (j['badge'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : (j['badge'] as String).trim(),
       verifiedAt: DateTime.parse(j['verified_at'] as String),
     );
   }

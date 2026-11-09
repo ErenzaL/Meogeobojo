@@ -443,5 +443,9 @@
   "condRestartTitle": "重新开始设置？",
   "condRestartBody": "这会重置当前条件和出发位置，并重新打开口味设置。",
   "condRestartAction": "重新设置",
-  "condRestartGuestDone": "已重置条件和出发位置。"
+  "condRestartGuestDone": "已重置条件和出发位置。",
+  "restaurantAboutTitle": "简介",
+  "restaurantMenuTitle": "菜单",
+  "restaurantMenuSoldOut": "已售罄",
+  "restaurantPriceWon": "{price}韩元"
 }

@@ -2763,6 +2763,30 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'조건과 출발 위치를 처음 상태로 되돌렸어요.'**
   String get condRestartGuestDone;
+
+  /// No description provided for @restaurantAboutTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'소개'**
+  String get restaurantAboutTitle;
+
+  /// No description provided for @restaurantMenuTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'메뉴'**
+  String get restaurantMenuTitle;
+
+  /// No description provided for @restaurantMenuSoldOut.
+  ///
+  /// In ko, this message translates to:
+  /// **'품절'**
+  String get restaurantMenuSoldOut;
+
+  /// No description provided for @restaurantPriceWon.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}원'**
+  String restaurantPriceWon(int price);
 }
 
 class _AppLocalizationsDelegate

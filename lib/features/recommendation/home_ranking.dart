@@ -54,6 +54,7 @@ List<RankedRestaurant> rankRestaurants({
   required Conditions conditions,
   required Map<String, RestaurantInsight> insights,
   required int nowMinutes,
+  Set<String> hiddenIds = const {},
 }) {
   final maxMeters = maxDistanceMeters(conditions.distance);
   final cuisines = conditions.cuisines;
@@ -61,6 +62,7 @@ List<RankedRestaurant> rankRestaurants({
 
   final kept = <({Restaurant r, int meters, RestaurantInsight i})>[];
   for (final r in all) {
+    if (hiddenIds.contains(r.kakaoId)) continue; // hidden by an admin
     final isFood =
         r.categoryGroupCode == 'FD6' ||
         (wantsCafe && r.categoryGroupCode == 'CE7');

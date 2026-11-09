@@ -1129,4 +1129,390 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get prefsSaveFailed => '保存失败。你的选择仍保留，请重试。';
+
+  @override
+  String get homeTitle => '今天吃什么？';
+
+  @override
+  String homeSubtitle(String part, String time, String origin) {
+    return '$part · $time · 从$origin出发';
+  }
+
+  @override
+  String get dayPartBreakfast => '早餐';
+
+  @override
+  String get dayPartLunch => '午餐';
+
+  @override
+  String get dayPartDinner => '晚餐';
+
+  @override
+  String get dayPartLateNight => '夜宵';
+
+  @override
+  String get homeRestartTooltip => '重新开始';
+
+  @override
+  String get homeProfileTooltip => '个人资料';
+
+  @override
+  String homeOriginChip(String origin) {
+    return '以$origin为准';
+  }
+
+  @override
+  String get homeConditionsChip => '条件';
+
+  @override
+  String homeConditionsActive(int count) {
+    return '已应用$count项条件';
+  }
+
+  @override
+  String homeHeroRank(int total, int rank) {
+    return '$total家中第$rank名';
+  }
+
+  @override
+  String homePriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '$priceString~';
+  }
+
+  @override
+  String homeMetaReviews(int count) {
+    return '$count条评价';
+  }
+
+  @override
+  String homeReasonCuisine(String cuisine) {
+    return '$cuisine，正是你选的菜系';
+  }
+
+  @override
+  String get homeReasonBudget => '在预算范围内';
+
+  @override
+  String get homeReasonClosest => '离你最近';
+
+  @override
+  String homeReasonWalk(int minutes) {
+    return '步行$minutes分钟';
+  }
+
+  @override
+  String get homeArrival => '预计到达';
+
+  @override
+  String get homeLastOrder => '最后点单';
+
+  @override
+  String homeWalkAbout(int minutes) {
+    return '步行约$minutes分钟';
+  }
+
+  @override
+  String homeSlackHM(int hours, int minutes) {
+    return '还剩$hours小时$minutes分钟';
+  }
+
+  @override
+  String homeSlackH(int hours) {
+    return '还剩$hours小时';
+  }
+
+  @override
+  String homeSlackM(int minutes) {
+    return '还剩$minutes分钟';
+  }
+
+  @override
+  String get homeNoInfo => '暂无信息';
+
+  @override
+  String get homeClosesBeforeArrival => '到达前就打烊了';
+
+  @override
+  String get homeDirections => '导航';
+
+  @override
+  String get homeInfo => '详情';
+
+  @override
+  String get homeAltTitle => '不喜欢的话';
+
+  @override
+  String get homePickForMe => '帮我选一个';
+
+  @override
+  String homeCmpCloser(int minutes) {
+    return '近$minutes分钟';
+  }
+
+  @override
+  String homeCmpCheaper(int amount) {
+    final intl.NumberFormat amountNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String amountString = amountNumberFormat.format(amount);
+
+    return '便宜$amountString韩元';
+  }
+
+  @override
+  String get homeCmpRating => '评分更高';
+
+  @override
+  String get homeCmpLater => '营业到更晚';
+
+  @override
+  String get homeStatusOrderable => '可点单';
+
+  @override
+  String homeStatusClosesAt(String time) {
+    return '$time截止点单';
+  }
+
+  @override
+  String homeSeeOnMap(int count) {
+    return '在地图上查看符合条件的$count家';
+  }
+
+  @override
+  String get homeEmptyTitle => '没有符合条件的店';
+
+  @override
+  String get homeEmptyMessage => '放宽一些条件会看到更多。';
+
+  @override
+  String get homeMealTitle => '今日食堂';
+
+  @override
+  String homeMealChipNow(String meal) {
+    return '现在$meal';
+  }
+
+  @override
+  String homeMealChipToday(String meal) {
+    return '今天$meal';
+  }
+
+  @override
+  String homeMealChipTomorrow(String meal) {
+    return '明天$meal';
+  }
+
+  @override
+  String get homeMealNone => '暂未登记近期的食堂菜单。';
+
+  @override
+  String homeMealAvgCaption(String place) {
+    return '午餐均价 · 以$place步行15分钟内的餐厅为准';
+  }
+
+  @override
+  String get homeMealBarCafeteria => '食堂';
+
+  @override
+  String get homeMealBarOutside => '校外餐厅';
+
+  @override
+  String get homeMealSavingPre => '每月在食堂吃20顿可省 ';
+
+  @override
+  String get homeMealSavingPost => '。';
+
+  @override
+  String get homeMealNoCompare => '价格数据还不足，需要食堂和校外餐厅的价格才能比较。';
+
+  @override
+  String get homeMealWeekly => '本周菜单';
+
+  @override
+  String get homeMealCompare => '对比校外餐厅';
+
+  @override
+  String get homeCompareSoon => '价格对比页面正在准备中。';
+
+  @override
+  String get originCampusCenter => '校园中心';
+
+  @override
+  String get originSheetTitle => '从哪里出发？';
+
+  @override
+  String get originSheetDesc => '地图和推荐会按从所选位置出发的步行距离重新排序。建筑位置仅为演示示例。';
+
+  @override
+  String get originGroupGates => '校门';
+
+  @override
+  String get originGroupColleges => '学院';
+
+  @override
+  String get originGroupBuildings => '主要建筑';
+
+  @override
+  String get originGroupPins => '我的标记';
+
+  @override
+  String get originNoPins => '还没有保存的标记。';
+
+  @override
+  String originNearest(String name, int minutes) {
+    return '最近：$name · 步行$minutes分钟';
+  }
+
+  @override
+  String get originNearestNone => '附近没有符合条件的店';
+
+  @override
+  String get originPickOnMap => '在地图上标记';
+
+  @override
+  String get originPinPickerTitle => '选择出发位置';
+
+  @override
+  String get originPinPickerHint => '移动地图，让标记对准想要的位置。';
+
+  @override
+  String get originPinConfirm => '就选这里';
+
+  @override
+  String get originPinNameTitle => '标记名称';
+
+  @override
+  String get originPinNameHint => '例如：宿舍门口';
+
+  @override
+  String originPinDefaultName(int number) {
+    return '我的标记$number';
+  }
+
+  @override
+  String get originPinDelete => '删除标记';
+
+  @override
+  String get originPinFailed => '无法获取位置，请重试。';
+
+  @override
+  String get condTitle => '条件';
+
+  @override
+  String get condSubtitle => '首页、地图、搜索通用。';
+
+  @override
+  String get condMust => '必须满足';
+
+  @override
+  String get condMustHint => '不符合的店会被排除';
+
+  @override
+  String get condMissingNote => '没有价格或营业信息的店不会被排除。';
+
+  @override
+  String get condChange => '更改';
+
+  @override
+  String get condOpenNow => '仅显示现在可点单的店';
+
+  @override
+  String get condOpenNowHint => '到达时尚未截止点单的店。仅在为之后做计划时关闭。';
+
+  @override
+  String get condCuisine => '菜系';
+
+  @override
+  String get condOps => '营业·便利';
+
+  @override
+  String get condAmenityNoBreak => '无休息时间';
+
+  @override
+  String get condAmenityParking => '可停车';
+
+  @override
+  String get condAmenityLocalCurrency => '地方货币（牙山Pay）';
+
+  @override
+  String get condAmenityFast => '翻台快';
+
+  @override
+  String get condAmenityTakeout => '可打包';
+
+  @override
+  String get condAmenityLate => '营业到晚上10点';
+
+  @override
+  String get condSoft => '影响推荐顺序';
+
+  @override
+  String get condParty => '几个人吃？';
+
+  @override
+  String get condPartyFew => '2~3人';
+
+  @override
+  String get condNeeds => '需要什么';
+
+  @override
+  String get condNeedQuiet => '安静聊天';
+
+  @override
+  String get condNeedQuick => '快速用餐';
+
+  @override
+  String get condNeedGenerous => '分量足';
+
+  @override
+  String get condUntried => '优先没去过的店';
+
+  @override
+  String condUntriedHint(int count) {
+    return '已参考$count条用餐记录 · 按餐厅计算';
+  }
+
+  @override
+  String get condSort => '排序';
+
+  @override
+  String get condSortRecommended => '推荐';
+
+  @override
+  String get condSortPrice => '价格';
+
+  @override
+  String get condSortRating => '评分';
+
+  @override
+  String get condSoftNote => '目前按距离推荐。人数和需求会在有数据后影响顺序。';
+
+  @override
+  String get condResetAll => '全部清除';
+
+  @override
+  String condShowCount(int count) {
+    return '查看$count家';
+  }
+
+  @override
+  String get condNoMatch => '没有符合条件的店';
+
+  @override
+  String get condRestart => '回到初始画面重新设置';
+
+  @override
+  String get condRestartTitle => '重新开始设置？';
+
+  @override
+  String get condRestartBody => '这会重置当前条件和出发位置，并重新打开口味设置。';
+
+  @override
+  String get condRestartAction => '重新设置';
+
+  @override
+  String get condRestartGuestDone => '已重置条件和出发位置。';
 }

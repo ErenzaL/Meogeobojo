@@ -11,10 +11,11 @@ import '../../../core/config/env.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/mascot_message.dart';
+import '../../origin/providers/origin_providers.dart';
+import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
-import '../../university/models/university.dart';
 import '../../university/providers/university_providers.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../university/models/university_display.dart';
@@ -129,25 +130,30 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _onMarkerTapped(LabelClickEvent e) {
-    final items = ref.read(allNearbyRestaurantsProvider).value ?? const [];
+    final items = ref.read(filteredRestaurantsProvider).value ?? const [];
     final match = items.where((r) => r.kakaoId == e.labelId);
     if (match.isNotEmpty && mounted) setState(() => _selected = match.first);
   }
 
   Future<void> _syncMarkers() async {
     final c = _controller;
-    final univ = ref.read(selectedUniversityProvider).value;
-    if (c == null || !_stylesReady || univ == null) return;
-    final items = ref.read(allNearbyRestaurantsProvider).value ?? const [];
+    final origin = ref.read(originProvider);
+    if (c == null || !_stylesReady || origin == null || !mounted) return;
+    final items = ref.read(filteredRestaurantsProvider).value ?? const [];
+    final originLabel = origin.label(context.l10n);
     try {
       await c.clearMarkers();
       await c.addMarkers(
         markerOptions: [
+          // The pin marks where the walk starts (the chosen origin).
           MarkerOption(
             id: _campusMarkerId,
-            latLng: LatLng(latitude: univ.latitude, longitude: univ.longitude),
+            latLng: LatLng(
+              latitude: origin.latitude,
+              longitude: origin.longitude,
+            ),
             styleId: _campusStyle,
-            text: univ.nameKo,
+            text: originLabel,
             rank: 2,
           ),
           for (final r in items)
@@ -164,14 +170,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
-  Future<void> _moveTo(University u) async {
+  Future<void> _moveTo(double lat, double lng) async {
     final c = _controller;
     if (c == null) return;
     setState(() => _selected = null);
     try {
       await c.moveCamera(
         cameraUpdate: CameraUpdate.fromLatLng(
-          LatLng(latitude: u.latitude, longitude: u.longitude),
+          LatLng(latitude: lat, longitude: lng),
         ),
         animation: const CameraAnimation(
           duration: 600,
@@ -187,13 +193,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     // Keep the map synchronised with the selected university.
-    ref.listen(selectedUniversityProvider, (prev, next) {
-      final u = next.value;
-      if (u != null && u != prev?.value) {
-        _moveTo(u);
+    ref.listen(originProvider, (prev, next) {
+      if (next != null && next != prev) {
+        _moveTo(next.latitude, next.longitude);
+        _syncMarkers();
       }
     });
-    ref.listen(allNearbyRestaurantsProvider, (_, _) => _syncMarkers());
+    // Markers follow the shared conditions, not the raw nearby list.
+    ref.listen(filteredRestaurantsProvider, (_, _) => _syncMarkers());
 
     _bottomInset = MediaQuery.paddingOf(context).bottom;
     if (_controller != null && _appliedInset != _bottomInset) {
@@ -204,7 +211,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     final init = ref.watch(kakaoMapInitProvider);
     final univ = ref.watch(selectedUniversityProvider).value;
-    final places = ref.watch(allNearbyRestaurantsProvider);
+    final places = ref.watch(filteredRestaurantsProvider);
 
     return Scaffold(
       body: init.when(

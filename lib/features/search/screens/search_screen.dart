@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/config/app_assets.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/mascot_message.dart';
+import '../../conditions/providers/conditions_providers.dart';
+import '../../origin/providers/origin_providers.dart';
+import '../../recommendation/home_ranking.dart';
+import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/widgets/restaurant_async_list.dart';
 import '../../university/providers/university_providers.dart';
 import '../providers/search_providers.dart';
@@ -50,6 +54,25 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final state = ref.watch(searchProvider);
     final univ = ref.watch(selectedUniversityProvider).value;
     final notifier = ref.read(searchProvider.notifier);
+
+    // Search obeys the same conditions as Home and the map.
+    final origin = ref.watch(originProvider);
+    final conditions = ref.watch(conditionsProvider);
+    final insights = ref.watch(restaurantInsightsProvider);
+    final now = ref.watch(seoulNowProvider);
+    final shown = origin == null
+        ? state.results
+        : [
+            for (final r in rankRestaurants(
+              all: state.results,
+              lat: origin.latitude,
+              lng: origin.longitude,
+              conditions: conditions,
+              insights: insights,
+              nowMinutes: now.hour * 60 + now.minute,
+            ))
+              r.restaurant,
+          ];
 
     return Scaffold(
       appBar: AppBar(
@@ -114,19 +137,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           error: state.error!,
           onRetry: notifier.retry,
         ),
+        SearchStatus.data when state.results.isNotEmpty && shown.isEmpty =>
+          MascotMessage(
+            asset: AppAssets.mascotSearching,
+            title: context.l10n.homeEmptyTitle,
+            message: context.l10n.homeEmptyMessage,
+            actionLabel: context.l10n.condResetAll,
+            onAction: ref.read(conditionsProvider.notifier).clear,
+          ),
         SearchStatus.data when state.results.isEmpty => MascotMessage(
           asset: AppAssets.mascotSearching,
           title: context.l10n.searchNoResultsTitle(state.query),
           message: context.l10n.searchNoResultsMessage,
         ),
         _ => RestaurantListView(
-          restaurants: state.results,
+          restaurants: shown,
           header: Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               context.l10n.searchResultsSummary(
                 univ?.displayName(Localizations.localeOf(context)) ?? '',
-                state.results.length,
+                shown.length,
               ),
               style: AppText.caption(context),
             ),

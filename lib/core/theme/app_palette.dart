@@ -40,6 +40,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.navSelectedBg,
     required this.navSelectedFg,
     required this.navShadow,
+    required this.pageWarm,
+    required this.hairline,
+    required this.fillMuted,
+    required this.rust,
+    required this.onRust,
+    required this.rustSoft,
+    required this.rustText,
+    required this.chipSelectedBg,
+    required this.chipSelectedFg,
+    required this.statusOpen,
+    required this.statusWarn,
+    required this.starAmber,
+    required this.barMuted,
+    required this.artBackdrop,
   });
 
   /// Page / scaffold background.
@@ -89,6 +103,42 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color navSelectedFg;
   final Color navShadow;
 
+  // ---- Home / sheets role tokens (calm warm-neutral look) ----
+
+  /// Warm off-white page behind the Home tab and the sheets' scroll area.
+  final Color pageWarm;
+
+  /// 1px hairline on cards, chips and dividers (warmer than [border]).
+  final Color hairline;
+
+  /// Neutral fill for secondary buttons, tiles and icon wells.
+  final Color fillMuted;
+
+  /// Deep rust: filled CTAs, logo dot, primary action buttons.
+  final Color rust;
+  final Color onRust;
+
+  /// Light rust tint for a selected row.
+  final Color rustSoft;
+
+  /// Rust used for text / links (AA on the page and card).
+  final Color rustText;
+
+  /// Selected chip: near-black fill in Light, inverted in Dark.
+  final Color chipSelectedBg;
+  final Color chipSelectedFg;
+
+  /// "Order available" green, "closing / closed" orange, rating star amber.
+  final Color statusOpen;
+  final Color statusWarn;
+  final Color starAmber;
+
+  /// Secondary bar in comparison charts.
+  final Color barMuted;
+
+  /// Backdrop behind category illustrations when there is no photo.
+  final Color artBackdrop;
+
   static const light = AppPalette(
     background: Color(0xFFFFFFFF),
     card: Color(0xFFFFFFFF),
@@ -117,6 +167,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navSelectedBg: Color(0xFFFFE7C9),
     navSelectedFg: Color(0xFFB8420A),
     navShadow: Color(0x1A000000),
+    pageWarm: Color(0xFFF5F4F1),
+    hairline: Color(0xFFE8E5E0),
+    fillMuted: Color(0xFFEEECE7),
+    rust: Color(0xFFB34A22),
+    onRust: Color(0xFFFFFFFF),
+    rustSoft: Color(0xFFFBEBE2),
+    rustText: Color(0xFFB34A22),
+    chipSelectedBg: Color(0xFF1C1B19),
+    chipSelectedFg: Color(0xFFFFFFFF),
+    statusOpen: Color(0xFF3A7D44),
+    statusWarn: Color(0xFFB8561E),
+    starAmber: Color(0xFFB8862F),
+    barMuted: Color(0xFF6B655D),
+    artBackdrop: Color(0xFF3B3532),
   );
 
   static const dark = AppPalette(
@@ -147,6 +211,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navSelectedBg: Color(0xFF483021),
     navSelectedFg: Color(0xFFFFA066),
     navShadow: Color(0x66000000),
+    pageWarm: Color(0xFF141312),
+    hairline: Color(0xFF38342F),
+    fillMuted: Color(0xFF2B2926),
+    rust: Color(0xFFC25A2E),
+    onRust: Color(0xFFFFFFFF),
+    rustSoft: Color(0xFF3A2519),
+    rustText: Color(0xFFFF9C74),
+    chipSelectedBg: Color(0xFFF2EFEA),
+    chipSelectedFg: Color(0xFF1C1B19),
+    statusOpen: Color(0xFF6FBF7B),
+    statusWarn: Color(0xFFF09A62),
+    starAmber: Color(0xFFD9A94E),
+    barMuted: Color(0xFF9A948A),
+    artBackdrop: Color(0xFF2A2624),
   );
 
   /// Cards are separated from the page by their hairline border only. A
@@ -192,6 +270,20 @@ class AppPalette extends ThemeExtension<AppPalette> {
       navSelectedBg: c(navSelectedBg, other.navSelectedBg),
       navSelectedFg: c(navSelectedFg, other.navSelectedFg),
       navShadow: c(navShadow, other.navShadow),
+      pageWarm: c(pageWarm, other.pageWarm),
+      hairline: c(hairline, other.hairline),
+      fillMuted: c(fillMuted, other.fillMuted),
+      rust: c(rust, other.rust),
+      onRust: c(onRust, other.onRust),
+      rustSoft: c(rustSoft, other.rustSoft),
+      rustText: c(rustText, other.rustText),
+      chipSelectedBg: c(chipSelectedBg, other.chipSelectedBg),
+      chipSelectedFg: c(chipSelectedFg, other.chipSelectedFg),
+      statusOpen: c(statusOpen, other.statusOpen),
+      statusWarn: c(statusWarn, other.statusWarn),
+      starAmber: c(starAmber, other.starAmber),
+      barMuted: c(barMuted, other.barMuted),
+      artBackdrop: c(artBackdrop, other.artBackdrop),
     );
   }
 }

@@ -8,7 +8,7 @@ import 'package:meogeobojo/core/theme/app_palette.dart';
 import 'package:meogeobojo/core/theme/app_theme.dart';
 import 'package:meogeobojo/features/community/screens/community_screen.dart';
 import 'package:meogeobojo/features/home/screens/home_screen.dart';
-import 'package:meogeobojo/features/home/widgets/menu_section.dart';
+import 'package:meogeobojo/features/home/widgets/cafeteria_card.dart';
 import 'package:meogeobojo/features/map/screens/map_screen.dart';
 import 'package:meogeobojo/features/navigation/providers/shell_tab_provider.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
@@ -326,7 +326,7 @@ void main() {
           .state<ScrollableState>(find.byType(Scrollable).first)
           .position;
       expect(end.extentAfter, 0, reason: 'scrolled to the very end');
-      final last = tester.getRect(find.byType(MenuSection));
+      final last = tester.getRect(find.byType(CafeteriaCard));
       expect(
         last.bottom,
         lessThanOrEqualTo(navRect(tester).top),
@@ -396,9 +396,9 @@ void main() {
       'a bottom sheet / dialog is drawn above the bar and blocks it',
       (tester) async {
         final h = await openShell(tester);
-        await tester.tap(find.text('순천향대학교').first); // university sheet
+        await tester.tap(find.text('정문 기준')); // 출발 위치 sheet
         await tester.pumpAndSettle();
-        expect(find.text('학교 선택'), findsOneWidget);
+        expect(find.text('어디서 출발하나요?'), findsOneWidget);
         // The bar is part of the shell route underneath the modal route.
         await tester.tapAt(navRect(tester).center + const Offset(120, 0));
         await tester.pump();

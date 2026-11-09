@@ -5,8 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/app.dart';
 import 'package:meogeobojo/core/l10n/language_controller.dart';
 import 'package:meogeobojo/features/auth/providers/auth_providers.dart';
+import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
 import 'package:meogeobojo/features/favorites/providers/favorites_providers.dart';
 import 'package:meogeobojo/features/preferences/providers/preferences_providers.dart';
+import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
 import 'package:meogeobojo/features/university/models/verified_universities.dart';
 import 'package:meogeobojo/features/university/providers/university_providers.dart';
@@ -43,6 +45,8 @@ Future<Harness> buildHarness({
   FakePreferencesRepository? prefs,
   FakeRestaurantRepository? restaurants,
   FakeFavoritesRepository? favorites,
+  FakeCampusMealRepository? meals,
+  Stream<DateTime>? clock,
   List<Locale> deviceLocales = const [Locale('ko')],
   List<Override> extraOverrides = const [],
 }) async {
@@ -73,6 +77,13 @@ Future<Harness> buildHarness({
       profileRepositoryProvider.overrideWithValue(p),
       preferencesRepositoryProvider.overrideWithValue(pr),
       favoritesRepositoryProvider.overrideWithValue(fav),
+      campusMealRepositoryProvider.overrideWithValue(
+        meals ?? FakeCampusMealRepository(),
+      ),
+      // Fixed clock (Mon 2026-11-09 18:54 Seoul) instead of a real timer.
+      minuteTickProvider.overrideWith(
+        (ref) => clock ?? Stream.value(DateTime.utc(2026, 11, 9, 9, 54)),
+      ),
       kakaoCallbackGraceProvider.overrideWithValue(
         const Duration(milliseconds: 50),
       ),

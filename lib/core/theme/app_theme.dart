@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,6 +33,20 @@ abstract final class AppText {
   );
   static const title = TextStyle(fontSize: 16, fontWeight: FontWeight.w700);
   static const body = TextStyle(fontSize: 14, height: 1.4);
+
+  /// Times and prices (19:01, ₩5,100): monospaced, tabular digits so they
+  /// line up and do not jitter when a minute ticks over.
+  static TextStyle numeric({double size = 16, FontWeight? weight}) {
+    final mono =
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+    return TextStyle(
+      fontFamily: mono ? 'Menlo' : 'monospace',
+      fontSize: size,
+      fontWeight: weight ?? FontWeight.w700,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+  }
 
   static TextStyle caption(BuildContext context) => TextStyle(
     fontSize: 12,

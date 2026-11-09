@@ -72,7 +72,7 @@ void main() {
       await openMy(tester, h);
       await tester.tap(find.text('로그인 없이 계속 둘러보기 →'));
       await tester.pumpAndSettle();
-      expect(find.text('학교 주변 맛집'), findsWidgets);
+      expect(find.text('오늘 뭐 먹지?'), findsOneWidget);
     });
   });
 
@@ -331,7 +331,8 @@ void main() {
           home: const AppShell(),
           size: const Size(320, 568),
         );
-        await tester.tap(find.byIcon(Icons.person_outline_rounded));
+        // Home (kept alive in the shell) has a profile icon too: MY's is the last.
+        await tester.tap(find.byIcon(Icons.person_outline_rounded).last);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: lang);
         expect(find.byType(ProfileScreen), findsOneWidget);

@@ -7,11 +7,11 @@ import 'package:meogeobojo/features/campus_meals/screens/campus_meal_screen.dart
 import 'package:meogeobojo/features/campus_meals/widgets/campus_meal_widgets.dart';
 import 'package:meogeobojo/features/home/widgets/category_section.dart';
 import 'package:meogeobojo/features/restaurants/screens/restaurant_category_screen.dart';
-import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/university/providers/university_providers.dart';
 import 'package:meogeobojo/features/university/models/verified_universities.dart';
 
 import '../../support/fakes.dart';
+import '../../support/category_host.dart';
 import '../../support/harness.dart';
 
 const univ1 = '5c0a8f3e-0001-4a6e-9b1d-000000000001'; // 순천향
@@ -56,8 +56,8 @@ Future<(Harness, FakeCampusMealRepository)> open(
       );
   final h = await buildHarness(
     storage: {'app_language': lang},
+    meals: fake,
     extraOverrides: [
-      campusMealRepositoryProvider.overrideWithValue(fake),
       campusMealClockProvider.overrideWithValue(now ?? clock),
       campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
     ],
@@ -80,8 +80,8 @@ void main() {
       );
       final h = await buildHarness(
         storage: {'app_language': lang},
+        meals: fake,
         extraOverrides: [
-          campusMealRepositoryProvider.overrideWithValue(fake),
           campusMealClockProvider.overrideWithValue(clock),
           campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
         ],
@@ -89,7 +89,7 @@ void main() {
       await pumpApp(
         tester,
         h,
-        home: const AppShell(),
+        home: const CategoryHost(),
         size: size ?? const Size(390, 844),
       );
       return h;
@@ -142,7 +142,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(CampusMealScreen), findsNothing);
       expect(find.byType(CategorySection), findsOneWidget);
-      expect(find.text('홈'), findsOneWidget);
     });
 
     for (final (lang, label) in [

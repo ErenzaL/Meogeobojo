@@ -319,8 +319,8 @@ void main() {
       );
       return buildHarness(
         storage: {'app_language': lang, themeModePrefsKey: mode},
+        meals: repo,
         extraOverrides: [
-          campusMealRepositoryProvider.overrideWithValue(repo),
           campusMealClockProvider.overrideWithValue(
             () => DateTime.utc(2026, 11, 3, 3),
           ),
@@ -338,17 +338,17 @@ void main() {
       expect(colors, {expected.toARGB32()}, reason: '$label page background');
     }
 
-    for (final (mode, expected) in [
-      ('light', const Color(0xFFFFFFFF)),
-      ('dark', const Color(0xFF121212)),
+    for (final (mode, expected, homeExpected) in [
+      ('light', const Color(0xFFFFFFFF), AppPalette.light.pageWarm),
+      ('dark', const Color(0xFF121212), AppPalette.dark.pageWarm),
     ]) {
       testWidgets('$mode: Home, MY, Login and Campus Meals backgrounds', (
         tester,
       ) async {
-        // Home
+        // Home uses the warm page colour; the other screens keep theirs.
         var harness = await h(mode);
         await pumpThemed(tester, harness, home: const AppShell());
-        await expectBackground(tester, expected, 'Home');
+        await expectBackground(tester, homeExpected, 'Home');
 
         // MY (guest) through the real tab bar
         harness.container
@@ -370,20 +370,24 @@ void main() {
     }
 
     testWidgets(
-      'light: Home carries NO cream or peach page tint anywhere in the gutters',
+      'light: Home page is the warm neutral, with no peach or orange tint',
       (tester) async {
         await pumpThemed(tester, await h('light'), home: const AppShell());
-        // Left gutter all the way down; the right gutter above the restaurant
-        // carousel, which intentionally bleeds off the right edge.
+        // Home cards sit inside a 20px gutter, so the page shows through at
+        // the far left and right edges all the way down.
         for (final x in [3.0, 8.0, 386.0]) {
-          for (final y
-              in x < 100
-                  ? [90.0, 250.0, 420.0, 560.0, 700.0]
-                  : [90.0, 250.0, 420.0]) {
+          for (final y in [90.0, 250.0, 420.0, 560.0, 700.0]) {
             final c = await pixelAt(tester, Offset(x, y));
-            expect(c.toARGB32(), 0xFFFFFFFF, reason: 'pixel ($x,$y)');
+            expect(
+              c.toARGB32(),
+              AppPalette.light.pageWarm.toARGB32(),
+              reason: 'pixel ($x,$y)',
+            );
           }
         }
+        // Warm, not orange: red barely above blue.
+        final page = AppPalette.light.pageWarm;
+        expect(page.r - page.b, lessThan(0.05));
       },
     );
 

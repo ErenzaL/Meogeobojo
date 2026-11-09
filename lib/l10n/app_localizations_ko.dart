@@ -1135,4 +1135,394 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get prefsSaveFailed => '저장하지 못했어요. 선택한 내용은 그대로 있으니 다시 시도해주세요.';
+
+  @override
+  String get homeTitle => '오늘 뭐 먹지?';
+
+  @override
+  String homeSubtitle(String part, String time, String origin) {
+    return '$part · $time · $origin 출발 기준';
+  }
+
+  @override
+  String get dayPartBreakfast => '아침';
+
+  @override
+  String get dayPartLunch => '점심';
+
+  @override
+  String get dayPartDinner => '저녁';
+
+  @override
+  String get dayPartLateNight => '야식';
+
+  @override
+  String get homeRestartTooltip => '처음부터 다시';
+
+  @override
+  String get homeProfileTooltip => '프로필';
+
+  @override
+  String homeOriginChip(String origin) {
+    return '$origin 기준';
+  }
+
+  @override
+  String get homeConditionsChip => '조건';
+
+  @override
+  String homeConditionsActive(int count) {
+    return '조건 $count개 적용 중';
+  }
+
+  @override
+  String homeHeroRank(int total, int rank) {
+    return '$total곳 중 $rank순위';
+  }
+
+  @override
+  String homePriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '$priceString~';
+  }
+
+  @override
+  String homeMetaReviews(int count) {
+    return '리뷰 $count';
+  }
+
+  @override
+  String homeReasonCuisine(String cuisine) {
+    return '$cuisine, 고른 음식이에요';
+  }
+
+  @override
+  String get homeReasonBudget => '예산 안이에요';
+
+  @override
+  String get homeReasonClosest => '가장 가까워요';
+
+  @override
+  String homeReasonWalk(int minutes) {
+    return '걸어서 $minutes분이에요';
+  }
+
+  @override
+  String get homeArrival => '도착 예상';
+
+  @override
+  String get homeLastOrder => '주문 마감';
+
+  @override
+  String homeWalkAbout(int minutes) {
+    return '도보 약 $minutes분';
+  }
+
+  @override
+  String homeSlackHM(int hours, int minutes) {
+    return '$hours시간 $minutes분 여유';
+  }
+
+  @override
+  String homeSlackH(int hours) {
+    return '$hours시간 여유';
+  }
+
+  @override
+  String homeSlackM(int minutes) {
+    return '$minutes분 여유';
+  }
+
+  @override
+  String get homeNoInfo => '정보 없음';
+
+  @override
+  String get homeClosesBeforeArrival => '도착 전에 마감돼요';
+
+  @override
+  String get homeDirections => '길찾기';
+
+  @override
+  String get homeInfo => '정보';
+
+  @override
+  String get homeAltTitle => '마음에 안 들면';
+
+  @override
+  String get homePickForMe => '하나 골라줘';
+
+  @override
+  String homeCmpCloser(int minutes) {
+    return '$minutes분 더 가까워요';
+  }
+
+  @override
+  String homeCmpCheaper(int amount) {
+    final intl.NumberFormat amountNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String amountString = amountNumberFormat.format(amount);
+
+    return '$amountString원 더 싸요';
+  }
+
+  @override
+  String get homeCmpRating => '평점이 더 높아요';
+
+  @override
+  String get homeCmpLater => '더 늦게까지 열어요';
+
+  @override
+  String get homeStatusOrderable => '주문 가능';
+
+  @override
+  String homeStatusClosesAt(String time) {
+    return '주문 마감 $time';
+  }
+
+  @override
+  String homeSeeOnMap(int count) {
+    return '조건에 맞는 $count곳 지도에서 보기';
+  }
+
+  @override
+  String get homeEmptyTitle => '조건에 맞는 곳이 없어요';
+
+  @override
+  String get homeEmptyMessage => '조건을 조금 풀면 더 많이 보여요.';
+
+  @override
+  String get homeMealTitle => '오늘의 학식';
+
+  @override
+  String homeMealChipNow(String meal) {
+    return '지금 $meal';
+  }
+
+  @override
+  String homeMealChipToday(String meal) {
+    return '오늘 $meal';
+  }
+
+  @override
+  String homeMealChipTomorrow(String meal) {
+    return '내일 $meal';
+  }
+
+  @override
+  String get homeMealNone => '곧 먹을 수 있는 학식 메뉴가 아직 등록되지 않았어요.';
+
+  @override
+  String homeMealAvgCaption(String place) {
+    return '점심 한 끼 평균 · $place에서 도보 15분 안 식당 기준';
+  }
+
+  @override
+  String get homeMealBarCafeteria => '학식';
+
+  @override
+  String get homeMealBarOutside => '바깥 식당';
+
+  @override
+  String get homeMealSavingPre => '한 달 20끼를 학식으로 먹으면 ';
+
+  @override
+  String get homeMealSavingPost => ' 아껴요';
+
+  @override
+  String get homeMealNoCompare =>
+      '비교할 가격 정보가 아직 부족해요. 학식과 바깥 식당 가격이 모두 있어야 비교할 수 있어요.';
+
+  @override
+  String get homeMealWeekly => '이번 주 식단';
+
+  @override
+  String get homeMealCompare => '바깥 식당과 비교';
+
+  @override
+  String get homeCompareSoon => '가격 비교 화면은 준비 중이에요.';
+
+  @override
+  String get originCampusCenter => '캠퍼스 중심';
+
+  @override
+  String get originSheetTitle => '어디서 출발하나요?';
+
+  @override
+  String get originSheetDesc =>
+      '고른 위치에서 걷는 거리로 지도와 추천을 다시 정렬해요. 건물 위치는 시연용 예시예요.';
+
+  @override
+  String get originGroupGates => '출입문';
+
+  @override
+  String get originGroupColleges => '단과대학';
+
+  @override
+  String get originGroupBuildings => '주요 건물';
+
+  @override
+  String get originGroupPins => '내 핀';
+
+  @override
+  String get originNoPins => '아직 저장한 핀이 없어요.';
+
+  @override
+  String originNearest(String name, int minutes) {
+    return '가장 가까운 곳: $name · 도보 $minutes분';
+  }
+
+  @override
+  String get originNearestNone => '조건에 맞는 가까운 식당이 없어요';
+
+  @override
+  String get originPickOnMap => '지도에서 직접 찍기';
+
+  @override
+  String get originPinPickerTitle => '출발 위치 정하기';
+
+  @override
+  String get originPinPickerHint => '지도를 움직여 핀을 원하는 곳에 맞춰주세요.';
+
+  @override
+  String get originPinConfirm => '여기로 정하기';
+
+  @override
+  String get originPinNameTitle => '핀 이름';
+
+  @override
+  String get originPinNameHint => '예: 기숙사 앞';
+
+  @override
+  String originPinDefaultName(int number) {
+    return '내 핀 $number';
+  }
+
+  @override
+  String get originPinDelete => '핀 삭제';
+
+  @override
+  String get originPinFailed => '위치를 가져오지 못했어요. 다시 시도해주세요.';
+
+  @override
+  String get condTitle => '조건';
+
+  @override
+  String get condSubtitle => '홈·지도·검색에 똑같이 적용돼요.';
+
+  @override
+  String get condMust => '꼭 지킬 조건';
+
+  @override
+  String get condMustHint => '넘는 식당은 빼요';
+
+  @override
+  String get condMissingNote => '가격·영업 정보가 없는 식당은 빼지 않고 그대로 보여드려요.';
+
+  @override
+  String get condChange => '바꾸기';
+
+  @override
+  String get condOpenNow => '지금 주문 가능한 곳만';
+
+  @override
+  String get condOpenNowHint =>
+      '도착 예상 시각에 주문이 마감되지 않은 곳이에요. 나중에 갈 곳을 찾을 때만 꺼 주세요.';
+
+  @override
+  String get condCuisine => '음식 종류';
+
+  @override
+  String get condOps => '운영·편의';
+
+  @override
+  String get condAmenityNoBreak => '브레이크타임 없음';
+
+  @override
+  String get condAmenityParking => '주차 가능';
+
+  @override
+  String get condAmenityLocalCurrency => '지역화폐(아산페이)';
+
+  @override
+  String get condAmenityFast => '빠른 회전';
+
+  @override
+  String get condAmenityTakeout => '포장 가능';
+
+  @override
+  String get condAmenityLate => '밤 10시까지';
+
+  @override
+  String get condSoft => '추천 순서에 반영';
+
+  @override
+  String get condParty => '몇 명이 먹나요?';
+
+  @override
+  String get condPartyFew => '2~3명';
+
+  @override
+  String get condNeeds => '필요한 것';
+
+  @override
+  String get condNeedQuiet => '조용한 대화';
+
+  @override
+  String get condNeedQuick => '빠른 식사';
+
+  @override
+  String get condNeedGenerous => '넉넉한 양';
+
+  @override
+  String get condUntried => '안 가 본 식당 먼저';
+
+  @override
+  String condUntriedHint(int count) {
+    return '먹은 기록 $count개 반영 · 식당 단위로 봐요';
+  }
+
+  @override
+  String get condSort => '정렬';
+
+  @override
+  String get condSortRecommended => '추천순';
+
+  @override
+  String get condSortPrice => '가격순';
+
+  @override
+  String get condSortRating => '평점순';
+
+  @override
+  String get condSoftNote =>
+      '지금은 가까운 순으로 추천해요. 함께 먹는 사람·필요한 것은 데이터가 생기면 순서에 반영돼요.';
+
+  @override
+  String get condResetAll => '모두 풀기';
+
+  @override
+  String condShowCount(int count) {
+    return '$count곳 보기';
+  }
+
+  @override
+  String get condNoMatch => '조건에 맞는 곳이 없어요';
+
+  @override
+  String get condRestart => '처음 화면으로 돌아가 다시 설정';
+
+  @override
+  String get condRestartTitle => '처음부터 다시 설정할까요?';
+
+  @override
+  String get condRestartBody => '지금 조건과 출발 위치를 처음 상태로 되돌리고, 취향 설정을 다시 시작해요.';
+
+  @override
+  String get condRestartAction => '다시 설정';
+
+  @override
+  String get condRestartGuestDone => '조건과 출발 위치를 처음 상태로 되돌렸어요.';
 }

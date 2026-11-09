@@ -1213,4 +1213,399 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prefsSaveFailed =>
       'Couldn\'t save. Your selections are still here, so please try again.';
+
+  @override
+  String get homeTitle => 'What should I eat today?';
+
+  @override
+  String homeSubtitle(String part, String time, String origin) {
+    return '$part · $time · from $origin';
+  }
+
+  @override
+  String get dayPartBreakfast => 'Breakfast';
+
+  @override
+  String get dayPartLunch => 'Lunch';
+
+  @override
+  String get dayPartDinner => 'Dinner';
+
+  @override
+  String get dayPartLateNight => 'Late night';
+
+  @override
+  String get homeRestartTooltip => 'Start over';
+
+  @override
+  String get homeProfileTooltip => 'Profile';
+
+  @override
+  String homeOriginChip(String origin) {
+    return 'From $origin';
+  }
+
+  @override
+  String get homeConditionsChip => 'Filters';
+
+  @override
+  String homeConditionsActive(int count) {
+    return '$count filters on';
+  }
+
+  @override
+  String homeHeroRank(int total, int rank) {
+    return '#$rank of $total';
+  }
+
+  @override
+  String homePriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '$priceString~';
+  }
+
+  @override
+  String homeMetaReviews(int count) {
+    return '$count reviews';
+  }
+
+  @override
+  String homeReasonCuisine(String cuisine) {
+    return '$cuisine, the food you picked';
+  }
+
+  @override
+  String get homeReasonBudget => 'Within your budget';
+
+  @override
+  String get homeReasonClosest => 'Closest to you';
+
+  @override
+  String homeReasonWalk(int minutes) {
+    return '$minutes min on foot';
+  }
+
+  @override
+  String get homeArrival => 'Arrive at';
+
+  @override
+  String get homeLastOrder => 'Last order';
+
+  @override
+  String homeWalkAbout(int minutes) {
+    return 'About $minutes min walk';
+  }
+
+  @override
+  String homeSlackHM(int hours, int minutes) {
+    return '$hours h $minutes min to spare';
+  }
+
+  @override
+  String homeSlackH(int hours) {
+    return '$hours h to spare';
+  }
+
+  @override
+  String homeSlackM(int minutes) {
+    return '$minutes min to spare';
+  }
+
+  @override
+  String get homeNoInfo => 'No info';
+
+  @override
+  String get homeClosesBeforeArrival => 'Closes before you arrive';
+
+  @override
+  String get homeDirections => 'Directions';
+
+  @override
+  String get homeInfo => 'Info';
+
+  @override
+  String get homeAltTitle => 'Not feeling it?';
+
+  @override
+  String get homePickForMe => 'Pick one for me';
+
+  @override
+  String homeCmpCloser(int minutes) {
+    return '$minutes min closer';
+  }
+
+  @override
+  String homeCmpCheaper(int amount) {
+    final intl.NumberFormat amountNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String amountString = amountNumberFormat.format(amount);
+
+    return '₩$amountString cheaper';
+  }
+
+  @override
+  String get homeCmpRating => 'Rated higher';
+
+  @override
+  String get homeCmpLater => 'Open later';
+
+  @override
+  String get homeStatusOrderable => 'Ordering open';
+
+  @override
+  String homeStatusClosesAt(String time) {
+    return 'Last order $time';
+  }
+
+  @override
+  String homeSeeOnMap(int count) {
+    return 'See $count matching places on the map';
+  }
+
+  @override
+  String get homeEmptyTitle => 'No place matches';
+
+  @override
+  String get homeEmptyMessage => 'Loosen a condition to see more.';
+
+  @override
+  String get homeMealTitle => 'Today\'s cafeteria';
+
+  @override
+  String homeMealChipNow(String meal) {
+    return '$meal now';
+  }
+
+  @override
+  String homeMealChipToday(String meal) {
+    return '$meal today';
+  }
+
+  @override
+  String homeMealChipTomorrow(String meal) {
+    return '$meal tomorrow';
+  }
+
+  @override
+  String get homeMealNone => 'No upcoming cafeteria menu has been added yet.';
+
+  @override
+  String homeMealAvgCaption(String place) {
+    return 'Average lunch · restaurants within a 15 min walk of $place';
+  }
+
+  @override
+  String get homeMealBarCafeteria => 'Cafeteria';
+
+  @override
+  String get homeMealBarOutside => 'Outside';
+
+  @override
+  String get homeMealSavingPre =>
+      'Eating 20 meals a month at the cafeteria saves ';
+
+  @override
+  String get homeMealSavingPost => '.';
+
+  @override
+  String get homeMealNoCompare =>
+      'Not enough price data to compare yet. Both cafeteria and outside prices are needed.';
+
+  @override
+  String get homeMealWeekly => 'This week\'s menu';
+
+  @override
+  String get homeMealCompare => 'Compare with outside';
+
+  @override
+  String get homeCompareSoon => 'The price comparison screen is coming soon.';
+
+  @override
+  String get originCampusCenter => 'Campus center';
+
+  @override
+  String get originSheetTitle => 'Where are you starting from?';
+
+  @override
+  String get originSheetDesc =>
+      'Maps and recommendations are re-sorted by walking distance from the spot you pick. Building positions are demo examples.';
+
+  @override
+  String get originGroupGates => 'Gates';
+
+  @override
+  String get originGroupColleges => 'Colleges';
+
+  @override
+  String get originGroupBuildings => 'Main buildings';
+
+  @override
+  String get originGroupPins => 'My pins';
+
+  @override
+  String get originNoPins => 'No saved pins yet.';
+
+  @override
+  String originNearest(String name, int minutes) {
+    return 'Nearest: $name · $minutes min walk';
+  }
+
+  @override
+  String get originNearestNone => 'No matching place nearby';
+
+  @override
+  String get originPickOnMap => 'Drop a pin on the map';
+
+  @override
+  String get originPinPickerTitle => 'Choose a starting point';
+
+  @override
+  String get originPinPickerHint =>
+      'Move the map to put the pin where you want.';
+
+  @override
+  String get originPinConfirm => 'Use this spot';
+
+  @override
+  String get originPinNameTitle => 'Pin name';
+
+  @override
+  String get originPinNameHint => 'e.g. In front of the dorm';
+
+  @override
+  String originPinDefaultName(int number) {
+    return 'My pin $number';
+  }
+
+  @override
+  String get originPinDelete => 'Delete pin';
+
+  @override
+  String get originPinFailed => 'Couldn\'t read the position. Try again.';
+
+  @override
+  String get condTitle => 'Filters';
+
+  @override
+  String get condSubtitle => 'Applied the same on Home, Map and Search.';
+
+  @override
+  String get condMust => 'Must-haves';
+
+  @override
+  String get condMustHint => 'Places that don\'t fit are hidden';
+
+  @override
+  String get condMissingNote =>
+      'Places with no price or hours info are kept, not hidden.';
+
+  @override
+  String get condChange => 'Change';
+
+  @override
+  String get condOpenNow => 'Only places I can order from now';
+
+  @override
+  String get condOpenNowHint =>
+      'Places whose last order isn\'t before your arrival. Turn off only when planning for later.';
+
+  @override
+  String get condCuisine => 'Cuisine';
+
+  @override
+  String get condOps => 'Hours & facilities';
+
+  @override
+  String get condAmenityNoBreak => 'No break time';
+
+  @override
+  String get condAmenityParking => 'Parking';
+
+  @override
+  String get condAmenityLocalCurrency => 'Local currency (Asan Pay)';
+
+  @override
+  String get condAmenityFast => 'Fast turnover';
+
+  @override
+  String get condAmenityTakeout => 'Takeout';
+
+  @override
+  String get condAmenityLate => 'Open until 10 pm';
+
+  @override
+  String get condSoft => 'Shapes the order';
+
+  @override
+  String get condParty => 'How many are eating?';
+
+  @override
+  String get condPartyFew => '2–3 people';
+
+  @override
+  String get condNeeds => 'What you need';
+
+  @override
+  String get condNeedQuiet => 'Quiet talk';
+
+  @override
+  String get condNeedQuick => 'Quick meal';
+
+  @override
+  String get condNeedGenerous => 'Generous portions';
+
+  @override
+  String get condUntried => 'Try new places first';
+
+  @override
+  String condUntriedHint(int count) {
+    return 'Based on $count logged meals · counted per restaurant';
+  }
+
+  @override
+  String get condSort => 'Sort';
+
+  @override
+  String get condSortRecommended => 'Recommended';
+
+  @override
+  String get condSortPrice => 'Price';
+
+  @override
+  String get condSortRating => 'Rating';
+
+  @override
+  String get condSoftNote =>
+      'For now the order is nearest first. Party size and needs will shape it once data exists.';
+
+  @override
+  String get condResetAll => 'Clear all';
+
+  @override
+  String condShowCount(int count) {
+    return 'Show $count places';
+  }
+
+  @override
+  String get condNoMatch => 'No place matches';
+
+  @override
+  String get condRestart => 'Go back to the start and set up again';
+
+  @override
+  String get condRestartTitle => 'Start over?';
+
+  @override
+  String get condRestartBody =>
+      'This resets your conditions and starting point and reopens your taste setup.';
+
+  @override
+  String get condRestartAction => 'Start over';
+
+  @override
+  String get condRestartGuestDone =>
+      'Conditions and starting point were reset.';
 }

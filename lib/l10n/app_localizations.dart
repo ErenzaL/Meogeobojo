@@ -2103,6 +2103,666 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'저장하지 못했어요. 선택한 내용은 그대로 있으니 다시 시도해주세요.'**
   String get prefsSaveFailed;
+
+  /// No description provided for @homeTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 뭐 먹지?'**
+  String get homeTitle;
+
+  /// No description provided for @homeSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{part} · {time} · {origin} 출발 기준'**
+  String homeSubtitle(String part, String time, String origin);
+
+  /// No description provided for @dayPartBreakfast.
+  ///
+  /// In ko, this message translates to:
+  /// **'아침'**
+  String get dayPartBreakfast;
+
+  /// No description provided for @dayPartLunch.
+  ///
+  /// In ko, this message translates to:
+  /// **'점심'**
+  String get dayPartLunch;
+
+  /// No description provided for @dayPartDinner.
+  ///
+  /// In ko, this message translates to:
+  /// **'저녁'**
+  String get dayPartDinner;
+
+  /// No description provided for @dayPartLateNight.
+  ///
+  /// In ko, this message translates to:
+  /// **'야식'**
+  String get dayPartLateNight;
+
+  /// No description provided for @homeRestartTooltip.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음부터 다시'**
+  String get homeRestartTooltip;
+
+  /// No description provided for @homeProfileTooltip.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필'**
+  String get homeProfileTooltip;
+
+  /// No description provided for @homeOriginChip.
+  ///
+  /// In ko, this message translates to:
+  /// **'{origin} 기준'**
+  String homeOriginChip(String origin);
+
+  /// No description provided for @homeConditionsChip.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건'**
+  String get homeConditionsChip;
+
+  /// No description provided for @homeConditionsActive.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건 {count}개 적용 중'**
+  String homeConditionsActive(int count);
+
+  /// No description provided for @homeHeroRank.
+  ///
+  /// In ko, this message translates to:
+  /// **'{total}곳 중 {rank}순위'**
+  String homeHeroRank(int total, int rank);
+
+  /// No description provided for @homePriceFrom.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}~'**
+  String homePriceFrom(int price);
+
+  /// No description provided for @homeMetaReviews.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 {count}'**
+  String homeMetaReviews(int count);
+
+  /// No description provided for @homeReasonCuisine.
+  ///
+  /// In ko, this message translates to:
+  /// **'{cuisine}, 고른 음식이에요'**
+  String homeReasonCuisine(String cuisine);
+
+  /// No description provided for @homeReasonBudget.
+  ///
+  /// In ko, this message translates to:
+  /// **'예산 안이에요'**
+  String get homeReasonBudget;
+
+  /// No description provided for @homeReasonClosest.
+  ///
+  /// In ko, this message translates to:
+  /// **'가장 가까워요'**
+  String get homeReasonClosest;
+
+  /// No description provided for @homeReasonWalk.
+  ///
+  /// In ko, this message translates to:
+  /// **'걸어서 {minutes}분이에요'**
+  String homeReasonWalk(int minutes);
+
+  /// No description provided for @homeArrival.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 예상'**
+  String get homeArrival;
+
+  /// No description provided for @homeLastOrder.
+  ///
+  /// In ko, this message translates to:
+  /// **'주문 마감'**
+  String get homeLastOrder;
+
+  /// No description provided for @homeWalkAbout.
+  ///
+  /// In ko, this message translates to:
+  /// **'도보 약 {minutes}분'**
+  String homeWalkAbout(int minutes);
+
+  /// No description provided for @homeSlackHM.
+  ///
+  /// In ko, this message translates to:
+  /// **'{hours}시간 {minutes}분 여유'**
+  String homeSlackHM(int hours, int minutes);
+
+  /// No description provided for @homeSlackH.
+  ///
+  /// In ko, this message translates to:
+  /// **'{hours}시간 여유'**
+  String homeSlackH(int hours);
+
+  /// No description provided for @homeSlackM.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분 여유'**
+  String homeSlackM(int minutes);
+
+  /// No description provided for @homeNoInfo.
+  ///
+  /// In ko, this message translates to:
+  /// **'정보 없음'**
+  String get homeNoInfo;
+
+  /// No description provided for @homeClosesBeforeArrival.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 전에 마감돼요'**
+  String get homeClosesBeforeArrival;
+
+  /// No description provided for @homeDirections.
+  ///
+  /// In ko, this message translates to:
+  /// **'길찾기'**
+  String get homeDirections;
+
+  /// No description provided for @homeInfo.
+  ///
+  /// In ko, this message translates to:
+  /// **'정보'**
+  String get homeInfo;
+
+  /// No description provided for @homeAltTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'마음에 안 들면'**
+  String get homeAltTitle;
+
+  /// No description provided for @homePickForMe.
+  ///
+  /// In ko, this message translates to:
+  /// **'하나 골라줘'**
+  String get homePickForMe;
+
+  /// No description provided for @homeCmpCloser.
+  ///
+  /// In ko, this message translates to:
+  /// **'{minutes}분 더 가까워요'**
+  String homeCmpCloser(int minutes);
+
+  /// No description provided for @homeCmpCheaper.
+  ///
+  /// In ko, this message translates to:
+  /// **'{amount}원 더 싸요'**
+  String homeCmpCheaper(int amount);
+
+  /// No description provided for @homeCmpRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'평점이 더 높아요'**
+  String get homeCmpRating;
+
+  /// No description provided for @homeCmpLater.
+  ///
+  /// In ko, this message translates to:
+  /// **'더 늦게까지 열어요'**
+  String get homeCmpLater;
+
+  /// No description provided for @homeStatusOrderable.
+  ///
+  /// In ko, this message translates to:
+  /// **'주문 가능'**
+  String get homeStatusOrderable;
+
+  /// No description provided for @homeStatusClosesAt.
+  ///
+  /// In ko, this message translates to:
+  /// **'주문 마감 {time}'**
+  String homeStatusClosesAt(String time);
+
+  /// No description provided for @homeSeeOnMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 {count}곳 지도에서 보기'**
+  String homeSeeOnMap(int count);
+
+  /// No description provided for @homeEmptyTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 곳이 없어요'**
+  String get homeEmptyTitle;
+
+  /// No description provided for @homeEmptyMessage.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건을 조금 풀면 더 많이 보여요.'**
+  String get homeEmptyMessage;
+
+  /// No description provided for @homeMealTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘의 학식'**
+  String get homeMealTitle;
+
+  /// No description provided for @homeMealChipNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 {meal}'**
+  String homeMealChipNow(String meal);
+
+  /// No description provided for @homeMealChipToday.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 {meal}'**
+  String homeMealChipToday(String meal);
+
+  /// No description provided for @homeMealChipTomorrow.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일 {meal}'**
+  String homeMealChipTomorrow(String meal);
+
+  /// No description provided for @homeMealNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'곧 먹을 수 있는 학식 메뉴가 아직 등록되지 않았어요.'**
+  String get homeMealNone;
+
+  /// No description provided for @homeMealAvgCaption.
+  ///
+  /// In ko, this message translates to:
+  /// **'점심 한 끼 평균 · {place}에서 도보 15분 안 식당 기준'**
+  String homeMealAvgCaption(String place);
+
+  /// No description provided for @homeMealBarCafeteria.
+  ///
+  /// In ko, this message translates to:
+  /// **'학식'**
+  String get homeMealBarCafeteria;
+
+  /// No description provided for @homeMealBarOutside.
+  ///
+  /// In ko, this message translates to:
+  /// **'바깥 식당'**
+  String get homeMealBarOutside;
+
+  /// No description provided for @homeMealSavingPre.
+  ///
+  /// In ko, this message translates to:
+  /// **'한 달 20끼를 학식으로 먹으면 '**
+  String get homeMealSavingPre;
+
+  /// No description provided for @homeMealSavingPost.
+  ///
+  /// In ko, this message translates to:
+  /// **' 아껴요'**
+  String get homeMealSavingPost;
+
+  /// No description provided for @homeMealNoCompare.
+  ///
+  /// In ko, this message translates to:
+  /// **'비교할 가격 정보가 아직 부족해요. 학식과 바깥 식당 가격이 모두 있어야 비교할 수 있어요.'**
+  String get homeMealNoCompare;
+
+  /// No description provided for @homeMealWeekly.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 주 식단'**
+  String get homeMealWeekly;
+
+  /// No description provided for @homeMealCompare.
+  ///
+  /// In ko, this message translates to:
+  /// **'바깥 식당과 비교'**
+  String get homeMealCompare;
+
+  /// No description provided for @homeCompareSoon.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격 비교 화면은 준비 중이에요.'**
+  String get homeCompareSoon;
+
+  /// No description provided for @originCampusCenter.
+  ///
+  /// In ko, this message translates to:
+  /// **'캠퍼스 중심'**
+  String get originCampusCenter;
+
+  /// No description provided for @originSheetTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'어디서 출발하나요?'**
+  String get originSheetTitle;
+
+  /// No description provided for @originSheetDesc.
+  ///
+  /// In ko, this message translates to:
+  /// **'고른 위치에서 걷는 거리로 지도와 추천을 다시 정렬해요. 건물 위치는 시연용 예시예요.'**
+  String get originSheetDesc;
+
+  /// No description provided for @originGroupGates.
+  ///
+  /// In ko, this message translates to:
+  /// **'출입문'**
+  String get originGroupGates;
+
+  /// No description provided for @originGroupColleges.
+  ///
+  /// In ko, this message translates to:
+  /// **'단과대학'**
+  String get originGroupColleges;
+
+  /// No description provided for @originGroupBuildings.
+  ///
+  /// In ko, this message translates to:
+  /// **'주요 건물'**
+  String get originGroupBuildings;
+
+  /// No description provided for @originGroupPins.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 핀'**
+  String get originGroupPins;
+
+  /// No description provided for @originNoPins.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 저장한 핀이 없어요.'**
+  String get originNoPins;
+
+  /// No description provided for @originNearest.
+  ///
+  /// In ko, this message translates to:
+  /// **'가장 가까운 곳: {name} · 도보 {minutes}분'**
+  String originNearest(String name, int minutes);
+
+  /// No description provided for @originNearestNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 가까운 식당이 없어요'**
+  String get originNearestNone;
+
+  /// No description provided for @originPickOnMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'지도에서 직접 찍기'**
+  String get originPickOnMap;
+
+  /// No description provided for @originPinPickerTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'출발 위치 정하기'**
+  String get originPinPickerTitle;
+
+  /// No description provided for @originPinPickerHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'지도를 움직여 핀을 원하는 곳에 맞춰주세요.'**
+  String get originPinPickerHint;
+
+  /// No description provided for @originPinConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'여기로 정하기'**
+  String get originPinConfirm;
+
+  /// No description provided for @originPinNameTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'핀 이름'**
+  String get originPinNameTitle;
+
+  /// No description provided for @originPinNameHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'예: 기숙사 앞'**
+  String get originPinNameHint;
+
+  /// No description provided for @originPinDefaultName.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 핀 {number}'**
+  String originPinDefaultName(int number);
+
+  /// No description provided for @originPinDelete.
+  ///
+  /// In ko, this message translates to:
+  /// **'핀 삭제'**
+  String get originPinDelete;
+
+  /// No description provided for @originPinFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'위치를 가져오지 못했어요. 다시 시도해주세요.'**
+  String get originPinFailed;
+
+  /// No description provided for @condTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건'**
+  String get condTitle;
+
+  /// No description provided for @condSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'홈·지도·검색에 똑같이 적용돼요.'**
+  String get condSubtitle;
+
+  /// No description provided for @condMust.
+  ///
+  /// In ko, this message translates to:
+  /// **'꼭 지킬 조건'**
+  String get condMust;
+
+  /// No description provided for @condMustHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'넘는 식당은 빼요'**
+  String get condMustHint;
+
+  /// No description provided for @condMissingNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격·영업 정보가 없는 식당은 빼지 않고 그대로 보여드려요.'**
+  String get condMissingNote;
+
+  /// No description provided for @condChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'바꾸기'**
+  String get condChange;
+
+  /// No description provided for @condOpenNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 주문 가능한 곳만'**
+  String get condOpenNow;
+
+  /// No description provided for @condOpenNowHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 예상 시각에 주문이 마감되지 않은 곳이에요. 나중에 갈 곳을 찾을 때만 꺼 주세요.'**
+  String get condOpenNowHint;
+
+  /// No description provided for @condCuisine.
+  ///
+  /// In ko, this message translates to:
+  /// **'음식 종류'**
+  String get condCuisine;
+
+  /// No description provided for @condOps.
+  ///
+  /// In ko, this message translates to:
+  /// **'운영·편의'**
+  String get condOps;
+
+  /// No description provided for @condAmenityNoBreak.
+  ///
+  /// In ko, this message translates to:
+  /// **'브레이크타임 없음'**
+  String get condAmenityNoBreak;
+
+  /// No description provided for @condAmenityParking.
+  ///
+  /// In ko, this message translates to:
+  /// **'주차 가능'**
+  String get condAmenityParking;
+
+  /// No description provided for @condAmenityLocalCurrency.
+  ///
+  /// In ko, this message translates to:
+  /// **'지역화폐(아산페이)'**
+  String get condAmenityLocalCurrency;
+
+  /// No description provided for @condAmenityFast.
+  ///
+  /// In ko, this message translates to:
+  /// **'빠른 회전'**
+  String get condAmenityFast;
+
+  /// No description provided for @condAmenityTakeout.
+  ///
+  /// In ko, this message translates to:
+  /// **'포장 가능'**
+  String get condAmenityTakeout;
+
+  /// No description provided for @condAmenityLate.
+  ///
+  /// In ko, this message translates to:
+  /// **'밤 10시까지'**
+  String get condAmenityLate;
+
+  /// No description provided for @condSoft.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 순서에 반영'**
+  String get condSoft;
+
+  /// No description provided for @condParty.
+  ///
+  /// In ko, this message translates to:
+  /// **'몇 명이 먹나요?'**
+  String get condParty;
+
+  /// No description provided for @condPartyFew.
+  ///
+  /// In ko, this message translates to:
+  /// **'2~3명'**
+  String get condPartyFew;
+
+  /// No description provided for @condNeeds.
+  ///
+  /// In ko, this message translates to:
+  /// **'필요한 것'**
+  String get condNeeds;
+
+  /// No description provided for @condNeedQuiet.
+  ///
+  /// In ko, this message translates to:
+  /// **'조용한 대화'**
+  String get condNeedQuiet;
+
+  /// No description provided for @condNeedQuick.
+  ///
+  /// In ko, this message translates to:
+  /// **'빠른 식사'**
+  String get condNeedQuick;
+
+  /// No description provided for @condNeedGenerous.
+  ///
+  /// In ko, this message translates to:
+  /// **'넉넉한 양'**
+  String get condNeedGenerous;
+
+  /// No description provided for @condUntried.
+  ///
+  /// In ko, this message translates to:
+  /// **'안 가 본 식당 먼저'**
+  String get condUntried;
+
+  /// No description provided for @condUntriedHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹은 기록 {count}개 반영 · 식당 단위로 봐요'**
+  String condUntriedHint(int count);
+
+  /// No description provided for @condSort.
+  ///
+  /// In ko, this message translates to:
+  /// **'정렬'**
+  String get condSort;
+
+  /// No description provided for @condSortRecommended.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천순'**
+  String get condSortRecommended;
+
+  /// No description provided for @condSortPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격순'**
+  String get condSortPrice;
+
+  /// No description provided for @condSortRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'평점순'**
+  String get condSortRating;
+
+  /// No description provided for @condSoftNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금은 가까운 순으로 추천해요. 함께 먹는 사람·필요한 것은 데이터가 생기면 순서에 반영돼요.'**
+  String get condSoftNote;
+
+  /// No description provided for @condResetAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'모두 풀기'**
+  String get condResetAll;
+
+  /// No description provided for @condShowCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}곳 보기'**
+  String condShowCount(int count);
+
+  /// No description provided for @condNoMatch.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 곳이 없어요'**
+  String get condNoMatch;
+
+  /// No description provided for @condRestart.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음 화면으로 돌아가 다시 설정'**
+  String get condRestart;
+
+  /// No description provided for @condRestartTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음부터 다시 설정할까요?'**
+  String get condRestartTitle;
+
+  /// No description provided for @condRestartBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 조건과 출발 위치를 처음 상태로 되돌리고, 취향 설정을 다시 시작해요.'**
+  String get condRestartBody;
+
+  /// No description provided for @condRestartAction.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 설정'**
+  String get condRestartAction;
+
+  /// No description provided for @condRestartGuestDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건과 출발 위치를 처음 상태로 되돌렸어요.'**
+  String get condRestartGuestDone;
 }
 
 class _AppLocalizationsDelegate

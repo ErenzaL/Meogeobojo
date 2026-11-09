@@ -167,12 +167,8 @@ void main() {
           profiles: FakeProfileRepository(onboardingCompleted: true),
         );
         await pumpApp(tester, h);
-        await tester.scrollUntilVisible(
-          find.text('학교 주변 맛집'),
-          200,
-          scrollable: find.byType(Scrollable).first,
-        );
-        await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
+        // The heart is on the detail page: open the top pick's 정보.
+        await tester.tap(find.text('정보'));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
@@ -194,12 +190,7 @@ void main() {
     ) async {
       final h = await buildHarness();
       await pumpApp(tester, h);
-      await tester.scrollUntilVisible(
-        find.text('학교 주변 맛집'),
-        200,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
+      await tester.tap(find.text('정보'));
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
       await tester.pumpAndSettle();

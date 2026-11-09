@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/features/campus_meals/screens/campus_meal_screen.dart';
 import 'package:meogeobojo/features/home/widgets/category_section.dart';
-import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
@@ -13,6 +12,7 @@ import 'package:meogeobojo/features/restaurants/widgets/category_tile.dart';
 import 'package:meogeobojo/features/university/providers/university_providers.dart';
 
 import '../../support/fakes.dart';
+import '../../support/category_host.dart';
 import '../../support/harness.dart';
 
 Finder inSection(Finder f) =>
@@ -35,7 +35,7 @@ Future<Harness> openHome(
   Size size = const Size(390, 844),
 }) async {
   final h = await buildHarness(storage: storage, restaurants: repo);
-  await pumpApp(tester, h, home: const AppShell(), size: size);
+  await pumpApp(tester, h, home: const CategoryHost(), size: size);
   return h;
 }
 
@@ -195,16 +195,15 @@ void main() {
       'back returns to Home: scroll kept, university and category untouched',
       (tester) async {
         final h = await openHome(tester);
-        await tester.drag(find.byType(ListView).first, const Offset(0, -120));
+        await tester.drag(find.byType(ListView).first, const Offset(0, -40));
         await tester.pumpAndSettle();
         final before = tester
             .state<ScrollableState>(find.byType(Scrollable).first)
             .position
             .pixels;
-        final universityBefore = h.container
-            .read(selectedUniversityProvider)
-            .value!
-            .nameKo;
+        final universityBefore = (await h.container.read(
+          selectedUniversityProvider.future,
+        )).nameKo;
 
         await openCategory(tester, '한식');
         expect(find.byType(RestaurantCategoryScreen), findsOneWidget);
@@ -226,7 +225,7 @@ void main() {
           universityBefore,
         );
         expect(h.container.read(selectedCategoryProvider), FoodCategory.all);
-        expect(find.text('홈'), findsOneWidget); // nav is back
+        expect(find.byType(CategorySection), findsOneWidget); // host is back
       },
     );
 

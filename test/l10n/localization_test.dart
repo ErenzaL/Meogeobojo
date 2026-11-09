@@ -11,6 +11,7 @@ import 'package:meogeobojo/features/university/models/university.dart';
 import 'package:meogeobojo/features/university/models/university_display.dart';
 
 import '../support/fakes.dart';
+import '../support/category_host.dart';
 import '../support/harness.dart';
 
 Map<String, dynamic> arb(String locale) =>
@@ -164,34 +165,31 @@ void main() {
         ),
       );
       await pumpApp(tester, h, home: const AppShell());
-      expect(find.text('Search dishes, restaurants, keywords'), findsOneWidget);
-      expect(find.text('See recommendations'), findsOneWidget);
-      expect(find.text('Soonchunhyang University'), findsWidgets);
+      expect(find.text('What should I eat today?'), findsOneWidget);
+      expect(find.text('Filters'), findsOneWidget);
+      expect(find.textContaining('from Main gate'), findsNothing);
       await tester.scrollUntilVisible(
-        find.text('Restaurants near campus'),
+        find.text("Today's cafeteria"),
         200,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
-      await tester.pumpAndSettle();
-      expect(find.text('Restaurants near campus'), findsOneWidget);
-      // Kakao-sourced name and address are left exactly as received.
+      expect(find.text("Today's cafeteria"), findsOneWidget);
+      // Kakao-sourced names are left exactly as received.
       expect(find.text('국수집1'), findsOneWidget);
-      expect(find.text('100m from campus'), findsOneWidget);
     });
 
     testWidgets('Chinese Home', (tester) async {
       final h = await buildHarness(storage: {'app_language': 'zh-Hans'});
       await pumpApp(tester, h, home: const AppShell());
-      expect(find.text('搜索菜品、餐厅、关键词'), findsOneWidget);
-      expect(find.text('查看推荐'), findsOneWidget);
+      expect(find.text('今天吃什么？'), findsOneWidget);
+      expect(find.text('条件'), findsOneWidget);
     });
 
     testWidgets('category chips are localized but still search in Korean', (
       tester,
     ) async {
       final h = await buildHarness(storage: {'app_language': 'en'});
-      await pumpApp(tester, h, home: const AppShell());
+      await pumpApp(tester, h, home: const CategoryHost());
       expect(find.text('Korean'), findsOneWidget);
       await tester.tap(find.text('Korean'));
       await tester.pumpAndSettle();

@@ -25,4 +25,8 @@ class UserPreferencesNotifier extends AsyncNotifier<UserPreferences?> {
   }
 
   void setSaved(UserPreferences prefs) => state = AsyncData(prefs);
+
+  /// Forgets the answers in memory only (used by "start over"); the saved
+  /// row stays in the database.
+  void clearLocal() => state = const AsyncData(null);
 }

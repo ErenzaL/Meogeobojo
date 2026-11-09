@@ -399,13 +399,21 @@ class _MapError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: MascotMessage(
-        asset: AppAssets.mascotMapConfused,
-        title: context.l10n.mapErrorTitle,
-        message: context.l10n.mapErrorMessage,
-        actionLabel: context.l10n.commonRetry,
-        onAction: onRetry,
+    // The map area shares the screen with the header and the list sheet, so on
+    // a small phone it can be short: shrink the picture and let it scroll.
+    return LayoutBuilder(
+      builder: (context, box) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: box.maxHeight),
+          child: MascotMessage(
+            asset: AppAssets.mascotMapConfused,
+            imageHeight: box.maxHeight < 360 ? 56 : 120,
+            title: context.l10n.mapErrorTitle,
+            message: context.l10n.mapErrorMessage,
+            actionLabel: context.l10n.commonRetry,
+            onAction: onRetry,
+          ),
+        ),
       ),
     );
   }

@@ -51,6 +51,7 @@ class MapFilterBar extends ConsumerWidget {
           child: Row(
             children: [
               HomeChip(
+                dense: true,
                 onTap: () => showOriginSheet(context),
                 background: p.card,
                 children: [
@@ -61,7 +62,7 @@ class MapFilterBar extends ConsumerWidget {
                         ? ''
                         : l10n.homeOriginChip(origin.label(l10n)),
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -73,9 +74,10 @@ class MapFilterBar extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               if (c.openNowOnly)
                 HomeChip(
+                  dense: true,
                   onTap: () =>
                       notifier.update((x) => x.copyWith(openNowOnly: false)),
                   background: p.fillMuted,
@@ -91,8 +93,9 @@ class MapFilterBar extends ConsumerWidget {
                     Icon(Icons.close_rounded, size: 18, color: p.textSecondary),
                   ],
                 ),
-              if (c.openNowOnly) const SizedBox(width: 10),
+              if (c.openNowOnly) const SizedBox(width: 8),
               HomeChip(
+                dense: true,
                 onTap: () => showConditionsSheet(context),
                 background: p.card,
                 children: [
@@ -101,7 +104,7 @@ class MapFilterBar extends ConsumerWidget {
                   Text(
                     l10n.homeConditionsChip,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

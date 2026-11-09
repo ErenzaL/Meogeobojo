@@ -144,8 +144,11 @@ class HomeChip extends StatelessWidget {
     required this.onTap,
     required this.background,
     required this.children,
+    this.dense = false,
   });
 
+  /// Tighter padding (the map header, where three chips share a phone row).
+  final bool dense;
   final VoidCallback onTap;
   final Color background;
   final List<Widget> children;
@@ -161,7 +164,10 @@ class HomeChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? 11 : 14,
+          vertical: dense ? 11 : 12,
+        ),
         child: Row(mainAxisSize: MainAxisSize.min, children: children),
       ),
     ),

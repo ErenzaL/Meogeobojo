@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #ffca80;
+  --color-brand-strong: #f36b21;
+  --color-brand-ink: #7a3a0c;
+  --color-page: #f5f4f1;
+  --color-line: #e8e5e0;
+  --color-ink: #2d201a;
+  --color-muted: #6f6b66;
+  --font-sans: "Pretendard", "Noto Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body { @apply bg-page text-ink antialiased; font-family: var(--font-sans); }

@@ -19,3 +19,30 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+
+  # React admin dashboard. Uses the PUBLISHABLE Supabase key only; what an admin
+  # may do is enforced by Row Level Security in the database.
+  - type: web
+    runtime: static
+    name: meogeobojo-admin
+    rootDir: admin
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY   # publishable key ONLY, never a service-role key
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer

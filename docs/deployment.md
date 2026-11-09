@@ -42,3 +42,19 @@ The same applies to `flutter test` / `flutter analyze` on a fresh clone: copy
 
 ## Rollback
 Render → Deploys → pick the last good deploy → Rollback (or revert the commit).
+
+# Deployment: React admin on Render
+
+Static site from `render.yaml` (`meogeobojo-admin`).
+
+| Setting | Value |
+|---|---|
+| Root directory | `admin` |
+| Build command | `npm ci && npm run build` |
+| Publish directory | `dist` |
+| Rewrite | `/*` → `/index.html` (React Router) |
+| Node | `22.12.0` (`NODE_VERSION`; Vite 8 needs ≥ 20.19 or ≥ 22.12) |
+
+Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (**publishable key
+only**: everything `VITE_*` is public JavaScript). After deploying, add the admin URL
+to Supabase Auth → URL Configuration → Redirect URLs. Never deploy with a service-role key.

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'bottom_pinned.dart';
+import 'responsive.dart';
 import 'web_footer.dart';
 
 import 'package:flutter/material.dart';
@@ -138,15 +139,21 @@ class V5Page extends StatelessWidget {
                       footer: Column(
                         children: [
                           const WebFooterSlot(),
-                          // the system inset below the content, unless the footer ends the page (then it is flush)
+                          // The system inset (on a phone: the floating nav bar) stays below the page so the footer can be
+                          // scrolled clear of it; on a desktop with the footer the footer ends flush with the window.
                           Consumer(
-                            builder: (context, ref, _) =>
-                                ref.watch(webFooterEnabledProvider)
-                                ? const SizedBox.shrink()
-                                : SizedBox(
-                                    height: MediaQuery.paddingOf(context)
-                                        .bottom,
-                                  ),
+                            builder: (context, ref, _) {
+                              final flush =
+                                  ref.watch(webFooterEnabledProvider) &&
+                                  MediaQuery.sizeOf(context).width >=
+                                      Breakpoints.desktop;
+                              return flush
+                                  ? const SizedBox.shrink()
+                                  : SizedBox(
+                                      height: MediaQuery.paddingOf(context)
+                                          .bottom,
+                                    );
+                            },
                           ),
                         ],
                       ),

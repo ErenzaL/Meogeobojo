@@ -91,7 +91,8 @@ class WebFooter extends ConsumerWidget {
       margin: const EdgeInsets.only(top: 32),
       decoration: BoxDecoration(
         color: p.fillMuted,
-        border: Border(top: BorderSide(color: p.border)),
+        // the brand's warm yellow-orange as a complementary accent; primary actions elsewhere stay rust
+        border: Border(top: BorderSide(color: p.brandWarm, width: 4)),
       ),
       child: Center(
         child: ConstrainedBox(

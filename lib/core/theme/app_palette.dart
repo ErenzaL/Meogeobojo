@@ -25,6 +25,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.accentFaint,
     required this.accentTile,
     required this.peach,
+    required this.brandWarm,
     required this.onPeach,
     required this.bannerStart,
     required this.bannerEnd,
@@ -87,6 +88,10 @@ class AppPalette extends ThemeExtension<AppPalette> {
   /// a muted warm brown in Dark.
   final Color accentTile;
   final Color peach;
+
+  /// The brand's warm yellow-orange (#FFCA80): a complementary accent for web branding (the footer rule). It is NOT the
+  /// primary action colour: buttons and links stay rust ([rust] / [accent]).
+  final Color brandWarm;
 
   /// Text/icons drawn ON [peach] fills; always dark so it reads in both modes.
   final Color onPeach;
@@ -160,6 +165,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     accentFaint: Color(0xFFFBEEE7),
     accentTile: Color(0xFFFBEEE7),
     peach: Color(0xFFF1EDE7),
+    brandWarm: Color(0xFFFFCA80),
     onPeach: Color(0xFF1C1A17),
     bannerStart: Color(0xFFFBEEE7),
     bannerEnd: Color(0xFFFBEEE7),
@@ -206,6 +212,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     accentFaint: Color(0x24EE7A45),
     accentTile: Color(0x24EE7A45),
     peach: Color(0xFF2A2724),
+    brandWarm: Color(0xFFFFCA80),
     onPeach: Color(0xFFEFEBE4),
     bannerStart: Color(0x24EE7A45),
     bannerEnd: Color(0x24EE7A45),
@@ -267,6 +274,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
       accentFaint: c(accentFaint, other.accentFaint),
       accentTile: c(accentTile, other.accentTile),
       peach: c(peach, other.peach),
+      brandWarm: c(brandWarm, other.brandWarm),
       onPeach: c(onPeach, other.onPeach),
       bannerStart: c(bannerStart, other.bannerStart),
       bannerEnd: c(bannerEnd, other.bannerEnd),

@@ -103,6 +103,19 @@ void main() {
     );
 
     testWidgets(
+      'a phone keeps room under the footer for the floating nav bar',
+      (tester) async {
+        await open(
+          tester,
+          tab: ShellTabs.community,
+          size: const Size(390, 2000),
+        );
+        final box = tester.getRect(find.byKey(const ValueKey('web-footer')));
+        expect(box.bottom, lessThan(2000 - 40)); // not flush: the inset is kept
+      },
+    );
+
+    testWidgets(
       'lists only real published announcements; none means an honest line',
       (tester) async {
         await open(tester, tab: ShellTabs.community);

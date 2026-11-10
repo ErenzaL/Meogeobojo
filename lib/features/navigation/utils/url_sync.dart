@@ -33,9 +33,11 @@ final urlHistoryModeProvider = Provider<Future<void> Function()>(
 /// is that push: it closes anything stacked on the shell (an open detail screen), selects the tab and disappears, so the
 /// Navigator never gets a duplicate shell or an "unknown route" error.
 class UrlTabRoute extends PageRouteBuilder<void> {
-  UrlTabRoute(int tab, RouteSettings settings)
+  // No route name on purpose: Flutter's root Navigator announces every NAMED route to the browser, which would add a
+  // second history entry for what the browser already did.
+  UrlTabRoute(int tab)
     : super(
-        settings: settings,
+        settings: const RouteSettings(),
         opaque: false,
         transitionDuration: Duration.zero,
         reverseTransitionDuration: Duration.zero,
@@ -45,12 +47,12 @@ class UrlTabRoute extends PageRouteBuilder<void> {
 
 Route<dynamic>? generateUrlRoute(RouteSettings settings) {
   final tab = shellTabForPath(settings.name);
-  return tab == null ? null : UrlTabRoute(tab, settings);
+  return tab == null ? null : UrlTabRoute(tab);
 }
 
 /// A path that names no tab (a mistyped address) opens Home.
 Route<dynamic> unknownUrlRoute(RouteSettings settings) =>
-    UrlTabRoute(ShellTabs.home, settings);
+    UrlTabRoute(ShellTabs.home);
 
 class _UrlTabLanding extends ConsumerStatefulWidget {
   const _UrlTabLanding({required this.tab});

@@ -107,7 +107,7 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
   if (error) return <div className="mb-5"><ErrorState error={error as Error} /></div>
   if (!state) return null
   const visible = isLiveVisible(type, state.live)
-  const vis = type === 'app_content' || type === 'university' || type === 'campaign' ? (visible ? 'published' : 'draft') : type === 'restaurant_menus' ? (visible ? 'published' : 'no_menu') : type === 'restaurant_photos' ? (visible ? 'published' : 'no_photo') : String(state.live.visibility ?? state.live.status ?? '')
+  const vis = type === 'app_content' || type === 'university' || type === 'campaign' || type === 'cafeteria_week' ? (visible ? 'published' : 'draft') : type === 'restaurant_menus' ? (visible ? 'published' : 'no_menu') : type === 'restaurant_photos' ? (visible ? 'published' : 'no_photo') : String(state.live.visibility ?? state.live.status ?? '')
   const msg = message ?? note
 
   return (

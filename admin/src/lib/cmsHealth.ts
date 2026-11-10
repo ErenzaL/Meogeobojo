@@ -25,11 +25,11 @@ export async function cmsHealth(): Promise<CmsHealth> {
 export const isMissingFunction = (e: unknown) => typeof e === 'object' && e !== null && 'code' in e && ['PGRST202', '42883'].includes((e as { code: string }).code)
 
 export const TYPE_LABEL: Record<EntityType, string> = {
-  restaurant: '식당', restaurant_menus: '메뉴·가격', restaurant_photos: '사진', cafeteria_meal: '학식 식단', mission: '미션', campaign: '캠페인', app_content: '앱 콘텐츠', university: '대학교',
+  restaurant: '식당', cafeteria_week: '학식 주간 식단', restaurant_menus: '메뉴·가격', restaurant_photos: '사진', cafeteria_meal: '학식 식단', mission: '미션', campaign: '캠페인', app_content: '앱 콘텐츠', university: '대학교',
 }
 /** Where an entity is edited (and its publishing toolbar lives). */
 export const TYPE_ROUTE = (type: EntityType, id: string): string => ({
-  restaurant: `/restaurants/${id}`, restaurant_menus: '/menus', restaurant_photos: '/photos', cafeteria_meal: '/cafeteria', mission: '/missions', campaign: '/missions', app_content: '/content', university: '/universities',
+  restaurant: `/restaurants/${id}`, cafeteria_week: '/cafeteria', restaurant_menus: '/menus', restaurant_photos: '/photos', cafeteria_meal: '/cafeteria', mission: '/missions', campaign: '/missions', app_content: '/content', university: '/universities',
 }[type])
 
 /** Counts only, for a database that does not have cms_health yet (the tables are admin-readable). */

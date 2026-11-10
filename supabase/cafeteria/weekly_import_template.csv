@@ -1,0 +1,6 @@
+﻿university,cafeteria_name,date,meal_type,menu_name,price,serving_time,meal_option,program,description,notes,menu_items,location,source_url
+순천향대학교,학생식당,2026-11-23,breakfast,계란토스트,1000,08:00-09:30,,천원의 아침밥,간단한 아침 식사,,우유|과일,학생회관 1층,https://example.org/official-menu
+순천향대학교,학생식당,2026-11-23,lunch,제육볶음,5500,11:30-13:30,A코너,,,,밥|된장국|김치,학생회관 1층,
+순천향대학교,학생식당,2026-11-23,lunch,돈까스,6500,11:30-13:30,B코너,,,한정 판매,밥|샐러드,학생회관 1층,
+순천향대학교,학생식당,2026-11-23,dinner,김치찌개,5500,17:00-19:00,,,,,밥|계란말이,학생회관 1층,
+호서대학교,기숙사식당,2026-11-24,lunch,"비빔밥, 국 세트",5000,11:30-13:30,,,"고추장, 참기름 별도",,국|김치,생활관 1층,

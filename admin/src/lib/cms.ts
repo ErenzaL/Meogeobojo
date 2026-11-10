@@ -2,7 +2,7 @@
  *  The database owns every rule: these are thin wrappers plus Seoul-time and diff helpers. */
 import { supabase } from '@/lib/supabase'
 
-export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus' | 'restaurant_photos' | 'mission' | 'app_content' | 'university' | 'campaign'
+export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus' | 'restaurant_photos' | 'mission' | 'app_content' | 'university' | 'campaign' | 'cafeteria_week'
 export type Snapshot = Record<string, unknown>
 
 export type Job = {
@@ -57,12 +57,39 @@ export const FIELD_LABEL: Record<string, string> = {
   menu_items: '메뉴', price_krw: '가격', start_time: '시작 시간', end_time: '종료 시간', status: '상태', badge: '배지',
   source_url: '출처 주소', verified_at: '확인한 날짜', extra: '사진·공지',
   subtitle: '부제목', theme_color: '테마 색상', banner_mascot: '배너 마스코트', publish_state: '게시 상태', city: '도시', search_radius_m: '검색 반경(m)', is_active: '앱에 표시',
-  body: '내용', image_url: '이미지 주소', link_url: '링크', kakao_place_id: '카카오 장소 ID', active: '노출',
+  meals: '식단', body: '내용', image_url: '이미지 주소', link_url: '링크', kakao_place_id: '카카오 장소 ID', active: '노출',
   campaign_id: '캠페인', title: '제목', icon: '아이콘', reward_points: '보상 포인트', rule_type: '완료 규칙', rule_params: '완료 규칙 값',
   target_count: '목표 횟수', recurrence: '반복', university_id: '대상 캠퍼스', starts_at: '시작', ends_at: '종료', action_key: '버튼 동작',
   sort_order: '정렬 순서', reward_badge_key: '뱃지 키', reward_badge_name: '뱃지 이름', reward_badge_mascot: '뱃지 마스코트',
 }
 export type Change = { key: string; label: string; from: unknown; to: unknown }
+/** What a publish would do to one cafeteria's week: menus added / removed (hidden) / changed. */
+type WeekMealLike = { date: string; meal_type: string; option_name: string; menu_items: { name_ko: string }[]; price_krw: number | null; start_time: string | null; end_time: string | null; status: string; badge: string | null; source_url: string | null; extra: Record<string, unknown> }
+const MEAL_WORD: Record<string, string> = { breakfast: '조식', lunch: '중식', dinner: '석식' }
+const STATUS_WORD: Record<string, string> = { published: '공개', closed: '운영 안 함', no_menu: '메뉴 비공개' }
+export function diffWeekMeals(live: Snapshot, draft: Snapshot): Change[] {
+  const a = (live.meals as WeekMealLike[] | undefined) ?? []; const b = (draft.meals as WeekMealLike[] | undefined) ?? []
+  const key = (m: WeekMealLike) => `${m.date}|${m.meal_type}|${m.option_name}`
+  const name = (m: WeekMealLike) => `${m.date.slice(5)} ${MEAL_WORD[m.meal_type] ?? m.meal_type}${m.option_name ? ` (${m.option_name})` : ''}`
+  const summary = (m: WeekMealLike) => `${m.menu_items.map((i) => i.name_ko).join(', ') || STATUS_WORD[m.status]}${m.price_krw != null ? ` · ${m.price_krw.toLocaleString('ko-KR')}원` : ''}`
+  const before = new Map(a.map((m) => [key(m), m])); const after = new Map(b.map((m) => [key(m), m]))
+  const out: Change[] = []
+  for (const m of b) if (!before.has(key(m))) out.push({ key: `add:${key(m)}`, label: `${name(m)} 추가`, from: null, to: summary(m) })
+  for (const m of a) if (!after.has(key(m))) out.push({ key: `rm:${key(m)}`, label: `${name(m)} 제거 (앱에서 숨겨짐)`, from: summary(m), to: '앱에서 사라짐' })
+  const FIELDS: [keyof WeekMealLike, string][] = [['menu_items', '메뉴'], ['price_krw', '가격'], ['start_time', '시작'], ['end_time', '종료'], ['status', '상태'], ['badge', '프로그램'], ['source_url', '출처']]
+  for (const m of b) {
+    const o = before.get(key(m)); if (!o) continue
+    for (const [f, label] of FIELDS) {
+      if (same(o[f], m[f])) continue
+      const show = (v: unknown) => (f === 'menu_items' ? (v as { name_ko: string }[]).map((i) => i.name_ko).join(', ') : f === 'status' ? STATUS_WORD[String(v)] ?? v : v)
+      out.push({ key: `chg:${key(m)}:${f}`, label: `${name(m)} · ${label}`, from: show(o[f]), to: show(m[f]) })
+    }
+    for (const [f, label] of [['description', '설명'], ['notice', '공지'], ['sold_out', '품절']] as const) {
+      if (!same(o.extra?.[f], m.extra?.[f])) out.push({ key: `chg:${key(m)}:${f}`, label: `${name(m)} · ${label}`, from: o.extra?.[f] ?? null, to: m.extra?.[f] ?? null })
+    }
+  }
+  return out
+}
 /** One menu line of a restaurant's menu set (snapshot shape of 'restaurant_menus'). */
 export type MenuItem = {
   id: string; name_ko: string; description_ko: string | null; price_krw: number | null; category: string | null; price_verified_on: string | null
@@ -124,6 +151,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 export function diffSnapshots(live: Snapshot, draft: Snapshot): Change[] {
   if ('items' in draft || 'items' in live) return diffMenuItems(live, draft)
   if ('photos' in draft || 'photos' in live) return diffPhotoItems(live, draft)
+  if ('meals' in draft || 'meals' in live) return diffWeekMeals(live, draft)
   const out: Change[] = []
   for (const key of Object.keys(FIELD_LABEL)) {
     if (!(key in draft) && !(key in live)) continue
@@ -154,6 +182,7 @@ export const isLiveVisible = (type: EntityType, live: Snapshot): boolean =>
     : type === 'restaurant_menus' ? ((live.items as MenuItem[] | undefined) ?? []).some((i) => i.status === 'active')
     : type === 'mission' ? live.status === 'active'
     : type === 'app_content' ? live.active === true
+    : type === 'cafeteria_week' ? ((live.meals as { status: string }[] | undefined) ?? []).some((m) => m.status === 'published')
     : type === 'university' ? live.is_active === true
     : type === 'campaign' ? live.publish_state === 'published'
     : type === 'restaurant_photos' ? ((live.photos as PhotoItem[] | undefined) ?? []).some((i) => i.status === 'published')
@@ -184,6 +213,10 @@ export const cmsUnpublish = (type: EntityType, id: string, reason: string) => rp
 export const cmsRollback = (type: EntityType, id: string, version: number, reason: string) => rpc<number>('cms_rollback', { p_type: type, p_id: id, p_version: version, p_reason: reason })
 export const cmsSetVisibility = (type: EntityType, id: string, visibility: string, reason: string) => rpc<number>('cms_set_visibility', { p_type: type, p_id: id, p_visibility: visibility, p_reason: reason })
 export type OverviewRow = { entity_id: string; has_draft: boolean; draft_updated_at: string | null; scheduled_at: string | null; failed_jobs: number; live_version: number; last_published_at: string | null }
+/** Publish only the chosen days of a week draft, atomically (the other days stay in the draft). */
+export const cmsPublishWeekDays = (id: string, rev: number, days: string[], reason: string) => rpc<number>('cms_publish_week_days', { p_id: id, p_expected_revision: rev, p_days: days, p_reason: reason || null })
+/** The publishing entity of one cafeteria's week (created on first use). */
+export const cafeteriaWeekEntity = (cafeteriaId: string, week: string) => rpc<string>('cafeteria_week_entity', { p_cafeteria: cafeteriaId, p_week: week })
 export const cmsOverview = (type: EntityType, parent: string | null = null) => rpc<OverviewRow[]>('cms_overview', { p_type: type, p_parent: parent })
 export async function cmsVersions(type: EntityType, id: string): Promise<Version[]> {
   const { data, error } = await supabase.from('content_versions').select('*').eq('entity_type', type).eq('entity_id', id).order('version', { ascending: false }).limit(50)

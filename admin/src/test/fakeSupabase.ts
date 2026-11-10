@@ -35,7 +35,7 @@ export function createFake() {
   const client = {
     from,
     functions: { invoke: (name: string, opts: { body: unknown }) => { invokes.push({ name, body: opts.body }); const r = responses.get(`fn:${name}`) as Resp | ((b: unknown) => Resp) | undefined; const out = (typeof r === 'function' ? r(opts.body) : r) ?? { data: null, error: null }; return Promise.resolve({ data: out.data ?? null, error: out.error ?? null }) } },
-    rpc: (name: string, args: unknown) => { rpcs.push({ name, args }); const r = responses.get(`rpc:${name}`) as Resp | undefined; return Promise.resolve({ data: r?.data ?? null, error: r?.error ?? null }) },
+    rpc: (name: string, args: unknown) => { rpcs.push({ name, args }); const raw = responses.get(`rpc:${name}`) as Resp | ((a: unknown) => Resp) | undefined; const r = typeof raw === 'function' ? raw(args) : raw; return Promise.resolve({ data: r?.data ?? null, error: r?.error ?? null }) },
     storage: { from: (bucket: string) => ({ upload: async (path: string, body: unknown) => { const r = responses.get('storage:upload') as Resp | undefined; if (r?.error) return { error: r.error }; uploads.push({ bucket, path, body }); return { error: null } }, remove: async (paths: string[]) => { removed.push(...paths); return { error: null } }, createSignedUrl: async (path: string) => ({ data: { signedUrl: `https://signed.example/${bucket}/${path}` }, error: null }), getPublicUrl: (path: string) => ({ data: { publicUrl: `https://x.supabase.co/storage/v1/object/public/${bucket}/${path}` } }) }) },
     auth: {
       getSession: async () => ({ data: { session } }),

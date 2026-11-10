@@ -4,8 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { makeQueryClient } from '@/App'
 import { fake } from '@/test/fakeSupabase'
-import { addDays, weekStart } from '../CafeteriaPage'
-import { cafeteriaRow, cafeteriaTitle, emptyCafeteriaForm, validateCafeteria } from './model'
+import { cafeteriaRow, cafeteriaTitle, emptyCafeteriaForm, periodsOf, daysOf, validateCafeteria } from './model'
 
 vi.mock('@/lib/supabase', async () => {
   const m = await import('@/test/fakeSupabase')
@@ -21,7 +20,21 @@ describe('cafeteria form logic', () => {
     expect(validateCafeteria(emptyCafeteriaForm()).university_id).toBeTruthy()
     const f = { ...emptyCafeteriaForm('u1'), kind: 'dormitory' as const }
     expect(validateCafeteria(f)).toEqual({})
-    expect(cafeteriaRow(f)).toMatchObject({ university_id: 'u1', kind: 'dormitory', name_ko: null, name_en: null, name_zh: null, location_description: null, operating_note: null, status: 'active' })
+    expect(cafeteriaRow(f)).toMatchObject({ university_id: 'u1', kind: 'dormitory', name_ko: null, name_en: null, name_zh: null, location_description: null, operating_note: null })
+  })
+  it('a new cafeteria starts INACTIVE: students see nothing until an admin switches it on', () => {
+    expect(emptyCafeteriaForm('u1').status).toBe('inactive')
+  })
+  it('does not assume every meal or weekday: at least one of each is required, and the order is canonical', () => {
+    const f = emptyCafeteriaForm('u1')
+    expect(validateCafeteria({ ...f, meal_periods: [] }).meal_periods).toBeTruthy()
+    expect(validateCafeteria({ ...f, operating_days: [] }).operating_days).toBeTruthy()
+    expect(cafeteriaRow({ ...f, meal_periods: ['dinner', 'lunch'], operating_days: [6, 1, 3] })).toMatchObject({ meal_periods: ['lunch', 'dinner'], operating_days: [1, 3, 6] })
+  })
+  it('a database without the weekly columns reports Monday-Friday and all three meals', () => {
+    expect(periodsOf({})).toEqual(['breakfast', 'lunch', 'dinner'])
+    expect(daysOf({})).toEqual([1, 2, 3, 4, 5])
+    expect(periodsOf({ meal_periods: ['lunch'] })).toEqual(['lunch'])
   })
   it('trims, bounds and validates', () => {
     const f = { ...emptyCafeteriaForm('u1'), name_ko: ' 학생식당 ', sort_order: ' 3 ', location: ' 1층 ' }
@@ -34,20 +47,23 @@ describe('cafeteria form logic', () => {
   })
 })
 
-const CAF = (over: Record<string, unknown> = {}) => ({ id: 'c1', university_id: 'u1', kind: 'student', name_ko: '학생식당', name_en: null, name_zh: null, location_description: null, sort_order: 0, status: 'active', operating_note: null, universities: { name_ko: '순천향대학교' }, ...over })
+const CAF = (over: Record<string, unknown> = {}) => ({ id: 'c1', university_id: 'u1', kind: 'student', name_ko: '학생식당', name_en: null, name_zh: null, location_description: null, sort_order: 0, status: 'active', operating_note: null, meal_periods: ['breakfast', 'lunch', 'dinner'], operating_days: [1, 2, 3, 4, 5], photo_url: null, photo_path: null, universities: { name_ko: '순천향대학교' }, ...over })
 const UNIS = [{ id: 'u1', name_ko: '순천향대학교', is_active: true }, { id: 'u2', name_ko: '호서대학교', is_active: true }]
-const MON = () => weekStart(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()))
 
-async function open(cafeterias: unknown[] = [CAF()], meals: unknown[] = []) {
+async function open(cafeterias: unknown[] = [CAF()], weeks: unknown[] = [], overview: unknown[] = []) {
   fake.respond('universities:select', { data: UNIS })
   fake.respond('campus_cafeterias:select', { data: cafeterias })
-  fake.respond('cafeteria_meals:select', { data: meals })
+  fake.respond('cafeteria_weeks:select', { data: weeks })
+  fake.respond('rpc:cms_overview', { data: overview })
+  fake.respond('rpc:cafeteria_week_entity', { data: 'w1' })
+  fake.respond('rpc:cms_state', { data: { live: { meals: [] }, live_version: 0, last_published: null, draft: null, jobs: [] } })
   render(<MemoryRouter initialEntries={['/cafeteria']}><App client={makeQueryClient()} /></MemoryRouter>)
   await screen.findByRole('button', { name: /학식 식당 추가/ })
-  const active = (cafeterias as { status: string; university_id: string }[]).filter((c) => c.status === 'active' && c.university_id === 'u1').length
-  if (active > 0) await waitFor(() => expect(within(screen.getByLabelText('학식 식당')).getAllByRole('option').length).toBeGreaterThanOrEqual(active + 1))
-  else await waitFor(() => expect(fake.calls.some((c) => c.table === 'campus_cafeterias')).toBe(true))
+  await waitFor(() => expect(fake.calls.some((c) => c.table === 'campus_cafeterias')).toBe(true))
 }
+const list = () => screen.getByLabelText('학식 식당 목록')
+const names = () => within(list()).queryAllByRole('button', { name: /메뉴 관리$/ }).map((b) => b.getAttribute('aria-label')!.replace(' 메뉴 관리', ''))
+const openCaf = async (name = '학생식당') => userEvent.click(await screen.findByRole('button', { name: `${name} 메뉴 관리` }))
 
 beforeEach(() => {
   fake.reset(); fake.signInAs('admin')
@@ -56,26 +72,38 @@ beforeEach(() => {
 })
 
 describe('학식 식당 추가 / 수정', () => {
-  it('creates a cafeteria with only the confirmed information and selects it', async () => {
+  it('creates a cafeteria with only the confirmed information, INACTIVE, and selects it', async () => {
     fake.respond('campus_cafeterias:insert', { data: [{ id: 'new1' }] })
     await open([])
     expect(await screen.findByText(/등록된 학식 식당이 없어요/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
     const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
-    // the university being managed is preselected; clearing it must block saving
     expect((within(modal).getByLabelText('대학교') as HTMLSelectElement).value).toBe('u1')
     await userEvent.selectOptions(within(modal).getByLabelText('대학교'), '')
     await userEvent.click(within(modal).getByRole('button', { name: '추가' }))
-    expect(await within(modal).findByText('대학교를 선택해 주세요')).toBeTruthy() // university is required
+    expect(await within(modal).findByText('대학교를 선택해 주세요')).toBeTruthy()
     expect(fake.last('campus_cafeterias', 'insert')).toBeUndefined()
     await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u1')
     await userEvent.type(within(modal).getByLabelText(/이름 \(한국어\)/), '학생식당')
     await userEvent.type(within(modal).getByLabelText(/위치/), '학생회관 1층')
+    await userEvent.click(within(modal).getByLabelText('운영 식사 석식')) // this cafeteria does not serve dinner
+    await userEvent.click(within(modal).getByLabelText('운영 요일 토'))   // but opens on Saturdays
     await userEvent.click(within(modal).getByRole('button', { name: '추가' }))
     await screen.findByText(/학식 식당을 만들었어요/)
     expect(fake.last('campus_cafeterias', 'insert')!.payload).toEqual({
-      university_id: 'u1', kind: 'student', name_ko: '학생식당', name_en: null, name_zh: null, location_description: '학생회관 1층', sort_order: 0, status: 'active', operating_note: null,
+      university_id: 'u1', kind: 'student', name_ko: '학생식당', name_en: null, name_zh: null, location_description: '학생회관 1층', sort_order: 0, status: 'inactive', operating_note: null,
+      meal_periods: ['breakfast', 'lunch'], operating_days: [1, 2, 3, 4, 5, 6], photo_url: null, photo_path: null,
     })
+  })
+
+  it('refuses a cafeteria that serves no meal at all', async () => {
+    await open([])
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    for (const m of ['조식', '중식', '석식']) await userEvent.click(within(modal).getByLabelText(`운영 식사 ${m}`))
+    await userEvent.click(within(modal).getByRole('button', { name: '추가' }))
+    expect(await within(modal).findByText('운영하는 식사를 하나 이상 골라 주세요')).toBeTruthy()
+    expect(fake.last('campus_cafeterias', 'insert')).toBeUndefined()
   })
 
   it('says clearly when the same cafeteria already exists on that campus', async () => {
@@ -83,182 +111,163 @@ describe('학식 식당 추가 / 수정', () => {
     await open([])
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
     const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
-    await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u1')
     await userEvent.type(within(modal).getByLabelText(/이름 \(한국어\)/), '학생식당')
     await userEvent.click(within(modal).getByRole('button', { name: '추가' }))
     expect(await within(modal).findByText(/같은 이름의 학식 식당이 이미 있어요/)).toBeTruthy()
   })
 
-  it('edits a cafeteria in place; the university cannot be moved', async () => {
-    await open()
-    await userEvent.selectOptions(screen.getByLabelText('학식 식당'), 'c1')
+  it('edits a cafeteria in place, keeping its id', async () => {
+    await open(); await openCaf()
     await userEvent.click(screen.getByRole('button', { name: /식당 정보 수정/ }))
     const modal = await screen.findByRole('dialog', { name: '학식 식당 수정' })
-    expect((within(modal).getByLabelText('대학교') as HTMLSelectElement).disabled).toBe(true)
-    const note = within(modal).getByLabelText(/운영 안내/)
-    await userEvent.type(note, '평일 11:30~13:30')
+    await userEvent.type(within(modal).getByLabelText(/운영 안내/), '평일 11:30~13:30')
     await userEvent.click(within(modal).getByRole('button', { name: '저장' }))
     await screen.findByText(/정보를 저장했어요/)
-    expect(fake.last('campus_cafeterias', 'update')!.payload).toMatchObject({ name_ko: '학생식당', operating_note: '평일 11:30~13:30' })
+    expect(fake.last('campus_cafeterias', 'update')!.payload).toMatchObject({ name_ko: '학생식당', operating_note: '평일 11:30~13:30', university_id: 'u1' })
+    expect(fake.last('campus_cafeterias', 'update')!.filters).toEqual(expect.arrayContaining([['eq', 'id', 'c1']]))
+  })
+
+  it('moving a cafeteria to another university needs a second, explicit confirmation', async () => {
+    await open(); await openCaf()
+    await userEvent.click(screen.getByRole('button', { name: /식당 정보 수정/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 수정' })
+    await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u2')
+    expect(within(modal).getByText(/다른 대학교로 옮기면/)).toBeTruthy()
+    await userEvent.click(within(modal).getByRole('button', { name: '저장' }))
+    expect(await screen.findByText('다른 대학교로 옮길까요?')).toBeTruthy()
+    expect(fake.last('campus_cafeterias', 'update')).toBeUndefined()
+    await userEvent.click(screen.getByRole('button', { name: '옮기고 저장' }))
+    await waitFor(() => expect(fake.last('campus_cafeterias', 'update')).toBeTruthy())
+    expect(fake.last('campus_cafeterias', 'update')!.payload).toMatchObject({ university_id: 'u2' })
+  })
+
+  it('uploads a cafeteria photo; replacing it on save removes the old file, cancelling removes the new one', async () => {
+    const BASE = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/'
+    await open([CAF({ photo_url: `${BASE}cafeterias/old.jpg`, photo_path: 'cafeterias/old.jpg' })]); await openCaf()
+    await userEvent.click(screen.getByRole('button', { name: /식당 정보 수정/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 수정' })
+    expect((within(modal).getByAltText('식당 사진') as HTMLImageElement).src).toContain('cafeterias/old.jpg')
+    await userEvent.upload(within(modal).getByLabelText('식당 사진 올리기'), new File(['x'], 'p.jpg', { type: 'image/jpeg' }))
+    await waitFor(() => expect(fake.uploads).toHaveLength(1))
+    expect(fake.uploads[0].path).toMatch(/^cafeterias\/[0-9a-f-]{36}\.jpg$/)
+    expect(fake.removed).toEqual([])
+    await userEvent.click(within(modal).getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(fake.removed).toEqual(['cafeterias/old.jpg']))
+    expect((fake.last('campus_cafeterias', 'update')!.payload as { photo_path: string }).photo_path).toBe(fake.uploads[0].path)
+  })
+  it('cancelling the dialog deletes a photo that was uploaded but never saved', async () => {
+    await open(); await openCaf()
+    await userEvent.click(screen.getByRole('button', { name: /식당 정보 수정/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 수정' })
+    await userEvent.upload(within(modal).getByLabelText('식당 사진 올리기'), new File(['x'], 'p.jpg', { type: 'image/jpeg' }))
+    await waitFor(() => expect(fake.uploads).toHaveLength(1))
+    await userEvent.click(within(modal).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(fake.removed).toEqual([fake.uploads[0].path]))
+  })
+
+  it('on a database without the weekly migration the new fields are disabled and not sent', async () => {
+    fake.respond('campus_cafeterias:select', (c: { filters: [string, ...unknown[]][] }) => ({ data: [CAF()], error: JSON.stringify(c.filters).includes('meal_periods') ? { code: '42703', message: 'column campus_cafeterias.meal_periods does not exist' } : null }))
+    fake.respond('universities:select', { data: UNIS })
+    fake.respond('campus_cafeterias:insert', { data: [{ id: 'n' }] })
+    render(<MemoryRouter initialEntries={['/cafeteria']}><App client={makeQueryClient()} /></MemoryRouter>)
+    expect(await screen.findByText(/20261118000100/)).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    await userEvent.type(within(modal).getByLabelText(/이름 \(한국어\)/), '새 식당')
+    await userEvent.click(within(modal).getByRole('button', { name: '추가' }))
+    await waitFor(() => expect(fake.last('campus_cafeterias', 'insert')).toBeTruthy())
+    const row = fake.last('campus_cafeterias', 'insert')!.payload as Record<string, unknown>
+    expect(row).not.toHaveProperty('meal_periods'); expect(row).not.toHaveProperty('operating_days'); expect(row).not.toHaveProperty('photo_url')
   })
 })
 
 describe('활성화 · 비활성화 · 보관', () => {
   it('deactivating asks first, then hides the cafeteria from students without deleting anything', async () => {
-    await open()
-    await userEvent.selectOptions(screen.getByLabelText('학식 식당'), 'c1')
+    await open(); await openCaf()
     await userEvent.click(screen.getByRole('button', { name: /비활성화/ }))
-    expect(fake.last('campus_cafeterias', 'update')).toBeUndefined() // nothing before the confirmation
-    await userEvent.click(await screen.findByRole('button', { name: '비활성화', hidden: true }).catch(() => screen.getAllByRole('button', { name: '비활성화' }).at(-1)!))
+    expect(await screen.findByText(/비활성화할까요/)).toBeTruthy()
+    expect(fake.last('campus_cafeterias', 'update')).toBeUndefined()
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '비활성화' }))
     await screen.findByText(/비활성으로 바꿨어요/)
     expect(fake.last('campus_cafeterias', 'update')!.payload).toEqual({ status: 'inactive' })
-    expect(fake.last('cafeteria_meals', 'delete')).toBeUndefined()
-  })
-
-  it('archiving is a status change, never a delete; an inactive one can be restored', async () => {
-    await open([CAF({ status: 'inactive' })])
-    await userEvent.click(screen.getByLabelText(/비활성·보관된 식당도 보기/))
-    await userEvent.selectOptions(screen.getByLabelText('학식 식당'), 'c1')
-    await userEvent.click(screen.getByRole('button', { name: /운영 중으로/ }))
-    await userEvent.click(screen.getAllByRole('button', { name: '운영 중으로' }).at(-1)!)
-    await screen.findByText(/다시 운영 중으로 바꿨어요/)
-    expect(fake.last('campus_cafeterias', 'update')!.payload).toEqual({ status: 'active' })
     expect(fake.last('campus_cafeterias', 'delete')).toBeUndefined()
   })
-
-  it('inactive and archived cafeterias are hidden from the picker until asked', async () => {
-    await open([CAF(), CAF({ id: 'c2', name_ko: '옛 식당', status: 'archived' })])
-    const picker = screen.getByLabelText('학식 식당')
-    expect(within(picker).queryByRole('option', { name: /옛 식당/ })).toBeNull()
-    await userEvent.click(screen.getByLabelText(/비활성·보관된 식당도 보기/))
-    expect(within(picker).getByRole('option', { name: /옛 식당 \(보관\)/ })).toBeTruthy()
+  it('archiving is a status change, never a delete; an inactive one can be switched back on', async () => {
+    await open([CAF({ status: 'inactive' })]); await openCaf()
+    expect(screen.getByText(/앱에 보이지 않아요/)).toBeTruthy()
+    await userEvent.click(screen.getByRole('button', { name: /운영 중으로/ }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '운영 중으로' }))
+    await waitFor(() => expect(fake.last('campus_cafeterias', 'update')!.payload).toEqual({ status: 'active' }))
+    await userEvent.click(await screen.findByRole('button', { name: /^보관$|보관/ }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '보관' }))
+    await waitFor(() => expect(fake.last('campus_cafeterias', 'update')!.payload).toEqual({ status: 'archived' }))
+    expect(fake.last('campus_cafeterias', 'delete')).toBeUndefined()
+  })
+  it('the status filter hides archived ones by default and can show each state', async () => {
+    await open([CAF({ id: 'a', name_ko: '운영식당' }), CAF({ id: 'b', name_ko: '비활성식당', status: 'inactive' }), CAF({ id: 'c', name_ko: '보관식당', status: 'archived' })])
+    expect(names()).toEqual(['운영식당', '비활성식당'])
+    await userEvent.selectOptions(screen.getByLabelText('상태'), 'archived')
+    expect(names()).toEqual(['보관식당'])
+    await userEvent.selectOptions(screen.getByLabelText('상태'), 'active')
+    expect(names()).toEqual(['운영식당'])
+    await userEvent.selectOptions(screen.getByLabelText('상태'), 'all')
+    expect(names()).toHaveLength(3)
   })
 })
 
 describe('대학교별 관리 · 검색', () => {
-  const list = [CAF(), CAF({ id: 'c2', university_id: 'u2', name_ko: '호서 식당', universities: { name_ko: '호서대학교' } }), CAF({ id: 'c3', name_ko: '기숙사 식당', location_description: '생활관' })]
-  const names = () => within(screen.getByLabelText('학식 식당')).getAllByRole('option').map((o) => o.textContent)
+  const list2 = [CAF(), CAF({ id: 'c2', name_ko: '기숙사 식당', kind: 'dormitory', location_description: '생활관 1층' }), CAF({ id: 'c3', university_id: 'u2', name_ko: '호서 학생식당', universities: { name_ko: '호서대학교' } })]
   it('always manages ONE university: only its cafeterias are listed, and there is no "all universities"', async () => {
-    await open(list)
-    expect(within(screen.getByLabelText('대학교')).queryByRole('option', { name: /모든 대학교/ })).toBeNull()
-    expect((screen.getByLabelText('대학교') as HTMLSelectElement).value).toBe('u1')
-    expect(names()).toEqual(['선택하세요', '학생식당', '기숙사 식당'])
+    await open(list2)
+    expect(names()).toEqual(['학생식당', '기숙사 식당'])
+    expect(within(screen.getByLabelText('대학교')).queryByRole('option', { name: /전체|모든/ })).toBeNull()
     await userEvent.selectOptions(screen.getByLabelText('대학교'), 'u2')
-    expect(names()).toEqual(['선택하세요', '호서 식당'])
-    expect(screen.getByLabelText('대학교 현황').textContent).toContain('호서대학교: 학식 식당 1곳 운영 중')
+    expect(names()).toEqual(['호서 학생식당'])
   })
-  it('shows how many cafeterias each university has', async () => {
-    await open(list)
-    const opts = within(screen.getByLabelText('대학교')).getAllByRole('option').map((o) => o.textContent)
-    expect(opts).toEqual(['순천향대학교 (학식 2곳)', '호서대학교 (학식 1곳)'])
-  })
-  it('opens the first live cafeteria of the chosen university and queries only its meals', async () => {
-    await open(list)
-    await waitFor(() => expect((screen.getByLabelText('학식 식당') as HTMLSelectElement).value).toBe('c1'))
-    await userEvent.selectOptions(screen.getByLabelText('대학교'), 'u2')
-    await waitFor(() => expect((screen.getByLabelText('학식 식당') as HTMLSelectElement).value).toBe('c2'))
-    await waitFor(() => {
-      const q = [...fake.calls].reverse().find((c) => c.table === 'cafeteria_meals' && c.op === 'select')
-      expect(q!.filters).toEqual(expect.arrayContaining([['eq', 'cafeteria_id', 'c2']]))
-    })
+  it('shows how many cafeterias each university has and a status summary', async () => {
+    await open(list2)
+    expect(within(screen.getByLabelText('대학교')).getByRole('option', { name: /순천향대학교 \(학식 2곳\)/ })).toBeTruthy()
+    expect(within(screen.getByLabelText('대학교')).getByRole('option', { name: /호서대학교 \(학식 1곳\)/ })).toBeTruthy()
+    expect(within(screen.getByLabelText('대학교 현황')).getByText('2')).toBeTruthy()
   })
   it('a university with no cafeteria says so by name and offers to add one', async () => {
     await open([CAF()])
     await userEvent.selectOptions(screen.getByLabelText('대학교'), 'u2')
     expect(await screen.findByText(/호서대학교에 등록된 학식 식당이 없어요/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
-    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
-    expect((within(modal).getByLabelText('대학교') as HTMLSelectElement).value).toBe('u2') // new ones start in the university being managed
+    expect((within(await screen.findByRole('dialog', { name: '학식 식당 추가' })).getByLabelText('대학교') as HTMLSelectElement).value).toBe('u2')
   })
-  it('searches by name and location within the university', async () => {
-    await open(list)
+  it('searches by name and location within the university only', async () => {
+    await open(list2)
     await userEvent.type(screen.getByLabelText('식당 검색'), '생활관')
-    expect(names()).toEqual(['선택하세요', '기숙사 식당'])
-    await userEvent.clear(screen.getByLabelText('식당 검색'))
-    await userEvent.type(screen.getByLabelText('식당 검색'), '호서')
-    expect(names()).toEqual(['식당 없음']) // another university's cafeteria never matches here
+    expect(names()).toEqual(['기숙사 식당'])
+    await userEvent.clear(screen.getByLabelText('식당 검색')); await userEvent.type(screen.getByLabelText('식당 검색'), '호서')
+    expect(screen.getByText('조건에 맞는 학식 식당이 없어요.')).toBeTruthy()
+  })
+  it('each card shows which meals it serves, whether it opens at weekends, and its status', async () => {
+    await open([CAF({ meal_periods: ['lunch'], operating_days: [1, 2, 3, 4, 5, 6] })])
+    const card = within(list())
+    expect(card.getByText('중식')).toBeTruthy(); expect(card.queryByText('조식')).toBeNull(); expect(card.getByText('주말 운영')).toBeTruthy(); expect(card.getByText('운영 중')).toBeTruthy()
+  })
+  it('cards show the publishing state per cafeteria (draft weeks, scheduled, failed)', async () => {
+    await open([CAF()], [{ id: 'w1', cafeteria_id: 'c1', week_start: '2026-11-09' }, { id: 'w2', cafeteria_id: 'c1', week_start: '2026-11-16' }],
+      [{ entity_id: 'w1', has_draft: true, draft_updated_at: null, scheduled_at: null, failed_jobs: 0, live_version: 1, last_published_at: null }, { entity_id: 'w2', has_draft: false, draft_updated_at: null, scheduled_at: '2098-12-31T22:00:00Z', failed_jobs: 1, live_version: 1, last_published_at: null }])
+    expect(await screen.findByText('게시 전 초안 1주')).toBeTruthy()
+    expect(screen.getByText('예약 1주')).toBeTruthy(); expect(screen.getByText('실패 1주')).toBeTruthy()
   })
 })
 
-describe('식사별 구간 · 확인 정보', () => {
-  const meal = (over: Record<string, unknown> = {}) => ({
-    id: 'm1', cafeteria_id: 'c1', meal_date: addDays(MON(), 1), meal_type: 'lunch', option_name: '', option_order: 0, menu_items: [{ name_ko: '김치찌개', kind: 'main' }],
-    price_krw: 5500, start_time: '11:30:00', end_time: '13:30:00', badge: null, status: 'published', source_url: 'https://example.org/menu', verified_at: '2026-11-09T00:00:00+09:00', extra: {}, ...over,
-  })
-  async function pick() { await userEvent.selectOptions(screen.getByLabelText('학식 식당'), 'c1') }
-
-  it('shows 조식 / 중식 / 석식 separately; a missing meal says so and creates nothing', async () => {
-    await open([CAF()], [meal()])
-    await pick()
-    const day = await screen.findByRole('region', { name: new RegExp(addDays(MON(), 1)) })
-    expect(within(day).getByRole('group', { name: /중식/ })).toBeTruthy()
-    expect(within(day).getByText('조식 · 등록 안 함')).toBeTruthy()
-    expect(within(day).getByText('석식 · 등록 안 함')).toBeTruthy()
-    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined()
-    await userEvent.click(within(day).getByRole('button', { name: '+ 조식 추가' }))
-    expect((screen.getByLabelText('식사') as HTMLSelectElement).value).toBe('breakfast')
-    expect((screen.getByLabelText('날짜') as HTMLInputElement).value).toBe(addDays(MON(), 1))
-    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined() // still nothing saved
-  })
-
-  it('a day with no meals at all is one honest empty line, not three invented slots', async () => {
-    await open([CAF()], [])
-    await pick()
-    const day = await screen.findByRole('region', { name: new RegExp(MON()) })
-    expect(within(day).getByText(/등록된 식단 없음/)).toBeTruthy()
-    expect(within(day).queryByText(/등록 안 함/)).toBeNull()
-  })
-
-  it('shows when and where the information was verified', async () => {
-    await open([CAF()], [meal(), meal({ id: 'm2', meal_type: 'dinner', source_url: null })])
-    await pick()
-    expect(await screen.findAllByText(/확인 2026-11-09/)).toHaveLength(2)
-    expect(screen.getByRole('link', { name: '출처' }).getAttribute('href')).toBe('https://example.org/menu')
-    expect(screen.getByText(/출처 없음/)).toBeTruthy()
-  })
-
-  it('a new 천원의 아침밥 draft needs an official source before the editor can publish it', async () => {
-    fake.respond('cafeteria_meals:insert', { data: { id: 'new1' } })
-    await open([CAF()], [])
-    await pick()
-    await userEvent.click(await screen.findByRole('button', { name: '천원의 아침밥' }))
-    await userEvent.type(screen.getByLabelText(/메뉴 \(한 줄/), '북엇국')
-    await userEvent.click(screen.getByRole('button', { name: '초안으로 추가' }))
-    expect(await screen.findByText(/공식 출처 주소가 있어야/)).toBeTruthy() // blocked: no source
-    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined()
-    await userEvent.type(screen.getByLabelText('출처 주소'), 'https://example.org/morning')
-    const verified = screen.getByLabelText('확인한 날짜')
-    await userEvent.clear(verified); await userEvent.type(verified, '2026-11-09')
-    await userEvent.click(screen.getByRole('button', { name: '초안으로 추가' }))
-    await waitFor(() => expect(fake.last('cafeteria_meals', 'insert')).toBeTruthy())
-    expect(fake.last('cafeteria_meals', 'insert')!.payload).toMatchObject({ meal_type: 'breakfast', badge: '천원의 아침밥', price_krw: 1000, source_url: 'https://example.org/morning', verified_at: '2026-11-09T00:00:00+09:00', cafeteria_id: 'c1', status: 'draft' })
-  })
-
-  it('two corners of the same meal are two rows, each edited on its own', async () => {
-    const d = addDays(MON(), 1)
-    const live = (id: string, name: string) => ({ id, cafeteria_id: 'c1', meal_date: d, meal_type: 'lunch', option_name: name, menu_items: [{ name_ko: name ? '돈까스' : '김치찌개', kind: 'main' }], price_krw: 5500, start_time: null, end_time: null, badge: null, status: 'published', source_url: null, verified_at: '2026-11-09T00:00:00+09:00', extra: {} })
-    fake.respond('rpc:cms_state', { data: { live: live('m3', 'B코너'), live_version: 1, last_published: null, draft: null, jobs: [] } })
-    await open([CAF()], [meal(), meal({ id: 'm3', option_name: 'B코너', option_order: 1, menu_items: [{ name_ko: '돈까스', kind: 'main' }] })])
-    await pick()
-    const lunch = await screen.findByRole('group', { name: new RegExp(`${d} 중식`) })
-    expect(within(lunch).getByText('김치찌개')).toBeTruthy()
-    expect(within(lunch).getByText('돈까스')).toBeTruthy()
-    await userEvent.click(within(lunch).getAllByRole('button', { name: '수정' })[1])
-    await screen.findByLabelText('식단 편집')
-    expect(fake.rpcs.find((r) => r.name === 'cms_state')!.args).toMatchObject({ p_type: 'cafeteria_meal', p_id: 'm3' }) // the B corner, not the A one
-    expect(screen.getByLabelText('식단 정보').textContent).toMatch(/B코너/)
-  })
-
-  it('the edit panel shows the current photo and replacing it only stages it in the draft', async () => {
-    const BASE = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/'
-    const m = meal({ extra: { photo_url: `${BASE}cafeteria/c1/a.jpg`, photo_path: 'cafeteria/c1/a.jpg' } })
-    fake.respond('rpc:cms_state', { data: { live: m, live_version: 1, last_published: null, draft: null, jobs: [] } })
-    await open([CAF()], [m])
-    await pick()
-    await userEvent.click(await screen.findByRole('button', { name: '수정' }))
-    expect((await screen.findByAltText('현재 음식 사진')).getAttribute('src')).toBe(`${BASE}cafeteria/c1/a.jpg`)
-    await userEvent.upload(screen.getByLabelText('이 식단 사진 올리기'), new File(['x'], 'p.jpg', { type: 'image/jpeg' }))
-    await screen.findByText(/사진을 골랐어요/)
-    expect(fake.removed).toEqual([]) // the live file stays until a newer version is published
+describe('식당 정보 · 게시 이력 탭', () => {
+  it('the info tab lists the configuration; the history tab lists every publication of the cafeteria', async () => {
+    fake.respond('content_versions:select', { data: [{ id: 5, entity_id: 'w1', version: 2, kind: 'publish', reason: '11월 2주차', published_at: '2026-11-09T22:00:00Z', published_by: null, rolled_back_from: null }] })
+    await open([CAF({ meal_periods: ['lunch', 'dinner'], operating_days: [1, 2, 3, 4, 5, 6] })], [{ id: 'w1', cafeteria_id: 'c1', week_start: '2026-11-09' }]); await openCaf()
+    await userEvent.click(screen.getByRole('tab', { name: '식당 정보' }))
+    const info = screen.getByLabelText('식당 정보')
+    expect(info.textContent).toMatch(/중식 · 석식/); expect(info.textContent).toMatch(/월 화 수 목 금 토/)
+    await userEvent.click(screen.getByRole('tab', { name: '게시 이력' }))
+    const hist = await screen.findByLabelText('식당 게시 이력')
+    expect(within(hist).getByText(/v2 · 게시/)).toBeTruthy(); expect(within(hist).getByText(/11월 2주차/)).toBeTruthy()
+    await userEvent.click(within(hist).getByRole('button', { name: '이 주 열기' }))
+    expect(await screen.findByLabelText('주간 식단표')).toBeTruthy()
   })
 })

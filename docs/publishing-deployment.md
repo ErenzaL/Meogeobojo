@@ -18,7 +18,7 @@ Two different things get "published"; keep them apart.
 | Supabase `20261112000100` (live-update channel) | **unknown** without SQL access | run query C below |
 | Supabase `20261116000100` | **not applied** | `verify_production.py` → PENDING |
 | pg_cron job `cms-run-due-jobs` | **unknown** without SQL access | run queries A/B below |
-| Release candidate | `86072fb` = `main` + 2 commits (`b17e36b` settings center / `cms_health` / campus sync, `86072fb` upgrade-path fix, preservation test, preflight) | `scripts/preflight.sh` |
+| Release candidate | tip of `feature/cms-publishing` = `main` + 3 commits (`b17e36b` settings center / `cms_health` / campus sync, `86072fb` upgrade-path fix + preservation test + preflight, then docs) | `scripts/preflight.sh` |
 
 ## What each migration does (all additive and idempotent; none drops or rewrites content)
 
@@ -40,10 +40,10 @@ what students (anon) can read is identical before and after; a second pass on po
 |---|---|
 | Admin `21affc9` (deployed) + DB through `20261115` | works (every write goes through publishing) |
 | Admin `21affc9` + `20261116` applied | works (only adds functions, a publication entry, a CHECK that accepts more) |
-| New Admin (`86072fb`) + DB **without** `20261116` | works; `/settings` shows a clear "apply 20261116000100" notice with raw counts, publishing itself is unaffected |
+| New Admin (release candidate) + DB **without** `20261116` | works; `/settings` shows a clear "apply 20261116000100" notice with raw counts, publishing itself is unaffected |
 | Any Admin **older than `21affc9`** + DB `20261115` | **breaks**: direct edits of menus, photos, missions, campaigns, content, universities, meals are refused by the guards (only restaurants work) |
 | Old Flutter builds + new DB | works (the app only reads; guards affect writes; archived menus are filtered in the app as before) |
-| New Flutter (`86072fb`) + DB without `is_active` | falls back to the bundled campus list (column exists in production) |
+| New Flutter (release candidate) + DB without `is_active` | falls back to the bundled campus list (column exists in production) |
 
 Therefore: **never roll the Admin back below `21affc9`** without the emergency step in "Rollback".
 
@@ -86,7 +86,7 @@ Render builds `main`; watch both deploys finish. The Admin works before step 3 (
 python3 scripts/verify_production.py            # expect 48/48 and every migration line "OK" including 20261116000100
 ```
 Then open `https://meogeobojo-admin.onrender.com/settings` as an admin and check 게시 관리:
-- "지금 열려 있는 관리자 코드" = the commit Render shows for the Admin deploy (`86072fb…`).
+- "지금 열려 있는 관리자 코드" = the commit Render shows for the Admin deploy (the release tip).
 - 동기화 상태 shows 정상 (or tells you exactly what to fix: scheduler, live-update tables, guards).
 
 **5. Prove it end to end against production** (writes one throw-away "[E2E]" announcement for seconds, then deletes it; needs an admin login):
@@ -105,7 +105,7 @@ Published content itself never needs a mobile build.
 |---|---|
 | Bad **content** was published | the page's 게시 이력 → "이 버전으로 복원" (a new version, nothing deleted), or 게시 중단 |
 | A scheduled publication is wrong | `/settings` → 게시 관리 → 예약 취소 |
-| New **Admin/Flutter code** misbehaves | Render → service → Deploys → previous deploy → Rollback (or `git revert 86072fb b17e36b` and push). Safe down to `21affc9` |
+| New **Admin/Flutter code** misbehaves | Render → service → Deploys → previous deploy → Rollback (or `git revert` the release commits and push). Safe down to `21affc9` |
 | `20261116` misbehaves | `drop function if exists public.cms_health(); drop function if exists public._cms_label(text, uuid); alter publication supabase_realtime drop table public.universities;` (the widened CHECK is harmless, keep it) |
 | You must run an Admin **older than `21affc9`** | first lift the guards (reversible; the old Admin then edits live content directly, without drafts/versions):<br>`alter table public.restaurant_menus disable trigger restaurant_menus_guard_live;` and the same for `restaurant_photos_guard_live`, `app_content_guard_live`, `universities_guard_live`, `cafeteria_meals_guard_live`, `restaurant_overrides_guard_live`; undo with `enable trigger`. (`admin_save_mission` / `admin_save_campaign` also refuse live edits: re-create them from `20261110000100`.) Not recommended. |
 | Student data worry | none of these migrations touch user tables; the preservation test compares them before and after |

@@ -121,6 +121,8 @@ for fn_, body_, what_ in (('_campaign_save', {'p': {}}, 'campaigns + app content
     pending(f'20261115000100 publishing: final edition ({what_})', s_ in (401, 403) and '42501' in b_)
 s_, b_, _ = call('/rest/v1/rpc/cms_health', {})
 pending('20261116000100 publishing health (cms_health) for the /settings page', s_ in (401, 403) and '42501' in b_)
+s_, b_, _ = call('/rest/v1/content_sync?select=id,source&limit=1')
+pending('20261117000100 live-update signal (content_sync: take-downs reach running apps at once)', s_ == 200)
 print('  (pg_cron must also be enabled for scheduled publishing: check Dashboard -> Database -> Extensions and cron.job)')
 print()
 

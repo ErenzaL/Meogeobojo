@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,9 +11,34 @@ final appContentRepositoryProvider = Provider<AppContentRepository>(
 );
 
 /// Everything an admin currently publishes (all campuses).
-final appContentProvider = FutureProvider<List<AppContent>>(
-  (ref) => ref.watch(appContentRepositoryProvider).live(),
-);
+///
+/// The server's answer is authoritative: when the query succeeds and returns
+/// nothing, nothing is shown (an unpublished or deleted announcement disappears).
+/// Only a FAILED read (offline, timeout) keeps the last answer we got, so a
+/// flaky connection does not blank the banner, and a read that fails before
+/// any answer shows nothing rather than an error screen.
+final appContentProvider =
+    AsyncNotifierProvider<AppContentNotifier, List<AppContent>>(
+      AppContentNotifier.new,
+    );
+
+class AppContentNotifier extends AsyncNotifier<List<AppContent>> {
+  List<AppContent>? _lastConfirmed;
+
+  @override
+  Future<List<AppContent>> build() async {
+    try {
+      final live = await ref.watch(appContentRepositoryProvider).live();
+      _lastConfirmed = live; // even when empty: that IS the truth
+      return live;
+    } catch (e) {
+      debugPrint(
+        'app_content refresh failed (${e.runtimeType}); keeping the last answer',
+      );
+      return _lastConfirmed ?? const [];
+    }
+  }
+}
 
 /// The items that apply to the selected campus: its own plus the ones for
 /// every campus.

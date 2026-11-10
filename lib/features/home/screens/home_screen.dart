@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/sync/content_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/v5_widgets.dart';
@@ -76,125 +77,134 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       backgroundColor: whitePageColor(context),
       body: SafeArea(
         bottom: false, // the bottom bar in the shell handles the home indicator
-        child: ListView(
-          // Keeps scroll offset when the shell switches tabs (IndexedStack).
-          key: const PageStorageKey('home-scroll'),
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          // The shell reports the floating bar's footprint as bottom padding,
-          // so the last card can scroll fully above it.
-          padding: EdgeInsets.only(
-            top: 8,
-            bottom: 24 + MediaQuery.paddingOf(context).bottom,
+        // Pull down to re-read everything an admin published (the fallback for
+        // when a live update was missed).
+        child: RefreshIndicator(
+          onRefresh: () => refreshAllContentAndWait(
+            ProviderScope.containerOf(context, listen: false),
           ),
-          children: [
-            // Desktop has the shared header; this row is phone-only.
-            if (MediaQuery.sizeOf(context).width < Breakpoints.desktop) ...[
-              const Padding(padding: pad, child: HomeTopBar()),
-              const SizedBox(height: 8),
-            ],
-            const Padding(padding: pad, child: HomeNotices()),
-            const Padding(padding: pad, child: HomeSearchField()),
-            const SizedBox(height: 14),
-            const HomeCategoryBar(padding: pad),
-            const SizedBox(height: 8),
-            const HomeFilterBar(padding: pad),
-            const SizedBox(height: 14),
-            Padding(
-              padding: pad,
-              child: HomeRecommendButton(
-                onPressed: _recommend,
-                onRestart: showRecs ? _restart : null,
-              ),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            // Keeps scroll offset when the shell switches tabs (IndexedStack).
+            key: const PageStorageKey('home-scroll'),
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            // The shell reports the floating bar's footprint as bottom padding,
+            // so the last card can scroll fully above it.
+            padding: EdgeInsets.only(
+              top: 8,
+              bottom: 24 + MediaQuery.paddingOf(context).bottom,
             ),
-            const SizedBox(height: 20),
-            Padding(
-              key: _resultsKey,
-              padding: pad,
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final twoColumn =
-                      box.maxWidth >= Breakpoints.homeTwoColumn - 2 * 20;
-                  final recsColumn = !showRecs
-                      ? const RecsPrompt()
-                      : recs.when(
-                          loading: () => const RecsSkeleton(),
-                          error: (e, _) => RecsError(error: e),
-                          data: (data) => data == null
-                              ? const RecsEmpty()
-                              : Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Changing the pick fades the new card in.
-                                    AnimatedSwitcher(
-                                      duration: const Duration(
-                                        milliseconds: 260,
-                                      ),
-                                      switchInCurve: Curves.easeOutCubic,
-                                      transitionBuilder: (child, animation) =>
-                                          FadeTransition(
-                                            opacity: animation,
-                                            child: SlideTransition(
-                                              position: Tween(
-                                                begin: const Offset(0.04, 0),
-                                                end: Offset.zero,
-                                              ).animate(animation),
-                                              child: child,
-                                            ),
-                                          ),
-                                      child: HeroCard(
-                                        key: ValueKey(
-                                          data.hero.restaurant.kakaoId,
+            children: [
+              // Desktop has the shared header; this row is phone-only.
+              if (MediaQuery.sizeOf(context).width < Breakpoints.desktop) ...[
+                const Padding(padding: pad, child: HomeTopBar()),
+                const SizedBox(height: 8),
+              ],
+              const Padding(padding: pad, child: HomeNotices()),
+              const Padding(padding: pad, child: HomeSearchField()),
+              const SizedBox(height: 14),
+              const HomeCategoryBar(padding: pad),
+              const SizedBox(height: 8),
+              const HomeFilterBar(padding: pad),
+              const SizedBox(height: 14),
+              Padding(
+                padding: pad,
+                child: HomeRecommendButton(
+                  onPressed: _recommend,
+                  onRestart: showRecs ? _restart : null,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                key: _resultsKey,
+                padding: pad,
+                child: LayoutBuilder(
+                  builder: (context, box) {
+                    final twoColumn =
+                        box.maxWidth >= Breakpoints.homeTwoColumn - 2 * 20;
+                    final recsColumn = !showRecs
+                        ? const RecsPrompt()
+                        : recs.when(
+                            loading: () => const RecsSkeleton(),
+                            error: (e, _) => RecsError(error: e),
+                            data: (data) => data == null
+                                ? const RecsEmpty()
+                                : Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Changing the pick fades the new card in.
+                                      AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 260,
                                         ),
-                                        recs: data,
+                                        switchInCurve: Curves.easeOutCubic,
+                                        transitionBuilder: (child, animation) =>
+                                            FadeTransition(
+                                              opacity: animation,
+                                              child: SlideTransition(
+                                                position: Tween(
+                                                  begin: const Offset(0.04, 0),
+                                                  end: Offset.zero,
+                                                ).animate(animation),
+                                                child: child,
+                                              ),
+                                            ),
+                                        child: HeroCard(
+                                          key: ValueKey(
+                                            data.hero.restaurant.kakaoId,
+                                          ),
+                                          recs: data,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 28),
-                                    AlternativesSection(recs: data),
-                                    const SizedBox(height: 28),
-                                    // Before 학식: the places that fit the filters.
-                                    TodayPicksSection(
-                                      ranked: featuredFirst(
-                                        data.ranked,
-                                        ref
-                                                .watch(
-                                                  restaurantOverridesProvider,
-                                                )
-                                                .value ??
-                                            const {},
-                                        ref.watch(featuredContentIdsProvider),
+                                      const SizedBox(height: 28),
+                                      AlternativesSection(recs: data),
+                                      const SizedBox(height: 28),
+                                      // Before 학식: the places that fit the filters.
+                                      TodayPicksSection(
+                                        ranked: featuredFirst(
+                                          data.ranked,
+                                          ref
+                                                  .watch(
+                                                    restaurantOverridesProvider,
+                                                  )
+                                                  .value ??
+                                              const {},
+                                          ref.watch(featuredContentIdsProvider),
+                                        ),
+                                        categories: categories,
+                                        bleed: twoColumn ? 0 : gutter,
                                       ),
-                                      categories: categories,
-                                      bleed: twoColumn ? 0 : gutter,
-                                    ),
-                                  ],
-                                ),
-                        );
-                  // Tablet / desktop: recommendations left, cafeteria right.
-                  if (twoColumn) {
-                    return Row(
+                                    ],
+                                  ),
+                          );
+                    // Tablet / desktop: recommendations left, cafeteria right.
+                    if (twoColumn) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: recsColumn),
+                          const SizedBox(width: 24),
+                          const Expanded(
+                            flex: 2,
+                            child: CafeteriaCard(stackButtons: true),
+                          ),
+                        ],
+                      );
+                    }
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(flex: 3, child: recsColumn),
-                        const SizedBox(width: 24),
-                        const Expanded(
-                          flex: 2,
-                          child: CafeteriaCard(stackButtons: true),
-                        ),
+                        recsColumn,
+                        const SizedBox(height: 28),
+                        const CafeteriaCard(),
                       ],
                     );
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      recsColumn,
-                      const SizedBox(height: 28),
-                      const CafeteriaCard(),
-                    ],
-                  );
-                },
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -29,12 +29,12 @@ class _CountingUniversities implements UniversityRepository {
 
 void main() {
   late _CountingUniversities universities;
-  late StreamController<String> changes;
+  late StreamController<ContentChange> changes;
   late FakeMissionRepository missions;
   late FakeRestaurantOverrideRepository overrides;
 
   Future<Harness> open(WidgetTester tester) async {
-    changes = StreamController<String>.broadcast();
+    changes = StreamController<ContentChange>.broadcast();
     addTearDown(changes.close);
     universities = _CountingUniversities();
     missions = FakeMissionRepository();
@@ -75,12 +75,12 @@ void main() {
     h.container.read(shellTabProvider.notifier).select(ShellTabs.missions);
     await tester.pumpAndSettle();
     final before = missions.syncs;
-    changes.add('missions');
+    changes.add(ContentChange('missions'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(missions.syncs, greaterThan(before));
     final mid = missions.syncs;
-    changes.add('monthly_campaigns');
+    changes.add(ContentChange('monthly_campaigns'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(missions.syncs, greaterThan(mid));
@@ -96,7 +96,7 @@ void main() {
       'restaurant_photos',
     ]) {
       final before = overrides.forPlacesCalls;
-      changes.add(table);
+      changes.add(ContentChange(table));
       await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       expect(overrides.forPlacesCalls, greaterThan(before), reason: table);
@@ -109,7 +109,7 @@ void main() {
     await open(tester);
     final before = overrides.forPlacesCalls;
     for (var i = 0; i < 6; i++) {
-      changes.add('restaurant_overrides');
+      changes.add(ContentChange('restaurant_overrides'));
       await tester.pump(const Duration(milliseconds: 100));
     }
     await tester.pump(const Duration(seconds: 1));
@@ -123,7 +123,7 @@ void main() {
   ) async {
     await open(tester);
     final before = universities.fetches;
-    changes.add('universities');
+    changes.add(ContentChange('universities'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(universities.fetches, greaterThan(before));
@@ -132,7 +132,7 @@ void main() {
   testWidgets('unrelated tables change nothing', (tester) async {
     await open(tester);
     final before = overrides.forPlacesCalls;
-    changes.add('some_other_table');
+    changes.add(ContentChange('some_other_table'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     expect(overrides.forPlacesCalls, before);

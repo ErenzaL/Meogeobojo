@@ -531,10 +531,14 @@ class FakeAppContentRepository implements AppContentRepository {
   List<AppContent> items;
   int loads = 0;
 
+  /// Simulates an outage: the read throws instead of answering.
+  bool failing = false;
+
   @override
   Future<List<AppContent>> live() async {
     loads++;
-    return items;
+    if (failing) throw TimeoutException('offline');
+    return List.of(items);
   }
 }
 

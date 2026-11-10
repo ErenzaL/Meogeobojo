@@ -45,11 +45,33 @@ Two different things get "published"; keep them apart.
 | `20261113000100_cafeteria_management` | `campus_cafeterias.status`/`operating_note`, per-university unique name, public read of active cafeterias only; existing rows become `active` | cafeteria suite; **preservation test** |
 | `20261114000100_student_contributions` | private contribution-photo bucket, own-pending delete, one open report | contributions tests |
 | `20261115000100_cms_publishing` | publishing tables/RPCs, guards on live content, pg_cron job; replaces the public LIST policy on `restaurant-images` with admin-only (files still served by URL) | 100+ CMS checks; preservation test |
+| `20261117000100_content_sync_signal` | an append-only log `content_sync` (table name + time, no content) that every synced table's statement-level trigger writes to; readable by students, writable by nobody; on the realtime channel. **Makes take-downs reach running apps immediately** (see below) | content_sync suite (9 checks); preservation test |
 | `20261116000100_cms_health` | read-only `cms_health()`, adds `universities` to the live-update channel, **widens an older `entity_type` CHECK** on the publishing tables | health tests; **upgrade-path test** (older shorter constraint → widened) |
 
 Proven on a scratch PostgreSQL by `scripts/preflight.sh` → "sql suite": migrations applied fresh and twice; existing restaurants, menus, photos,
 announcements, cafeteria data, campaigns, missions, **user progress** and universities are byte-for-byte unchanged by `20261112..20261116`;
 what students (anon) can read is identical before and after; a second pass on populated data changes nothing.
+
+## Why a take-down did not reach a running app (announcement bug) and what fixes it
+
+Found when an announcement taken down in Admin stayed on the Flutter home screen until a full restart. Two independent causes:
+
+1. **App bug (fixed in the Flutter code):** Realtime events reached the shell as the bare table name through a Riverpod
+   `StreamProvider<String>`. Riverpod drops a state equal to the previous one, so after the first `app_content` event every later one
+   (the unpublish after the publish) never reached the listener (verified: 3 identical events → 1 listener call).
+   Events are now distinct objects. The announcement list is also handled correctly: a confirmed empty answer clears the banner, a
+   failed read keeps the last answer.
+2. **Database/Realtime behaviour (fixed by `20261117000100`):** Realtime only delivers a change the subscriber could read under RLS. Switching an
+   announcement off is an UPDATE after which students can no longer read the row, so Realtime says nothing
+   ([Supabase: Postgres Changes troubleshooting](https://supabase.com/docs/guides/troubleshooting/realtime-postgres-changes-troubleshooting)).
+   The same applies to hiding a restaurant, archiving a photo, pausing a mission, unpublishing a meal. `content_sync` is announced
+   instead because its rows are always readable.
+
+Layers, so that nothing depends on a single mechanism: live table events → the `content_sync` signal (needs `20261117`) →
+re-read on app resume / campus switch / return to Home → a 60-second foreground refresh of the cheap live content → pull-to-refresh on Home.
+Without `20261117` an unpublish reaches a running app within 60 seconds (or sooner on resume / pull-to-refresh); with it, within about a second.
+Realtime channels are one per source (a missing publication entry for one table can no longer take all live updates down), re-subscribe with
+back-off, announce a full re-read after a reconnect, and are disposed with the app shell.
 
 ## Backward compatibility (production DB ⇄ code that is deployed or about to be)
 

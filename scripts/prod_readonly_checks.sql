@@ -118,6 +118,13 @@ begin
   select exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'universities') into ok;
   insert into _chk (section, item, expected, actual, status, hint) values ('7 live updates', 'realtime: universities', 'added by 20261116000100', case when ok then 'yes' else 'not yet' end, 'INFO', 'The app still refreshes campuses on resume and pull-to-refresh.');
 
+  -- 7b. the live-update signal (20261117000100): Realtime cannot announce a take-down, this log does
+  select exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'content_sync') into ok;
+  select count(*) into n from pg_trigger where tgname = 'content_sync_bump' and not tgisinternal;
+  insert into _chk (section, item, expected, actual, status, hint) values ('7 live updates', 'content_sync signal (migration 20261117000100)', '9 triggers + on the channel after the migration',
+    n || ' triggers, ' || case when ok then 'on the channel' else 'not on the channel' end, case when n = 9 and ok then 'PASS' else 'INFO' end,
+    'Without it a running app learns about a take-down only on resume, on its 60 s refresh or on pull-to-refresh.');
+
   -- 8. storage
   if to_regclass('storage.objects') is not null then
     select exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'restaurant-images: public read') into ok;

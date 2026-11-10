@@ -11,7 +11,9 @@ import '../../missions/screens/mission_screen.dart';
 import '../../missions/widgets/mission_celebration_host.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/sync/content_sync.dart';
+import '../../content/providers/app_content_providers.dart';
 import '../../university/providers/university_account_sync.dart';
+import '../../university/providers/university_providers.dart';
 import '../providers/shell_tab_provider.dart';
 import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
@@ -48,35 +50,69 @@ class _AppShellState extends ConsumerState<AppShell> {
   void initState() {
     super.initState();
     // Coming back to the app (or the browser tab) re-reads what admins
-    // published: photos, menus, hidden places. No rebuild or restart needed.
+    // published: announcements, photos, menus, hidden places. No rebuild or
+    // restart needed. While the app is in the background nothing polls.
     _lifecycle = AppLifecycleListener(
-      onResume: () => refreshAllContent(_container),
+      onResume: () {
+        refreshAllContent(_container);
+        _container.read(contentSyncEngineProvider)?.retryFailed();
+        _startPolling();
+      },
+      onInactive: _stopPolling,
+      onHide: _stopPolling,
+      onPause: _stopPolling,
     );
+    _startPolling();
   }
 
   @override
   void dispose() {
     _lifecycle.dispose();
     _syncTimer?.cancel();
+    _pollTimer?.cancel();
     super.dispose();
+  }
+
+  /// Safety net under Realtime: a Realtime event can be missed (a dropped
+  /// connection, an update that row-level security hides), so the cheap live
+  /// content is re-read once a minute while the app is in the foreground.
+  void _startPolling() {
+    _pollTimer?.cancel();
+    final every = ref.read(contentPollIntervalProvider);
+    _pollTimer = Timer.periodic(every, (_) {
+      if (mounted) refreshLiveContent(_container);
+    });
+  }
+
+  void _stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
   }
 
   ProviderContainer get _container =>
       ProviderScope.containerOf(context, listen: false);
 
   Timer? _syncTimer;
+  Timer? _pollTimer;
   final _pendingTables = <String>{};
 
   /// A burst of admin edits (a save touches several rows) becomes one refresh.
-  void _onContentChanged(String table) {
-    _pendingTables.add(table);
+  void _onContentChanged(ContentChange change) {
+    _pendingTables.add(change.source);
     _syncTimer?.cancel();
     _syncTimer = Timer(const Duration(milliseconds: 800), () {
       if (!mounted) return;
-      for (final t in _pendingTables) {
-        invalidateForTable(_container, t);
-      }
+      final tables = {..._pendingTables};
       _pendingTables.clear();
+      if (tables.contains(ContentChange.resyncSource)) {
+        refreshAllContent(
+          _container,
+        ); // reconnected: events may have been missed
+      } else {
+        for (final t in tables) {
+          invalidateForTable(_container, t);
+        }
+      }
     });
   }
 
@@ -87,8 +123,19 @@ class _AppShellState extends ConsumerState<AppShell> {
     // The campus follows the account (server-side mission eligibility).
     ref.watch(universityAccountSyncProvider);
     ref.listen(contentChangesProvider, (_, next) {
-      final table = next.value;
-      if (table != null) _onContentChanged(table);
+      final change = next.value;
+      if (change != null) _onContentChanged(change);
+    });
+    // A different campus, or coming back to Home: re-read the announcements
+    // (the list is global, the campus only filters it, but this also clears
+    // anything that went stale while another tab was open).
+    ref.listen(selectedUniversityProvider, (prev, next) {
+      if (prev?.value?.id != next.value?.id) ref.invalidate(appContentProvider);
+    });
+    ref.listen(shellTabProvider, (prev, next) {
+      if (next == ShellTabs.home && prev != ShellTabs.home) {
+        ref.invalidate(appContentProvider);
+      }
     });
     return MissionCelebrationHost(child: _shell(context));
   }

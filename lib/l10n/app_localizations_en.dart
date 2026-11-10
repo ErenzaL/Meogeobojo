@@ -1688,6 +1688,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restaurantMenuSoldOut => 'Sold out';
 
   @override
+  String get restaurantGalleryTitle => 'Photos';
+
+  @override
+  String get restaurantMenuRecommended => 'Recommended';
+
+  @override
   String restaurantPriceWon(int price) {
     final intl.NumberFormat priceNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);

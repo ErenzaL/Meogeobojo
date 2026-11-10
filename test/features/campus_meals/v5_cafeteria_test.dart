@@ -74,6 +74,35 @@ void main() {
       );
     });
 
+    test(
+      'an admin photo and notice come from `extra`; only https photos load',
+      () {
+        CafeteriaMeal parse(Object? extra) => CafeteriaMeal.fromJson({
+          'id': 'm',
+          'cafeteria_id': 'c',
+          'meal_date': '2026-11-10',
+          'meal_type': 'lunch',
+          'status': 'published',
+          'menu_items': [
+            {'name_ko': '김치찌개'},
+          ],
+          'verified_at': '2026-11-09T00:00:00Z',
+          'extra': extra,
+        })!;
+        final m = parse({
+          'photo_url': 'https://x.supabase.co/a.webp',
+          'notice': ' 방학 중 운영 ',
+          'photo_path': 'cafeteria/c1/a.webp',
+        });
+        expect(m.photoUrl, 'https://x.supabase.co/a.webp');
+        expect(m.notice, '방학 중 운영');
+        expect(parse({'photo_url': 'http://x/a.webp'}).photoUrl, isNull);
+        expect(parse({'photo_url': '  ', 'notice': ''}).photoUrl, isNull);
+        expect(parse({}).notice, isNull);
+        expect(parse(null).photoUrl, isNull); // rows without extra still parse
+      },
+    );
+
     test('an admin-set badge is read from the row, blank means none', () {
       CafeteriaMeal parse(Object? badge) => CafeteriaMeal.fromJson({
         'id': 'm',
@@ -90,6 +119,31 @@ void main() {
       expect(parse('천원의 아침밥').badge, '천원의 아침밥');
       expect(parse('  ').badge, isNull);
       expect(parse(null).badge, isNull);
+    });
+  });
+
+  group('photo and notice from the admin', () {
+    testWidgets(
+      'the meal card shows the notice and tolerates its photo failing',
+      (tester) async {
+        await openPage(tester, [
+          fakeMeal(
+            '2026-11-09',
+            MealType.lunch,
+            photoUrl: 'https://x.supabase.co/a.webp',
+            notice: '방학 중 운영시간이 달라요',
+          ),
+        ]);
+        expect(find.text('방학 중 운영시간이 달라요'), findsOneWidget);
+        expect(find.byType(Image), findsOneWidget);
+        // the test HTTP client refuses the request: the card must not throw or show a stock photo
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('no photo means no image at all', (tester) async {
+      await openPage(tester, [fakeMeal('2026-11-09', MealType.lunch)]);
+      expect(find.byType(Image), findsNothing);
     });
   });
 

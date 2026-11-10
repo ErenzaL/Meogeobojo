@@ -2914,6 +2914,18 @@ abstract class AppLocalizations {
   /// **'품절'**
   String get restaurantMenuSoldOut;
 
+  /// No description provided for @restaurantGalleryTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진'**
+  String get restaurantGalleryTitle;
+
+  /// No description provided for @restaurantMenuRecommended.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천'**
+  String get restaurantMenuRecommended;
+
   /// No description provided for @restaurantPriceWon.
   ///
   /// In ko, this message translates to:

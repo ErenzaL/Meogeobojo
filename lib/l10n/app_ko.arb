@@ -1017,6 +1017,8 @@
   "restaurantAboutTitle": "소개",
   "restaurantMenuTitle": "메뉴",
   "restaurantMenuSoldOut": "품절",
+  "restaurantGalleryTitle": "사진",
+  "restaurantMenuRecommended": "추천",
   "restaurantPriceWon": "{price}원",
   "@restaurantPriceWon": {
     "placeholders": {

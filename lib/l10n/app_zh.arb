@@ -476,6 +476,8 @@
   "restaurantAboutTitle": "简介",
   "restaurantMenuTitle": "菜单",
   "restaurantMenuSoldOut": "已售罄",
+  "restaurantGalleryTitle": "照片",
+  "restaurantMenuRecommended": "推荐",
   "restaurantPriceWon": "{price}韩元",
   "mealBreakfastProgram": "早餐 · 千元早餐",
   "mealHeading": "{day}{meal}食堂",

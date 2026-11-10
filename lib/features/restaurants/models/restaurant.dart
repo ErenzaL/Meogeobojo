@@ -38,6 +38,23 @@ class Restaurant {
   final int distanceMeters;
   final String? placeUrl;
 
+  /// A copy with the admin-managed display fields replaced; everything else
+  /// (id, Kakao category path, coordinates, distance) stays as Kakao gave it.
+  Restaurant copyWith({String? name, String? roadAddress, String? phone}) =>
+      Restaurant(
+        kakaoId: kakaoId,
+        name: name ?? this.name,
+        categoryName: categoryName,
+        categoryGroupCode: categoryGroupCode,
+        address: address,
+        roadAddress: roadAddress ?? this.roadAddress,
+        phone: phone ?? this.phone,
+        latitude: latitude,
+        longitude: longitude,
+        distanceMeters: distanceMeters,
+        placeUrl: placeUrl,
+      );
+
   /// Short tag for cards: the second path segment ("한식", "카페").
   String get categoryTag {
     final parts = categoryName.split('>').map((e) => e.trim()).toList();

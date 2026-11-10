@@ -8,6 +8,7 @@ import '../../profile/screens/profile_screen.dart';
 import '../../missions/screens/mission_screen.dart';
 import '../../missions/widgets/mission_celebration_host.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../restaurants/providers/restaurant_providers.dart';
 import '../providers/shell_tab_provider.dart';
 import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
@@ -38,6 +39,27 @@ class _AppShellState extends ConsumerState<AppShell> {
   static Widget _profile(BuildContext _) => const ProfileScreen();
 
   final _visited = <int>{ShellTabs.home};
+  late final AppLifecycleListener _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+    // Coming back to the app (or the browser tab) re-reads what admins
+    // published: photos, menus, hidden places. No rebuild or restart needed.
+    _lifecycle = AppLifecycleListener(
+      onResume: () {
+        ref.invalidate(restaurantOverridesProvider);
+        ref.invalidate(restaurantMenusProvider);
+        ref.invalidate(restaurantPhotosProvider);
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) =>

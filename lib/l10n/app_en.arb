@@ -476,6 +476,8 @@
   "restaurantAboutTitle": "About",
   "restaurantMenuTitle": "Menu",
   "restaurantMenuSoldOut": "Sold out",
+  "restaurantGalleryTitle": "Photos",
+  "restaurantMenuRecommended": "Recommended",
   "restaurantPriceWon": "₩{price}",
   "mealBreakfastProgram": "Breakfast · 1,000-won Breakfast",
   "mealHeading": "{day} {meal} · cafeteria",

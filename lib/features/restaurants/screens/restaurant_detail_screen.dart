@@ -43,6 +43,17 @@ class RestaurantDetailScreen extends ConsumerWidget {
     final override = ref.watch(restaurantOverridesProvider).value?[r.kakaoId];
     final menus =
         ref.watch(restaurantMenusProvider(r.kakaoId)).value ?? const [];
+    final photos =
+        ref.watch(restaurantPhotosProvider(r.kakaoId)).value ?? const [];
+    // The live cover (also mirrored to the override's image) leads; the rest
+    // of the uploads form the gallery. Nothing is invented when there are none.
+    final coverUrl =
+        photos.where((p) => p.isCover).firstOrNull?.url ??
+        override?.insight.imageUrl;
+    final gallery = [
+      for (final p in photos)
+        if (!p.isCover) p,
+    ];
     final description = override?.description;
     final phone = r.phone.trim();
     return Scaffold(
@@ -52,8 +63,8 @@ class RestaurantDetailScreen extends ConsumerWidget {
             pinned: true,
             expandedHeight: 220,
             backgroundColor: context.palette.background,
-            flexibleSpace: const FlexibleSpaceBar(
-              background: RestaurantPhotoPlaceholder(iconSize: 56),
+            flexibleSpace: FlexibleSpaceBar(
+              background: _CoverImage(url: coverUrl),
             ),
             actions: [
               Padding(
@@ -100,6 +111,12 @@ class RestaurantDetailScreen extends ConsumerWidget {
                     const SizedBox(height: 6),
                     Text(description, style: AppText.body),
                   ],
+                  if (gallery.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    Text(l10n.restaurantGalleryTitle, style: AppText.title),
+                    const SizedBox(height: 8),
+                    _Gallery(photos: gallery),
+                  ],
                   if (menus.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Text(l10n.restaurantMenuTitle, style: AppText.title),
@@ -130,6 +147,102 @@ class RestaurantDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// The place's cover. While loading it is a quiet block; if the file cannot be
+/// loaded (or there is none) it is the neutral placeholder, never stock art.
+class _CoverImage extends StatelessWidget {
+  const _CoverImage({required this.url});
+
+  final String? url;
+
+  @override
+  Widget build(BuildContext context) {
+    final u = url;
+    if (u == null) return const RestaurantPhotoPlaceholder(iconSize: 56);
+    return Image.network(
+      u,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      loadingBuilder: (context, child, progress) => progress == null
+          ? child
+          : ColoredBox(color: context.palette.fillMuted),
+      errorBuilder: (_, _, _) => const RestaurantPhotoPlaceholder(iconSize: 56),
+    );
+  }
+}
+
+/// Horizontal strip of uploaded photos; tapping one opens it full screen.
+class _Gallery extends StatelessWidget {
+  const _Gallery({required this.photos});
+
+  final List<RestaurantPhoto> photos;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 116,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: photos.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 8),
+      itemBuilder: (context, i) {
+        final p = photos[i];
+        return Semantics(
+          button: true,
+          label: p.caption,
+          child: GestureDetector(
+            onTap: () => showDialog<void>(
+              context: context,
+              builder: (_) => Dialog.fullscreen(
+                backgroundColor: Colors.black,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          p.url,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: IconButton(
+                          tooltip: context.l10n.commonClose,
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: AspectRatio(
+                aspectRatio: 4 / 3,
+                child: Image.network(
+                  p.url,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : ColoredBox(color: context.palette.fillMuted),
+                  errorBuilder: (_, _, _) =>
+                      const RestaurantPhotoPlaceholder(iconSize: 24),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _InfoRow extends StatelessWidget {
@@ -183,10 +296,38 @@ class _MenuRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (item.imageUrl != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox.square(
+                dimension: 56,
+                child: Image.network(
+                  item.imageUrl!,
+                  fit: BoxFit.cover,
+                  semanticLabel: item.name,
+                  loadingBuilder: (context, child, progress) => progress == null
+                      ? child
+                      : ColoredBox(color: context.palette.fillMuted),
+                  errorBuilder: (_, _, _) =>
+                      const RestaurantPhotoPlaceholder(iconSize: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (item.recommended)
+                  Text(
+                    l10n.restaurantMenuRecommended,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: context.palette.rustText,
+                    ),
+                  ),
                 Text(
                   item.name,
                   style: AppText.body.copyWith(

@@ -370,6 +370,8 @@ CafeteriaMeal fakeMeal(
   String? end,
   String? source,
   String? badge,
+  String? photoUrl,
+  String? notice,
 }) => CafeteriaMeal(
   id: '$cafeteriaId-$date-${type.name}-$option',
   cafeteriaId: cafeteriaId,
@@ -384,6 +386,8 @@ CafeteriaMeal fakeMeal(
   endTime: end,
   sourceUrl: source,
   badge: badge,
+  photoUrl: photoUrl,
+  notice: notice,
   verifiedAt: DateTime.utc(2026, 11, 2, 0),
 );
 
@@ -434,21 +438,34 @@ class FakeRestaurantOverrideRepository implements RestaurantOverrideRepository {
   FakeRestaurantOverrideRepository({
     Map<String, RestaurantOverride>? overrides,
     Map<String, List<RestaurantMenuItem>>? menuItems,
+    Map<String, List<RestaurantPhoto>>? photoItems,
   }) : overrides = overrides ?? {},
-       menuItems = menuItems ?? {};
+       menuItems = menuItems ?? {},
+       photoItems = photoItems ?? {};
 
   Map<String, RestaurantOverride> overrides;
   Map<String, List<RestaurantMenuItem>> menuItems;
+  Map<String, List<RestaurantPhoto>> photoItems;
+
+  /// How many times the app asked for overrides (a refresh shows up here).
+  int forPlacesCalls = 0;
 
   @override
-  Future<Map<String, RestaurantOverride>> forPlaces(List<String> ids) async => {
-    for (final id in ids)
-      if (overrides[id] != null) id: overrides[id]!,
-  };
+  Future<Map<String, RestaurantOverride>> forPlaces(List<String> ids) async {
+    forPlacesCalls++;
+    return {
+      for (final id in ids)
+        if (overrides[id] != null) id: overrides[id]!,
+    };
+  }
 
   @override
   Future<List<RestaurantMenuItem>> menus(String kakaoId) async =>
       menuItems[kakaoId] ?? const [];
+
+  @override
+  Future<List<RestaurantPhoto>> photos(String kakaoId) async =>
+      photoItems[kakaoId] ?? const [];
 }
 
 /// The server's mission logic lives in SQL (see supabase/tests/missions_test.sql);

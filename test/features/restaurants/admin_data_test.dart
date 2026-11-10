@@ -1,10 +1,13 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/recommendation/restaurant_insight.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
 import 'package:meogeobojo/features/restaurants/screens/restaurant_detail_screen.dart';
+import 'package:meogeobojo/features/restaurants/widgets/restaurant_photo_placeholder.dart';
 
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
@@ -69,6 +72,169 @@ void main() {
       expect(m.available, isFalse);
       expect(m.priceKrw, 9000);
     });
+  });
+
+  group('photos and richer menus', () {
+    test('archived menus are dropped; recommended, category and https images parse', () {
+      expect(
+        RestaurantMenuItem.fromJson({'name_ko': '옛 메뉴', 'status': 'archived'}),
+        isNull,
+      );
+      final m = RestaurantMenuItem.fromJson({
+        'name_ko': '제육 정식',
+        'recommended': true,
+        'category': '식사',
+        'status': 'active',
+        'image_url': 'https://x.supabase.co/a.webp',
+      })!;
+      expect(m.recommended, isTrue);
+      expect(m.category, '식사');
+      expect(m.imageUrl, 'https://x.supabase.co/a.webp');
+      // an insecure or blank image link is ignored rather than loaded
+      expect(
+        RestaurantMenuItem.fromJson({
+          'name_ko': 'a',
+          'image_url': 'http://x/a.png',
+        })!.imageUrl,
+        isNull,
+      );
+      expect(
+        RestaurantMenuItem.fromJson({'name_ko': 'a', 'image_url': ' '})!
+            .imageUrl,
+        isNull,
+      );
+    });
+
+    test('photo rows need an https url; kind and caption are read', () {
+      final p = RestaurantPhoto.fromJson({
+        'url': 'https://x/c.webp',
+        'kind': 'cover',
+        'caption': ' 입구 ',
+        'sort_order': 0,
+      })!;
+      expect(p.isCover, isTrue);
+      expect(p.caption, '입구');
+      expect(
+        RestaurantPhoto.fromJson({'url': 'http://x/c.webp', 'kind': 'gallery'}),
+        isNull,
+      );
+      expect(RestaurantPhoto.fromJson({'kind': 'gallery'}), isNull);
+      expect(
+        RestaurantPhoto.fromJson({
+          'url': 'https://x/g.webp',
+          'kind': 'gallery',
+          'caption': '',
+        })!.caption,
+        isNull,
+      );
+    });
+
+    testWidgets(
+      'the detail page shows the uploaded gallery and a recommended menu',
+      (tester) async {
+        final repo = FakeRestaurantOverrideRepository(
+          photoItems: {
+            'a': const [
+              RestaurantPhoto(url: 'https://x/cover.webp', isCover: true),
+              RestaurantPhoto(
+                url: 'https://x/g1.webp',
+                isCover: false,
+                caption: '내부',
+              ),
+            ],
+          },
+          menuItems: {
+            'a': const [
+              RestaurantMenuItem(
+                name: '잔치국수',
+                priceKrw: 6000,
+                recommended: true,
+                imageUrl: 'https://x/m.webp',
+              ),
+            ],
+          },
+        );
+        final h = await buildHarness(
+          restaurants: FakeRestaurantRepository(
+            items: [spot('a', '국수집', 0.0005)],
+          ),
+          overridesRepo: repo,
+        );
+        await pumpApp(
+          tester,
+          h,
+          home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('사진'), findsOneWidget); // the gallery heading
+        expect(find.bySemanticsLabel('내부'), findsOneWidget);
+        expect(find.text('추천'), findsOneWidget);
+        expect(find.text('잔치국수'), findsOneWidget);
+        // a broken image link falls back quietly: no exception
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('no uploads: no gallery heading and no invented photo', (
+      tester,
+    ) async {
+      final h = await buildHarness(
+        restaurants: FakeRestaurantRepository(
+          items: [spot('a', '국수집', 0.0005)],
+        ),
+        overridesRepo: FakeRestaurantOverrideRepository(),
+      );
+      await pumpApp(
+        tester,
+        h,
+        home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('사진'), findsNothing);
+      expect(
+        find.byType(RestaurantPhotoPlaceholder),
+        findsOneWidget,
+      ); // the neutral cover
+    });
+  });
+
+  testWidgets('coming back to the app re-reads what admins published', (
+    tester,
+  ) async {
+    final repo = FakeRestaurantOverrideRepository(
+      overrides: {
+        'a': const RestaurantOverride(
+          kakaoId: 'a',
+          visibility: 'published',
+          description: '옛 설명',
+        ),
+      },
+    );
+    final h = await buildHarness(
+      restaurants: FakeRestaurantRepository(items: [spot('a', '국수집', 0.0005)]),
+      overridesRepo: repo,
+    );
+    await pumpApp(tester, h, home: const AppShell());
+    await h.container.read(restaurantOverridesProvider.future);
+    await tester.pumpAndSettle();
+    final before = repo.forPlacesCalls;
+    repo.overrides = {
+      'a': const RestaurantOverride(
+        kakaoId: 'a',
+        visibility:
+            'hidden', // an admin hides it while the app is in the background
+      ),
+    };
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    await h.container.read(restaurantOverridesProvider.future);
+    expect(repo.forPlacesCalls, greaterThan(before));
+    expect(h.container.read(hiddenPlaceIdsProvider), contains('a'));
   });
 
   testWidgets('detail shows the description and menus an admin entered', (

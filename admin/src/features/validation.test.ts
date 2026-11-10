@@ -3,7 +3,7 @@ import { THOUSAND_WON_BADGE, parseItems, validateMeal, type MealForm } from './C
 import { MAX_IMAGE_BYTES, validateImageFile } from './MenusPage'
 import { validateUniversity } from './UniversitiesPage'
 
-const meal: MealForm = { date: '2026-11-10', type: 'breakfast', option: '', items: '북엇국\n시금치나물', price: '1000', start: '08:00', end: '09:30', badge: THOUSAND_WON_BADGE, status: 'published', source: '' }
+const meal: MealForm = { date: '2026-11-10', type: 'breakfast', option: '', items: '북엇국\n시금치나물', price: '1000', start: '08:00', end: '09:30', badge: THOUSAND_WON_BADGE, status: 'published', source: '', notice: '' }
 
 describe('cafeteria meals', () => {
   it('first line is the main dish', () => expect(parseItems('북엇국\n\n 시금치나물 ')).toEqual([{ name_ko: '북엇국', kind: 'main' }, { name_ko: '시금치나물', kind: 'side' }]))

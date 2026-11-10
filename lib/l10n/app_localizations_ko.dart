@@ -1604,6 +1604,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restaurantMenuSoldOut => '품절';
 
   @override
+  String get restaurantGalleryTitle => '사진';
+
+  @override
+  String get restaurantMenuRecommended => '추천';
+
+  @override
   String restaurantPriceWon(int price) {
     final intl.NumberFormat priceNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);

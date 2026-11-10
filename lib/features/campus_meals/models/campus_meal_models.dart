@@ -205,6 +205,8 @@ class CafeteriaMeal {
     this.endTime,
     this.sourceUrl,
     this.badge,
+    this.photoUrl,
+    this.notice,
   });
 
   final String id;
@@ -229,6 +231,12 @@ class CafeteriaMeal {
   final String? badge;
   final DateTime verifiedAt;
 
+  /// Admin-uploaded photo of the meal (`extra.photo_url`, https only).
+  final String? photoUrl;
+
+  /// Admin-written note for this meal (`extra.notice`).
+  final String? notice;
+
   static CafeteriaMeal? fromJson(Map<String, dynamic> j) {
     final type = MealType.fromDb(j['meal_type'] as String?);
     final status = MealStatus.fromDb(j['status'] as String?);
@@ -238,6 +246,13 @@ class CafeteriaMeal {
       return (s == null || s.length < 5) ? null : s.substring(0, 5);
     }
 
+    final extra = j['extra'] is Map ? j['extra'] as Map : const {};
+    String? text(Object? v) {
+      final t = (v as String?)?.trim();
+      return (t == null || t.isEmpty) ? null : t;
+    }
+
+    final photo = text(extra['photo_url']);
     return CafeteriaMeal(
       id: j['id'] as String,
       cafeteriaId: j['cafeteria_id'] as String,
@@ -258,6 +273,8 @@ class CafeteriaMeal {
           ? null
           : (j['badge'] as String).trim(),
       verifiedAt: DateTime.parse(j['verified_at'] as String),
+      photoUrl: (photo != null && photo.startsWith('https://')) ? photo : null,
+      notice: text(extra['notice']),
     );
   }
 }

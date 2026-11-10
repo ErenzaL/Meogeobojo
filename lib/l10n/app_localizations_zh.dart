@@ -1594,6 +1594,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restaurantMenuSoldOut => '已售罄';
 
   @override
+  String get restaurantGalleryTitle => '照片';
+
+  @override
+  String get restaurantMenuRecommended => '推荐';
+
+  @override
   String restaurantPriceWon(int price) {
     final intl.NumberFormat priceNumberFormat =
         intl.NumberFormat.decimalPattern(localeName);

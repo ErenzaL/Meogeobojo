@@ -8,12 +8,14 @@ import { Badge, Button, ConfirmDialog, ErrorState, Input, PageHeader, Select } f
 import { useAuth } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { errorMessage, formatDateTime } from '@/lib/utils'
+import KakaoImport from './KakaoImport'
 import { buildCsv, parseRestaurantCsv, toRow, type ParsedRow } from './csv'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
 
 type Row = {
-  id: string; kakao_place_id: string | null; name_ko: string; category: string | null
-  visibility: Visibility; updated_at: string; description: string | null
+  id: string; kakao_place_id: string | null; name_ko: string; category: string | null; address: string | null
+  visibility: Visibility; updated_at: string; description: string | null; image_url?: string | null
+  restaurant_university_links?: { universities: { name_ko: string } | null }[]
 }
 const PAGE = 20
 const tone = { draft: 'neutral', published: 'green', hidden: 'amber', archived: 'red' } as const
@@ -23,9 +25,31 @@ export function useUniversities() {
   return useQuery({
     queryKey: ['universities'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('universities').select('id,name_ko,is_active').order('name_ko')
+      const { data, error } = await supabase.from('universities').select('id,name_ko,is_active,latitude,longitude').order('name_ko')
       if (error) throw error
-      return data as { id: string; name_ko: string; is_active: boolean }[]
+      return data as { id: string; name_ko: string; is_active: boolean; latitude: number | null; longitude: number | null }[]
+    },
+  })
+}
+
+/** Photo / menu coverage over every managed restaurant (real counts, one pass). */
+export function useCoverage() {
+  return useQuery({
+    queryKey: ['restaurant-coverage'],
+    queryFn: async () => {
+      const [r, m] = await Promise.all([
+        supabase.from('restaurant_overrides').select('id,image_url,visibility').limit(5000),
+        supabase.from('restaurant_menus').select('restaurant_id').limit(20000),
+      ])
+      if (r.error) throw r.error
+      if (m.error) throw m.error
+      const rows = r.data as { id: string; image_url: string | null; visibility: string }[]
+      const menuIds = [...new Set((m.data as { restaurant_id: string | null }[]).map((x) => x.restaurant_id).filter((x): x is string => !!x))]
+      const withMenu = new Set(menuIds)
+      return {
+        total: rows.length, withPhoto: rows.filter((x) => x.image_url).length, withMenu: rows.filter((x) => withMenu.has(x.id)).length,
+        published: rows.filter((x) => x.visibility === 'published').length, menuIds,
+      }
     },
   })
 }
@@ -38,24 +62,32 @@ export default function RestaurantsPage() {
   const [visibility, setVisibility] = useState('')
   const [university, setUniversity] = useState('')
   const [category, setCategory] = useState('')
+  const [photo, setPhoto] = useState('')
+  const [menu, setMenu] = useState('')
   const [sorting, setSorting] = useState<SortingState>([{ id: 'updated_at', desc: true }])
   const [confirm, setConfirm] = useState<{ row: Row; to: Visibility } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const unis = useUniversities()
 
   const sort = sorting[0] ?? { id: 'updated_at', desc: true }
-  const filters = { page, search, visibility, university, category, sort }
+  const coverage = useCoverage()
+  const menuIds = coverage.data?.menuIds
+  const filters = { page, search, visibility, university, category, photo, menu, sort, menuIds: menu ? menuIds?.length : 0 }
   const list = useQuery({
     queryKey: ['restaurants', filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
       let q = supabase
         .from('restaurant_overrides')
-        .select(university ? '*, restaurant_university_links!inner(university_id)' : '*', { count: 'exact' })
+        .select(university ? '*, restaurant_university_links!inner(university_id, universities(name_ko))' : '*, restaurant_university_links(universities(name_ko))', { count: 'exact' })
       if (search.trim()) q = q.or(`name_ko.ilike.%${clean(search)}%,kakao_place_id.ilike.%${clean(search)}%`)
       if (visibility) q = q.eq('visibility', visibility)
       if (category.trim()) q = q.ilike('category', `%${clean(category)}%`)
       if (university) q = q.eq('restaurant_university_links.university_id', university)
+      if (photo === 'none') q = q.is('image_url', null)
+      if (photo === 'has') q = q.not('image_url', 'is', null)
+      if (menu === 'has') q = q.in('id', menuIds?.length ? menuIds : ['00000000-0000-0000-0000-000000000000'])
+      if (menu === 'none' && menuIds?.length) q = q.not('id', 'in', `(${menuIds.join(',')})`)
       const { data, error, count } = await q.order(sort.id, { ascending: !sort.desc }).range(page * PAGE, page * PAGE + PAGE - 1)
       if (error) throw error
       return { rows: data as unknown as Row[], total: count ?? 0 }
@@ -73,9 +105,13 @@ export default function RestaurantsPage() {
 
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => [
     { accessorKey: 'name_ko', header: '이름', cell: ({ row: { original: r } }) => (
-      <div><Link className="font-semibold hover:underline" to={`/restaurants/${r.id}`}>{r.name_ko}</Link>
-        <div className="text-xs text-muted">{r.kakao_place_id ? `Kakao ${r.kakao_place_id}` : '직접 등록'}</div></div>) },
+      <div className="flex items-center gap-3">
+        {r.image_url ? <img src={r.image_url} alt="" className="size-10 rounded-lg object-cover" loading="lazy" /> : <span className="grid size-10 place-items-center rounded-lg bg-page text-[10px] text-muted" title="대표 사진 없음">없음</span>}
+        <div><Link className="font-semibold hover:underline" to={`/restaurants/${r.id}`}>{r.name_ko}</Link>
+          <div className="text-xs text-muted">{r.kakao_place_id ? `Kakao ID ${r.kakao_place_id}` : '직접 등록'}</div></div></div>) },
     { accessorKey: 'category', header: '카테고리', enableSorting: false, cell: ({ getValue }) => (getValue() as string | null) ?? '—' },
+    { id: 'university', header: '대학교', enableSorting: false, cell: ({ row: { original: r } }) => (r.restaurant_university_links?.map((l) => l.universities?.name_ko).filter(Boolean).join(', ') || '—') },
+    { accessorKey: 'address', header: '주소', enableSorting: false, cell: ({ getValue }) => <span className="text-sm text-muted">{(getValue() as string | null) ?? '—'}</span> },
     { accessorKey: 'visibility', header: '상태', enableSorting: false, cell: ({ getValue }) => <Badge tone={tone[getValue() as Visibility]}>{VISIBILITY_LABEL[getValue() as Visibility]}</Badge> },
     { id: 'complete', header: '정보', enableSorting: false, cell: ({ row: { original: r } }) => (r.description ? <Badge tone="green">설명 있음</Badge> : <Badge tone="amber">설명 없음</Badge>) },
     { accessorKey: 'updated_at', header: '수정일', cell: ({ getValue }) => formatDateTime(getValue() as string) },
@@ -149,10 +185,24 @@ export default function RestaurantsPage() {
           <option value="">모든 대학교</option>{unis.data?.map((u) => <option key={u.id} value={u.id}>{u.name_ko}</option>)}
         </Select>
         <Input aria-label="카테고리" placeholder="카테고리 (예: 한식)" value={category} onChange={(e) => { setCategory(e.target.value); setPage(0) }} />
+        <Select aria-label="사진 필터" value={photo} onChange={(e) => { setPhoto(e.target.value); setPage(0) }}>
+          <option value="">사진: 전체</option><option value="none">대표 사진 없음</option><option value="has">대표 사진 있음</option>
+        </Select>
+        <Select aria-label="메뉴 필터" value={menu} onChange={(e) => { setMenu(e.target.value); setPage(0) }}>
+          <option value="">메뉴: 전체</option><option value="none">메뉴 없음</option><option value="has">메뉴 있음</option>
+        </Select>
       </div>
+      {coverage.data && (
+        <p role="status" aria-label="사진·메뉴 현황" className="mb-4 flex flex-wrap gap-x-6 gap-y-1 rounded-xl bg-white p-3 text-sm ring-1 ring-line">
+          <span>관리 중 <b>{coverage.data.total}</b>곳 (공개 {coverage.data.published})</span>
+          <span>대표 사진 <b>{coverage.data.withPhoto}</b> / 없음 <b>{coverage.data.total - coverage.data.withPhoto}</b></span>
+          <span>메뉴 <b>{coverage.data.withMenu}</b> / 없음 <b>{coverage.data.total - coverage.data.withMenu}</b></span>
+        </p>)}
+      {coverage.isError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">사진·메뉴 현황을 불러오지 못했어요: {errorMessage(coverage.error)}</p>}
+      {can('admin') && <KakaoImport universities={unis.data ?? []} />}
       <DataTable columns={columns} rows={list.data?.rows} total={list.data?.total} page={page} pageSize={PAGE} onPage={setPage}
         loading={list.isLoading} error={list.error} onRetry={() => void list.refetch()} sorting={sorting} onSorting={(s) => { setSorting(s); setPage(0) }}
-        empty="조건에 맞는 식당이 없어요." />
+        empty="조건에 맞는 식당이 없어요. 위의 '카카오 식당 불러오기'로 대학교 주변 식당을 불러올 수 있어요." />
 
       <ConfirmDialog open={!!confirm} busy={setVis.isPending}
         title={confirm?.to === 'published' ? '이 식당을 공개할까요?' : '이 식당을 숨길까요?'}

@@ -5,13 +5,16 @@ import '../../university/providers/university_providers.dart';
 import '../models/food_category.dart';
 import '../models/restaurant.dart';
 import '../models/restaurant_override.dart';
+import '../repositories/merged_restaurant_repository.dart';
 import '../repositories/restaurant_override_repository.dart';
 import '../repositories/restaurant_repository.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
   final client = Supabase.instance.client;
-  return KakaoRestaurantRepository(
-    (body) => supabaseSearchGateway(client, body),
+  // Kakao (live) + published admin data, merged in one place.
+  return OverrideAwareRestaurantRepository(
+    KakaoRestaurantRepository((body) => supabaseSearchGateway(client, body)),
+    ref.watch(restaurantOverrideRepositoryProvider),
   );
 });
 
@@ -94,4 +97,11 @@ final restaurantMenusProvider =
     FutureProvider.family<List<RestaurantMenuItem>, String>(
       (ref, kakaoId) =>
           ref.watch(restaurantOverrideRepositoryProvider).menus(kakaoId),
+    );
+
+/// Published cover + gallery photos an admin uploaded for one place.
+final restaurantPhotosProvider =
+    FutureProvider.family<List<RestaurantPhoto>, String>(
+      (ref, kakaoId) =>
+          ref.watch(restaurantOverrideRepositoryProvider).photos(kakaoId),
     );

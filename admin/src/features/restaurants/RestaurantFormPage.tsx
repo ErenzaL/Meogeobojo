@@ -7,6 +7,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button, Card, ConfirmDialog, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import KakaoSourceCard from './KakaoSourceCard'
 import { useUniversities } from './RestaurantsPage'
 import { BUSINESS_LABEL, BUSINESS_STATUSES, VISIBILITIES, VISIBILITY_LABEL, emptyRestaurantForm, fromRow, restaurantSchema, toRow, type RestaurantForm } from './schema'
 
@@ -75,6 +76,7 @@ export default function RestaurantFormPage() {
       <Link to="/restaurants" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft className="size-4" />식당 목록</Link>
       <PageHeader title={isNew ? '식당 추가' : '식당 편집'} description="저장하면 앱 사용자에게 바로 반영돼요 (공개 상태일 때)."
         actions={<Button type="submit" disabled={save.isPending || (!isNew && !isDirty)}>저장</Button>} />
+      {!isNew && <KakaoSourceCard id={id!} />}
       {saved && <p role="status" className="rounded-xl bg-green-50 p-3 text-sm text-green-800">저장했어요.</p>}
       {save.isError && <ErrorState error={new Error(dupMessage(save.error))} />}
 

@@ -8,6 +8,7 @@ import ContentPage from '@/features/ContentPage'
 import MenusPage from '@/features/MenusPage'
 import MissionsPage from '@/features/MissionsPage'
 import ModerationPage from '@/features/ModerationPage'
+import PhotosPage from '@/features/PhotosPage'
 import OverviewPage from '@/features/OverviewPage'
 import RecommendationsPage from '@/features/RecommendationsPage'
 import RestaurantFormPage from '@/features/restaurants/RestaurantFormPage'
@@ -37,6 +38,7 @@ export function AppRoutes() {
           <Route path="restaurants/new" element={<RestaurantFormPage />} />
           <Route path="restaurants/:id" element={<RestaurantFormPage />} />
           <Route path="menus" element={<MenusPage />} />
+          <Route path="photos" element={<PhotosPage />} />
           <Route path="universities" element={<UniversitiesPage />} />
           <Route path="cafeteria" element={<CafeteriaPage />} />
           <Route path="users" element={<UsersPage />} />

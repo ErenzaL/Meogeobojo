@@ -441,6 +441,29 @@ class MealCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (meal.photoUrl != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: Image.network(
+                    meal.photoUrl!,
+                    fit: BoxFit.cover,
+                    semanticLabel: meal.optionName.isNotEmpty
+                        ? meal.optionName
+                        : null,
+                    loadingBuilder: (context, child, progress) =>
+                        progress == null
+                        ? child
+                        : ColoredBox(color: context.palette.fillMuted),
+                    // A broken link is simply left out, never replaced by a stock photo.
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
           if (meal.optionName.isNotEmpty || meal.priceKrw != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -529,6 +552,13 @@ class MealCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (meal.notice != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              meal.notice!,
+              style: AppText.caption(context).copyWith(fontSize: 13.5),
+            ),
+          ],
           const SizedBox(height: 8),
           Divider(height: 1, color: context.palette.border),
           const SizedBox(height: 8),

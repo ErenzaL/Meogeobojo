@@ -7,10 +7,17 @@ import '../../../core/theme/app_theme.dart';
 import '../providers/home_meal_providers.dart';
 import '../utils/home_text.dart';
 
+/// Whether both lunch averages exist, i.e. whether the comparison can be drawn at all.
+final priceComparisonAvailableProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(cafeteriaLunchAverageProvider) != null &&
+      ref.watch(outsideLunchAverageProvider) != null,
+);
+
 /// Average lunch price: cafeteria versus restaurants within a 15 minute walk
 /// of the comparison spot, as two bars and a monthly saving. Both averages
-/// come from real data; when either is missing it says so instead of drawing
-/// anything.
+/// come from real data; when either is missing nothing is drawn (no
+/// explanatory text, no basis line).
 class PriceComparison extends ConsumerWidget {
   const PriceComparison({super.key});
 
@@ -18,61 +25,44 @@ class PriceComparison extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final p = context.palette;
-    final anchor = ref.watch(comparisonAnchorProvider);
     final cafeteria = ref.watch(cafeteriaLunchAverageProvider);
     final outside = ref.watch(outsideLunchAverageProvider);
-    final caption = TextStyle(fontSize: 14, color: p.textSecondary);
 
-    final Widget body;
-    if (cafeteria == null || outside == null) {
-      body = Text(l10n.homeMealNoCompare, style: caption);
-    } else {
-      final longest = cafeteria > outside ? cafeteria : outside;
-      final saving = (outside - cafeteria) * 20;
-      body = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Bar(
-            label: l10n.homeMealBarCafeteria,
-            value: cafeteria,
-            fraction: cafeteria / longest,
-            color: p.rust,
-          ),
-          const SizedBox(height: 10),
-          _Bar(
-            label: l10n.homeMealBarOutside,
-            value: outside,
-            fraction: outside / longest,
-            color: p.barMuted,
-          ),
-          if (saving > 0) ...[
-            const SizedBox(height: 14),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(text: l10n.homeMealSavingPre),
-                  TextSpan(
-                    text: wonSigned(saving),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  TextSpan(text: l10n.homeMealSavingPost),
-                ],
-              ),
-              style: const TextStyle(fontSize: 15.5),
-            ),
-          ],
-        ],
-      );
-    }
-
+    if (cafeteria == null || outside == null) return const SizedBox.shrink();
+    final longest = cafeteria > outside ? cafeteria : outside;
+    final saving = (outside - cafeteria) * 20;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (anchor != null) ...[
-          Text(l10n.homeMealAvgCaption(anchor.label(l10n)), style: caption),
-          const SizedBox(height: 12),
+        _Bar(
+          label: l10n.homeMealBarCafeteria,
+          value: cafeteria,
+          fraction: cafeteria / longest,
+          color: p.rust,
+        ),
+        const SizedBox(height: 10),
+        _Bar(
+          label: l10n.homeMealBarOutside,
+          value: outside,
+          fraction: outside / longest,
+          color: p.barMuted,
+        ),
+        if (saving > 0) ...[
+          const SizedBox(height: 14),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(text: l10n.homeMealSavingPre),
+                TextSpan(
+                  text: wonSigned(saving),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                TextSpan(text: l10n.homeMealSavingPost),
+              ],
+            ),
+            style: const TextStyle(fontSize: 15.5),
+          ),
         ],
-        body,
       ],
     );
   }

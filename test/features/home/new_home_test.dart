@@ -1055,10 +1055,9 @@ void main() {
       await openHome(tester);
       await reveal(tester, find.text('이번 주 식단'));
       expect(find.text('이 학교의 학식 정보는 아직 등록되지 않았어요.'), findsOneWidget);
-      expect(
-        find.text('비교할 가격 정보가 아직 부족해요. 학식과 바깥 식당 가격이 모두 있어야 비교할 수 있어요.'),
-        findsOneWidget,
-      );
+      // not enough prices to compare: nothing is drawn, no explanatory text
+      expect(find.textContaining('비교할 가격 정보'), findsNothing);
+      expect(find.textContaining('점심 한 끼 평균'), findsNothing);
       await tester.tap(find.text('이번 주 식단'));
       await tester.pumpAndSettle();
       expect(find.byType(CampusMealScreen), findsOneWidget);
@@ -1091,7 +1090,10 @@ void main() {
         ],
       );
       await scrollDown(tester);
-      expect(find.text('점심 한 끼 평균 · 학생회관에서 도보 15분 안 식당 기준'), findsOneWidget);
+      expect(
+        find.textContaining('점심 한 끼 평균'),
+        findsNothing,
+      ); // the basis line is gone
       expect(find.text('₩5,100'), findsOneWidget);
       expect(find.text('₩9,100'), findsOneWidget);
       // (9,100 - 5,100) * 20

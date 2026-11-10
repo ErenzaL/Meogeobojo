@@ -108,10 +108,13 @@ class CafeteriaCard extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 16),
-          Divider(height: 1, color: context.palette.hairline),
-          const SizedBox(height: 14),
-          const PriceComparison(),
-          const SizedBox(height: 16),
+          // the price comparison (and its divider) only exists when both averages are known
+          if (ref.watch(priceComparisonAvailableProvider)) ...[
+            Divider(height: 1, color: context.palette.hairline),
+            const SizedBox(height: 14),
+            const PriceComparison(),
+            const SizedBox(height: 16),
+          ],
           Builder(
             builder: (context) {
               final weekly = OutlineActionButton(

@@ -1,7 +1,34 @@
 # Controlled publishing (draft → preview → publish / schedule → live)
 
-Status: **foundation + restaurants built and tested locally; not applied to production.**
+Status: **foundation + restaurants + cafeteria meals (학식) built and tested locally; not applied to production.**
 Other sections are listed under "Rollout" and still publish immediately.
+
+Entity types so far: `restaurant` and `cafeteria_meal` (one meal = one date × meal × corner).
+The engine is generic (`_cms_keys / _cms_snapshot / _cms_validate / _cms_apply /
+_cms_unpublished`); a new type is one more branch plus its admin form.
+
+### Cafeteria meals (학식)
+* A new meal is inserted as a **draft row** (`status = 'draft'`, invisible to students; the
+  guard refuses any API insert/update that would make a live meal visible or change one).
+  It is then edited in the editor (`초안 저장`, `미리보기`, `지금 게시`, `예약 게시`,
+  `예약 취소`, `게시 중단`, `게시 이력` with restore).
+* Quick actions on the card (`바로 공개` / `비공개로`) call `cms_set_visibility`
+  (versioned + audited, reason required). Only a draft meal can be deleted.
+* The photo is part of the draft snapshot (`extra.photo_url/path`). Saving or replacing a
+  photo never deletes the published file (a rollback needs it). **Limitation:** the file is
+  uploaded to the public bucket, so its URL is reachable if guessed even while unpublished
+  (see Rollout 2: a private staging bucket).
+* Verified-source rules are kept (천원의 아침밥 needs an official source and breakfast).
+* Flutter keeps reading only `cafeteria_meals.status = 'published'` of active cafeterias.
+
+### Admin database compatibility (`campus_cafeterias.status` does not exist)
+**Root cause:** the Admin expects `campus_cafeterias.status` / `operating_note`, added by
+migration `20261113000100_cafeteria_management.sql`, which is **not applied in production**
+(`scripts/verify_production.py` reports it PENDING). The fix is that migration (additive;
+existing cafeterias become `active`, nothing is deleted or rewritten). Until it is applied
+the Admin 학식 page does not crash: on that exact error it re-reads the list without those
+columns, treats every cafeteria as active, hides the status controls and shows a banner
+naming the missing migration. Applying the migration removes the banner without a redeploy.
 
 ## 1. Audit: which Admin pages write public data directly (before this work)
 
@@ -106,14 +133,14 @@ Flutter app or laptop.
 Mapping to your scenarios: A, B, D, F, G, H are covered by the SQL suite and the admin
 tests; C (7 AM KST) is covered as "a due job published by the runner without any client";
 the actual wall-clock firing by **pg_cron in production is not verified** until it is enabled.
-E (missions) is not implemented yet.
+E (missions) is not implemented yet. The cafeteria meal flow (draft invisible → publish → schedule → cancel → rollback → unpublish, guard, non-admin refusal) is covered by the same SQL suite (`cafeteria_meal` section) and by `CafeteriaPage.test.tsx` / `CafeteriaManagement.test.tsx`.
 
 ## 5. Rollout (safe order; not done)
 
 1. **Menus + prices** (per restaurant menu set → snapshot of the items; publish together).
 2. **Photos** (cover + gallery set). Needs a private staging bucket so unpublished photos
    are not reachable by permanent public URLs (today they upload to the public bucket).
-3. **Cafeteria weeks** (a week or one meal; keeps verified-source rules).
+3. ~~Cafeteria meals~~ done (single meal). A whole week as one publication is still open.
 4. **App content** (banners/announcements: schedule start + automatic expiry; the live
    window already exists, this adds drafts and history).
 5. **Missions/campaigns**: publish versions without touching progress, points or badges

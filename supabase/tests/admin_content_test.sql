@@ -198,7 +198,8 @@ set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000a","role":"authenticated"}', false);
 do $$ begin
   assert (select count(*) from public.cafeteria_meals where cafeteria_id = 'c2000000-0000-4000-8000-000000000001') = 2, 'admin sees drafts too';
-  update public.cafeteria_meals set status = 'published' where meal_date = '2026-11-16' and cafeteria_id = 'c2000000-0000-4000-8000-000000000001';
+  begin update public.cafeteria_meals set status = 'published' where meal_date = '2026-11-16' and cafeteria_id = 'c2000000-0000-4000-8000-000000000001'; raise exception 'accepted#c4'; exception when insufficient_privilege then null; end;
+  perform public.cms_set_visibility('cafeteria_meal', (select id from public.cafeteria_meals where meal_date = '2026-11-16' and cafeteria_id = 'c2000000-0000-4000-8000-000000000001'), 'published', '공개');
   raise notice 'OK cafeteria: admin reads and publishes a draft';
 end $$;
 reset role;
@@ -226,8 +227,10 @@ do $$ declare a uuid; b uuid; c uuid; begin
   begin update public.campus_cafeterias set status = 'gone' where id = a; raise exception 'accepted#21'; exception when check_violation then null; end;
   begin update public.campus_cafeterias set operating_note = repeat('가', 301) where id = a; raise exception 'accepted#22'; exception when check_violation then null; end;
   insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, status, verified_at)
-    values (a, '2026-11-18', 'lunch', '[{"name_ko":"A메뉴"}]', 'published', now()),
-           (b, '2026-11-18', 'lunch', '[{"name_ko":"B메뉴"}]', 'published', now());
+    values (a, '2026-11-18', 'lunch', '[{"name_ko":"A메뉴"}]', 'draft', now()),
+           (b, '2026-11-18', 'lunch', '[{"name_ko":"B메뉴"}]', 'draft', now());
+  perform public.cms_set_visibility('cafeteria_meal', (select id from public.cafeteria_meals where cafeteria_id = a), 'published', '공개');
+  perform public.cms_set_visibility('cafeteria_meal', (select id from public.cafeteria_meals where cafeteria_id = b), 'published', '공개');
   raise notice 'OK cafeteria admin: create, same name on another campus, duplicate name / bad status / long note refused';
 end $$;
 reset role;

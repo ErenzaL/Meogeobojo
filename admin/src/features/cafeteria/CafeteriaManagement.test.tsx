@@ -194,11 +194,11 @@ describe('식사별 구간 · 확인 정보', () => {
     expect(within(day).getByRole('group', { name: /중식/ })).toBeTruthy()
     expect(within(day).getByText('조식 · 등록 안 함')).toBeTruthy()
     expect(within(day).getByText('석식 · 등록 안 함')).toBeTruthy()
-    expect(fake.last('cafeteria_meals', 'upsert')).toBeUndefined()
+    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined()
     await userEvent.click(within(day).getByRole('button', { name: '+ 조식 추가' }))
     expect((screen.getByLabelText('식사') as HTMLSelectElement).value).toBe('breakfast')
     expect((screen.getByLabelText('날짜') as HTMLInputElement).value).toBe(addDays(MON(), 1))
-    expect(fake.last('cafeteria_meals', 'upsert')).toBeUndefined() // still nothing saved
+    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined() // still nothing saved
   })
 
   it('a day with no meals at all is one honest empty line, not three invented slots', async () => {
@@ -217,42 +217,48 @@ describe('식사별 구간 · 확인 정보', () => {
     expect(screen.getByText(/출처 없음/)).toBeTruthy()
   })
 
-  it('saves the verified date and a 천원의 아침밥 only with an official source', async () => {
+  it('a new 천원의 아침밥 draft needs an official source before the editor can publish it', async () => {
+    fake.respond('cafeteria_meals:insert', { data: { id: 'new1' } })
     await open([CAF()], [])
     await pick()
     await userEvent.click(await screen.findByRole('button', { name: '천원의 아침밥' }))
     await userEvent.type(screen.getByLabelText(/메뉴 \(한 줄/), '북엇국')
-    await userEvent.click(screen.getByRole('button', { name: '저장' }))
+    await userEvent.click(screen.getByRole('button', { name: '초안으로 추가' }))
     expect(await screen.findByText(/공식 출처 주소가 있어야/)).toBeTruthy() // blocked: no source
-    expect(fake.last('cafeteria_meals', 'upsert')).toBeUndefined()
+    expect(fake.last('cafeteria_meals', 'insert')).toBeUndefined()
     await userEvent.type(screen.getByLabelText('출처 주소'), 'https://example.org/morning')
     const verified = screen.getByLabelText('확인한 날짜')
     await userEvent.clear(verified); await userEvent.type(verified, '2026-11-09')
-    await userEvent.click(screen.getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(fake.last('cafeteria_meals', 'upsert')).toBeTruthy())
-    expect(fake.last('cafeteria_meals', 'upsert')!.payload).toMatchObject({ meal_type: 'breakfast', badge: '천원의 아침밥', price_krw: 1000, source_url: 'https://example.org/morning', verified_at: '2026-11-09T00:00:00+09:00', cafeteria_id: 'c1' })
+    await userEvent.click(screen.getByRole('button', { name: '초안으로 추가' }))
+    await waitFor(() => expect(fake.last('cafeteria_meals', 'insert')).toBeTruthy())
+    expect(fake.last('cafeteria_meals', 'insert')!.payload).toMatchObject({ meal_type: 'breakfast', badge: '천원의 아침밥', price_krw: 1000, source_url: 'https://example.org/morning', verified_at: '2026-11-09T00:00:00+09:00', cafeteria_id: 'c1', status: 'draft' })
   })
 
-  it('two corners of the same meal are two rows, never one overwriting the other', async () => {
+  it('two corners of the same meal are two rows, each edited on its own', async () => {
+    const d = addDays(MON(), 1)
+    const live = (id: string, name: string) => ({ id, cafeteria_id: 'c1', meal_date: d, meal_type: 'lunch', option_name: name, menu_items: [{ name_ko: name ? '돈까스' : '김치찌개', kind: 'main' }], price_krw: 5500, start_time: null, end_time: null, badge: null, status: 'published', source_url: null, verified_at: '2026-11-09T00:00:00+09:00', extra: {} })
+    fake.respond('rpc:cms_state', { data: { live: live('m3', 'B코너'), live_version: 1, last_published: null, draft: null, jobs: [] } })
     await open([CAF()], [meal(), meal({ id: 'm3', option_name: 'B코너', option_order: 1, menu_items: [{ name_ko: '돈까스', kind: 'main' }] })])
     await pick()
-    const lunch = await screen.findByRole('group', { name: new RegExp(`${addDays(MON(), 1)} 중식`) })
+    const lunch = await screen.findByRole('group', { name: new RegExp(`${d} 중식`) })
     expect(within(lunch).getByText('김치찌개')).toBeTruthy()
     expect(within(lunch).getByText('돈까스')).toBeTruthy()
     await userEvent.click(within(lunch).getAllByRole('button', { name: '수정' })[1])
-    await userEvent.click(screen.getByRole('button', { name: '저장' }))
-    await waitFor(() => expect(fake.last('cafeteria_meals', 'upsert')).toBeTruthy())
-    expect(fake.last('cafeteria_meals', 'upsert')!.payload).toMatchObject({ option_name: 'B코너' }) // keyed by (cafeteria, date, type, corner)
-    expect(fake.calls.find((c) => c.table === 'cafeteria_meals' && c.op === 'upsert')!.filters).toBeDefined()
+    await screen.findByLabelText('식단 편집')
+    expect(fake.rpcs.find((r) => r.name === 'cms_state')!.args).toMatchObject({ p_type: 'cafeteria_meal', p_id: 'm3' }) // the B corner, not the A one
+    expect(screen.getByLabelText('식단 정보').textContent).toMatch(/B코너/)
   })
 
-  it('the edit form shows the current photo and can replace it', async () => {
+  it('the edit panel shows the current photo and replacing it only stages it in the draft', async () => {
     const BASE = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/'
-    await open([CAF()], [meal({ extra: { photo_url: `${BASE}cafeteria/c1/a.jpg`, photo_path: 'cafeteria/c1/a.jpg' } })])
+    const m = meal({ extra: { photo_url: `${BASE}cafeteria/c1/a.jpg`, photo_path: 'cafeteria/c1/a.jpg' } })
+    fake.respond('rpc:cms_state', { data: { live: m, live_version: 1, last_published: null, draft: null, jobs: [] } })
+    await open([CAF()], [m])
     await pick()
     await userEvent.click(await screen.findByRole('button', { name: '수정' }))
     expect((await screen.findByAltText('현재 음식 사진')).getAttribute('src')).toBe(`${BASE}cafeteria/c1/a.jpg`)
     await userEvent.upload(screen.getByLabelText('이 식단 사진 올리기'), new File(['x'], 'p.jpg', { type: 'image/jpeg' }))
-    await waitFor(() => expect(fake.removed).toEqual(['cafeteria/c1/a.jpg']))
+    await screen.findByText(/사진을 골랐어요/)
+    expect(fake.removed).toEqual([]) // the live file stays until a newer version is published
   })
 })

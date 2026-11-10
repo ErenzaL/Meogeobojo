@@ -9,8 +9,8 @@ type Uni = { id: string; name_ko: string }
 
 /** Create (cafeteria = null) or edit one campus cafeteria in `campus_cafeterias`.
  *  Names are optional: leave them empty unless an official source gives them. */
-export default function CafeteriaFormModal({ cafeteria, universities, defaultUniversity, onClose, onSaved }: {
-  cafeteria: Cafeteria | null; universities: Uni[]; defaultUniversity: string; onClose: () => void; onSaved: (id: string, msg: string, universityId: string) => void
+export default function CafeteriaFormModal({ cafeteria, universities, defaultUniversity, legacy = false, onClose, onSaved }: {
+  cafeteria: Cafeteria | null; legacy?: boolean; universities: Uni[]; defaultUniversity: string; onClose: () => void; onSaved: (id: string, msg: string, universityId: string) => void
 }) {
   const qc = useQueryClient()
   const isNew = cafeteria === null
@@ -23,7 +23,10 @@ export default function CafeteriaFormModal({ cafeteria, universities, defaultUni
     mutationFn: async () => {
       const e = validateCafeteria(f); setErrors(e)
       if (Object.keys(e).length) throw new Error('입력값을 확인해 주세요')
-      const row = cafeteriaRow(f)
+      // A database without the cafeteria-management migration has no status / operating_note columns.
+      const { status: _s, operating_note: _o, ...legacyRow } = cafeteriaRow(f)
+      void _s; void _o
+      const row = legacy ? legacyRow : cafeteriaRow(f)
       if (isNew) {
         const { data, error } = await supabase.from('campus_cafeterias').insert(row).select('id').single()
         if (error) throw error
@@ -57,11 +60,12 @@ export default function CafeteriaFormModal({ cafeteria, universities, defaultUni
           <Field label="표시 순서" htmlFor="cf_order" error={errors.sort_order} hint="작을수록 먼저"><Input id="cf_order" inputMode="numeric" value={f.sort_order} onChange={(e) => set('sort_order', e.target.value)} /></Field>
         </div>
         <Field label="위치 / 건물 설명 (선택)" htmlFor="cf_loc"><Input id="cf_loc" value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="예: 학생회관 1층" /></Field>
+        {legacy && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">운영 안내와 상태는 데이터베이스 업데이트(20261113000100) 뒤에 쓸 수 있어요.</p>}
         <Field label="운영 안내 (선택)" htmlFor="cf_note" error={errors.operating_note} hint="확인된 운영 정보만 적어 주세요. 앱의 학식 화면에 보여요.">
-          <Textarea id="cf_note" className="min-h-16" value={f.operating_note} onChange={(e) => set('operating_note', e.target.value)} />
+          <Textarea id="cf_note" className="min-h-16" disabled={legacy} value={f.operating_note} onChange={(e) => set('operating_note', e.target.value)} />
         </Field>
         <Field label="상태" htmlFor="cf_status" hint="비활성·보관하면 앱에서 이 식당과 메뉴가 숨겨져요. 메뉴 기록은 지워지지 않아요.">
-          <Select id="cf_status" value={f.status} onChange={(e) => set('status', e.target.value as CafeteriaForm['status'])}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</Select>
+          <Select id="cf_status" disabled={legacy} value={f.status} onChange={(e) => set('status', e.target.value as CafeteriaForm['status'])}>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}</Select>
         </Field>
         {err && <p role="alert" className="text-sm text-red-600">{err}</p>}
         <div className="flex justify-end gap-2">

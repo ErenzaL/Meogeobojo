@@ -1,6 +1,7 @@
 -- Controlled publishing for admin-managed content: draft -> preview -> publish
 -- now / schedule -> live, with immutable version history, rollback and a
--- server-side scheduler. First entity type: 'restaurant' (restaurant_overrides).
+-- server-side scheduler. Entity types: 'restaurant' (restaurant_overrides) and
+-- 'cafeteria_meal' (cafeteria_meals). More types = one branch in each adapter below.
 --
 -- Additive and idempotent. Requires 20261109000100 (roles, audit) and
 -- 20261110000100 (_audit). Applying it changes nothing for students: the LIVE
@@ -34,6 +35,7 @@
 do $$ begin
   if to_regclass('public.restaurant_overrides') is null
      or to_regclass('public.restaurant_university_links') is null
+     or to_regclass('public.cafeteria_meals') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -44,7 +46,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -58,7 +60,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -74,7 +76,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -133,6 +135,8 @@ language sql immutable as $$
     'name_ko', 'name_en', 'category', 'address', 'latitude', 'longitude', 'phone', 'description',
     'opening_hours', 'break_time', 'last_order_time', 'business_status', 'price_min_krw', 'price_max_krw',
     'avg_cost_krw', 'dining_purposes', 'visibility', 'featured', 'display_order', 'university_ids']
+  when 'cafeteria_meal' then array[
+    'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
   else null end
 $$;
 
@@ -153,6 +157,12 @@ begin
       'university_ids', coalesce((select jsonb_agg(l.university_id order by l.university_id)
                                     from public.restaurant_university_links l where l.restaurant_id = o.id), '[]'::jsonb))
       into v from public.restaurant_overrides o where o.id = p_id;
+  elsif p_type = 'cafeteria_meal' then
+    select jsonb_build_object(
+      'menu_items', m.menu_items, 'price_krw', m.price_krw,
+      'start_time', to_char(m.start_time, 'HH24:MI'), 'end_time', to_char(m.end_time, 'HH24:MI'),
+      'status', m.status, 'badge', m.badge, 'source_url', m.source_url, 'verified_at', m.verified_at, 'extra', m.extra)
+      into v from public.cafeteria_meals m where m.id = p_id;
   else
     raise exception 'unknown entity type' using errcode = '22023';
   end if;
@@ -161,9 +171,9 @@ begin
 end $$;
 
 -- Friendly validation (the table's CHECK constraints remain the last line of defence).
-create or replace function public._cms_validate(p_type text, p_data jsonb) returns void
+create or replace function public._cms_validate(p_type text, p_data jsonb, p_id uuid default null) returns void
 language plpgsql stable set search_path = public, pg_temp as $$
-declare k text;
+declare k text; mt text; it jsonb;
 begin
   if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception 'content must be an object' using errcode = '22023'; end if;
   for k in select jsonb_object_keys(p_data) loop
@@ -197,13 +207,51 @@ begin
     if p_data ? 'university_ids' and jsonb_typeof(p_data -> 'university_ids') <> 'array' then
       raise exception '대학교 목록이 올바르지 않아요' using errcode = '22023';
     end if;
+  elsif p_type = 'cafeteria_meal' then
+    if coalesce(p_data ->> 'status', '') not in ('draft', 'published', 'closed', 'no_menu') then
+      raise exception '식단 상태가 올바르지 않아요' using errcode = '22023';
+    end if;
+    if jsonb_typeof(p_data -> 'menu_items') is distinct from 'array' then
+      raise exception '메뉴 목록이 올바르지 않아요' using errcode = '22023';
+    end if;
+    for it in select * from jsonb_array_elements(p_data -> 'menu_items') loop
+      if jsonb_typeof(it) <> 'object' or btrim(coalesce(it ->> 'name_ko', '')) = '' then
+        raise exception '메뉴 이름은 비워 둘 수 없어요' using errcode = '22023';
+      end if;
+    end loop;
+    if p_data ->> 'status' = 'published' and jsonb_array_length(p_data -> 'menu_items') = 0 then
+      raise exception '공개하려면 메뉴가 한 개 이상 필요해요' using errcode = '22023';
+    end if;
+    begin
+      if (p_data ->> 'price_krw') is not null and (p_data ->> 'price_krw')::integer < 0 then raise exception 'x'; end if;
+    exception when others then raise exception '가격이 올바르지 않아요' using errcode = '22023'; end;
+    if (p_data ->> 'start_time') is not null and (p_data ->> 'start_time') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception '시작 시간 형식이 올바르지 않아요' using errcode = '22023'; end if;
+    if (p_data ->> 'end_time') is not null and (p_data ->> 'end_time') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception '종료 시간 형식이 올바르지 않아요' using errcode = '22023'; end if;
+    if (p_data ->> 'start_time') is not null and (p_data ->> 'end_time') is not null and (p_data ->> 'start_time') >= (p_data ->> 'end_time') then
+      raise exception '종료는 시작보다 늦어야 해요' using errcode = '22023';
+    end if;
+    if (p_data ->> 'source_url') is not null and (p_data ->> 'source_url') !~ '^https://' then raise exception '출처 주소는 https:// 로 시작해야 해요' using errcode = '22023'; end if;
+    if (p_data ->> 'verified_at') is null then raise exception '확인한 날짜가 필요해요' using errcode = '22023'; end if;
+    begin perform (p_data ->> 'verified_at')::timestamptz; exception when others then raise exception '확인한 날짜 형식이 올바르지 않아요' using errcode = '22023'; end;
+    if p_data ? 'extra' and (jsonb_typeof(p_data -> 'extra') <> 'object' or octet_length((p_data -> 'extra')::text) > 4000) then
+      raise exception '추가 정보가 올바르지 않아요' using errcode = '22023';
+    end if;
+    -- the 천원의 아침밥 label is only for a breakfast with an official source
+    if btrim(coalesce(p_data ->> 'badge', '')) = '천원의 아침밥' then
+      if btrim(coalesce(p_data ->> 'source_url', '')) = '' then raise exception '천원의 아침밥은 공식 출처 주소가 있어야 해요' using errcode = '22023'; end if;
+      if p_id is not null then
+        select meal_type into mt from public.cafeteria_meals where id = p_id;
+        if mt is distinct from 'breakfast' then raise exception '천원의 아침밥은 조식에만 쓸 수 있어요' using errcode = '22023'; end if;
+      end if;
+    end if;
   end if;
 end $$;
 
 -- What "unpublished" means for a type (non-destructive: nothing is deleted).
 create or replace function public._cms_unpublished(p_type text, p_live jsonb) returns jsonb
 language sql immutable as $$
-  select case p_type when 'restaurant' then p_live || '{"visibility":"hidden"}'::jsonb else p_live end
+  select case p_type when 'restaurant' then p_live || '{"visibility":"hidden"}'::jsonb
+                     when 'cafeteria_meal' then p_live || '{"status":"draft"}'::jsonb else p_live end
 $$;
 
 -- Write [p_data] into the live row. Only callable from the publishing functions
@@ -234,13 +282,22 @@ begin
         select p_id, (jsonb_array_elements_text(p_data -> 'university_ids'))::uuid
         on conflict do nothing;
     end if;
+  elsif p_type = 'cafeteria_meal' then
+    update public.cafeteria_meals m set
+      menu_items = coalesce(p_data -> 'menu_items', '[]'::jsonb), price_krw = (p_data ->> 'price_krw')::integer,
+      start_time = nullif(p_data ->> 'start_time', '')::time, end_time = nullif(p_data ->> 'end_time', '')::time,
+      status = p_data ->> 'status', badge = nullif(btrim(coalesce(p_data ->> 'badge', '')), ''),
+      source_url = nullif(p_data ->> 'source_url', ''), verified_at = (p_data ->> 'verified_at')::timestamptz,
+      extra = coalesce(p_data -> 'extra', '{}'::jsonb)
+     where m.id = p_id;
+    if not found then raise exception 'no such meal' using errcode = 'P0002'; end if;
   else
     raise exception 'unknown entity type' using errcode = '22023';
   end if;
   perform set_config('app.cms_apply', 'off', true);
 end $$;
 revoke all on function public._cms_apply(text, uuid, jsonb), public._cms_snapshot(text, uuid),
-  public._cms_validate(text, jsonb), public._cms_unpublished(text, jsonb), public._cms_keys(text)
+  public._cms_validate(text, jsonb, uuid), public._cms_unpublished(text, jsonb), public._cms_keys(text)
   from public, anon, authenticated;
 
 -- Guard: live restaurant content cannot be changed through the API.
@@ -273,6 +330,37 @@ drop trigger if exists restaurant_overrides_guard_live on public.restaurant_over
 create trigger restaurant_overrides_guard_live before insert or update on public.restaurant_overrides
   for each row execute function public.restaurant_overrides_guard_live();
 
+-- Guard: LIVE cafeteria meals change only by publishing. A meal that is a draft
+-- (status 'draft', hidden from students) may be created and removed freely.
+create or replace function public.cafeteria_meals_guard_live() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if current_user not in ('authenticated', 'anon') or coalesce(current_setting('app.cms_apply', true), '') = 'on' then
+    return coalesce(new, old);
+  end if;
+  if tg_op = 'INSERT' then
+    if new.status <> 'draft' then
+      raise exception 'new meals start as drafts; publish them from the publishing toolbar' using errcode = '42501';
+    end if;
+    return new;
+  elsif tg_op = 'DELETE' then
+    if old.status <> 'draft' then
+      raise exception 'a published meal cannot be deleted: unpublish it first' using errcode = '42501';
+    end if;
+    return old;
+  end if;
+  if old.status = 'draft' and new.status = 'draft' then return new; end if;
+  if (new.menu_items, new.price_krw, new.start_time, new.end_time, new.status, new.badge, new.source_url, new.verified_at, new.extra, new.option_order)
+     is distinct from
+     (old.menu_items, old.price_krw, old.start_time, old.end_time, old.status, old.badge, old.source_url, old.verified_at, old.extra, old.option_order) then
+    raise exception 'live meals are changed only by publishing (save a draft, then publish)' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+drop trigger if exists cafeteria_meals_guard_live on public.cafeteria_meals;
+create trigger cafeteria_meals_guard_live before insert or update or delete on public.cafeteria_meals
+  for each row execute function public.cafeteria_meals_guard_live();
+
 -- ---------------------------------------------------------------------------
 -- Helpers
 -- ---------------------------------------------------------------------------
@@ -304,7 +392,7 @@ create or replace function public._cms_commit(
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 declare v integer; applied jsonb;
 begin
-  perform public._cms_validate(p_type, p_data);
+  perform public._cms_validate(p_type, p_data, p_id);
   perform public._cms_apply(p_type, p_id, p_data);
   v := public._cms_live_version(p_type, p_id) + 1;
   applied := public._cms_snapshot(p_type, p_id);          -- exactly what is live now
@@ -352,7 +440,7 @@ returns jsonb language plpgsql security definer set search_path = public, pg_tem
 declare d public.content_drafts; lv integer;
 begin
   perform public._cms_admin_check();
-  perform public._cms_validate(p_type, p_data);
+  perform public._cms_validate(p_type, p_data, p_id);
   perform public._cms_lock(p_type, p_id);
   perform public._cms_snapshot(p_type, p_id);               -- the entity must exist
   lv := public._cms_live_version(p_type, p_id);
@@ -450,7 +538,7 @@ begin
   if p_unpublish_at is not null and p_unpublish_at <= p_run_at then
     raise exception '게시 종료 시각은 게시 시각보다 늦어야 해요' using errcode = '22023';
   end if;
-  perform public._cms_validate(p_type, d.data);
+  perform public._cms_validate(p_type, d.data, p_id);
   if exists (select 1 from public.publication_jobs where entity_type = p_type and entity_id = p_id and action = 'publish' and status = 'scheduled') then
     raise exception '이미 예약된 게시가 있어요. 예약을 취소하거나 시간을 바꿔 주세요.' using errcode = '55006';
   end if;
@@ -550,12 +638,17 @@ begin
   if p_visibility not in ('draft', 'published', 'hidden', 'archived') then raise exception '공개 상태가 올바르지 않아요' using errcode = '22023'; end if;
   if p_reason is null or btrim(p_reason) = '' then raise exception '사유를 입력해 주세요' using errcode = '22023'; end if;
   perform public._cms_lock(p_type, p_id);
+  -- restaurants carry "visibility"; a meal's visible/hidden is its "status" (published / draft)
   return public._cms_commit(p_type, p_id,
-    public._cms_snapshot(p_type, p_id) || jsonb_build_object('visibility', p_visibility), 'visibility', p_reason, auth.uid());
+    public._cms_snapshot(p_type, p_id) || case p_type
+      when 'cafeteria_meal' then jsonb_build_object('status', case p_visibility when 'published' then 'published' else 'draft' end)
+      else jsonb_build_object('visibility', p_visibility) end,
+    'visibility', p_reason, auth.uid());
 end $$;
 
 -- One row per entity for the list filters: draft / scheduled / failed.
-create or replace function public.cms_overview(p_type text)
+-- [p_parent] limits meals to one cafeteria.
+create or replace function public.cms_overview(p_type text, p_parent uuid default null)
 returns table (entity_id uuid, has_draft boolean, draft_updated_at timestamptz, scheduled_at timestamptz,
                failed_jobs integer, live_version integer, last_published_at timestamptz)
 language plpgsql stable security definer set search_path = public, pg_temp as $$
@@ -569,8 +662,9 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from public.restaurant_overrides e
-     where p_type = 'restaurant';
+      from (select o.id from public.restaurant_overrides o where p_type = 'restaurant'
+            union all
+            select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)) e;
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -645,7 +739,7 @@ revoke all on function
   public.cms_rebase_draft(text, uuid, integer), public.cms_publish(text, uuid, integer, text),
   public.cms_schedule(text, uuid, integer, timestamptz, timestamptz, text), public.cms_reschedule(bigint, timestamptz, timestamptz),
   public.cms_cancel_job(bigint, text), public.cms_retry_job(bigint), public.cms_unpublish(text, uuid, text),
-  public.cms_rollback(text, uuid, integer, text), public.cms_set_visibility(text, uuid, text, text), public.cms_overview(text),
+  public.cms_rollback(text, uuid, integer, text), public.cms_set_visibility(text, uuid, text, text), public.cms_overview(text, uuid),
   public.cms_run_due_jobs()
   from public, anon;
 revoke all on function public.cms_run_due_jobs() from authenticated;
@@ -654,7 +748,7 @@ grant execute on function
   public.cms_rebase_draft(text, uuid, integer), public.cms_publish(text, uuid, integer, text),
   public.cms_schedule(text, uuid, integer, timestamptz, timestamptz, text), public.cms_reschedule(bigint, timestamptz, timestamptz),
   public.cms_cancel_job(bigint, text), public.cms_retry_job(bigint), public.cms_unpublish(text, uuid, text),
-  public.cms_rollback(text, uuid, integer, text), public.cms_set_visibility(text, uuid, text, text), public.cms_overview(text)
+  public.cms_rollback(text, uuid, integer, text), public.cms_set_visibility(text, uuid, text, text), public.cms_overview(text, uuid)
   to authenticated;
 
 -- Schedule the runner (every minute) with pg_cron, where it is available.

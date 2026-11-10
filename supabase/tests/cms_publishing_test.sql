@@ -276,7 +276,7 @@ end $$;
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
 do $$ declare o record; begin
-  select * into o from public.cms_overview('restaurant') where entity_id = 'e4000000-0000-4000-8000-000000000002';
+  select * into o from public.cms_overview('restaurant', null) where entity_id = 'e4000000-0000-4000-8000-000000000002';
   assert o.failed_jobs >= 1 and o.live_version >= 1 and o.last_published_at is not null, 'the overview reports failed jobs and versions';
   raise notice 'OK cms overview: draft / scheduled / failed per restaurant';
 end $$;
@@ -294,7 +294,7 @@ do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000001'; n int; 
   begin perform public.cms_rollback('restaurant', r, 1, 'x'); raise exception 'accepted#45'; exception when insufficient_privilege then null; end;
   begin perform public.cms_cancel_job(1); raise exception 'accepted#46'; exception when insufficient_privilege then null; end;
   begin perform public.cms_set_visibility('restaurant', r, 'hidden', 'x'); raise exception 'accepted#47'; exception when insufficient_privilege then null; end;
-  begin perform * from public.cms_overview('restaurant'); raise exception 'accepted#48'; exception when insufficient_privilege then null; end;
+  begin perform * from public.cms_overview('restaurant', null); raise exception 'accepted#48'; exception when insufficient_privilege then null; end;
   select count(*) into n from public.content_drafts; assert n = 0, 'a moderator reads no drafts';
   select count(*) into n from public.content_versions; assert n = 0, 'no history';
   select count(*) into n from public.publication_jobs; assert n = 0, 'no jobs';
@@ -321,6 +321,104 @@ do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000001'; begin
   raise notice 'OK cms G: anon has no access to publishing at all';
 end $$;
 reset role;
+
+-- ===== cafeteria meals: the same engine, with students watching =====
+insert into public.campus_cafeterias (id, university_id, kind, name_ko) values
+  ('c4000000-0000-4000-8000-000000000001', '5c0a8f3e-0001-4a6e-9b1d-000000000001', 'student', 'CMS 학생식당');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare m uuid; d jsonb; s jsonb; v int; j bigint; rev int; begin
+  insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, status, verified_at)
+    values ('c4000000-0000-4000-8000-000000000001', '2026-11-20', 'lunch', '[{"name_ko":"첫 메뉴","kind":"main"}]', 'draft', now()) returning id into m;
+  perform set_config('test.meal', m::text, false);
+  -- a new meal is a hidden draft; the first publication goes through the engine
+  begin insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, status, verified_at)
+    values ('c4000000-0000-4000-8000-000000000001', '2026-11-21', 'lunch', '[{"name_ko":"x"}]', 'published', now()); raise exception 'accepted#70'; exception when insufficient_privilege then null; end;
+  s := public.cms_state('cafeteria_meal', m);
+  d := jsonb_set(jsonb_set(s -> 'live', '{status}', '"published"'), '{price_krw}', '5500');
+  perform public.cms_save_draft('cafeteria_meal', m, d, 0);
+  assert (select status from public.cafeteria_meals where id = m) = 'draft', 'saving a draft does not publish';
+  v := public.cms_publish('cafeteria_meal', m, 1, '첫 게시');
+  assert v = 1 and (select status from public.cafeteria_meals where id = m) = 'published' and (select price_krw from public.cafeteria_meals where id = m) = 5500, 'publish makes the meal live';
+  raise notice 'OK cms meal: a new meal is a hidden draft until published';
+end $$;
+reset role;
+set role anon; select set_config('request.jwt.claims', '{"role":"anon"}', false);
+do $$ begin
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = current_setting('test.meal')::uuid) = '첫 메뉴', 'students see the published menu';
+  raise notice 'OK cms meal: students see it after publication';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare m uuid := current_setting('test.meal')::uuid; d jsonb; j bigint; v int; begin
+  -- 1: edit as a draft: the published menu is unchanged
+  d := jsonb_set(public.cms_state('cafeteria_meal', m) -> 'live', '{menu_items}', '[{"name_ko":"새 메뉴","kind":"main"}]');
+  perform public.cms_save_draft('cafeteria_meal', m, d, 0);
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = m) = '첫 메뉴', 'the live menu is still the published one';
+  begin update public.cafeteria_meals set price_krw = 1 where id = m; raise exception 'accepted#71'; exception when insufficient_privilege then null; end;
+  begin delete from public.cafeteria_meals where id = m; raise exception 'accepted#72'; exception when insufficient_privilege then null; end;
+  -- validation specific to meals
+  begin perform public.cms_save_draft('cafeteria_meal', m, jsonb_set(d, '{menu_items}', '[]'), 1); raise exception 'accepted#73'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('cafeteria_meal', m, jsonb_set(d, '{start_time}', '"13:00"') || '{"end_time":"12:00"}', 1); raise exception 'accepted#74'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('cafeteria_meal', m, d || '{"badge":"천원의 아침밥"}', 1); raise exception 'accepted#75'; exception when invalid_parameter_value then null; end;  -- no source
+  begin perform public.cms_save_draft('cafeteria_meal', m, d || '{"badge":"천원의 아침밥","source_url":"https://example.org/a"}', 1); raise exception 'accepted#76'; exception when invalid_parameter_value then null; end;  -- lunch, not breakfast
+  begin perform public.cms_save_draft('cafeteria_meal', m, jsonb_set(d, '{source_url}', '"http://x"'), 1); raise exception 'accepted#77'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('cafeteria_meal', m, d || '{"cafeteria_id":"x"}', 1); raise exception 'accepted#78'; exception when invalid_parameter_value then null; end;
+  -- 3: schedule, then the server publishes it with no client involved
+  j := public.cms_schedule('cafeteria_meal', m, 1, now() + interval '1 day', null, '아침 7시');
+  perform set_config('test.mjob', j::text, false);
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = m) = '첫 메뉴', 'scheduled content is not live';
+  -- 4: cancel and re-create
+  perform public.cms_cancel_job(j, '취소');
+  j := public.cms_schedule('cafeteria_meal', m, 1, now() + interval '1 day', null, '다시 예약');
+  perform set_config('test.mjob', j::text, false);
+  raise notice 'OK cms meal: draft leaves the published menu alone; guard, validation, schedule, cancel';
+end $$;
+reset role;
+set role anon; select set_config('request.jwt.claims', '{"role":"anon"}', false);
+do $$ begin
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = current_setting('test.meal')::uuid) = '첫 메뉴', 'Flutter still reads the previously published menu';
+  raise notice 'OK cms meal: students still see the old menu while a draft and a schedule exist';
+end $$;
+reset role;
+do $$ declare m uuid := current_setting('test.meal')::uuid; j bigint := current_setting('test.mjob')::bigint; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = j;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'the due meal job ran: ' || res::text;
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = m) = '새 메뉴', 'the scheduled menu is now live';
+  assert (select count(*) from public.content_versions where entity_type = 'cafeteria_meal' and entity_id = m) = 2, 'two versions';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'running again publishes nothing twice';
+  raise notice 'OK cms meal: the server publishes a scheduled meal exactly once';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare m uuid := current_setting('test.meal')::uuid; v int; begin
+  v := public.cms_unpublish('cafeteria_meal', m, '점검');
+  assert (select status from public.cafeteria_meals where id = m) = 'draft' and (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = m) = '새 메뉴', 'unpublished = hidden, content kept';
+  v := public.cms_rollback('cafeteria_meal', m, 1, '처음 메뉴로');
+  assert (select menu_items -> 0 ->> 'name_ko' from public.cafeteria_meals where id = m) = '첫 메뉴' and (select status from public.cafeteria_meals where id = m) = 'published', 'rollback restores version 1 as a new version';
+  assert (select count(*) from public.content_versions where entity_type = 'cafeteria_meal' and entity_id = m) = 4, 'history keeps all four versions';
+  assert (select count(*) from public.cms_overview('cafeteria_meal', 'c4000000-0000-4000-8000-000000000001')) = 1, 'the overview is limited to one cafeteria';
+  -- a hidden draft meal can be deleted, a live one cannot
+  perform public.cms_unpublish('cafeteria_meal', m, '삭제 준비');
+  delete from public.cafeteria_meals where id = m;
+  raise notice 'OK cms meal: unpublish, rollback, history; only drafts can be deleted';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('cafeteria_meal', gen_random_uuid(), 1, 'x'); raise exception 'accepted#79'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms meal: moderators cannot publish meals';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'cafeteria_meal';
+delete from public.content_drafts where entity_type = 'cafeteria_meal';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'cafeteria_meal';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.campus_cafeterias where id = 'c4000000-0000-4000-8000-000000000001';
 
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

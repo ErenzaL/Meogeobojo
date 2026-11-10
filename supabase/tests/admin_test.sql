@@ -133,8 +133,12 @@ do $$ declare n int; begin
   insert into public.restaurant_university_links values ('11111111-0000-4000-8000-000000000001', '5c0a8f3e-0001-4a6e-9b1d-000000000001');
   insert into public.restaurant_menus (restaurant_id, name_ko, price_krw, source, representative, sort_order)
     values ('11111111-0000-4000-8000-000000000001', '비빔밥', 9000, 'admin', true, 1);
-  insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, price_krw, badge, verified_at)
-    values ('c1c1c1c1-0000-4000-8000-0000000000f1', '2026-11-10', 'breakfast', '[{"name_ko":"북엇국","kind":"main"}]', 1000, '천원의 아침밥', now());
+  -- a meal is created as a hidden draft; publishing it goes through the publishing functions
+  begin insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, price_krw, badge, verified_at, status)
+    values ('c1c1c1c1-0000-4000-8000-0000000000f1', '2026-11-11', 'breakfast', '[{"name_ko":"북엇국"}]', 1000, '천원의 아침밥', now(), 'published'); raise exception 'accepted#c3'; exception when insufficient_privilege then null; end;
+  insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, price_krw, badge, verified_at, status)
+    values ('c1c1c1c1-0000-4000-8000-0000000000f1', '2026-11-10', 'breakfast', '[{"name_ko":"북엇국","kind":"main"}]', 1000, '천원의 아침밥', now(), 'draft');
+  update public.cafeteria_meals set status = 'draft' where meal_date = '2026-11-10' and cafeteria_id = 'c1c1c1c1-0000-4000-8000-0000000000f1';  -- editing a draft is fine
   update public.universities set search_radius_m = 2000, is_active = true where id = '5c0a8f3e-0001-4a6e-9b1d-000000000001';
   begin update public.universities set search_radius_m = 10; raise exception 'accepted#24'; exception when check_violation then null; end;
   insert into public.app_content (kind, title, active) values ('banner', '새 배너', true);

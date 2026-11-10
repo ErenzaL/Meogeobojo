@@ -2,7 +2,7 @@
  *  The database owns every rule: these are thin wrappers plus Seoul-time and diff helpers. */
 import { supabase } from '@/lib/supabase'
 
-export type EntityType = 'restaurant'
+export type EntityType = 'restaurant' | 'cafeteria_meal'
 export type Snapshot = Record<string, unknown>
 
 export type Job = {
@@ -54,6 +54,8 @@ export const FIELD_LABEL: Record<string, string> = {
   description: '설명', opening_hours: '영업시간', break_time: '브레이크타임', last_order_time: '주문 마감', business_status: '영업 상태',
   price_min_krw: '최저 가격', price_max_krw: '최고 가격', avg_cost_krw: '1인 평균', dining_purposes: '식사 목적', visibility: '공개 상태',
   featured: '추천 식당', display_order: '추천 순서', university_ids: '연결된 대학교',
+  menu_items: '메뉴', price_krw: '가격', start_time: '시작 시간', end_time: '종료 시간', status: '상태', badge: '배지',
+  source_url: '출처 주소', verified_at: '확인한 날짜', extra: '사진·공지',
 }
 export type Change = { key: string; label: string; from: unknown; to: unknown }
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
@@ -68,8 +70,23 @@ export function diffSnapshots(live: Snapshot, draft: Snapshot): Change[] {
   }
   return out
 }
-export const showValue = (v: unknown): string =>
-  v == null || v === '' ? '(비어 있음)' : Array.isArray(v) ? (v.length ? v.join(', ') : '(없음)') : typeof v === 'boolean' ? (v ? '예' : '아니요') : String(v)
+export const showValue = (v: unknown): string => {
+  if (v == null || v === '') return '(비어 있음)'
+  if (Array.isArray(v)) {
+    if (v.length === 0) return '(없음)'
+    // menu items are objects: show their names
+    return v.map((x) => (typeof x === 'object' && x !== null && 'name_ko' in x ? String((x as { name_ko: unknown }).name_ko) : String(x))).join(', ')
+  }
+  if (typeof v === 'object') {
+    const o = v as { photo_url?: string; notice?: string }
+    return [o.photo_url ? '사진 있음' : null, o.notice ? `공지: ${o.notice}` : null].filter(Boolean).join(' · ') || '(비어 있음)'
+  }
+  return typeof v === 'boolean' ? (v ? '예' : '아니요') : String(v)
+}
+
+/** Does the live content show to students? (restaurants: visibility; meals: status) */
+export const isLiveVisible = (type: EntityType, live: Snapshot): boolean =>
+  type === 'restaurant' ? live.visibility === 'published' : ['published', 'closed', 'no_menu'].includes(String(live.status))
 
 // ---- Errors -------------------------------------------------------------------
 /** The database signals "someone else changed this" with SQLSTATE 40001. */
@@ -96,7 +113,7 @@ export const cmsUnpublish = (type: EntityType, id: string, reason: string) => rp
 export const cmsRollback = (type: EntityType, id: string, version: number, reason: string) => rpc<number>('cms_rollback', { p_type: type, p_id: id, p_version: version, p_reason: reason })
 export const cmsSetVisibility = (type: EntityType, id: string, visibility: string, reason: string) => rpc<number>('cms_set_visibility', { p_type: type, p_id: id, p_visibility: visibility, p_reason: reason })
 export type OverviewRow = { entity_id: string; has_draft: boolean; draft_updated_at: string | null; scheduled_at: string | null; failed_jobs: number; live_version: number; last_published_at: string | null }
-export const cmsOverview = (type: EntityType) => rpc<OverviewRow[]>('cms_overview', { p_type: type })
+export const cmsOverview = (type: EntityType, parent: string | null = null) => rpc<OverviewRow[]>('cms_overview', { p_type: type, p_parent: parent })
 export async function cmsVersions(type: EntityType, id: string): Promise<Version[]> {
   const { data, error } = await supabase.from('content_versions').select('*').eq('entity_type', type).eq('entity_id', id).order('version', { ascending: false }).limit(50)
   if (error) throw error

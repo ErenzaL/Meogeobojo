@@ -4,12 +4,12 @@ import { useState } from 'react'
 import { Badge, Button, ConfirmDialog, EmptyState, ErrorState, Field, Input, Modal, Skeleton, Textarea } from '@/components/ui'
 import {
   cmsCancelJob, cmsPublish, cmsRebaseDraft, cmsReschedule, cmsRetryJob, cmsRollback, cmsSchedule, cmsUnpublish, cmsVersions, diffSnapshots, formatKst,
-  isConflict, isoToKst, JOB_LABEL, KIND_LABEL, kstToIso, showValue, type Change, type CmsState, type EntityType, type Job,
+  isConflict, isLiveVisible, isoToKst, JOB_LABEL, KIND_LABEL, kstToIso, showValue, type Change, type CmsState, type EntityType, type Job,
 } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 
-const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관' }
+const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관', closed: '운영 안 함', no_menu: '메뉴 없음' }
 const short = (id: string | null) => (id ? id.slice(0, 8) : '—')
 
 /** Display names for admin user ids (profiles are readable by admins). */
@@ -106,14 +106,15 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
   if (loading) return <Skeleton className="mb-5 h-24 w-full" />
   if (error) return <div className="mb-5"><ErrorState error={error as Error} /></div>
   if (!state) return null
-  const vis = String(state.live.visibility ?? '')
+  const vis = String(state.live.visibility ?? state.live.status ?? '')
+  const visible = isLiveVisible(type, state.live)
   const msg = message ?? note
 
   return (
     <section aria-label="게시 도구" className="mb-6 space-y-3 rounded-2xl border border-line bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2" aria-label="게시 상태">
-          <div className="flex items-center gap-2"><dt className="text-muted">라이브</dt><dd><Badge tone={vis === 'published' ? 'green' : vis === 'draft' ? 'neutral' : 'amber'}>{VIS_LABEL[vis] ?? vis}</Badge> <span className="text-muted">v{state.live_version}</span></dd></div>
+          <div className="flex items-center gap-2"><dt className="text-muted">라이브</dt><dd><Badge tone={visible ? 'green' : vis === 'draft' ? 'neutral' : 'amber'}>{VIS_LABEL[vis] ?? vis}</Badge> <span className="text-muted">v{state.live_version}</span></dd></div>
           <div className="flex items-center gap-2"><dt className="text-muted">초안</dt><dd>{draft ? (draft.has_changes ? <Badge tone="brand">게시되지 않은 변경 {changes.length}건</Badge> : <Badge tone="neutral">라이브와 같음</Badge>) : <Badge tone="neutral">없음</Badge>}{dirty && <span className="ml-2 text-xs text-amber-700">저장하지 않은 수정</span>}</dd></div>
           <div className="flex gap-2"><dt className="text-muted">마지막 저장</dt><dd>{draft ? `${formatKst(draft.updated_at)} · ${who(draft.updated_by)}` : '—'}</dd></div>
           <div className="flex gap-2"><dt className="text-muted">마지막 게시</dt><dd>{state.last_published ? `${formatKst(state.last_published.at)} · ${who(state.last_published.by)} (${KIND_LABEL[state.last_published.kind as keyof typeof KIND_LABEL] ?? state.last_published.kind})` : '게시한 적 없음'}</dd></div>
@@ -125,7 +126,7 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
           <Button onClick={() => { setReason(''); setModal('publish') }} disabled={!canAct || !!scheduled} title={scheduled ? '예약을 취소한 뒤 지금 게시할 수 있어요' : undefined}><Send className="size-4" />지금 게시</Button>
           <Button variant="soft" onClick={openSchedule} disabled={!canAct || !!scheduled}><CalendarClock className="size-4" />예약 게시</Button>
           {scheduled && <Button variant="outline" onClick={() => cancel.mutate(scheduled)} disabled={cancel.isPending}><XCircle className="size-4" />예약 취소</Button>}
-          {vis === 'published' && <Button variant="outline" onClick={() => { setReason(''); setModal('unpublish') }}><Undo2 className="size-4" />게시 중단</Button>}
+          {visible && <Button variant="outline" onClick={() => { setReason(''); setModal('unpublish') }}><Undo2 className="size-4" />게시 중단</Button>}
           <Button variant="ghost" onClick={() => setHistoryOpen((o) => !o)} aria-expanded={historyOpen}><History className="size-4" />게시 이력</Button>
         </div>
       </div>
@@ -169,7 +170,7 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
       </Modal>
 
       <ConfirmDialog open={modal === 'unpublish'} askReason danger busy={unpublish.isPending} title="게시를 중단할까요?"
-        description="앱에서 이 항목이 숨겨져요. 내용은 지워지지 않고, 이력에서 다시 복원할 수 있어요."
+        description="앱에서 이 항목이 숨겨져요 (식단은 초안 상태가 돼요). 내용은 지워지지 않고, 이력에서 다시 복원할 수 있어요."
         confirmLabel="게시 중단" onCancel={() => setModal(null)} onConfirm={(r) => unpublish.mutate(r)} />
       <ConfirmDialog open={rollbackTo !== null} askReason busy={rollback.isPending} title={`버전 ${rollbackTo}으로 복원할까요?`}
         description="그 버전의 내용이 새 버전으로 게시돼요. 이후 버전은 이력에 그대로 남아요."

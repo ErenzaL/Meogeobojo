@@ -42,6 +42,7 @@ do $$ begin
      or to_regclass('public.restaurant_photos') is null
      or to_regclass('public.missions') is null
      or to_regclass('public.app_content') is null
+     or to_regclass('public.monthly_campaigns') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -52,7 +53,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content', 'university', 'campaign')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -66,7 +67,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content', 'university', 'campaign')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -82,7 +83,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content', 'university', 'campaign')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -145,6 +146,8 @@ language sql immutable as $$
     'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
   when 'restaurant_menus' then array['items']
   when 'restaurant_photos' then array['photos']
+  when 'campaign' then array['title', 'subtitle', 'description', 'theme_color', 'banner_mascot', 'starts_at', 'ends_at', 'publish_state']
+  when 'university' then array['name_ko', 'name_en', 'city', 'address', 'latitude', 'longitude', 'search_radius_m', 'is_active']
   when 'app_content' then array['title', 'body', 'image_url', 'link_url', 'kakao_place_id', 'university_id', 'active', 'sort_order', 'starts_at', 'ends_at']
   when 'mission' then array[
     'campaign_id', 'title', 'description', 'category', 'icon', 'reward_points', 'rule_type', 'rule_params', 'target_count',
@@ -187,6 +190,13 @@ begin
           'status', x.status, 'sort_order', x.sort_order, 'image_url', x.image_url) order by x.sort_order, x.id), '[]'::jsonb))
         into v from public.restaurant_menus x where x.restaurant_id = p_id;
     end if;
+  elsif p_type = 'campaign' then
+    select jsonb_build_object('title', c.title, 'subtitle', c.subtitle, 'description', c.description, 'theme_color', c.theme_color,
+      'banner_mascot', c.banner_mascot, 'starts_at', c.starts_at, 'ends_at', c.ends_at, 'publish_state', c.publish_state)
+      into v from public.monthly_campaigns c where c.id = p_id;
+  elsif p_type = 'university' then
+    select jsonb_build_object('name_ko', u.name_ko, 'name_en', u.name_en, 'city', u.city, 'address', u.address, 'latitude', u.latitude,
+      'longitude', u.longitude, 'search_radius_m', u.search_radius_m, 'is_active', u.is_active) into v from public.universities u where u.id = p_id;
   elsif p_type = 'app_content' then
     select jsonb_build_object('title', c.title, 'body', c.body, 'image_url', c.image_url, 'link_url', c.link_url,
       'kakao_place_id', c.kakao_place_id, 'university_id', c.university_id, 'active', c.active, 'sort_order', c.sort_order,
@@ -288,6 +298,27 @@ begin
       end if;
       if (it ->> 'image_url') is not null and (it ->> 'image_url') !~ '^https://' then raise exception '메뉴 사진 주소가 올바르지 않아요' using errcode = '22023'; end if;
     end loop;
+  elsif p_type = 'campaign' then
+    if btrim(coalesce(p_data ->> 'title', '')) = '' then raise exception '캠페인 이름을 입력해 주세요' using errcode = '22023'; end if;
+    if char_length(p_data ->> 'title') > 60 then raise exception '이름은 60자 이하여야 해요' using errcode = '22023'; end if;
+    if char_length(coalesce(p_data ->> 'subtitle', '')) > 120 then raise exception '부제목은 120자 이하여야 해요' using errcode = '22023'; end if;
+    if char_length(coalesce(p_data ->> 'description', '')) > 1000 then raise exception '설명은 1000자 이하여야 해요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'theme_color', '') !~ '^#[0-9A-Fa-f]{6}$' then raise exception '테마 색상은 #RRGGBB 형식이어야 해요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'banner_mascot', '') not in ('standing','wink','cheer','sparkle','burger','boba','searching','sleeping','confused','running') then raise exception '배너 마스코트가 올바르지 않아요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'publish_state', '') not in ('draft', 'published') then raise exception '게시 상태가 올바르지 않아요' using errcode = '22023'; end if;
+    begin
+      if (p_data ->> 'ends_at')::timestamptz <= (p_data ->> 'starts_at')::timestamptz then raise exception 'x'; end if;
+    exception when others then raise exception '종료는 시작보다 늦어야 해요' using errcode = '22023'; end;
+  elsif p_type = 'university' then
+    if btrim(coalesce(p_data ->> 'name_ko', '')) = '' then raise exception '이름을 입력해 주세요' using errcode = '22023'; end if;
+    if char_length(p_data ->> 'name_ko') > 80 then raise exception '이름이 너무 길어요' using errcode = '22023'; end if;
+    begin
+      if (p_data ->> 'latitude') is not null and (p_data ->> 'latitude')::double precision not between -90 and 90 then raise exception 'x'; end if;
+      if (p_data ->> 'longitude') is not null and (p_data ->> 'longitude')::double precision not between -180 and 180 then raise exception 'x'; end if;
+    exception when others then raise exception '좌표가 올바르지 않아요' using errcode = '22023'; end;
+    begin n := (p_data ->> 'search_radius_m')::integer; if n < 100 or n > 5000 then raise exception 'x'; end if;
+    exception when others then raise exception '검색 반경은 100 ~ 5000 m 사이여야 해요' using errcode = '22023'; end;
+    if jsonb_typeof(p_data -> 'is_active') is distinct from 'boolean' then raise exception '활성 여부가 올바르지 않아요' using errcode = '22023'; end if;
   elsif p_type = 'app_content' then
     if btrim(coalesce(p_data ->> 'title', '')) = '' then raise exception '제목을 입력해 주세요' using errcode = '22023'; end if;
     if char_length(p_data ->> 'title') > 120 then raise exception '제목이 너무 길어요' using errcode = '22023'; end if;
@@ -418,6 +449,8 @@ language sql immutable as $$
                      -- a stopped mission keeps its progress, rewards and badges; students just stop seeing it
                      when 'mission' then p_live || '{"status":"paused"}'::jsonb
                      when 'app_content' then p_live || '{"active":false}'::jsonb
+                     when 'university' then p_live || '{"is_active":false}'::jsonb
+                     when 'campaign' then p_live || '{"publish_state":"draft"}'::jsonb
                      when 'restaurant_photos' then jsonb_build_object('photos', coalesce(
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'photos') i), '[]'::jsonb))
                      else p_live end
@@ -480,6 +513,17 @@ begin
       representative = excluded.representative, recommended = excluded.recommended, status = excluded.status,
       sort_order = excluded.sort_order, image_url = excluded.image_url
       where x.restaurant_id = p_id;
+  elsif p_type = 'campaign' then
+    perform public._campaign_save(jsonb_build_object('id', p_id, 'title', p_data ->> 'title', 'subtitle', p_data ->> 'subtitle', 'description', p_data ->> 'description',
+      'theme_color', p_data ->> 'theme_color', 'banner_mascot', p_data ->> 'banner_mascot', 'starts_at', p_data ->> 'starts_at', 'ends_at', p_data ->> 'ends_at'));
+    update public.monthly_campaigns set publish_state = p_data ->> 'publish_state' where id = p_id;
+  elsif p_type = 'university' then
+    update public.universities u set
+      name_ko = btrim(p_data ->> 'name_ko'), name_en = nullif(btrim(coalesce(p_data ->> 'name_en', '')), ''), city = nullif(btrim(coalesce(p_data ->> 'city', '')), ''),
+      address = nullif(btrim(coalesce(p_data ->> 'address', '')), ''), latitude = (p_data ->> 'latitude')::double precision,
+      longitude = (p_data ->> 'longitude')::double precision, search_radius_m = (p_data ->> 'search_radius_m')::integer, is_active = (p_data ->> 'is_active')::boolean
+     where u.id = p_id;
+    if not found then raise exception 'no such university' using errcode = 'P0002'; end if;
   elsif p_type = 'app_content' then
     update public.app_content c set
       title = btrim(p_data ->> 'title'), body = nullif(btrim(coalesce(p_data ->> 'body', '')), ''), image_url = p_data ->> 'image_url',
@@ -687,6 +731,87 @@ begin
   update public.missions set status = p_status where id = p_id;
   perform public._audit('set_mission_status', 'missions', p_id::text, p_reason, jsonb_build_object('status', p_status));
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- Campaigns. The body of admin_save_campaign moves to _campaign_save() (no role check, not callable
+-- from the API) for publishing. The API function refuses to edit a published campaign, and a
+-- campaign goes published only through publishing; taking it back to draft stays an audited call.
+-- ---------------------------------------------------------------------------
+create or replace function public._campaign_save(p jsonb)
+returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
+declare
+  v_id uuid := nullif(p ->> 'id', '')::uuid;
+begin
+  if v_id is null then
+    insert into public.monthly_campaigns
+      (slug, title, subtitle, description, theme_color, banner_mascot, starts_at, ends_at)
+    values (p ->> 'slug', p ->> 'title', p ->> 'subtitle', p ->> 'description',
+            coalesce(p ->> 'theme_color', '#E85D04'), coalesce(p ->> 'banner_mascot', 'cheer'),
+            (p ->> 'starts_at')::timestamptz, (p ->> 'ends_at')::timestamptz)
+    returning id into v_id;
+  else
+    update public.monthly_campaigns set
+      title = coalesce(p ->> 'title', title),
+      subtitle = case when p ? 'subtitle' then p ->> 'subtitle' else subtitle end,
+      description = case when p ? 'description' then p ->> 'description' else description end,
+      theme_color = coalesce(p ->> 'theme_color', theme_color),
+      banner_mascot = coalesce(p ->> 'banner_mascot', banner_mascot),
+      starts_at = coalesce((p ->> 'starts_at')::timestamptz, starts_at),
+      ends_at = coalesce((p ->> 'ends_at')::timestamptz, ends_at)
+    where id = v_id;
+    if not found then raise exception 'no such campaign' using errcode = 'P0002'; end if;
+  end if;
+  return v_id;
+end $$;
+revoke all on function public._campaign_save(jsonb) from public, anon, authenticated;
+
+create or replace function public.admin_save_campaign(p jsonb)
+returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  perform public._require_role('admin');
+  if coalesce(current_setting('app.cms_apply', true), '') <> 'on'
+     and nullif(p ->> 'id', '') is not null
+     and exists (select 1 from public.monthly_campaigns where id = (p ->> 'id')::uuid and publish_state = 'published') then
+    raise exception 'a published campaign is changed only by publishing (save a draft, then publish)' using errcode = '42501';
+  end if;
+  return public._campaign_save(p);
+end $$;
+
+create or replace function public.admin_set_campaign_publish(p_id uuid, p_state text, p_reason text)
+returns void language plpgsql security definer set search_path = public, pg_temp as $$
+begin
+  perform public._require_role('admin');
+  if p_state not in ('draft', 'published') then raise exception 'unknown state' using errcode = '22023'; end if;
+  if p_reason is null or btrim(p_reason) = '' then raise exception 'a reason is required' using errcode = '22023'; end if;
+  if p_state = 'published' and coalesce(current_setting('app.cms_apply', true), '') <> 'on' then
+    raise exception 'a campaign goes live by publishing it' using errcode = '42501';
+  end if;
+  update public.monthly_campaigns set publish_state = p_state where id = p_id;
+  if not found then raise exception 'no such campaign' using errcode = 'P0002'; end if;
+  perform public._audit('set_campaign_publish', 'monthly_campaigns', p_id::text, p_reason, jsonb_build_object('state', p_state));
+end $$;
+
+-- Guard: a university's live fields change only by publishing. A new campus starts switched off.
+create or replace function public.universities_guard_live() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if current_user not in ('authenticated', 'anon') or coalesce(current_setting('app.cms_apply', true), '') = 'on' then
+    return coalesce(new, old);
+  end if;
+  if tg_op = 'INSERT' then
+    if new.is_active then raise exception 'new universities start switched off; publish them from the publishing toolbar' using errcode = '42501'; end if;
+    return new;
+  end if;
+  if (new.name_ko, new.name_en, new.city, new.address, new.latitude, new.longitude, new.search_radius_m, new.is_active)
+     is distinct from
+     (old.name_ko, old.name_en, old.city, old.address, old.latitude, old.longitude, old.search_radius_m, old.is_active) then
+    raise exception 'a university is changed only by publishing (save a draft, then publish)' using errcode = '42501';
+  end if;
+  return new;
+end $$;
+drop trigger if exists universities_guard_live on public.universities;
+create trigger universities_guard_live before insert or update on public.universities
+  for each row execute function public.universities_guard_live();
 
 -- Guard: LIVE app content (an active announcement / banner / featured restaurant) changes only by
 -- publishing. A switched-off row is a staging row and may be created, edited and removed freely.
@@ -1052,7 +1177,7 @@ create or replace function public.cms_set_visibility(p_type text, p_id uuid, p_v
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   perform public._cms_admin_check();
-  if p_type not in ('restaurant', 'cafeteria_meal', 'mission', 'app_content') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
+  if p_type not in ('restaurant', 'cafeteria_meal', 'mission', 'app_content', 'university', 'campaign') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
   if p_visibility not in ('draft', 'published', 'hidden', 'archived') then raise exception '공개 상태가 올바르지 않아요' using errcode = '22023'; end if;
   if p_reason is null or btrim(p_reason) = '' then raise exception '사유를 입력해 주세요' using errcode = '22023'; end if;
   perform public._cms_lock(p_type, p_id);
@@ -1062,6 +1187,8 @@ begin
       when 'cafeteria_meal' then jsonb_build_object('status', case p_visibility when 'published' then 'published' else 'draft' end)
       when 'mission' then jsonb_build_object('status', case p_visibility when 'published' then 'active' when 'hidden' then 'paused' else p_visibility end)
       when 'app_content' then jsonb_build_object('active', p_visibility = 'published')
+      when 'university' then jsonb_build_object('is_active', p_visibility = 'published')
+      when 'campaign' then jsonb_build_object('publish_state', case when p_visibility = 'published' then 'published' else 'draft' end)
       else jsonb_build_object('visibility', p_visibility) end,
     'visibility', p_reason, auth.uid());
 end $$;
@@ -1082,9 +1209,13 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')
+      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content', 'university', 'campaign')
             union all
             select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)
+            union all
+            select c.id from public.monthly_campaigns c where p_type = 'campaign'
+            union all
+            select u.id from public.universities u where p_type = 'university'
             union all
             select c.id from public.app_content c where p_type = 'app_content'
             union all

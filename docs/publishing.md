@@ -1,7 +1,9 @@
 # Controlled publishing (draft → preview → publish / schedule → live)
 
-Status: **foundation + restaurants + cafeteria meals (학식) built and tested locally; not applied to production.**
-Other sections are listed under "Rollout" and still publish immediately.
+Status: **every content type below is built and tested locally; nothing is applied to production.**
+Types: `restaurant`, `cafeteria_meal`, `restaurant_menus`, `restaurant_photos`, `mission`, `campaign`,
+`app_content`, `university`. Not publishing-controlled on purpose: user management, moderation, reward
+revocation (immediate, confirmed, audited), recommendation statistics (read-only).
 
 Entity types so far: `restaurant`, `cafeteria_meal` (one meal = one date × meal × corner) and
 `restaurant_menus` (a restaurant's whole menu list; entity id = the restaurant id) and
@@ -169,12 +171,15 @@ E (missions) is not implemented yet. The cafeteria meal flow (draft invisible �
 1. ~~Menus + prices~~ done (`restaurant_menus`).
 2. ~~Photos~~ done (`restaurant_photos`; unlistable, random URLs; see above).
 3. ~~Cafeteria meals~~ done (single meal). A whole week as one publication is still open.
-4. **App content** (banners/announcements: schedule start + automatic expiry; the live
-   window already exists, this adds drafts and history).
-5. **Missions/campaigns**: publish versions without touching progress, points or badges
-   (the existing mission versioning already preserves them; draft/schedule goes on top).
-6. **Universities / recommendation settings**: only student-facing configuration, separate
-   from operational changes.
+4. ~~App content~~ done (`app_content`; guard blocks direct edits of live rows).
+5. ~~Missions / campaigns~~ done (`mission` by lineage, `campaign`). Publishing a changed goal / reward /
+   rule / audience / period of a mission that already has progress creates a new mission version
+   (the existing rules), so progress and paid rewards are never rewritten. Pausing / archiving and
+   reward revocation remain immediate, audited operations; a draft mission's first activation is a publication.
+6. ~~Universities~~ done (`university`). The recommendation page only shows statistics (no writes).
+7. Still open: publishing a whole cafeteria week as one unit; a private staging bucket for photos
+   (see the Photos note); campaign + its missions as one atomic publication (today each is published
+   on its own, in any order, each with its own history).
 
 Each step = one more branch in `_cms_keys / _cms_snapshot / _cms_validate / _cms_apply /
 _cms_unpublished` plus its admin form. Account suspension, role changes and fraud

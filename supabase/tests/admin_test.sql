@@ -142,8 +142,11 @@ do $$ declare n int; begin
   insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, price_krw, badge, verified_at, status)
     values ('c1c1c1c1-0000-4000-8000-0000000000f1', '2026-11-10', 'breakfast', '[{"name_ko":"북엇국","kind":"main"}]', 1000, '천원의 아침밥', now(), 'draft');
   update public.cafeteria_meals set status = 'draft' where meal_date = '2026-11-10' and cafeteria_id = 'c1c1c1c1-0000-4000-8000-0000000000f1';  -- editing a draft is fine
-  update public.universities set search_radius_m = 2000, is_active = true where id = '5c0a8f3e-0001-4a6e-9b1d-000000000001';
-  begin update public.universities set search_radius_m = 10; raise exception 'accepted#24'; exception when check_violation then null; end;
+  begin update public.universities set search_radius_m = 2000 where id = '5c0a8f3e-0001-4a6e-9b1d-000000000001'; raise exception 'accepted#c6'; exception when insufficient_privilege then null; end;   -- universities change by publishing
+  perform public.cms_save_draft('university', '5c0a8f3e-0001-4a6e-9b1d-000000000001', (public.cms_state('university', '5c0a8f3e-0001-4a6e-9b1d-000000000001') -> 'live') || '{"search_radius_m":2000,"is_active":true}', 0);
+  perform public.cms_publish('university', '5c0a8f3e-0001-4a6e-9b1d-000000000001', 1, 'test');
+  assert (select search_radius_m from public.universities where id = '5c0a8f3e-0001-4a6e-9b1d-000000000001') = 2000, 'university radius published';
+  begin perform public.cms_save_draft('university', '5c0a8f3e-0001-4a6e-9b1d-000000000001', (public.cms_state('university', '5c0a8f3e-0001-4a6e-9b1d-000000000001') -> 'live') || '{"search_radius_m":10}', 0); raise exception 'accepted#24'; exception when invalid_parameter_value then null; end;
   begin insert into public.app_content (kind, title, active) values ('banner', '바로 노출', true); raise exception 'accepted#c5'; exception when insufficient_privilege then null; end;   -- live content is published, not inserted
   insert into public.app_content (kind, title, active) values ('banner', '새 배너', false);
   assert (select count(*) from public.audit_log) >= 6, 'admin changes are audited';
@@ -183,7 +186,7 @@ reset role;
 
 -- ===== referential integrity =====
 do $$ declare u uuid := gen_random_uuid(); begin
-  insert into public.universities (id, name_ko) values (u, '테스트대');
+  insert into public.universities (id, name_ko, is_active) values (u, '테스트대', false);
   insert into public.restaurant_university_links values ('11111111-0000-4000-8000-000000000001', u);
   delete from public.universities where id = u;
   assert (select count(*) from public.restaurant_university_links where university_id = u) = 0, 'links removed with the university';

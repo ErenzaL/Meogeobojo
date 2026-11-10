@@ -692,6 +692,103 @@ delete from public.content_versions where entity_type = 'app_content';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.app_content where id in ('ac000000-0000-4000-8000-000000000001', 'ac000000-0000-4000-8000-000000000002');
 
+-- ===== university =====
+insert into public.universities (id, name_ko, latitude, longitude, search_radius_m, is_active) values ('d0000000-0000-4000-8000-0000000000e1', 'CMS대학교', 36.7, 127.0, 1500, true);
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare u constant uuid := 'd0000000-0000-4000-8000-0000000000e1'; d jsonb; v int; j bigint; begin
+  d := public.cms_state('university', u) -> 'live';
+  begin update public.universities set search_radius_m = 900 where id = u; raise exception 'accepted#u1'; exception when insufficient_privilege then null; end;
+  begin insert into public.universities (name_ko, is_active) values ('바로공개대', true); raise exception 'accepted#u2'; exception when insufficient_privilege then null; end;
+  perform public.cms_save_draft('university', u, d || '{"search_radius_m":2000,"latitude":36.8}', 0);
+  assert (select search_radius_m from public.universities where id = u) = 1500, 'a draft campus change is not live';
+  begin perform public.cms_save_draft('university', u, d || '{"latitude":123}', 1); raise exception 'accepted#u3'; exception when invalid_parameter_value then null; end;
+  j := public.cms_schedule('university', u, 1, now() + interval '1 day', null, '내일 반영');
+  perform set_config('test.unijob', j::text, false);
+  raise notice 'OK cms university: drafts and schedules change nothing; direct edits refused';
+end $$;
+reset role;
+do $$ declare u constant uuid := 'd0000000-0000-4000-8000-0000000000e1'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.unijob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'university job ran: ' || res::text;
+  assert (select search_radius_m from public.universities where id = u) = 2000, 'the new radius is live';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  raise notice 'OK cms university: the server applies a scheduled change once';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare u constant uuid := 'd0000000-0000-4000-8000-0000000000e1'; v int; begin
+  v := public.cms_unpublish('university', u, '점검');
+  assert not (select is_active from public.universities where id = u), 'unpublish switches the campus off, nothing deleted';
+  v := public.cms_rollback('university', u, 1, '되돌림');
+  assert (select is_active from public.universities where id = u), 'rollback restores an earlier version';
+  raise notice 'OK cms university: unpublish and rollback';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('university', 'd0000000-0000-4000-8000-0000000000e1', 1, 'x'); raise exception 'accepted#u4'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms university: moderators cannot publish';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'university';
+delete from public.content_drafts where entity_type = 'university';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'university';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.universities where id = 'd0000000-0000-4000-8000-0000000000e1';
+
+-- ===== campaign =====
+insert into public.monthly_campaigns (id, slug, title, starts_at, ends_at, publish_state) values ('ca000000-0000-4000-8000-0000000000e1', 'cms-camp', '원래 캠페인', now() + interval '10 days', now() + interval '40 days', 'draft');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare c constant uuid := 'ca000000-0000-4000-8000-0000000000e1'; d jsonb; v int; j bigint; begin
+  d := public.cms_state('campaign', c) -> 'live';
+  begin perform public.admin_set_campaign_publish(c, 'published', '직접'); raise exception 'accepted#ca1'; exception when insufficient_privilege then null; end;
+  perform public.admin_save_campaign(jsonb_build_object('id', c, 'title', '초안 이름 수정'));   -- an unpublished campaign may still be edited directly
+  d := public.cms_state('campaign', c) -> 'live';
+  perform public.cms_save_draft('campaign', c, d || '{"title":"새 캠페인","publish_state":"published"}', 0);
+  assert (select publish_state from public.monthly_campaigns where id = c) = 'draft', 'a draft does not publish the campaign';
+  j := public.cms_schedule('campaign', c, 1, now() + interval '1 day', null, '내일 공개');
+  perform set_config('test.campjob', j::text, false);
+  raise notice 'OK cms campaign: drafts and schedules change nothing; direct publication refused';
+end $$;
+reset role;
+do $$ declare c constant uuid := 'ca000000-0000-4000-8000-0000000000e1'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.campjob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'campaign job ran: ' || res::text;
+  assert (select publish_state from public.monthly_campaigns where id = c) = 'published' and (select title from public.monthly_campaigns where id = c) = '새 캠페인', 'the server published the campaign';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  raise notice 'OK cms campaign: the server publishes a scheduled campaign once';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare c constant uuid := 'ca000000-0000-4000-8000-0000000000e1'; v int; begin
+  begin perform public.admin_save_campaign(jsonb_build_object('id', c, 'title', '직접')); raise exception 'accepted#ca2'; exception when insufficient_privilege then null; end;
+  v := public.cms_unpublish('campaign', c, '점검');
+  assert (select publish_state from public.monthly_campaigns where id = c) = 'draft', 'unpublish returns it to draft, nothing deleted';
+  v := public.cms_rollback('campaign', c, 1, '되돌림');
+  assert (select publish_state from public.monthly_campaigns where id = c) = 'published', 'rollback restores';
+  raise notice 'OK cms campaign: a published campaign is edited by publishing only; unpublish and rollback';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('campaign', 'ca000000-0000-4000-8000-0000000000e1', 1, 'x'); raise exception 'accepted#ca3'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms campaign: moderators cannot publish';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'campaign';
+delete from public.content_drafts where entity_type = 'campaign';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'campaign';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.monthly_campaigns where id = 'ca000000-0000-4000-8000-0000000000e1';
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

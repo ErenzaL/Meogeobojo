@@ -227,17 +227,17 @@ describe('campaigns', () => {
     const preview = screen.getByTestId('banner-preview')
     expect(within(preview).getByText('12월 미션')).toBeInTheDocument()
     expect(within(preview).getByText('2026.12.01 – 2026.12.31')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '저장' }))
+    await user.click(screen.getByRole('button', { name: '초안으로 만들기' }))
     await waitFor(() => expect(fake.rpcs.find((r) => r.name === 'admin_save_campaign')).toBeDefined())
     expect((fake.rpcs.find((r) => r.name === 'admin_save_campaign')!.args as { p: Record<string, unknown> }).p).toMatchObject({
       slug: '2026-12', title: '12월 미션', starts_at: '2026-11-30T15:00:00.000Z', ends_at: '2026-12-31T15:00:00.000Z',
     })
   })
 
-  it('publishing asks for a reason and calls admin_set_campaign_publish', async () => {
+  it('publishing asks for a reason and goes through the versioned publication call', async () => {
     fake.signInAs('admin')
     fake.respond('monthly_campaigns:select', { data: [{ ...campaign, publish_state: 'draft' }] }); fake.respond('missions:select', { data: [] })
-    fake.respond('rpc:admin_set_campaign_publish', { data: null })
+    fake.respond('rpc:cms_set_visibility', { data: 2 }); fake.respond('rpc:cms_overview', { data: [] })
     open()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('tab', { name: '캠페인' }))
@@ -245,8 +245,50 @@ describe('campaigns', () => {
     const dialog = await screen.findByRole('dialog', { hidden: true })
     await user.type(within(dialog).getByLabelText('사유 (필수)'), '11월 오픈')
     await user.click(within(dialog).getByRole('button', { name: '확인' }))
-    await waitFor(() => expect(fake.rpcs.find((r) => r.name === 'admin_set_campaign_publish')).toBeDefined())
-    expect(fake.rpcs.find((r) => r.name === 'admin_set_campaign_publish')!.args).toEqual({ p_id: 'camp-1', p_state: 'published', p_reason: '11월 오픈' })
+    await waitFor(() => expect(fake.rpcs.find((r) => r.name === 'cms_set_visibility')).toBeDefined())
+    expect(fake.rpcs.find((r) => r.name === 'cms_set_visibility')!.args).toEqual({ p_type: 'campaign', p_id: 'camp-1', p_visibility: 'published', p_reason: '11월 오픈' })
+    expect(fake.rpcs.some((r) => r.name === 'admin_set_campaign_publish')).toBe(false)
+  })
+
+  const cState = (over: Record<string, unknown> = {}) => {
+    const { id: _i, slug: _s, ...snap } = { ...campaign, publish_state: 'published' }; void _i; void _s
+    return { live: snap, live_version: 1, last_published: null, draft: null, jobs: [], ...over }
+  }
+  async function openCampaignEditor(state: Record<string, unknown> = {}) {
+    fake.signInAs('admin')
+    fake.respond('monthly_campaigns:select', { data: [{ ...campaign, publish_state: 'published' }] }); fake.respond('missions:select', { data: [] })
+    fake.respond('rpc:cms_state', { data: cState(state) }); fake.respond('rpc:cms_overview', { data: [] })
+    fake.respond('rpc:cms_save_draft', { data: { revision: 1, base_version: 1, updated_at: '2026-11-10T00:00:00Z' } })
+    open()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('tab', { name: '캠페인' }))
+    await user.click(await screen.findByRole('button', { name: '편집' }))
+    await screen.findByLabelText('캠페인 편집')
+    return user
+  }
+  it('editing a campaign saves a DRAFT; the live campaign is not changed', async () => {
+    const user = await openCampaignEditor()
+    const title = await screen.findByLabelText('이름')
+    await user.clear(title); await user.type(title, '11월 미션 (연장)')
+    await user.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/앱에는 아직 반영되지 않았어요/)
+    const call = fake.rpcs.find((r) => r.name === 'cms_save_draft')!.args as { p_type: string; p_id: string; p_data: Record<string, unknown> }
+    expect(call).toMatchObject({ p_type: 'campaign', p_id: 'camp-1' })
+    expect(call.p_data).toMatchObject({ title: '11월 미션 (연장)', publish_state: 'published', theme_color: '#E85D04' })
+    expect(call.p_data).not.toHaveProperty('slug')
+    expect(fake.rpcs.some((r) => r.name === 'admin_save_campaign')).toBe(false)
+  })
+  it('schedules a campaign draft in Seoul time', async () => {
+    fake.respond('rpc:cms_schedule', { data: 4 })
+    const draft = { data: { ...cState().live, title: '새 이름' }, revision: 1, base_version: 1, created_by: 'u-1', updated_by: 'u-1', created_at: '2026-11-09T00:00:00Z', updated_at: '2026-11-10T01:00:00Z', stale: false, has_changes: true }
+    const user = await openCampaignEditor({ draft })
+    await user.click(await screen.findByRole('button', { name: '예약 게시' }))
+    const dlg = await screen.findByRole('dialog', { name: '예약 게시' })
+    await user.type(within(dlg).getByLabelText('게시 날짜'), '2099-01-01')
+    await user.clear(within(dlg).getByLabelText('게시 시간')); await user.type(within(dlg).getByLabelText('게시 시간'), '07:00')
+    await user.click(within(dlg).getByRole('button', { name: '예약하기' }))
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'cms_schedule')).toBe(true))
+    expect(fake.rpcs.find((r) => r.name === 'cms_schedule')!.args).toMatchObject({ p_type: 'campaign', p_id: 'camp-1', p_run_at: '2098-12-31T22:00:00.000Z' })
   })
 })
 

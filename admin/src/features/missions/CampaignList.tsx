@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, Field, Input, Select, Skeleton, Textarea } from '@/components/ui'
+import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import CampaignEditor from './CampaignEditor'
 import { useCampaigns } from './MissionList'
 import { MASCOTS, MASCOT_LABEL, STATE_LABEL, type Campaign, type Mission } from './model'
 import { BannerPreview } from './previews'
@@ -30,30 +32,31 @@ export default function CampaignList() {
     mutationFn: async () => {
       const e = validateCampaign(f, editing === 'new'); setErrors(e)
       if (Object.keys(e).length) throw new Error('입력값을 확인해 주세요')
-      const { error } = await supabase.rpc('admin_save_campaign', { p: campaignPayload(f, editing && editing !== 'new' ? editing.id : undefined) })
+      const { error } = await supabase.rpc('admin_save_campaign', { p: campaignPayload(f) })
       if (error) throw error
     },
-    onSuccess: async () => { setEditing(null); setNotice('저장했어요. 게시된 캠페인은 앱에 바로 반영돼요.'); await qc.invalidateQueries({ queryKey: ['campaigns-admin'] }) },
+    onSuccess: async () => { setEditing(null); setNotice('초안으로 만들었어요. 앱에는 아직 보이지 않아요. 편집해서 게시하거나 예약해 주세요.'); await qc.invalidateQueries({ queryKey: ['campaigns-admin'] }) },
     onError: (e) => setNotice(errorMessage(e)),
   })
+  const overview = useQuery({ queryKey: ['cms-overview', 'campaign'], queryFn: () => cmsOverview('campaign') })
+  const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
   const publish = useMutation({
-    mutationFn: async ({ c, to, reason }: { c: Campaign; to: 'draft' | 'published'; reason: string }) => {
-      const { error } = await supabase.rpc('admin_set_campaign_publish', { p_id: c.id, p_state: to, p_reason: reason })
-      if (error) throw error
-    },
-    onSuccess: async () => { setAct(null); setNotice('처리했어요. 활동 기록에 사유가 남았어요.'); await qc.invalidateQueries({ queryKey: ['campaigns-admin'] }) },
+    // publishing / taking back is a versioned, audited publication (history + rollback)
+    mutationFn: async ({ c, to, reason }: { c: Campaign; to: 'draft' | 'published'; reason: string }) => { await cmsSetVisibility('campaign', c.id, to === 'published' ? 'published' : 'hidden', reason) },
+    onSuccess: async () => { setAct(null); setNotice('처리했어요. 게시 이력에 사유가 남았어요.'); await qc.invalidateQueries({ queryKey: ['campaigns-admin'] }); await qc.invalidateQueries({ queryKey: ['cms'] }); await qc.invalidateQueries({ queryKey: ['cms-overview', 'campaign'] }) },
     onError: (e) => { setAct(null); setNotice(errorMessage(e)) },
   })
 
   if (campaigns.isLoading) return <Skeleton className="h-48 w-full" />
   if (campaigns.error) return <ErrorState error={campaigns.error} onRetry={() => void campaigns.refetch()} />
 
+  if (editing && editing !== 'new') return <CampaignEditor campaign={editing} onClose={() => setEditing(null)} onChanged={() => void qc.invalidateQueries({ queryKey: ['campaigns-admin'] })} />
   if (editing) {
-    const isNew = editing === 'new'
+    const isNew = true
     return (
       <div className="grid gap-4 xl:grid-cols-[1fr_24rem]">
         <Card className="space-y-4">
-          <h2 className="text-lg font-bold">{isNew ? '캠페인 만들기' : `${editing.title} 편집`}</h2>
+          <h2 className="text-lg font-bold">캠페인 만들기</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="식별자 (slug)" htmlFor="c_slug" error={errors.slug} hint="예: 2026-12. 만든 뒤에는 바꿀 수 없어요"><Input id="c_slug" value={f.slug} disabled={!isNew} onChange={(e) => set({ slug: e.target.value })} /></Field>
             <Field label="이름" htmlFor="c_title" error={errors.title}><Input id="c_title" value={f.title} onChange={(e) => set({ title: e.target.value })} /></Field>
@@ -67,7 +70,7 @@ export default function CampaignList() {
             <Field label="배너 마스코트" htmlFor="c_mascot"><Select id="c_mascot" value={f.banner_mascot} onChange={(e) => set({ banner_mascot: e.target.value })}>{MASCOTS.map((m) => <option key={m} value={m}>{MASCOT_LABEL[m]}</option>)}</Select></Field>
           </div>
           <p className="text-xs text-muted">마스코트는 앱에 이미 있는 이미지 중에서만 고를 수 있어요. 새 캐릭터는 만들지 않아요.</p>
-          <div className="flex gap-2"><Button disabled={save.isPending} onClick={() => save.mutate()}>저장</Button><Button variant="outline" onClick={() => setEditing(null)}>취소</Button></div>
+          <div className="flex gap-2"><Button disabled={save.isPending} onClick={() => save.mutate()}>초안으로 만들기</Button><Button variant="outline" onClick={() => setEditing(null)}>취소</Button></div>
         </Card>
         <div className="space-y-2 self-start">
           <p className="text-sm font-semibold">앱 배너 미리보기</p>
@@ -90,6 +93,12 @@ export default function CampaignList() {
             <Card key={c.id} className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 font-semibold">{c.title}<Badge tone={TONE[st]}>{STATE_LABEL[st]}</Badge></div>
+                {ov.get(c.id) && (ov.get(c.id)!.has_draft || ov.get(c.id)!.scheduled_at || ov.get(c.id)!.failed_jobs > 0) && (
+                  <div className="my-1 flex flex-wrap gap-1">
+                    {ov.get(c.id)!.has_draft && <Badge tone="brand">게시되지 않은 수정 있음</Badge>}
+                    {ov.get(c.id)!.scheduled_at && <Badge tone="amber">예약 {formatKst(ov.get(c.id)!.scheduled_at)}</Badge>}
+                    {ov.get(c.id)!.failed_jobs > 0 && <Badge tone="red">실패 {ov.get(c.id)!.failed_jobs}</Badge>}
+                  </div>)}
                 <div className="text-xs text-muted">{c.slug} · 미션 {n}개 · {c.starts_at.slice(0, 10)} ~ {c.ends_at.slice(0, 10)} (UTC)</div>
               </div>
               <div className="flex gap-2">

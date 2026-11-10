@@ -2150,4 +2150,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeMealChipTomorrowMenu => '明天';
+
+  @override
+  String get footerAboutTitle => '关于 먹어보조';
+
+  @override
+  String get footerAboutBody => '먹어보조 帮助大学生在一个地方了解学校周边餐厅、学食和与美食相关的社区信息。';
+
+  @override
+  String get footerNoticesTitle => '公告';
+
+  @override
+  String get footerNoticesEmpty => '暂无公告。';
+
+  @override
+  String get footerContactTitle => '咨询与建议';
+
+  @override
+  String get footerContactBody => '欢迎留下对服务的疑问或建议。';
+
+  @override
+  String get footerFeedback => '发送意见';
+
+  @override
+  String get footerContactNotReady => '咨询渠道尚在准备中。';
+
+  @override
+  String get footerServiceTitle => '服务信息';
+
+  @override
+  String footerUniversities(int count) {
+    return '支持 $count 所大学';
+  }
+
+  @override
+  String get footerServiceNote => '餐厅、学食和任务信息仅显示已核实的资料和运营者发布的内容。';
+
+  @override
+  String get footerAboutLink => '服务介绍';
 }

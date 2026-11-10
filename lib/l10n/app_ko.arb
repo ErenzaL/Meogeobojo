@@ -1309,5 +1309,24 @@
   "mealSoldOutHint": "오늘 준비한 수량이 모두 판매됐어요.",
   "mealServedWith": "함께 제공",
   "mealOrigin": "원산지 표시사항",
-  "homeMealChipTomorrowMenu": "내일 식단"
+  "homeMealChipTomorrowMenu": "내일 식단",
+  "footerAboutTitle": "먹어보조 소개",
+  "footerAboutBody": "먹어보조는 대학생이 학교 주변 식당, 학식, 같이 먹을 사람과 맛집 이야기를 한곳에서 찾아볼 수 있도록 돕는 캠퍼스 맛집 서비스예요.",
+  "footerNoticesTitle": "공지사항",
+  "footerNoticesEmpty": "등록된 공지가 없어요.",
+  "footerContactTitle": "문의 및 제안",
+  "footerContactBody": "서비스에 대한 질문이나 제안을 남겨 주세요.",
+  "footerFeedback": "의견 보내기",
+  "footerContactNotReady": "문의 채널은 아직 준비 중이에요.",
+  "footerServiceTitle": "서비스 정보",
+  "footerUniversities": "지원 대학교 {count}곳",
+  "@footerUniversities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "footerServiceNote": "식당·학식·미션 정보는 확인된 자료와 운영자가 게시한 내용만 보여 드려요.",
+  "footerAboutLink": "서비스 소개"
 }

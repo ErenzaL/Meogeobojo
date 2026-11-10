@@ -701,5 +701,24 @@
   "mealSoldOutHint": "Today's portions have all been sold.",
   "mealServedWith": "Served with",
   "mealOrigin": "Ingredient origin",
-  "homeMealChipTomorrowMenu": "Tomorrow"
+  "homeMealChipTomorrowMenu": "Tomorrow",
+  "footerAboutTitle": "About 먹어보조",
+  "footerAboutBody": "먹어보조 helps university students explore nearby restaurants, campus cafeteria meals and food-related community information in one place.",
+  "footerNoticesTitle": "Announcements",
+  "footerNoticesEmpty": "No announcements yet.",
+  "footerContactTitle": "Questions & suggestions",
+  "footerContactBody": "Send us a question or a suggestion about the service.",
+  "footerFeedback": "Send feedback",
+  "footerContactNotReady": "The contact channel is not set up yet.",
+  "footerServiceTitle": "Service",
+  "footerUniversities": "{count} universities supported",
+  "@footerUniversities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "footerServiceNote": "Restaurant, cafeteria and mission information shows only verified data and what the operators publish.",
+  "footerAboutLink": "About"
 }

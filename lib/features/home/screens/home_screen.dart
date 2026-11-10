@@ -17,6 +17,8 @@ import '../widgets/home_filter_bar.dart';
 import '../widgets/home_recommend_button.dart';
 import '../widgets/home_search_field.dart';
 import '../widgets/home_top_bar.dart';
+import '../widgets/home_welcome.dart';
+import '../../../core/widgets/web_footer.dart';
 import '../../content/providers/app_content_providers.dart';
 import '../../content/widgets/home_notices.dart';
 import '../widgets/recs_states.dart';
@@ -95,11 +97,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               bottom: 24 + MediaQuery.paddingOf(context).bottom,
             ),
             children: [
-              // Desktop has the shared header; this row is phone-only.
+              // Desktop has the shared header; this row is phone-only. Desktop gets the welcome section instead
+              // (the selected university and its selector, which the header does not carry).
               if (MediaQuery.sizeOf(context).width < Breakpoints.desktop) ...[
                 const Padding(padding: pad, child: HomeTopBar()),
                 const SizedBox(height: 8),
-              ],
+              ] else
+                const Padding(padding: pad, child: HomeWelcome()),
               const Padding(padding: pad, child: HomeNotices()),
               const Padding(padding: pad, child: HomeSearchField()),
               const SizedBox(height: 14),
@@ -203,6 +207,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   },
                 ),
               ),
+              const WebFooterSlot(),
             ],
           ),
         ),

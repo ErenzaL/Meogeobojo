@@ -701,5 +701,24 @@
   "mealSoldOutHint": "今天准备的份数已全部售完。",
   "mealServedWith": "配餐",
   "mealOrigin": "原产地标示",
-  "homeMealChipTomorrowMenu": "明天"
+  "homeMealChipTomorrowMenu": "明天",
+  "footerAboutTitle": "关于 먹어보조",
+  "footerAboutBody": "먹어보조 帮助大学生在一个地方了解学校周边餐厅、学食和与美食相关的社区信息。",
+  "footerNoticesTitle": "公告",
+  "footerNoticesEmpty": "暂无公告。",
+  "footerContactTitle": "咨询与建议",
+  "footerContactBody": "欢迎留下对服务的疑问或建议。",
+  "footerFeedback": "发送意见",
+  "footerContactNotReady": "咨询渠道尚在准备中。",
+  "footerServiceTitle": "服务信息",
+  "footerUniversities": "支持 {count} 所大学",
+  "@footerUniversities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "footerServiceNote": "餐厅、学食和任务信息仅显示已核实的资料和运营者发布的内容。",
+  "footerAboutLink": "服务介绍"
 }

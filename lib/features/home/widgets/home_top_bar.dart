@@ -20,7 +20,7 @@ class HomeTopBar extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        const Expanded(child: _UniversityButton()),
+        const Expanded(child: UniversityButton()),
         // No unread-count badge: notifications are not implemented yet, and a
         // fake count would be misleading.
         _BarIcon(
@@ -48,9 +48,9 @@ class HomeTopBar extends ConsumerWidget {
   }
 }
 
-/// "📍 순천향대학교 ⌄": plain text button, no pill.
-class _UniversityButton extends ConsumerWidget {
-  const _UniversityButton();
+/// "📍 순천향대학교 ⌄": plain text button, no pill. Shared by the phone top bar and the desktop welcome section.
+class UniversityButton extends ConsumerWidget {
+  const UniversityButton({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -33,6 +33,19 @@ abstract final class Env {
   static Uri? get privacyUrl =>
       _optionalUrl('PRIVACY_URL', const String.fromEnvironment('PRIVACY_URL'));
 
+  /// Where questions and suggestions go. Optional, like the legal links: when neither is configured the footer says
+  /// the contact channel is not set up yet instead of showing an invented address.
+  static Uri? get feedbackUrl => _optionalUrl(
+    'FEEDBACK_URL',
+    const String.fromEnvironment('FEEDBACK_URL'),
+  );
+  static String? get supportEmail {
+    const compileTime = String.fromEnvironment('SUPPORT_EMAIL');
+    final v = (compileTime.isNotEmpty ? compileTime : _env('SUPPORT_EMAIL'))
+        .trim();
+    return RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(v) ? v : null;
+  }
+
   static Uri? _optionalUrl(String key, String compileTime) {
     final v = compileTime.isNotEmpty ? compileTime : _env(key);
     if (v.trim().isEmpty) return null;

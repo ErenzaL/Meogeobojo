@@ -3957,6 +3957,78 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'내일 식단'**
   String get homeMealChipTomorrowMenu;
+
+  /// No description provided for @footerAboutTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹어보조 소개'**
+  String get footerAboutTitle;
+
+  /// No description provided for @footerAboutBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹어보조는 대학생이 학교 주변 식당, 학식, 같이 먹을 사람과 맛집 이야기를 한곳에서 찾아볼 수 있도록 돕는 캠퍼스 맛집 서비스예요.'**
+  String get footerAboutBody;
+
+  /// No description provided for @footerNoticesTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'공지사항'**
+  String get footerNoticesTitle;
+
+  /// No description provided for @footerNoticesEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'등록된 공지가 없어요.'**
+  String get footerNoticesEmpty;
+
+  /// No description provided for @footerContactTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'문의 및 제안'**
+  String get footerContactTitle;
+
+  /// No description provided for @footerContactBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스에 대한 질문이나 제안을 남겨 주세요.'**
+  String get footerContactBody;
+
+  /// No description provided for @footerFeedback.
+  ///
+  /// In ko, this message translates to:
+  /// **'의견 보내기'**
+  String get footerFeedback;
+
+  /// No description provided for @footerContactNotReady.
+  ///
+  /// In ko, this message translates to:
+  /// **'문의 채널은 아직 준비 중이에요.'**
+  String get footerContactNotReady;
+
+  /// No description provided for @footerServiceTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스 정보'**
+  String get footerServiceTitle;
+
+  /// No description provided for @footerUniversities.
+  ///
+  /// In ko, this message translates to:
+  /// **'지원 대학교 {count}곳'**
+  String footerUniversities(int count);
+
+  /// No description provided for @footerServiceNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'식당·학식·미션 정보는 확인된 자료와 운영자가 게시한 내용만 보여 드려요.'**
+  String get footerServiceNote;
+
+  /// No description provided for @footerAboutLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'서비스 소개'**
+  String get footerAboutLink;
 }
 
 class _AppLocalizationsDelegate

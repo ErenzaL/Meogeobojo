@@ -1,3 +1,5 @@
+import 'web_footer.dart';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_palette.dart';
@@ -77,10 +79,14 @@ class V5Page extends StatelessWidget {
     this.scrollKey,
     this.backgroundColor,
     this.onRefresh,
+    this.maxWidth = 720,
   });
 
   final List<Widget> children;
   final Key? scrollKey;
+
+  /// Width of the content column. Phones are never wider than this anyway; desktop pages pass a larger value.
+  final double maxWidth;
 
   /// When set, pulling the page down calls it (pull-to-refresh).
   final Future<void> Function()? onRefresh;
@@ -98,25 +104,33 @@ class V5Page extends StatelessWidget {
       backgroundColor: backgroundColor ?? context.palette.background,
       body: SafeArea(
         bottom: false,
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
-            child: _refreshable(
-              ListView(
-                key: scrollKey,
-                physics: onRefresh == null
-                    ? null
-                    : const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  12,
-                  16,
-                  24 + MediaQuery.paddingOf(context).bottom,
-                ),
-                children: children,
-              ),
+        child: _refreshable(
+          ListView(
+            key: scrollKey,
+            physics: onRefresh == null
+                ? null
+                : const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(
+              top: 12,
+              bottom: MediaQuery.paddingOf(context).bottom,
             ),
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxWidth),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: children,
+                    ),
+                  ),
+                ),
+              ),
+              // the website footer (web only), once, for every page built on this shell
+              const WebFooterSlot(),
+            ],
           ),
         ),
       ),

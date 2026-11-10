@@ -2162,4 +2162,43 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeMealChipTomorrowMenu => '내일 식단';
+
+  @override
+  String get footerAboutTitle => '먹어보조 소개';
+
+  @override
+  String get footerAboutBody =>
+      '먹어보조는 대학생이 학교 주변 식당, 학식, 같이 먹을 사람과 맛집 이야기를 한곳에서 찾아볼 수 있도록 돕는 캠퍼스 맛집 서비스예요.';
+
+  @override
+  String get footerNoticesTitle => '공지사항';
+
+  @override
+  String get footerNoticesEmpty => '등록된 공지가 없어요.';
+
+  @override
+  String get footerContactTitle => '문의 및 제안';
+
+  @override
+  String get footerContactBody => '서비스에 대한 질문이나 제안을 남겨 주세요.';
+
+  @override
+  String get footerFeedback => '의견 보내기';
+
+  @override
+  String get footerContactNotReady => '문의 채널은 아직 준비 중이에요.';
+
+  @override
+  String get footerServiceTitle => '서비스 정보';
+
+  @override
+  String footerUniversities(int count) {
+    return '지원 대학교 $count곳';
+  }
+
+  @override
+  String get footerServiceNote => '식당·학식·미션 정보는 확인된 자료와 운영자가 게시한 내용만 보여 드려요.';
+
+  @override
+  String get footerAboutLink => '서비스 소개';
 }

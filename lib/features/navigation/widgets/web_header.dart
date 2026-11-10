@@ -6,7 +6,6 @@ import '../../../core/l10n/language_controller.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
-import '../../preferences/restart_onboarding.dart';
 import '../../search/screens/search_screen.dart';
 import '../providers/shell_tab_provider.dart';
 
@@ -94,13 +93,27 @@ class WebHeader extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 32),
-          for (final (i, label) in tabs)
-            _Tab(
-              label: label,
-              selected: i == index,
-              onTap: () => ref.read(shellTabProvider.notifier).select(i),
+          // The tab strip takes the room that is left and scrolls sideways if enlarged text or a long language does
+          // not fit, so the header can never overflow.
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final (i, label) in tabs)
+                      _Tab(
+                        label: label,
+                        selected: i == index,
+                        onTap: () =>
+                            ref.read(shellTabProvider.notifier).select(i),
+                      ),
+                  ],
+                ),
+              ),
             ),
-          const Spacer(),
+          ),
           if (compact)
             IconButton(
               tooltip: l10n.homeSearchLabel,
@@ -118,19 +131,6 @@ class WebHeader extends ConsumerWidget {
               ),
             ),
           const SizedBox(width: 8),
-          if (compact)
-            IconButton(
-              tooltip: l10n.homeRestartTooltip,
-              onPressed: () => restartOnboarding(context, ref),
-              icon: const Icon(Icons.refresh_rounded),
-            )
-          else
-            OutlinedButton.icon(
-              onPressed: () => restartOnboarding(context, ref),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(l10n.homeRestartTooltip),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 36)),
-            ),
           const SizedBox(width: 12),
           const _LanguageSwitch(),
           const SizedBox(width: 8),

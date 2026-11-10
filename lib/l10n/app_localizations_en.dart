@@ -2261,4 +2261,45 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeMealChipTomorrowMenu => 'Tomorrow';
+
+  @override
+  String get footerAboutTitle => 'About 먹어보조';
+
+  @override
+  String get footerAboutBody =>
+      '먹어보조 helps university students explore nearby restaurants, campus cafeteria meals and food-related community information in one place.';
+
+  @override
+  String get footerNoticesTitle => 'Announcements';
+
+  @override
+  String get footerNoticesEmpty => 'No announcements yet.';
+
+  @override
+  String get footerContactTitle => 'Questions & suggestions';
+
+  @override
+  String get footerContactBody =>
+      'Send us a question or a suggestion about the service.';
+
+  @override
+  String get footerFeedback => 'Send feedback';
+
+  @override
+  String get footerContactNotReady => 'The contact channel is not set up yet.';
+
+  @override
+  String get footerServiceTitle => 'Service';
+
+  @override
+  String footerUniversities(int count) {
+    return '$count universities supported';
+  }
+
+  @override
+  String get footerServiceNote =>
+      'Restaurant, cafeteria and mission information shows only verified data and what the operators publish.';
+
+  @override
+  String get footerAboutLink => 'About';
 }

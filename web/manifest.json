@@ -3,10 +3,10 @@
     "short_name": "먹어보조",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFCA80",
     "description": "대학생을 위한 캠퍼스 맛집 가이드",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

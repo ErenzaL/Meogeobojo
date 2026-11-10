@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/app.dart';
+import 'package:meogeobojo/main.dart' show SplashScreen;
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/university/providers/university_providers.dart';
 
@@ -55,6 +56,51 @@ void main() {
     expect(find.byType(AppShell), findsNothing);
     await tester.pump(const Duration(milliseconds: 150));
     await tester.pumpAndSettle();
+    expect(find.byType(AppShell), findsOneWidget);
+  });
+
+  testWidgets(
+    'web: no splash at all, the shell is there on the very first frame',
+    (tester) async {
+      final h = await buildHarness();
+      setPhoneSize(tester);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: h.container,
+          child: const MeogeobojoApp(
+            home: SplashGate(
+              skipSplash: true,
+              // a long delay proves nothing waits for it
+              duration: Duration(seconds: 30),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(SplashScreen), findsNothing);
+      expect(find.byType(AppShell), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppShell), findsOneWidget);
+    },
+  );
+
+  testWidgets('mobile (the default off the web): the splash is unchanged', (
+    tester,
+  ) async {
+    final h = await buildHarness();
+    setPhoneSize(tester);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: h.container,
+        child: const MeogeobojoApp(
+          home: SplashGate(skipSplash: false, duration: Duration(seconds: 2)),
+        ),
+      ),
+    );
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.byType(AppShell), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(AppShell), findsOneWidget);
   });
 

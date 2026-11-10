@@ -128,6 +128,8 @@ flutter_native_splash:
   image: "assets/images/splash.png"
   ios: true
   android: true
+  # No splash on the web (the site loads the requested page directly); never regenerate it into web/index.html.
+  web: false
 
   ios_content_mode: scaleAspectFill
   android_gravity: fill

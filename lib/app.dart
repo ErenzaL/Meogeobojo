@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -27,6 +28,9 @@ class MeogeobojoApp extends ConsumerWidget {
       // The brand name is never translated.
       title: '먹어보조',
       debugShowCheckedModeBanner: false,
+      // Web: the URL path is read by the shell (shellTabForPath); the Navigator itself always starts at the app, so a
+      // direct link such as /#/map can never end in an "unknown route" error. Mobile is untouched.
+      initialRoute: kIsWeb ? '/' : null,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       // System Default unless the user picked Light or Dark.
@@ -53,24 +57,31 @@ class MeogeobojoApp extends ConsumerWidget {
 
 /// Shows the existing [SplashScreen] briefly, then the app shell wrapped in
 /// the auth flow host (first-login onboarding, password recovery, ...).
+///
+/// On the web there is no splash ([skipSplash] defaults to [kIsWeb]): the site opens straight into the app shell
+/// (the session is restored by Supabase before runApp, and data shows its own small skeletons). Android and iOS
+/// keep the splash exactly as before.
 class SplashGate extends StatefulWidget {
   const SplashGate({
     super.key,
     this.duration = const Duration(milliseconds: 1500),
+    this.skipSplash = kIsWeb,
   });
 
   final Duration duration;
+  final bool skipSplash;
 
   @override
   State<SplashGate> createState() => _SplashGateState();
 }
 
 class _SplashGateState extends State<SplashGate> {
-  bool _done = false;
+  late bool _done = widget.skipSplash;
 
   @override
   void initState() {
     super.initState();
+    if (_done) return;
     Future<void>.delayed(widget.duration, () {
       if (mounted) setState(() => _done = true);
     });
@@ -78,6 +89,8 @@ class _SplashGateState extends State<SplashGate> {
 
   @override
   Widget build(BuildContext context) {
+    // No switcher either: nothing to fade from.
+    if (widget.skipSplash) return const AuthFlowHost(child: AppShell());
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
       child: _done

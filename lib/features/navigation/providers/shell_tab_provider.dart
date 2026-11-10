@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Tab indexes of the persistent shell.
@@ -15,9 +16,32 @@ final shellTabProvider = NotifierProvider<ShellTabController, int>(
   ShellTabController.new,
 );
 
+/// The browser URL path of each tab (`/#/map` opens the map directly).
+const _tabPaths = <String, int>{
+  '': ShellTabs.home,
+  'home': ShellTabs.home,
+  'map': ShellTabs.map,
+  'community': ShellTabs.community,
+  'missions': ShellTabs.missions,
+  'profile': ShellTabs.profile,
+};
+
+/// The tab a URL path names, or null when it names none (then Home opens, never an error page).
+int? shellTabForPath(String? route) {
+  if (route == null) return null;
+  final path = Uri.tryParse(route)?.path ?? '';
+  final name = path.replaceAll(RegExp(r'^/+|/+$'), '').split('/').first;
+  return _tabPaths[name.toLowerCase()];
+}
+
 class ShellTabController extends Notifier<int> {
+  /// Opens on the tab the URL asks for (direct links), Home otherwise. Tests and phones start at '/'.
   @override
-  int build() => ShellTabs.home;
+  int build() =>
+      shellTabForPath(
+        WidgetsBinding.instance.platformDispatcher.defaultRouteName,
+      ) ??
+      ShellTabs.home;
 
   void select(int index) => state = index;
 }

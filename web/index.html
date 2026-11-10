@@ -45,6 +45,38 @@
     body { margin: 0; min-height: 100%; background-color: #F6F5F3; }
     @media (prefers-color-scheme: dark) { body { background-color: #121212; } }
   </style>
+  <script>
+    // Kakao web map resize support. The Flutter plugin gives no way to re-measure the map after its container changes
+    // size, so remember every map the SDK creates and let the app ask for a relayout. The camera is restored exactly
+    // (centre and zoom), so a resize never resets the chosen university or the user's own panning.
+    (function () {
+      var maps = [];
+      function wrap() {
+        var k = window.kakao;
+        if (!k || !k.maps || !k.maps.Map || k.maps.Map.__tracked) return !!(k && k.maps && k.maps.Map && k.maps.Map.__tracked);
+        var Original = k.maps.Map;
+        var Tracked = function () {
+          var args = [null].concat(Array.prototype.slice.call(arguments));
+          var m = new (Function.prototype.bind.apply(Original, args))();
+          maps.push(m);
+          return m;
+        };
+        Tracked.prototype = Original.prototype;
+        Tracked.__tracked = true;
+        k.maps.Map = Tracked;
+        return true;
+      }
+      var timer = setInterval(function () { if (wrap()) clearInterval(timer); }, 10);
+      window.__meogeobojoRelayout = function () {
+        maps = maps.filter(function (m) {
+          try { return document.body.contains(m.getNode()); } catch (e) { return false; }
+        });
+        maps.forEach(function (m) {
+          try { var c = m.getCenter(); var l = m.getLevel(); m.relayout(); m.setLevel(l); m.setCenter(c); } catch (e) {}
+        });
+      };
+    })();
+  </script>
 </head>
 <body>
   

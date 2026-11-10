@@ -1,3 +1,6 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'bottom_pinned.dart';
 import 'web_footer.dart';
 
 import 'package:flutter/material.dart';
@@ -105,32 +108,53 @@ class V5Page extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: _refreshable(
-          ListView(
-            key: scrollKey,
-            physics: onRefresh == null
-                ? null
-                : const AlwaysScrollableScrollPhysics(),
-            padding: EdgeInsets.only(
-              top: 12,
-              bottom: MediaQuery.paddingOf(context).bottom,
-            ),
-            children: [
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: children,
+          // The web footer sits at the bottom of the viewport on a short page (BottomPinned measures the content and the
+          // footer for real) and follows the content on a long one. Off the web the footer is empty: nothing changes.
+          LayoutBuilder(
+            builder: (context, box) => CustomScrollView(
+              key: scrollKey,
+              physics: onRefresh == null
+                  ? null
+                  : const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: 12),
+                  sliver: SliverToBoxAdapter(
+                    child: BottomPinned(
+                      minHeight: box.maxHeight - 12,
+                      content: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxWidth),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: children,
+                            ),
+                          ),
+                        ),
+                      ),
+                      footer: Column(
+                        children: [
+                          const WebFooterSlot(),
+                          // the system inset below the content, unless the footer ends the page (then it is flush)
+                          Consumer(
+                            builder: (context, ref, _) =>
+                                ref.watch(webFooterEnabledProvider)
+                                ? const SizedBox.shrink()
+                                : SizedBox(
+                                    height: MediaQuery.paddingOf(context)
+                                        .bottom,
+                                  ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // the website footer (web only), once, for every page built on this shell
-              const WebFooterSlot(),
-            ],
+              ],
+            ),
           ),
         ),
       ),

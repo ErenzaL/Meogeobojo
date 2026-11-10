@@ -2201,4 +2201,21 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get footerAboutLink => '서비스 소개';
+
+  @override
+  String get homeFiltersApplied => '적용한 조건';
+
+  @override
+  String homeFilterRemove(String label) {
+    return '$label 해제';
+  }
+
+  @override
+  String get homeFilterOpenAny => '주문 마감 후에도 표시';
+
+  @override
+  String get homeFiltersAdvancedTitle => '상세 조건';
+
+  @override
+  String get homeFiltersHide => '접기';
 }

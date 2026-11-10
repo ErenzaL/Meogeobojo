@@ -98,8 +98,15 @@ class WebFooter extends ConsumerWidget {
           constraints: const BoxConstraints(maxWidth: maxContentWidth),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: LayoutBuilder(
-              builder: (context, box) {
+            // The column layout depends only on the screen width (not on a LayoutBuilder), so the footer can sit in a
+            // SliverFillRemaining, which measures its child's intrinsic size.
+            child: Builder(
+              builder: (context) {
+                final width =
+                    (MediaQuery.sizeOf(context).width
+                        .clamp(0.0, maxContentWidth)) -
+                    48; // minus the horizontal padding
+                final box = (maxWidth: width);
                 final columns = [about, announcements, contact, service];
                 final Widget top;
                 if (box.maxWidth >= Breakpoints.desktop - 48) {

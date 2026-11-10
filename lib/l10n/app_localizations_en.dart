@@ -2302,4 +2302,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get footerAboutLink => 'About';
+
+  @override
+  String get homeFiltersApplied => 'Applied filters';
+
+  @override
+  String homeFilterRemove(String label) {
+    return 'Remove $label';
+  }
+
+  @override
+  String get homeFilterOpenAny => 'Including closed places';
+
+  @override
+  String get homeFiltersAdvancedTitle => 'Advanced filters';
+
+  @override
+  String get homeFiltersHide => 'Collapse';
 }

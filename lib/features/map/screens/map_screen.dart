@@ -11,12 +11,14 @@ import '../../../core/config/env.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/mascot_message.dart';
+import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/models/origin.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../search/screens/search_screen.dart';
 import '../../university/widgets/university_sheet.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../../core/widgets/responsive.dart';
+import '../utils/kakao_relayout.dart';
 import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
 import '../widgets/map_places_sheet.dart';
@@ -62,7 +64,8 @@ class MapScreen extends ConsumerStatefulWidget {
   ConsumerState<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends ConsumerState<MapScreen> {
+class _MapScreenState extends ConsumerState<MapScreen>
+    with WidgetsBindingObserver {
   KakaoMapController? _controller;
   bool _stylesReady = false;
 
@@ -98,8 +101,32 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     }
   }
 
+  Timer? _relayoutTimer;
+  bool? _wasWide;
+
+  /// The map's container changed size (window resized, the list panel came or went, the tab came back): re-measure the
+  /// web map once things settle. It keeps the same centre and zoom, so nothing the user set is lost.
+  void _scheduleRelayout() {
+    if (!kIsWeb) return;
+    _relayoutTimer?.cancel();
+    _relayoutTimer = Timer(const Duration(milliseconds: 120), () {
+      if (mounted) relayoutKakaoMaps();
+    });
+  }
+
+  @override
+  void didChangeMetrics() => _scheduleRelayout();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _relayoutTimer?.cancel();
     _clickSub?.cancel();
     super.dispose();
   }
@@ -271,6 +298,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         _syncMarkers();
       }
     });
+    // Coming back to the map tab: it was laid out while hidden, so it may have a stale size.
+    ref.listen(shellTabProvider, (prev, next) {
+      if (next == ShellTabs.map && prev != next) _scheduleRelayout();
+    });
     // Markers follow the shared conditions, not the raw nearby list.
     ref.listen(filteredRestaurantsProvider, (_, _) => _syncMarkers());
 
@@ -290,6 +321,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     // Same breakpoint as the shell's desktop header: a list panel beside the map instead of a bottom sheet.
     final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
+    if (_wasWide != null && _wasWide != wide) _scheduleRelayout();
+    _wasWide = wide;
 
     return Scaffold(
       backgroundColor: p.background,

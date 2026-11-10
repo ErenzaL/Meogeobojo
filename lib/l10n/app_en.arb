@@ -720,5 +720,17 @@
     }
   },
   "footerServiceNote": "Restaurant, cafeteria and mission information shows only verified data and what the operators publish.",
-  "footerAboutLink": "About"
+  "footerAboutLink": "About",
+  "homeFiltersApplied": "Applied filters",
+  "homeFilterRemove": "Remove {label}",
+  "@homeFilterRemove": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeFilterOpenAny": "Including closed places",
+  "homeFiltersAdvancedTitle": "Advanced filters",
+  "homeFiltersHide": "Collapse"
 }

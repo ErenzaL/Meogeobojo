@@ -11,6 +11,7 @@ import 'core/theme/theme_controller.dart';
 import 'core/widgets/responsive.dart';
 import 'features/auth/widgets/auth_flow_host.dart';
 import 'features/navigation/screens/app_shell.dart';
+import 'features/navigation/utils/url_sync.dart';
 import 'main.dart' show SplashScreen;
 
 class MeogeobojoApp extends ConsumerWidget {
@@ -24,6 +25,7 @@ class MeogeobojoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final language = ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final urlSync = ref.watch(urlSyncEnabledProvider);
     return MaterialApp(
       // The brand name is never translated.
       title: '먹어보조',
@@ -31,6 +33,10 @@ class MeogeobojoApp extends ConsumerWidget {
       // Web: the URL path is read by the shell (shellTabForPath); the Navigator itself always starts at the app, so a
       // direct link such as /#/map can never end in an "unknown route" error. Mobile is untouched.
       initialRoute: kIsWeb ? '/' : null,
+      // Browser Back / Forward / typed URLs arrive as named pushes; they select the tab (see url_sync.dart).
+      onGenerateRoute: urlSync ? generateUrlRoute : null,
+      onUnknownRoute: urlSync ? unknownUrlRoute : null,
+      navigatorObservers: [if (urlSync) UrlHistoryObserver(ref)],
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),
       // System Default unless the user picked Light or Dark.

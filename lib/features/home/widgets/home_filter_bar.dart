@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../core/widgets/responsive.dart';
 import '../../conditions/models/conditions.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../conditions/widgets/condition_labels.dart';
@@ -11,6 +12,7 @@ import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
 import '../../preferences/models/user_preferences.dart';
 import '../../preferences/screens/preference_labels.dart';
+import 'advanced_filters.dart';
 
 /// One scrolling row of filter chips under the categories. They read and
 /// write the same shared conditions as the map and search; tapping one opens
@@ -27,6 +29,9 @@ class HomeFilterBar extends ConsumerWidget {
     final c = ref.watch(conditionsProvider);
     final origin = ref.watch(originProvider);
     final ops = opsActiveCount(c);
+    // Desktop: the "조건" pill expands the inline advanced panel instead of opening the modal sheet.
+    final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
+    final panelOpen = wide && ref.watch(homeAdvancedFiltersOpenProvider);
 
     void open(ConditionFocus f) => showConditionsSheet(context, focus: f);
 
@@ -35,9 +40,12 @@ class HomeFilterBar extends ConsumerWidget {
         icon: Icons.tune_rounded,
         label: l10n.homeConditionsChip,
         count: c.activeCount,
-        active: c.activeCount > 0,
-        chevron: false,
-        onTap: () => showConditionsSheet(context),
+        active: c.activeCount > 0 || panelOpen,
+        chevron: wide,
+        expanded: wide ? panelOpen : null,
+        onTap: () => wide
+            ? ref.read(homeAdvancedFiltersOpenProvider.notifier).toggle()
+            : showConditionsSheet(context),
       ),
       if (origin != null)
         _FilterPill(
@@ -112,6 +120,7 @@ class _FilterPill extends StatelessWidget {
     this.icon,
     this.count = 0,
     this.chevron = true,
+    this.expanded,
   });
 
   final String label;
@@ -123,6 +132,9 @@ class _FilterPill extends StatelessWidget {
   final int count;
   final bool chevron;
 
+  /// Non-null for a pill that expands a panel (reported to screen readers; the chevron turns up).
+  final bool? expanded;
+
   @override
   Widget build(BuildContext context) {
     final p = context.palette;
@@ -131,6 +143,7 @@ class _FilterPill extends StatelessWidget {
     return Semantics(
       button: true,
       selected: active,
+      expanded: expanded,
       child: Material(
         color: active ? p.chipSelectedBg : p.card,
         shape: RoundedRectangleBorder(
@@ -174,7 +187,9 @@ class _FilterPill extends StatelessWidget {
                   if (chevron) ...[
                     const SizedBox(width: 2),
                     Icon(
-                      Icons.keyboard_arrow_down_rounded,
+                      expanded == true
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
                       size: 20,
                       color: sub,
                     ),

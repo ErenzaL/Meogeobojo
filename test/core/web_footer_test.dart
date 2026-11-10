@@ -74,6 +74,35 @@ void main() {
     }
 
     testWidgets(
+      'a short page: the footer sits at the very bottom of the window, not under the content',
+      (tester) async {
+        // 1440 x 2400: 밥수다 (an empty feed) is much shorter than the window
+        await open(
+          tester,
+          tab: ShellTabs.community,
+          size: const Size(1440, 2400),
+        );
+        final box = tester.getRect(find.byKey(const ValueKey('web-footer')));
+        expect(box.bottom, closeTo(2400, 1));
+        final feed = tester.getBottomLeft(find.text('학교 근처 이야기'));
+        expect(
+          box.top,
+          greaterThan(feed.dy + 200),
+        ); // a real gap between the content and the footer
+      },
+    );
+
+    testWidgets(
+      'a long page: the footer follows the content (reached by scrolling)',
+      (tester) async {
+        await open(tester, tab: ShellTabs.home, size: const Size(1440, 700));
+        expect(find.byKey(const ValueKey('web-footer')), findsNothing);
+        await toFooter(tester);
+        expect(find.byKey(const ValueKey('web-footer')), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'lists only real published announcements; none means an honest line',
       (tester) async {
         await open(tester, tab: ShellTabs.community);

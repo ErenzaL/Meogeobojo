@@ -15,6 +15,7 @@ import '../../content/providers/app_content_providers.dart';
 import '../../university/providers/university_account_sync.dart';
 import '../../university/providers/university_providers.dart';
 import '../providers/shell_tab_provider.dart';
+import '../utils/url_sync.dart';
 import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
 
@@ -63,6 +64,22 @@ class _AppShellState extends ConsumerState<AppShell> {
       onPause: _stopPolling,
     );
     _startPolling();
+    _startUrlSync();
+  }
+
+  /// Website: history becomes multi-entry and the first entry names the tab the page opened on, so the very first Back
+  /// returns to a known state instead of an anonymous one.
+  void _startUrlSync() {
+    if (!ref.read(urlSyncEnabledProvider)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await ref.read(urlHistoryModeProvider)();
+      if (!mounted) return;
+      await ref.read(urlReporterProvider)(
+        Uri(path: shellPathFor(ref.read(shellTabProvider))),
+        replace: true,
+      );
+    });
   }
 
   @override
@@ -135,6 +152,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     ref.listen(shellTabProvider, (prev, next) {
       if (next == ShellTabs.home && prev != ShellTabs.home) {
         ref.invalidate(appContentProvider);
+      }
+      // Website: a tab the user chose becomes the address (and a browser history entry). A tab the BROWSER asked for
+      // (Back / Forward / typed URL) is already the address.
+      if (ref.read(urlSyncEnabledProvider) &&
+          !ref.read(shellTabProvider.notifier).takeFromUrl()) {
+        ref.read(urlReporterProvider)(
+          Uri(path: shellPathFor(next)),
+          replace: false,
+        );
       }
     });
     return MissionCelebrationHost(child: _shell(context));

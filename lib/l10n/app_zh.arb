@@ -720,5 +720,17 @@
     }
   },
   "footerServiceNote": "餐厅、学食和任务信息仅显示已核实的资料和运营者发布的内容。",
-  "footerAboutLink": "服务介绍"
+  "footerAboutLink": "服务介绍",
+  "homeFiltersApplied": "已应用的条件",
+  "homeFilterRemove": "移除 {label}",
+  "@homeFilterRemove": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "homeFilterOpenAny": "包含已打烊的店",
+  "homeFiltersAdvancedTitle": "高级筛选",
+  "homeFiltersHide": "收起"
 }

@@ -50,5 +50,21 @@ class ShellTabController extends Notifier<int> {
   @override
   int build() => shellTabForPath(initialShellRoute()) ?? ShellTabs.home;
 
+  bool _fromUrl = false;
+
   void select(int index) => state = index;
+
+  /// The browser asked for this tab (Back / Forward / typed URL): do not write the address bar again.
+  void selectFromUrl(int index) {
+    if (index == state) return;
+    _fromUrl = true;
+    state = index;
+  }
+
+  /// True once after [selectFromUrl] changed the tab.
+  bool takeFromUrl() {
+    final v = _fromUrl;
+    _fromUrl = false;
+    return v;
+  }
 }

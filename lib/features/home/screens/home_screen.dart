@@ -17,6 +17,7 @@ import '../widgets/home_filter_bar.dart';
 import '../widgets/home_recommend_button.dart';
 import '../widgets/home_search_field.dart';
 import '../widgets/home_top_bar.dart';
+import '../widgets/advanced_filters.dart';
 import '../widgets/home_welcome.dart';
 import '../../../core/widgets/web_footer.dart';
 import '../../content/providers/app_content_providers.dart';
@@ -110,6 +111,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const HomeCategoryBar(padding: pad),
               const SizedBox(height: 8),
               const HomeFilterBar(padding: pad),
+              // Desktop: the expandable advanced panel and the removable applied-filter chips.
+              if (MediaQuery.sizeOf(context).width >= Breakpoints.desktop)
+                const Padding(
+                  padding: pad,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [AdvancedFilterPanel(), AppliedFilterChips()],
+                  ),
+                ),
               const SizedBox(height: 14),
               Padding(
                 padding: pad,

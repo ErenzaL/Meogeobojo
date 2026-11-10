@@ -4029,6 +4029,36 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'서비스 소개'**
   String get footerAboutLink;
+
+  /// No description provided for @homeFiltersApplied.
+  ///
+  /// In ko, this message translates to:
+  /// **'적용한 조건'**
+  String get homeFiltersApplied;
+
+  /// No description provided for @homeFilterRemove.
+  ///
+  /// In ko, this message translates to:
+  /// **'{label} 해제'**
+  String homeFilterRemove(String label);
+
+  /// No description provided for @homeFilterOpenAny.
+  ///
+  /// In ko, this message translates to:
+  /// **'주문 마감 후에도 표시'**
+  String get homeFilterOpenAny;
+
+  /// No description provided for @homeFiltersAdvancedTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'상세 조건'**
+  String get homeFiltersAdvancedTitle;
+
+  /// No description provided for @homeFiltersHide.
+  ///
+  /// In ko, this message translates to:
+  /// **'접기'**
+  String get homeFiltersHide;
 }
 
 class _AppLocalizationsDelegate

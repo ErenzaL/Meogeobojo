@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart' show IconData, Icons;
+
 import '../../../l10n/app_localizations.dart';
 import '../../preferences/models/user_preferences.dart';
 import '../models/conditions.dart';
@@ -26,3 +28,21 @@ String sortLabelOf(AppLocalizations l10n, SortMode s) => switch (s) {
 int opsActiveCount(Conditions c) =>
     (c.openNowOnly != Conditions.defaults.openNowOnly ? 1 : 0) +
     c.amenities.length;
+
+String amenityLabelOf(AppLocalizations l10n, Amenity a) => switch (a) {
+  Amenity.noBreakTime => l10n.condAmenityNoBreak,
+  Amenity.parking => l10n.condAmenityParking,
+  Amenity.localCurrency => l10n.condAmenityLocalCurrency,
+  Amenity.fastTurnover => l10n.condAmenityFast,
+  Amenity.takeout => l10n.condAmenityTakeout,
+  Amenity.openLate => l10n.condAmenityLate,
+};
+
+IconData amenityIconOf(Amenity a) => switch (a) {
+  Amenity.noBreakTime => Icons.schedule_rounded,
+  Amenity.parking => Icons.local_parking_rounded,
+  Amenity.localCurrency => Icons.payments_outlined,
+  Amenity.fastTurnover => Icons.bolt_rounded,
+  Amenity.takeout => Icons.takeout_dining_outlined,
+  Amenity.openLate => Icons.dark_mode_outlined,
+};

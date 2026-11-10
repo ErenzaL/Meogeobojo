@@ -2188,4 +2188,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get footerAboutLink => '服务介绍';
+
+  @override
+  String get homeFiltersApplied => '已应用的条件';
+
+  @override
+  String homeFilterRemove(String label) {
+    return '移除 $label';
+  }
+
+  @override
+  String get homeFilterOpenAny => '包含已打烊的店';
+
+  @override
+  String get homeFiltersAdvancedTitle => '高级筛选';
+
+  @override
+  String get homeFiltersHide => '收起';
 }

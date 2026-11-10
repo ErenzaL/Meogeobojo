@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -34,14 +35,20 @@ int? shellTabForPath(String? route) {
   return _tabPaths[name.toLowerCase()];
 }
 
+/// The route the page was opened with. On the web it is read from the address bar (`/#/map` with the default hash
+/// strategy, `/map` with a path strategy); elsewhere from the platform's initial route ('/' on phones and in tests).
+String? initialShellRoute() {
+  if (!kIsWeb) {
+    return WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+  }
+  final fragment = Uri.base.fragment;
+  return fragment.startsWith('/') ? fragment : Uri.base.path;
+}
+
 class ShellTabController extends Notifier<int> {
-  /// Opens on the tab the URL asks for (direct links), Home otherwise. Tests and phones start at '/'.
+  /// Opens on the tab the URL asks for (direct links), Home otherwise.
   @override
-  int build() =>
-      shellTabForPath(
-        WidgetsBinding.instance.platformDispatcher.defaultRouteName,
-      ) ??
-      ShellTabs.home;
+  int build() => shellTabForPath(initialShellRoute()) ?? ShellTabs.home;
 
   void select(int index) => state = index;
 }

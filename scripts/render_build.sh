@@ -12,7 +12,7 @@
 # visible in the built JavaScript by design.
 #
 # Required env vars:  SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
-# Optional env vars:  KAKAO_JAVASCRIPT_KEY (web map), KAKAO_NATIVE_APP_KEY,
+# Optional env vars:  KAKAO_JAVASCRIPT_KEY (web map), KAKAO_NATIVE_APP_KEY, FEEDBACK_URL / SUPPORT_EMAIL (website footer),
 #                     TERMS_URL, PRIVACY_URL, FLUTTER_VERSION
 set -euo pipefail
 
@@ -33,7 +33,7 @@ flutter --version
 
 # 2. Placeholder .env (empty; never contains secrets) + compile-time defines.
 for v in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY KAKAO_JAVASCRIPT_KEY \
-         KAKAO_NATIVE_APP_KEY TERMS_URL PRIVACY_URL; do
+         KAKAO_NATIVE_APP_KEY TERMS_URL PRIVACY_URL FEEDBACK_URL SUPPORT_EMAIL; do
   case "${!v:-}" in *$'\n'*) echo "$v must be a single line" >&2; exit 1;; esac
 done
 : > .env
@@ -41,7 +41,7 @@ DEFINES=(
   "--dart-define=SUPABASE_URL=$SUPABASE_URL"
   "--dart-define=SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY"
 )
-for v in KAKAO_JAVASCRIPT_KEY KAKAO_NATIVE_APP_KEY TERMS_URL PRIVACY_URL; do
+for v in KAKAO_JAVASCRIPT_KEY KAKAO_NATIVE_APP_KEY TERMS_URL PRIVACY_URL FEEDBACK_URL SUPPORT_EMAIL; do
   [ -n "${!v:-}" ] && DEFINES+=("--dart-define=$v=${!v}")
 done
 

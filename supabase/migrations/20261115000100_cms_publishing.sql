@@ -40,6 +40,7 @@ do $$ begin
      or to_regclass('public.cafeteria_meals') is null
      or to_regclass('public.restaurant_menus') is null
      or to_regclass('public.restaurant_photos') is null
+     or to_regclass('public.missions') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -50,7 +51,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -64,7 +65,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -80,7 +81,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -143,6 +144,10 @@ language sql immutable as $$
     'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
   when 'restaurant_menus' then array['items']
   when 'restaurant_photos' then array['photos']
+  when 'mission' then array[
+    'campaign_id', 'title', 'description', 'category', 'icon', 'reward_points', 'rule_type', 'rule_params', 'target_count',
+    'recurrence', 'university_id', 'starts_at', 'ends_at', 'action_key', 'sort_order', 'reward_badge_key',
+    'reward_badge_name', 'reward_badge_mascot', 'status']
   else null end
 $$;
 
@@ -180,6 +185,15 @@ begin
           'status', x.status, 'sort_order', x.sort_order, 'image_url', x.image_url) order by x.sort_order, x.id), '[]'::jsonb))
         into v from public.restaurant_menus x where x.restaurant_id = p_id;
     end if;
+  elsif p_type = 'mission' then
+    -- the current version of the mission lineage
+    select jsonb_build_object(
+      'campaign_id', x.campaign_id, 'title', x.title, 'description', x.description, 'category', x.category, 'icon', x.icon,
+      'reward_points', x.reward_points, 'rule_type', x.rule_type, 'rule_params', x.rule_params, 'target_count', x.target_count,
+      'recurrence', x.recurrence, 'university_id', x.university_id, 'starts_at', x.starts_at, 'ends_at', x.ends_at,
+      'action_key', x.action_key, 'sort_order', x.sort_order, 'reward_badge_key', x.reward_badge_key,
+      'reward_badge_name', x.reward_badge_name, 'reward_badge_mascot', x.reward_badge_mascot, 'status', x.status)
+      into v from public.missions x where x.lineage_id = p_id order by x.version desc limit 1;
   elsif p_type = 'restaurant_photos' then
     if not exists (select 1 from public.restaurant_overrides where id = p_id) then v := null;
     else
@@ -268,6 +282,34 @@ begin
       end if;
       if (it ->> 'image_url') is not null and (it ->> 'image_url') !~ '^https://' then raise exception '메뉴 사진 주소가 올바르지 않아요' using errcode = '22023'; end if;
     end loop;
+  elsif p_type = 'mission' then
+    if btrim(coalesce(p_data ->> 'title', '')) = '' then raise exception '제목을 입력해 주세요' using errcode = '22023'; end if;
+    if char_length(p_data ->> 'title') > 60 then raise exception '제목은 60자 이하여야 해요' using errcode = '22023'; end if;
+    if char_length(coalesce(p_data ->> 'description', '')) > 300 then raise exception '설명은 300자 이하여야 해요' using errcode = '22023'; end if;
+    begin
+      n := (p_data ->> 'reward_points')::integer; if n < 0 or n > 10000 then raise exception 'x'; end if;
+    exception when others then raise exception '보상 포인트는 0 ~ 10000 사이 정수여야 해요' using errcode = '22023'; end;
+    begin
+      n := (p_data ->> 'target_count')::integer; if n < 1 or n > 1000 then raise exception 'x'; end if;
+    exception when others then raise exception '목표 횟수는 1 ~ 1000 사이 정수여야 해요' using errcode = '22023'; end;
+    if coalesce(p_data ->> 'rule_type', '') not in ('favorite_distinct', 'favorite_cheap', 'activity_days', 'activity_refs', 'review_valid', 'contribution_approved', 'missions_completed') then
+      raise exception '완료 조건이 올바르지 않아요' using errcode = '22023';
+    end if;
+    if jsonb_typeof(p_data -> 'rule_params') is distinct from 'object' then raise exception '완료 조건 값이 올바르지 않아요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'recurrence', '') not in ('none', 'daily', 'weekly') then raise exception '반복 주기가 올바르지 않아요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'action_key', '') not in ('none', 'recommend', 'map', 'favorites', 'review', 'photo', 'correct', 'categories') then raise exception '버튼 동작이 올바르지 않아요' using errcode = '22023'; end if;
+    if coalesce(p_data ->> 'status', '') not in ('draft', 'active', 'paused', 'archived') then raise exception '미션 상태가 올바르지 않아요' using errcode = '22023'; end if;
+    begin
+      if (p_data ->> 'starts_at') is not null and (p_data ->> 'ends_at') is not null
+         and (p_data ->> 'ends_at')::timestamptz <= (p_data ->> 'starts_at')::timestamptz then raise exception 'x'; end if;
+    exception when others then raise exception '종료는 시작보다 늦어야 해요' using errcode = '22023'; end;
+    if (p_data ->> 'reward_badge_key') is not null and (p_data ->> 'reward_badge_key') !~ '^[a-z0-9][a-z0-9_]{1,60}$' then raise exception '뱃지 키 형식이 올바르지 않아요' using errcode = '22023'; end if;
+    if p_id is not null and (select kind from public.missions where lineage_id = p_id order by version desc limit 1) = 'monthly' and (p_data ->> 'campaign_id') is null then
+      raise exception '월간 미션은 캠페인이 필요해요' using errcode = '22023';
+    end if;
+    if p_id is not null and (select status from public.missions where lineage_id = p_id order by version desc limit 1) = 'archived' then
+      raise exception '보관된 미션은 수정할 수 없어요' using errcode = '55000';
+    end if;
   elsif p_type = 'restaurant_photos' then
     if jsonb_typeof(p_data -> 'photos') is distinct from 'array' then raise exception '사진 목록이 올바르지 않아요' using errcode = '22023'; end if;
     if jsonb_array_length(p_data -> 'photos') > 200 then raise exception '사진은 200장까지 둘 수 있어요' using errcode = '22023'; end if;
@@ -352,6 +394,8 @@ language sql immutable as $$
                      -- no menu is shown any more; every item is kept (archived), none is deleted
                      when 'restaurant_menus' then jsonb_build_object('items', coalesce(
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'items') i), '[]'::jsonb))
+                     -- a stopped mission keeps its progress, rewards and badges; students just stop seeing it
+                     when 'mission' then p_live || '{"status":"paused"}'::jsonb
                      when 'restaurant_photos' then jsonb_build_object('photos', coalesce(
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'photos') i), '[]'::jsonb))
                      else p_live end
@@ -414,6 +458,10 @@ begin
       representative = excluded.representative, recommended = excluded.recommended, status = excluded.status,
       sort_order = excluded.sort_order, image_url = excluded.image_url
       where x.restaurant_id = p_id;
+  elsif p_type = 'mission' then
+    -- the existing mission rules decide: a change to goal / reward / rule / audience / period of a
+    -- mission that already has progress becomes a NEW VERSION (old row archived, rewards untouched)
+    perform public._mission_save(p_data || jsonb_build_object('id', (select x.id from public.missions x where x.lineage_id = p_id order by x.version desc limit 1)));
   elsif p_type = 'restaurant_photos' then
     if not exists (select 1 from public.restaurant_overrides where id = p_id) then raise exception 'no such restaurant' using errcode = 'P0002'; end if;
     -- a photo that is no longer in the set is archived (the file and the row are kept), and
@@ -471,6 +519,144 @@ end $$;
 drop trigger if exists restaurant_overrides_guard_live on public.restaurant_overrides;
 create trigger restaurant_overrides_guard_live before insert or update on public.restaurant_overrides
   for each row execute function public.restaurant_overrides_guard_live();
+
+-- ---------------------------------------------------------------------------
+-- Missions. admin_save_mission (20261110) keeps its versioning rules; its body moves to
+-- _mission_save() (no role check, not callable from the API) so that publishing - including the
+-- scheduler, which has no logged-in user - can reuse it. The API function now refuses to make a
+-- mission visible or to edit a visible one: that is what publishing is for.
+-- ---------------------------------------------------------------------------
+create or replace function public._mission_save(p jsonb)
+returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
+declare
+  v_id   uuid := nullif(p ->> 'id', '')::uuid;
+  old    public.missions;
+  v_new  uuid;
+  v_material boolean;
+begin
+  if v_id is null then
+    insert into public.missions
+      (campaign_id, slug, kind, title, description, category, icon, reward_points, rule_type, rule_params,
+       target_count, recurrence, university_id, starts_at, ends_at, action_key, sort_order,
+       reward_badge_key, reward_badge_name, reward_badge_mascot, status)
+    values (nullif(p ->> 'campaign_id', '')::uuid, p ->> 'slug', p ->> 'kind', p ->> 'title',
+            p ->> 'description', p ->> 'category', coalesce(p ->> 'icon', 'star'),
+            coalesce((p ->> 'reward_points')::integer, 0), p ->> 'rule_type',
+            coalesce(p -> 'rule_params', '{}'::jsonb), (p ->> 'target_count')::integer,
+            coalesce(p ->> 'recurrence', 'none'), nullif(p ->> 'university_id', '')::uuid,
+            (p ->> 'starts_at')::timestamptz, (p ->> 'ends_at')::timestamptz,
+            coalesce(p ->> 'action_key', 'none'), coalesce((p ->> 'sort_order')::integer, 0),
+            nullif(p ->> 'reward_badge_key', ''), nullif(p ->> 'reward_badge_name', ''),
+            nullif(p ->> 'reward_badge_mascot', ''), coalesce(p ->> 'status', 'draft'))
+    returning id into v_id;
+    return v_id;
+  end if;
+
+  select * into old from public.missions where id = v_id for update;
+  if not found then raise exception 'no such mission' using errcode = 'P0002'; end if;
+  if old.status = 'archived' then raise exception 'archived missions cannot be edited' using errcode = '55000'; end if;
+
+  v_material :=
+       coalesce((p ->> 'target_count')::integer, old.target_count) is distinct from old.target_count
+    or coalesce((p ->> 'reward_points')::integer, old.reward_points) is distinct from old.reward_points
+    or coalesce(p ->> 'rule_type', old.rule_type) is distinct from old.rule_type
+    or coalesce(p -> 'rule_params', old.rule_params) is distinct from old.rule_params
+    or coalesce(p ->> 'recurrence', old.recurrence) is distinct from old.recurrence
+    or (case when p ? 'university_id' then nullif(p ->> 'university_id', '')::uuid else old.university_id end)
+         is distinct from old.university_id
+    or (case when p ? 'starts_at' then (p ->> 'starts_at')::timestamptz else old.starts_at end)
+         is distinct from old.starts_at
+    or (case when p ? 'ends_at' then (p ->> 'ends_at')::timestamptz else old.ends_at end)
+         is distinct from old.ends_at;
+
+  if v_material and exists (select 1 from public.user_mission_progress where mission_id = old.id) then
+    insert into public.missions
+      (lineage_id, version, supersedes_id, campaign_id, slug, kind, title, description, category, icon,
+       reward_points, rule_type, rule_params, target_count, recurrence, university_id, starts_at, ends_at,
+       action_key, sort_order, reward_badge_key, reward_badge_name, reward_badge_mascot, status)
+    values (old.lineage_id, old.version + 1, old.id, old.campaign_id, old.slug, old.kind,
+            coalesce(p ->> 'title', old.title),
+            case when p ? 'description' then p ->> 'description' else old.description end,
+            case when p ? 'category' then p ->> 'category' else old.category end,
+            coalesce(p ->> 'icon', old.icon),
+            coalesce((p ->> 'reward_points')::integer, old.reward_points),
+            coalesce(p ->> 'rule_type', old.rule_type),
+            coalesce(p -> 'rule_params', old.rule_params),
+            coalesce((p ->> 'target_count')::integer, old.target_count),
+            coalesce(p ->> 'recurrence', old.recurrence),
+            case when p ? 'university_id' then nullif(p ->> 'university_id', '')::uuid else old.university_id end,
+            case when p ? 'starts_at' then (p ->> 'starts_at')::timestamptz else old.starts_at end,
+            case when p ? 'ends_at' then (p ->> 'ends_at')::timestamptz else old.ends_at end,
+            coalesce(p ->> 'action_key', old.action_key),
+            coalesce((p ->> 'sort_order')::integer, old.sort_order),
+            case when p ? 'reward_badge_key' then nullif(p ->> 'reward_badge_key', '') else old.reward_badge_key end,
+            case when p ? 'reward_badge_name' then nullif(p ->> 'reward_badge_name', '') else old.reward_badge_name end,
+            case when p ? 'reward_badge_mascot' then nullif(p ->> 'reward_badge_mascot', '') else old.reward_badge_mascot end,
+            coalesce(p ->> 'status', old.status))
+    returning id into v_new;
+    update public.missions set status = 'archived' where id = old.id;
+    perform public._audit('mission_new_version', 'missions', v_new::text, 'versioned edit',
+                          jsonb_build_object('previous', old.id, 'version', old.version + 1));
+    return v_new;
+  end if;
+
+  update public.missions set
+    campaign_id = case when p ? 'campaign_id' then nullif(p ->> 'campaign_id', '')::uuid else campaign_id end,
+    title = coalesce(p ->> 'title', title),
+    description = case when p ? 'description' then p ->> 'description' else description end,
+    category = case when p ? 'category' then p ->> 'category' else category end,
+    icon = coalesce(p ->> 'icon', icon),
+    reward_points = coalesce((p ->> 'reward_points')::integer, reward_points),
+    rule_type = coalesce(p ->> 'rule_type', rule_type),
+    rule_params = coalesce(p -> 'rule_params', rule_params),
+    target_count = coalesce((p ->> 'target_count')::integer, target_count),
+    recurrence = coalesce(p ->> 'recurrence', recurrence),
+    university_id = case when p ? 'university_id' then nullif(p ->> 'university_id', '')::uuid else university_id end,
+    starts_at = case when p ? 'starts_at' then (p ->> 'starts_at')::timestamptz else starts_at end,
+    ends_at = case when p ? 'ends_at' then (p ->> 'ends_at')::timestamptz else ends_at end,
+    action_key = coalesce(p ->> 'action_key', action_key),
+    sort_order = coalesce((p ->> 'sort_order')::integer, sort_order),
+    reward_badge_key = case when p ? 'reward_badge_key' then nullif(p ->> 'reward_badge_key', '') else reward_badge_key end,
+    reward_badge_name = case when p ? 'reward_badge_name' then nullif(p ->> 'reward_badge_name', '') else reward_badge_name end,
+    reward_badge_mascot = case when p ? 'reward_badge_mascot' then nullif(p ->> 'reward_badge_mascot', '') else reward_badge_mascot end,
+    status = coalesce(p ->> 'status', status)
+  where id = v_id;
+  return v_id;
+end $$;
+revoke all on function public._mission_save(jsonb) from public, anon, authenticated;
+
+create or replace function public.admin_save_mission(p jsonb)
+returns uuid language plpgsql security definer set search_path = public, pg_temp as $$
+declare v_id uuid := nullif(p ->> 'id', '')::uuid; old_status text;
+begin
+  perform public._require_role('admin');
+  if coalesce(current_setting('app.cms_apply', true), '') <> 'on' then
+    if v_id is not null then select status into old_status from public.missions where id = v_id; end if;
+    if coalesce(old_status, 'draft') <> 'draft' or coalesce(p ->> 'status', coalesce(old_status, 'draft')) <> 'draft' then
+      raise exception 'a visible mission is changed only by publishing (save a draft, then publish)' using errcode = '42501';
+    end if;
+  end if;
+  return public._mission_save(p);
+end $$;
+
+-- Pausing / archiving stays an immediate, audited operation; the FIRST activation is a publication.
+create or replace function public.admin_set_mission_status(p_id uuid, p_status text, p_reason text)
+returns void language plpgsql security definer set search_path = public, pg_temp as $$
+declare old_status text;
+begin
+  perform public._require_role('admin');
+  if p_status not in ('draft', 'active', 'paused', 'archived') then
+    raise exception 'unknown status' using errcode = '22023';
+  end if;
+  if p_reason is null or btrim(p_reason) = '' then raise exception 'a reason is required' using errcode = '22023'; end if;
+  select status into old_status from public.missions where id = p_id;
+  if not found then raise exception 'no such mission' using errcode = 'P0002'; end if;
+  if p_status = 'active' and old_status = 'draft' then
+    raise exception 'a draft mission goes live by publishing it' using errcode = '42501';
+  end if;
+  update public.missions set status = p_status where id = p_id;
+  perform public._audit('set_mission_status', 'missions', p_id::text, p_reason, jsonb_build_object('status', p_status));
+end $$;
 
 -- Guard: LIVE cafeteria meals change only by publishing. A meal that is a draft
 -- (status 'draft', hidden from students) may be created and removed freely.
@@ -814,7 +1000,7 @@ create or replace function public.cms_set_visibility(p_type text, p_id uuid, p_v
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   perform public._cms_admin_check();
-  if p_type not in ('restaurant', 'cafeteria_meal') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
+  if p_type not in ('restaurant', 'cafeteria_meal', 'mission') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
   if p_visibility not in ('draft', 'published', 'hidden', 'archived') then raise exception '공개 상태가 올바르지 않아요' using errcode = '22023'; end if;
   if p_reason is null or btrim(p_reason) = '' then raise exception '사유를 입력해 주세요' using errcode = '22023'; end if;
   perform public._cms_lock(p_type, p_id);
@@ -822,6 +1008,7 @@ begin
   return public._cms_commit(p_type, p_id,
     public._cms_snapshot(p_type, p_id) || case p_type
       when 'cafeteria_meal' then jsonb_build_object('status', case p_visibility when 'published' then 'published' else 'draft' end)
+      when 'mission' then jsonb_build_object('status', case p_visibility when 'published' then 'active' when 'hidden' then 'paused' else p_visibility end)
       else jsonb_build_object('visibility', p_visibility) end,
     'visibility', p_reason, auth.uid());
 end $$;
@@ -842,9 +1029,11 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos')
+      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos', 'mission')
             union all
-            select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)) e;
+            select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)
+            union all
+            select distinct m.lineage_id from public.missions m where p_type = 'mission' and (p_parent is null or m.campaign_id = p_parent)) e;
 end $$;
 
 -- ---------------------------------------------------------------------------

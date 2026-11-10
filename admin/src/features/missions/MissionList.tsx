@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, Select, Skeleton } from '@/components/ui'
+import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import MissionEditor from './MissionEditor'
 import MissionForm from './MissionForm'
 import { KINDS, STATUS_LABEL, type Campaign, type Mission, type MissionStatus, type University } from './model'
 import { missionPhase } from './schema'
@@ -33,16 +35,20 @@ export default function MissionList() {
     return data as Mission[]
   } })
   const [editing, setEditing] = useState<Mission | 'new' | null>(null)
+  const overview = useQuery({ queryKey: ['cms-overview', 'mission'], queryFn: () => cmsOverview('mission') })
+  const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
   const [filter, setFilter] = useState({ kind: '', campaign: '', status: '' })
   const [notice, setNotice] = useState<string | null>(null)
   const [act, setAct] = useState<{ m: Mission; to: MissionStatus } | null>(null)
 
   const setStatus = useMutation({
     mutationFn: async ({ m, to, reason }: { m: Mission; to: MissionStatus; reason: string }) => {
+      // the first activation of a draft mission is a publication (versioned, audited); pausing / archiving stay immediate
+      if (to === 'active' && m.status === 'draft') { await cmsSetVisibility('mission', m.lineage_id, 'published', reason); return }
       const { error } = await supabase.rpc('admin_set_mission_status', { p_id: m.id, p_status: to, p_reason: reason })
       if (error) throw error
     },
-    onSuccess: async () => { setAct(null); setNotice('상태를 바꿨어요. 활동 기록에 사유가 남았어요.'); await qc.invalidateQueries({ queryKey: ['missions-admin'] }) },
+    onSuccess: async () => { setAct(null); setNotice('상태를 바꿨어요. 활동 기록에 사유가 남았어요.'); await qc.invalidateQueries({ queryKey: ['missions-admin'] }); await qc.invalidateQueries({ queryKey: ['cms'] }); await qc.invalidateQueries({ queryKey: ['cms-overview', 'mission'] }) },
     onError: (e) => { setAct(null); setNotice(errorMessage(e)) },
   })
   const duplicate = useMutation({
@@ -54,9 +60,15 @@ export default function MissionList() {
   if (list.isLoading || campaigns.isLoading) return <Skeleton className="h-48 w-full" />
   if (list.error) return <ErrorState error={list.error} onRetry={() => void list.refetch()} />
   const camps = campaigns.data ?? []
+  if (editing === 'new') {
+    return <MissionForm campaigns={camps} universities={unis.data ?? []}
+      onDone={async (m, id) => {
+        if (id) { const r = await qc.fetchQuery({ queryKey: ['missions-admin'], queryFn: async () => { const { data, error } = await supabase.from('missions').select('*').order('kind').order('sort_order'); if (error) throw error; return data as Mission[] }, staleTime: 0 }); setEditing(r.find((x) => x.id === id) ?? null) } else setEditing(null)
+        if (m) setNotice(m)
+      }} />
+  }
   if (editing) {
-    return <MissionForm mission={editing === 'new' ? null : editing} campaigns={camps} universities={unis.data ?? []}
-      onDone={(m) => { setEditing(null); if (m) setNotice(m) }} />
+    return <MissionEditor mission={editing} campaigns={camps} universities={unis.data ?? []} onClose={() => setEditing(null)} onChanged={() => void qc.invalidateQueries({ queryKey: ['missions-admin'] })} />
   }
   const shown = (list.data ?? []).filter((m) => (!filter.kind || m.kind === filter.kind) && (!filter.campaign || m.campaign_id === filter.campaign) && (!filter.status || m.status === filter.status))
   return (
@@ -76,13 +88,13 @@ export default function MissionList() {
           return (
             <Card key={m.id} className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 font-semibold">{m.title}<Badge tone={PHASE_TONE[phase]}>{PHASE_LABEL[phase]}</Badge>{m.version > 1 && <Badge tone="brand">v{m.version}</Badge>}</div>
+                <div className="flex flex-wrap items-center gap-2 font-semibold">{m.title}<Badge tone={PHASE_TONE[phase]}>{PHASE_LABEL[phase]}</Badge>{m.version > 1 && <Badge tone="brand">v{m.version}</Badge>}{ov.get(m.lineage_id)?.has_draft && <Badge tone="brand">게시되지 않은 수정 있음</Badge>}{ov.get(m.lineage_id)?.scheduled_at && <Badge tone="amber">예약 {formatKst(ov.get(m.lineage_id)!.scheduled_at)}</Badge>}{(ov.get(m.lineage_id)?.failed_jobs ?? 0) > 0 && <Badge tone="red">실패 {ov.get(m.lineage_id)!.failed_jobs}</Badge>}</div>
                 <div className="text-xs text-muted">{KINDS.find((k) => k.value === m.kind)?.label} · {camp?.title ?? '캠페인 없음'} · 목표 {m.target_count} · {m.reward_badge_key ? `뱃지 ${m.reward_badge_key}` : `${m.reward_points}P`} · {m.slug}</div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" disabled={m.status === 'archived'} onClick={() => setEditing(m)}>편집</Button>
                 <Button size="sm" variant="outline" onClick={() => duplicate.mutate(m)}>복제</Button>
-                {m.status !== 'active' && m.status !== 'archived' && <Button size="sm" variant="soft" onClick={() => setAct({ m, to: 'active' })}>활성화</Button>}
+                {m.status !== 'active' && m.status !== 'archived' && <Button size="sm" variant="soft" onClick={() => setAct({ m, to: 'active' })}>{m.status === 'draft' ? '바로 게시' : '활성화'}</Button>}
                 {m.status === 'active' && <Button size="sm" variant="outline" onClick={() => setAct({ m, to: 'paused' })}>일시중지</Button>}
                 {m.status !== 'archived' && <Button size="sm" variant="outline" onClick={() => setAct({ m, to: 'archived' })}>보관</Button>}
               </div>

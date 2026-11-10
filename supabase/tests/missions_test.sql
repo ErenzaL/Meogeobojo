@@ -295,24 +295,37 @@ end $$;
 -- ===== admin: versioning, status, revoke, audit =====
 select set_config('request.jwt.claims', '{"sub":"f1000000-0000-4000-8000-00000000000a","role":"authenticated"}', false);
 set role authenticated;
-do $$ declare v1 uuid := 'b1000000-0000-4000-8000-000000000001'; v2 uuid; s jsonb; n integer; begin
+do $$ declare v1 uuid := 'b1000000-0000-4000-8000-000000000001'; v2 uuid; s jsonb; n integer; d jsonb; begin
+  -- a visible mission is edited only by publishing: the direct API edit is refused
+  begin perform public.admin_save_mission(jsonb_build_object('id', v1, 'title', 'x')); raise exception 'accepted#mc1'; exception when insufficient_privilege then null; end;
+  begin perform public.admin_save_mission('{"slug":"t-live","kind":"daily","title":"x","rule_type":"favorite_distinct","target_count":1,"status":"active"}'::jsonb); raise exception 'accepted#mc2'; exception when insufficient_privilege then null; end;
   -- title-only edit: in place
-  perform public.admin_save_mission(jsonb_build_object('id', v1, 'title', '찜 두 곳'));
+  d := public.cms_state('mission', v1) -> 'live';
+  perform public.cms_save_draft('mission', v1, d || '{"title":"찜 두 곳"}', 0);
+  assert (select title from public.missions where id = v1) = '찜 2곳', 'a draft title is not live';
+  perform public.cms_publish('mission', v1, 1, '제목 수정');
   assert (select title from public.missions where id = v1) = '찜 두 곳' and (select count(*) from public.missions where slug = 't-fav') = 1, 'a title edit is in place';
-  -- a material edit on a mission with progress: new version, old archived
-  v2 := public.admin_save_mission(jsonb_build_object('id', v1, 'target_count', 3, 'reward_points', 50));
-  assert v2 <> v1, 'new version row';
+  -- a material edit on a mission with progress: new version, old archived. The draft changes no points.
+  d := public.cms_state('mission', v1) -> 'live';
+  perform public.cms_save_draft('mission', v1, d || '{"target_count":3,"reward_points":50}', 0);
+  assert (select reward_points from public.missions where id = v1) = 10 and (select count(*) from public.missions where lineage_id = v1) = 1, 'a draft changes neither the reward nor the version';
+  perform public.cms_publish('mission', v1, 1, '보상 변경');
+  v2 := (select id from public.missions where lineage_id = v1 and version = 2);
+  assert v2 is not null and v2 <> v1, 'new version row';
   assert (select status from public.missions where id = v1) = 'archived', 'old version archived';
   assert (select version from public.missions where id = v2) = 2 and (select lineage_id from public.missions where id = v2) = v1, 'same lineage, version 2';
   assert (select reward_points from public.missions where id = v1) = 10, 'the old row is untouched';
+  assert (public.cms_state('mission', v1) -> 'live' ->> 'reward_points')::int = 50, 'the publishing state follows the newest version';
   -- editing an archived mission is refused
-  begin perform public.admin_save_mission(jsonb_build_object('id', v1, 'title', 'x')); raise exception 'accepted'; exception when object_not_in_prerequisite_state then null; end;
+  begin perform public.admin_save_mission(jsonb_build_object('id', v1, 'title', 'x')); raise exception 'accepted'; exception when insufficient_privilege or object_not_in_prerequisite_state then null; end;
   -- a new mission, then duplicate
   v2 := public.admin_save_mission('{"slug":"t-created","kind":"daily","title":"새 미션","rule_type":"favorite_distinct","target_count":1,"recurrence":"daily","reward_points":2}'::jsonb);
   assert (select status from public.missions where id = v2) = 'draft', 'new missions start as drafts';
   assert public.admin_duplicate_mission(v2) is not null, 'duplicate works';
   begin perform public.admin_set_mission_status(v2, 'active', ''); raise exception 'accepted'; exception when invalid_parameter_value then null; end;
-  perform public.admin_set_mission_status(v2, 'active', 'launch');
+  begin perform public.admin_set_mission_status(v2, 'active', 'launch'); raise exception 'accepted#mc3'; exception when insufficient_privilege then null; end;
+  perform public.cms_set_visibility('mission', (select lineage_id from public.missions where id = v2), 'published', 'launch');
+  assert (select status from public.missions where id = v2) = 'active', 'a draft mission goes live by publishing';
   s := public.admin_mission_stats(30);
   assert (s ->> 'points_awarded')::int >= 105, 'analytics reads real ledger data';
   raise notice 'OK admin: versioned edits keep history; status changes need a reason';

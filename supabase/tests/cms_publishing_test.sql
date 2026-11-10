@@ -564,6 +564,75 @@ delete from public.content_versions where entity_type = 'restaurant_photos';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.restaurant_photos where restaurant_id = 'e4000000-0000-4000-8000-000000000002';
 
+-- ===== mission: edits are drafts until published; progress and rewards survive =====
+insert into public.missions (id, lineage_id, slug, kind, title, reward_points, rule_type, target_count, recurrence, status)
+values ('d4000000-0000-4000-8000-000000000001', 'd4000000-0000-4000-8000-000000000001', 'cms-m1', 'daily', '원래 미션', 10, 'favorite_distinct', 2, 'daily', 'draft');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare l constant uuid := 'd4000000-0000-4000-8000-000000000001'; d jsonb; v int; j bigint; begin
+  assert (public.cms_state('mission', l) -> 'live' ->> 'status') = 'draft', 'live snapshot of the mission';
+  -- first publication: activate it on a schedule (a draft mission is invisible until then)
+  d := public.cms_state('mission', l) -> 'live';
+  perform public.cms_save_draft('mission', l, d || '{"status":"active","title":"새 미션"}', 0);
+  assert (select status from public.missions where id = l) = 'draft', 'a draft does not activate the mission';
+  j := public.cms_schedule('mission', l, 1, now() + interval '1 day', null, '내일 시작');
+  perform set_config('test.missionjob', j::text, false);
+  assert (select status from public.missions where id = l) = 'draft' and (select title from public.missions where id = l) = '원래 미션', 'a scheduled mission is not live';
+  raise notice 'OK cms mission: drafts and schedules change nothing for students';
+end $$;
+reset role;
+do $$ declare l constant uuid := 'd4000000-0000-4000-8000-000000000001'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.missionjob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'mission job ran: ' || res::text;
+  assert (select status from public.missions where id = l) = 'active' and (select title from public.missions where id = l) = '새 미션', 'the server activated the mission';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  -- a student earns progress on the live mission
+  insert into public.user_mission_progress (user_id, mission_id, lineage_id, period_key, progress, target, completed_at)
+  values ('f4000000-0000-4000-8000-0000000000c1', l, l, 'all', 2, 2, now());
+  raise notice 'OK cms mission: the server activates a scheduled mission once';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare l constant uuid := 'd4000000-0000-4000-8000-000000000001'; d jsonb; v int; nv uuid; begin
+  -- changing the reward of a mission that has progress: the draft changes nothing, publishing makes a NEW VERSION
+  d := public.cms_state('mission', l) -> 'live';
+  perform public.cms_save_draft('mission', l, d || '{"reward_points":99,"target_count":5}', 0);
+  assert (select reward_points from public.missions where id = l) = 10, 'the reward is unchanged until publication';
+  begin perform public.admin_save_mission(jsonb_build_object('id', l, 'reward_points', 99)); raise exception 'accepted#ms1'; exception when insufficient_privilege then null; end;
+  v := public.cms_publish('mission', l, 1, '보상 변경');
+  nv := (select id from public.missions where lineage_id = l and version = 2);
+  assert nv is not null and (select reward_points from public.missions where id = nv) = 99, 'published as version 2';
+  assert (select status from public.missions where id = l) = 'archived' and (select reward_points from public.missions where id = l) = 10, 'the old version is archived and untouched';
+  assert (select completed_at from public.user_mission_progress where mission_id = l and user_id = 'f4000000-0000-4000-8000-0000000000c1') is not null, 'earned progress is kept';
+  -- unpublish pauses it (nothing deleted); rollback restores the earlier content as another version
+  v := public.cms_unpublish('mission', l, '점검');
+  assert (select status from public.missions where id = (select id from public.missions where lineage_id = l order by version desc limit 1)) = 'paused', 'unpublish pauses the mission';
+  assert (select count(*) from public.user_mission_progress where lineage_id = l) = 1, 'progress survives';
+  begin perform public.cms_set_visibility('mission', l, 'nonsense', 'x'); raise exception 'accepted#ms2'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('mission', l, (public.cms_state('mission', l) -> 'live') || '{"reward_points":-5}', 0); raise exception 'accepted#ms3'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('mission', l, (public.cms_state('mission', l) -> 'live') || '{"evil":1}', 0); raise exception 'accepted#ms4'; exception when invalid_parameter_value then null; end;
+  assert (select count(*) from public.cms_overview('mission')) >= 1, 'overview lists missions by lineage';
+  raise notice 'OK cms mission: material edit becomes a new version; progress kept; unpublish pauses';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('mission', 'd4000000-0000-4000-8000-000000000001', 1, 'x'); raise exception 'accepted#ms5'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms mission: moderators cannot publish missions';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'mission';
+delete from public.content_drafts where entity_type = 'mission';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'mission';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.user_mission_progress where lineage_id = 'd4000000-0000-4000-8000-000000000001';
+delete from public.audit_log where row_id in (select id::text from public.missions where lineage_id = 'd4000000-0000-4000-8000-000000000001');
+update public.missions set supersedes_id = null where lineage_id = 'd4000000-0000-4000-8000-000000000001';
+delete from public.missions where lineage_id = 'd4000000-0000-4000-8000-000000000001';
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

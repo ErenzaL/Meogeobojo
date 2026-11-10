@@ -55,8 +55,9 @@ describe('기여 검토: student photos', () => {
     expect(fake.uploads[0].bucket).toBe('restaurant-images')
     expect(fake.uploads[0].path).toMatch(/^restaurants\/r1\/[0-9a-f-]{36}\.jpg$/)
     expect(fake.last('restaurant_photos', 'insert')!.payload).toMatchObject({ restaurant_id: 'r1', kind: 'gallery', source: 'student', credit: '학생 제공', caption: '입구', sort_order: 5, status: 'archived' })
-    expect(fake.rpcs.map((r) => r.name)).toEqual(['admin_review_contribution'])
-    expect(fake.rpcs[0].args).toMatchObject({ p_id: 'k1', p_status: 'approved' })
+    const reviews = fake.rpcs.filter((r) => r.name === 'admin_review_contribution')
+    expect(reviews).toHaveLength(1)
+    expect(reviews[0].args).toMatchObject({ p_id: 'k1', p_status: 'approved' })
     expect(fake.removed).toEqual([`${UID}/a.jpg`]) // the private original is removed after publishing
   })
 
@@ -98,7 +99,7 @@ describe('기여 검토: student photos', () => {
     await userEvent.type(within(dlg as HTMLElement).getByLabelText('사유 (필수)'), '음식과 관계없는 사진')
     await userEvent.click(within(dlg as HTMLElement).getByRole('button', { name: '반려' }))
     await screen.findByText(/반려했어요/)
-    expect(fake.rpcs[0].args).toMatchObject({ p_status: 'rejected', p_note: '음식과 관계없는 사진' })
+    expect(fake.rpcs.find((r) => r.name === 'admin_review_contribution')!.args).toMatchObject({ p_status: 'rejected', p_note: '음식과 관계없는 사진' })
     expect(fake.removed).toEqual([`${UID}/a.jpg`])
   })
 

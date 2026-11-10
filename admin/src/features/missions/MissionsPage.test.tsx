@@ -95,7 +95,7 @@ describe('missions', () => {
     await user.type(screen.getByLabelText('제목'), '점심 탐험')
     await user.selectOptions(screen.getByLabelText('캠페인'), 'camp-1')
     expect(within(screen.getByTestId('mission-preview')).getByText('점심 탐험')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '만들기' }))
+    await user.click(screen.getByRole('button', { name: '초안으로 만들기' }))
     await waitFor(() => expect(fake.rpcs.find((r) => r.name === 'admin_save_mission')).toBeDefined())
     expect((fake.rpcs.find((r) => r.name === 'admin_save_mission')!.args as { p: Record<string, unknown> }).p).toMatchObject({
       slug: 'nov-lunch', kind: 'monthly', campaign_id: 'camp-1', title: '점심 탐험', reward_points: 10, target_count: 3,
@@ -109,24 +109,101 @@ describe('missions', () => {
     open()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '미션 추가' }))
-    await user.click(screen.getByRole('button', { name: '만들기' }))
+    await user.click(screen.getByRole('button', { name: '초안으로 만들기' }))
     expect(await screen.findByText('제목을 입력해 주세요')).toBeInTheDocument()
     expect(fake.rpcs.find((r) => r.name === 'admin_save_mission')).toBeUndefined()
   })
 
-  it('tells the admin when an edit became a new version', async () => {
+  const live = (over: Record<string, unknown> = {}) => {
+    const { id: _i, lineage_id: _l, version: _v, slug: _s, kind: _k, ...snap } = mission(over); void _i; void _l; void _v; void _s; void _k
+    return snap
+  }
+  const editorState = (over: Record<string, unknown> = {}) => ({ live: live(), live_version: 1, last_published: null, draft: null, jobs: [], ...over })
+  async function openEditor(state: Record<string, unknown> = {}) {
     fake.signInAs('admin')
     fake.respond('monthly_campaigns:select', { data: [campaign] }); fake.respond('missions:select', { data: [mission()] }); fake.respond('universities:select', { data: [] })
-    fake.respond('rpc:admin_save_mission', { data: 'm1-v2' })
+    fake.respond('rpc:cms_state', { data: editorState(state) })
+    fake.respond('rpc:cms_save_draft', { data: { revision: 1, base_version: 1, updated_at: '2026-11-10T00:00:00Z' } })
+    fake.respond('rpc:cms_overview', { data: [] })
     open()
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '편집' }))
+    await screen.findByLabelText('미션 편집')
+    return user
+  }
+
+  it('editing a mission saves a DRAFT: the live reward and goal are not touched', async () => {
+    const user = await openEditor()
     expect(screen.getByText(/새 버전이 만들어져요/)).toBeInTheDocument()
     const target = screen.getByLabelText('목표 횟수')
     await user.clear(target); await user.type(target, '7')
-    await user.click(screen.getByRole('button', { name: '저장' }))
-    expect(await screen.findByText(/새 버전\(v2\)으로 저장했어요/)).toBeInTheDocument()
-    expect((fake.rpcs.find((r) => r.name === 'admin_save_mission')!.args as { p: { id: string; target_count: number } }).p).toMatchObject({ id: 'm1', target_count: 7 })
+    const pts = screen.getByLabelText('보상 포인트')
+    await user.clear(pts); await user.type(pts, '50')
+    await user.click(screen.getByRole('button', { name: '초안 저장' }))
+    expect(await screen.findByText(/앱의 미션·보상·진행에는 아직 영향이 없어요/)).toBeInTheDocument()
+    const call = fake.rpcs.find((r) => r.name === 'cms_save_draft')!.args as { p_type: string; p_id: string; p_data: Record<string, unknown>; p_expected_revision: number }
+    expect(call).toMatchObject({ p_type: 'mission', p_id: 'm1', p_expected_revision: 0 })
+    expect(call.p_data).toMatchObject({ target_count: 7, reward_points: 50, title: '맛집 찜하기', status: 'active', rule_type: 'favorite_distinct' })
+    expect(call.p_data).not.toHaveProperty('slug') // identity is not publishable content
+    expect(fake.rpcs.some((r) => r.name === 'admin_save_mission')).toBe(false)
+  })
+
+  it('an untouched form saves no phantom date change (stored timestamps are kept as they are)', async () => {
+    const s = editorState({ live: live({ starts_at: '2026-10-31T15:00:00+00:00', ends_at: '2026-11-30T15:00:00+00:00' }) })
+    const user = await openEditor(s)
+    await user.type(screen.getByLabelText('제목'), '!')
+    await user.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/초안을 저장했어요/)
+    const data = (fake.rpcs.find((r) => r.name === 'cms_save_draft')!.args as { p_data: Record<string, unknown> }).p_data
+    expect(data.starts_at).toBe('2026-10-31T15:00:00+00:00')
+    expect(data.ends_at).toBe('2026-11-30T15:00:00+00:00')
+  })
+
+  it('publishes the saved draft through the server (versioning happens in the database)', async () => {
+    fake.respond('rpc:cms_publish', { data: 2 })
+    const draft = { data: { ...live(), reward_points: 50 }, revision: 1, base_version: 1, created_by: 'u-1', updated_by: 'u-1', created_at: '2026-11-09T00:00:00Z', updated_at: '2026-11-10T01:00:00Z', stale: false, has_changes: true }
+    const user = await openEditor({ draft })
+    await user.click(await screen.findByRole('button', { name: '지금 게시' }))
+    const dlg = await screen.findByRole('dialog')
+    await user.click(within(dlg).getByRole('button', { name: '지금 게시' }))
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'cms_publish')).toBe(true))
+    expect(fake.rpcs.find((r) => r.name === 'cms_publish')!.args).toMatchObject({ p_type: 'mission', p_id: 'm1', p_expected_revision: 1 })
+    expect(fake.rpcs.some((r) => r.name === 'admin_save_mission')).toBe(false)
+  })
+
+  it('previews what changes, including the reward, before publishing', async () => {
+    const draft = { data: { ...live(), reward_points: 50 }, revision: 1, base_version: 1, created_by: 'u-1', updated_by: 'u-1', created_at: '2026-11-09T00:00:00Z', updated_at: '2026-11-10T01:00:00Z', stale: false, has_changes: true }
+    const user = await openEditor({ draft })
+    await user.click(await screen.findByRole('button', { name: '미리보기' }))
+    const list = await screen.findByLabelText('달라지는 항목')
+    expect(list.textContent).toMatch(/보상 포인트/)
+    expect(list.textContent).toMatch(/20/)
+    expect(list.textContent).toMatch(/50/)
+  })
+
+  it('a draft mission is published (not just flagged active) from the list', async () => {
+    fake.signInAs('admin')
+    fake.respond('monthly_campaigns:select', { data: [campaign] }); fake.respond('missions:select', { data: [mission({ status: 'draft' })] }); fake.respond('universities:select', { data: [] })
+    fake.respond('rpc:cms_overview', { data: [] }); fake.respond('rpc:cms_set_visibility', { data: 3 })
+    open()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '바로 게시' }))
+    const dlg = await screen.findByRole('dialog')
+    await user.type(within(dlg).getByLabelText(/사유/), '11월 시작')
+    await user.click(within(dlg).getByRole('button', { name: '확인' }))
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'cms_set_visibility')).toBe(true))
+    expect(fake.rpcs.find((r) => r.name === 'cms_set_visibility')!.args).toMatchObject({ p_type: 'mission', p_id: 'm1', p_visibility: 'published' })
+    expect(fake.rpcs.some((r) => r.name === 'admin_set_mission_status')).toBe(false)
+  })
+
+  it('shows draft / scheduled / failed badges per mission', async () => {
+    fake.signInAs('admin')
+    fake.respond('monthly_campaigns:select', { data: [campaign] }); fake.respond('missions:select', { data: [mission()] }); fake.respond('universities:select', { data: [] })
+    fake.respond('rpc:cms_overview', { data: [{ entity_id: 'm1', has_draft: true, draft_updated_at: null, scheduled_at: '2098-12-31T22:00:00Z', failed_jobs: 1, live_version: 1, last_published_at: null }] })
+    open()
+    expect(await screen.findByText('게시되지 않은 수정 있음')).toBeInTheDocument()
+    expect(screen.getByText('예약 2099.01.01 07:00 (KST)')).toBeInTheDocument()
+    expect(screen.getByText('실패 1')).toBeInTheDocument()
   })
 })
 

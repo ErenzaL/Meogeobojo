@@ -143,3 +143,25 @@ export function campaignToForm(c: Campaign): CampaignForm {
 export const emptyCampaignForm = (): CampaignForm => ({
   slug: '', title: '', subtitle: '', description: '', theme_color: '#E85D04', banner_mascot: 'cheer', start_date: '', end_date: '',
 })
+
+
+/** The publishable content of a mission (identity - slug, kind - is not part of it). */
+export const MISSION_KEYS = ['campaign_id', 'title', 'description', 'category', 'icon', 'reward_points', 'rule_type', 'rule_params', 'target_count', 'recurrence',
+  'university_id', 'starts_at', 'ends_at', 'action_key', 'sort_order', 'reward_badge_key', 'reward_badge_name', 'reward_badge_mascot', 'status'] as const
+
+/** Snapshot from the form. A date the admin did not change keeps its stored text, so an
+ *  untouched form compares equal to what is live (no phantom "changes"). */
+export function missionSnapshot(f: MissionForm, base: Record<string, unknown>): Record<string, unknown> {
+  const p = missionPayload(f) as Record<string, unknown>
+  const out: Record<string, unknown> = {}
+  for (const k of MISSION_KEYS) out[k] = p[k]
+  for (const k of ['starts_at', 'ends_at'] as const) {
+    const old = base[k] as string | null | undefined
+    if (old && out[k] && new Date(old).getTime() === new Date(out[k] as string).getTime()) out[k] = old
+  }
+  return out
+}
+/** A mission (as the admin screens know it) from a snapshot + its identity. */
+export function missionFromSnapshot(snap: Record<string, unknown>, id: Pick<Mission, 'id' | 'lineage_id' | 'version' | 'slug' | 'kind'>): Mission {
+  return { ...id, supersedes_id: null, ...(snap as object) } as unknown as Mission
+}

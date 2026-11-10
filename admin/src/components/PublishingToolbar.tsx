@@ -9,7 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 
-const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관', closed: '운영 안 함', no_menu: '메뉴 없음', no_photo: '사진 없음' }
+const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관', closed: '운영 안 함', no_menu: '메뉴 없음', no_photo: '사진 없음', active: '운영 중', paused: '일시중지' }
 const short = (id: string | null) => (id ? id.slice(0, 8) : '—')
 
 /** Display names for admin user ids (profiles are readable by admins). */

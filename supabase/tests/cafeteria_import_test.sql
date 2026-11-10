@@ -217,6 +217,35 @@ do $$ begin
 end $$;
 reset role;
 
+-- ===== 11. several dishes per meal: structured dishes, shared dishes, origin, labels =====
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f9100000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare u1 text := (select name_ko from _iu where rn = 1); rows jsonb; r jsonb; w uuid; meal jsonb; begin
+  rows := jsonb_build_array(public._ir(1, u1, '임포트 학생식당', '2026-12-14', 'lunch', '치즈닭갈비볶음밥', '', '',
+    jsonb_build_object('dishes', '[{"name_ko":"새우튀김*타르타르","kind":"side"},{"name_ko":"참나물무침","kind":"side"},{"name_ko":"계란국","kind":"soup"},
+                                   {"name_ko":"김치","kind":"kimchi","shared":true},{"name_ko":"샐러드","kind":"salad","shared":true},{"name_ko":"후식차","kind":"dessert","shared":true}]'::jsonb,
+                       'origin', '쌀:국내산 / 배추김치:중국산', 'notes', '재료수급상황에 따라 변경될 수 있습니다', 'labels', '["HALAL"]'::jsonb, 'labels_verified', true)));
+  r := public._imp(rows, 'upsert', false);
+  assert (r -> 'summary' ->> 'created')::int = 1 and (r -> 'summary' ->> 'failed')::int = 0, 'imported: ' || (r -> 'summary')::text;
+  w := (select id from public.cafeteria_weeks where cafeteria_id = '1a000000-0000-4000-8000-000000000001' and week_start = '2026-12-14');
+  meal := public.cms_state('cafeteria_week', w) -> 'draft' -> 'data' -> 'meals' -> 0;
+  assert jsonb_array_length(meal -> 'menu_items') = 7 and meal -> 'menu_items' -> 0 ->> 'kind' = 'main' and meal -> 'menu_items' -> 3 ->> 'kind' = 'soup', 'the main dish comes first, then the dishes in the order given';
+  assert (meal -> 'menu_items' -> 4 ->> 'shared')::boolean and meal -> 'menu_items' -> 4 ->> 'kind' = 'kimchi', 'shared dishes keep their category and flag';
+  assert meal -> 'extra' ->> 'origin' = '쌀:국내산 / 배추김치:중국산' and meal -> 'extra' -> 'labels' = '["HALAL"]'::jsonb, 'origin and the label are imported';
+  assert not exists (select 1 from public.cafeteria_meals where cafeteria_id = '1a000000-0000-4000-8000-000000000001' and meal_date = '2026-12-14'), 'imports are drafts: nothing is live';
+  assert (public._imp(rows, 'upsert', false) -> 'summary' ->> 'unchanged')::int = 1, 'the same file again is unchanged (idempotent)';
+  -- a label without the confirmation, an unknown category and a blank dish are row errors, never silently dropped
+  r := public._imp(jsonb_build_array(
+        public._ir(2, u1, '임포트 학생식당', '2026-12-15', 'lunch', '비빔밥', '', '', '{"labels":["HALAL"]}'),
+        public._ir(3, u1, '임포트 학생식당', '2026-12-15', 'dinner', '비빔밥', '', '', '{"dishes":[{"name_ko":"국","kind":"pizza"}]}'),
+        public._ir(4, u1, '임포트 학생식당', '2026-12-16', 'lunch', '비빔밥', '', '', '{"dishes":[{"name_ko":"국","kind":"soup"}]}')), 'upsert', true);
+  assert (r -> 'rows' -> 0 ->> 'status') = 'error' and (r -> 'rows' -> 0 ->> 'message') like '%HALAL%', 'an unconfirmed HALAL label is refused: ' || (r -> 'rows' -> 0)::text;
+  assert (r -> 'rows' -> 1 ->> 'status') = 'error' and (r -> 'rows' -> 1 ->> 'message') like '%분류%', 'an unknown category is refused';
+  assert (r -> 'rows' -> 2 ->> 'status') = 'create', 'the valid row is planned';
+  raise notice 'OK import: structured dishes, shared dishes, origin and confirmed labels import as a draft; bad rows are reported';
+end $$;
+reset role;
+
 -- cleanup
 drop function public._imp(jsonb, text, boolean, boolean, boolean);
 drop function public._week15(text, text, jsonb);

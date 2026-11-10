@@ -1306,5 +1306,7 @@
     }
   },
   "mealSoldOut": "품절",
-  "mealSoldOutHint": "오늘 준비한 수량이 모두 판매됐어요."
+  "mealSoldOutHint": "오늘 준비한 수량이 모두 판매됐어요.",
+  "mealServedWith": "함께 제공",
+  "mealOrigin": "원산지 표시사항"
 }

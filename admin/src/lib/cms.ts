@@ -67,11 +67,15 @@ export type Change = { key: string; label: string; from: unknown; to: unknown }
 type WeekMealLike = { date: string; meal_type: string; option_name: string; menu_items: { name_ko: string }[]; price_krw: number | null; start_time: string | null; end_time: string | null; status: string; badge: string | null; source_url: string | null; extra: Record<string, unknown> }
 const MEAL_WORD: Record<string, string> = { breakfast: '조식', lunch: '중식', dinner: '석식' }
 const STATUS_WORD: Record<string, string> = { published: '공개', closed: '운영 안 함', no_menu: '메뉴 비공개' }
+const DISH_WORD: Record<string, string> = { soup: '국', rice: '밥', kimchi: '김치', salad: '샐러드', dessert: '후식', drink: '음료', other: '기타' }
+type DishLike = { name_ko: string; kind?: string; shared?: boolean }
+/** A dish as the preview of changes shows it: the name, plus its category when it is not a plain main/side and a "공통" mark. */
+const dishText = (i: DishLike) => `${i.name_ko}${i.kind && DISH_WORD[i.kind] ? `[${DISH_WORD[i.kind]}]` : ''}${i.shared ? '(공통)' : ''}`
 export function diffWeekMeals(live: Snapshot, draft: Snapshot): Change[] {
   const a = (live.meals as WeekMealLike[] | undefined) ?? []; const b = (draft.meals as WeekMealLike[] | undefined) ?? []
   const key = (m: WeekMealLike) => `${m.date}|${m.meal_type}|${m.option_name}`
   const name = (m: WeekMealLike) => `${m.date.slice(5)} ${MEAL_WORD[m.meal_type] ?? m.meal_type}${m.option_name ? ` (${m.option_name})` : ''}`
-  const summary = (m: WeekMealLike) => `${m.menu_items.map((i) => i.name_ko).join(', ') || STATUS_WORD[m.status]}${m.price_krw != null ? ` · ${m.price_krw.toLocaleString('ko-KR')}원` : ''}`
+  const summary = (m: WeekMealLike) => `${m.menu_items.map(dishText).join(', ') || STATUS_WORD[m.status]}${m.price_krw != null ? ` · ${m.price_krw.toLocaleString('ko-KR')}원` : ''}`
   const before = new Map(a.map((m) => [key(m), m])); const after = new Map(b.map((m) => [key(m), m]))
   const out: Change[] = []
   for (const m of b) if (!before.has(key(m))) out.push({ key: `add:${key(m)}`, label: `${name(m)} 추가`, from: null, to: summary(m) })
@@ -81,10 +85,10 @@ export function diffWeekMeals(live: Snapshot, draft: Snapshot): Change[] {
     const o = before.get(key(m)); if (!o) continue
     for (const [f, label] of FIELDS) {
       if (same(o[f], m[f])) continue
-      const show = (v: unknown) => (f === 'menu_items' ? (v as { name_ko: string }[]).map((i) => i.name_ko).join(', ') : f === 'status' ? STATUS_WORD[String(v)] ?? v : v)
+      const show = (v: unknown) => (f === 'menu_items' ? (v as DishLike[]).map(dishText).join(', ') : f === 'status' ? STATUS_WORD[String(v)] ?? v : v)
       out.push({ key: `chg:${key(m)}:${f}`, label: `${name(m)} · ${label}`, from: show(o[f]), to: show(m[f]) })
     }
-    for (const [f, label] of [['description', '설명'], ['notice', '공지'], ['sold_out', '품절']] as const) {
+    for (const [f, label] of [['description', '설명'], ['notice', '공지'], ['origin', '원산지'], ['labels', '식이 표시'], ['sold_out', '품절']] as const) {
       if (!same(o.extra?.[f], m.extra?.[f])) out.push({ key: `chg:${key(m)}:${f}`, label: `${name(m)} · ${label}`, from: o.extra?.[f] ?? null, to: m.extra?.[f] ?? null })
     }
   }

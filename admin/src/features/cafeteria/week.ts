@@ -4,8 +4,14 @@
 import { addDays, DAY, MEAL_TYPES, seoulToday, THOUSAND_WON_BADGE, weekStart } from './meal'
 
 export type MealPeriod = (typeof MEAL_TYPES)[number]
-export type MenuLine = { name_ko: string; kind?: string }
-export type WeekExtra = { description?: string; notice?: string; sold_out?: boolean; photo_url?: string; photo_path?: string; [k: string]: unknown }
+/** Dish categories (the database accepts exactly these; an installed app that does not know a newer one shows it as "other"). */
+export const DISH_KINDS = ['main', 'side', 'soup', 'rice', 'kimchi', 'salad', 'dessert', 'drink', 'other'] as const
+export type DishKind = (typeof DISH_KINDS)[number]
+export const DISH_LABEL: Record<DishKind, string> = { main: '메인', side: '반찬', soup: '국·탕', rice: '밥', kimchi: '김치', salad: '샐러드', dessert: '후식', drink: '음료', other: '기타' }
+/** Dietary labels shown to students only when [WeekExtra.labels_verified] says an admin confirmed them from an official source. */
+export const DIETARY_LABELS = ['HALAL', 'VEGETARIAN', 'VEGAN'] as const
+export type MenuLine = { name_ko: string; kind?: string; shared?: boolean; name_en?: string; name_zh?: string }
+export type WeekExtra = { description?: string; notice?: string; origin?: string; labels?: string[]; labels_verified?: boolean; sold_out?: boolean; photo_url?: string; photo_path?: string; [k: string]: unknown }
 export type MealStatus = 'published' | 'closed' | 'no_menu'
 export type WeekMeal = {
   date: string; meal_type: MealPeriod; option_name: string; option_order: number; menu_items: MenuLine[]
@@ -33,9 +39,34 @@ export function normalizeOrders(ms: WeekMeal[]): WeekMeal[] {
 }
 export const mealsIn = (ms: WeekMeal[], date: string, type: MealPeriod) => sortMeals(ms.filter((m) => m.date === date && m.meal_type === type))
 
-export const parseLines = (text: string): MenuLine[] =>
-  text.split('\n').map((l) => l.trim()).filter(Boolean).map((name_ko, i) => ({ name_ko, kind: i === 0 ? 'main' : 'side' }))
+/** Dishes are separated by a new line or by "/" ("도시락김/미소장국"); a dish name keeps everything else, including "*" and "·". */
+export const splitDishes = (text: string): string[] => text.split(/[\n/|;]/).map((l) => l.trim()).filter(Boolean)
+
+/** A first guess of the category from the name (an admin can change it); the first dish of a meal is the main dish. */
+export function guessKind(name: string): DishKind {
+  const n = name.replace(/\s/g, '')
+  if (/샐러드/.test(n)) return 'salad'
+  if (/(김치|깍두기|겉절이)$/.test(n) && !/(볶음|찌개|국|전|밥|죽|만두|무침)/.test(n)) return 'kimchi'
+  if (/(쌀밥|잡곡밥|현미밥|흑미밥|공기밥)$|^밥$/.test(n)) return 'rice'
+  if (/(후식|차$|^차|주스|음료|식혜|요거트|요구르트|과일|푸딩|커피)/.test(n)) return 'dessert'
+  if (/(국|탕|찌개|죽|스프|수프|전골)$/.test(n)) return 'soup'
+  return 'side'
+}
+
+/** Text -> dishes. A dish that was already in the menu keeps its category, shared mark and translations (so typing never resets
+ *  what an admin set); a new one gets a guessed category; the first dish is always the main dish. */
+export function parseLines(text: string, prev: MenuLine[] = []): MenuLine[] {
+  const pool = [...prev]
+  return splitDishes(text).map((name_ko, i) => {
+    const at = pool.findIndex((p) => p.name_ko === name_ko)
+    const known = at >= 0 ? pool.splice(at, 1)[0] : null
+    if (i === 0) return { ...(known ?? {}), name_ko, kind: 'main' }
+    if (known) return { ...known, name_ko, kind: known.kind === 'main' ? 'side' : known.kind ?? guessKind(name_ko) }
+    return { name_ko, kind: guessKind(name_ko) }
+  })
+}
 export const linesToText = (items: MenuLine[]) => items.map((i) => i.name_ko).join('\n')
+export const sameNames = (a: MenuLine[], b: MenuLine[]) => a.length === b.length && a.every((x, i) => x.name_ko === b[i].name_ko)
 
 const stamp = (today = seoulToday()) => `${today}T00:00:00+09:00`
 
@@ -57,7 +88,7 @@ export const updateExtra = (ms: WeekMeal[], key: string, patch: Partial<WeekExtr
   ms.map((m) => {
     if (slotKey(m) !== key) return m
     const extra = { ...m.extra, ...patch }
-    for (const k of Object.keys(extra)) if (extra[k] === undefined || extra[k] === '' || extra[k] === false) delete extra[k]
+    for (const k of Object.keys(extra)) if (extra[k] === undefined || extra[k] === '' || extra[k] === false || (Array.isArray(extra[k]) && (extra[k] as unknown[]).length === 0)) delete extra[k]
     return { ...m, extra }
   })
 export const removeMeal = (ms: WeekMeal[], key: string) => ms.filter((m) => slotKey(m) !== key)
@@ -104,6 +135,41 @@ export function copyWeek(ms: WeekMeal[], other: WeekMeal[], otherMonday: string,
   return out
 }
 
+/** 공통 메뉴: the same dishes (rice, kimchi, salad ...) on several days WITHOUT typing them again. They are added to the end of every
+ *  published menu of the chosen days and meals, marked as shared, and a dish already on the menu is not added twice. */
+export function applyShared(ms: WeekMeal[], dates: string[], perMeal: Partial<Record<MealPeriod, string>>, mode: 'add' | 'remove' = 'add'): { meals: WeekMeal[]; touched: number } {
+  let touched = 0
+  const meals = ms.map((m) => {
+    const text = perMeal[m.meal_type]
+    if (!text || !dates.includes(m.date) || m.status !== 'published') return m
+    const names = splitDishes(text)
+    if (names.length === 0) return m
+    if (mode === 'remove') {
+      const items = m.menu_items.filter((i) => !(i.shared && names.includes(i.name_ko)))
+      if (items.length === m.menu_items.length) return m
+      touched++; return { ...m, menu_items: items }
+    }
+    const have = new Set(m.menu_items.map((i) => i.name_ko))
+    const add = names.filter((n) => !have.has(n)).map((name_ko) => ({ name_ko, kind: guessKind(name_ko), shared: true }))
+    if (add.length === 0) return m
+    touched++; return { ...m, menu_items: [...m.menu_items, ...add] }
+  })
+  return { meals, touched }
+}
+
+/** 공통 공지·원산지: one origin statement / notice for the chosen days and meals (a blank field changes nothing). */
+export function applyNotes(ms: WeekMeal[], dates: string[], periods: MealPeriod[], notes: { origin?: string; notice?: string }): { meals: WeekMeal[]; touched: number } {
+  let touched = 0
+  const origin = notes.origin?.trim(); const notice = notes.notice?.trim()
+  const meals = ms.map((m) => {
+    if (!dates.includes(m.date) || !periods.includes(m.meal_type) || m.status !== 'published' || (!origin && !notice)) return m
+    const extra = { ...m.extra, ...(origin ? { origin } : {}), ...(notice ? { notice } : {}) }
+    if (JSON.stringify(extra) === JSON.stringify(m.extra)) return m
+    touched++; return { ...m, extra }
+  })
+  return { meals, touched }
+}
+
 /** One serving time for the chosen weekdays and meal periods (blank on either side clears nothing). */
 export function applyHours(ms: WeekMeal[], dates: string[], periods: MealPeriod[], start: string, end: string): WeekMeal[] {
   return ms.map((m) => (dates.includes(m.date) && periods.includes(m.meal_type) ? { ...m, start_time: start, end_time: end } : m))
@@ -135,6 +201,12 @@ export function validateWeek(ms: WeekMeal[]): { key: string; message: string }[]
     seen.add(key)
     if (m.option_name.length > 40) out.push({ key, message: `${where}: 옵션 이름은 40자 이하여야 해요` })
     if (m.status === 'published' && m.menu_items.length === 0) out.push({ key, message: `${where}: 공개하려면 메뉴를 한 줄 이상 적어 주세요` })
+    if (m.menu_items.length > 40) out.push({ key, message: `${where}: 한 식사에는 메뉴를 40개까지 둘 수 있어요` })
+    if (m.menu_items.some((i) => i.name_ko.length > 60)) out.push({ key, message: `${where}: 메뉴 이름은 60자 이하여야 해요` })
+    if (m.menu_items.some((i) => i.kind && !(DISH_KINDS as readonly string[]).includes(i.kind))) out.push({ key, message: `${where}: 알 수 없는 메뉴 분류가 있어요` })
+    if ((m.extra.origin?.length ?? 0) > 1200) out.push({ key, message: `${where}: 원산지 표시는 1200자 이하로 적어 주세요` })
+    if ((m.extra.notice?.length ?? 0) > 1000) out.push({ key, message: `${where}: 공지는 1000자 이하로 적어 주세요` })
+    if (m.extra.labels?.length && m.extra.labels_verified !== true) out.push({ key, message: `${where}: 식이 표시(HALAL 등)는 공식 자료로 확인했을 때만 쓸 수 있어요` })
     if (m.price_krw != null && (!Number.isInteger(m.price_krw) || m.price_krw < 0)) out.push({ key, message: `${where}: 가격은 0 이상의 정수여야 해요` })
     if ((m.start_time && !TIME.test(m.start_time)) || (m.end_time && !TIME.test(m.end_time))) out.push({ key, message: `${where}: 시간은 HH:MM 형식이에요` })
     else if (m.start_time && m.end_time && m.start_time >= m.end_time) out.push({ key, message: `${where}: 종료는 시작보다 늦어야 해요` })
@@ -161,6 +233,7 @@ export function changedDates(live: WeekMeal[], draft: WeekMeal[]): string[] {
 
 export const weekCounts = (ms: WeekMeal[]) => ({
   menus: ms.length,
+  dishes: ms.reduce((n, m) => n + m.menu_items.length, 0),
   days: new Set(ms.map((m) => m.date)).size,
   slots: new Set(ms.map((m) => `${m.date}|${m.meal_type}`)).size,
   thousandWon: ms.filter((m) => m.badge === THOUSAND_WON_BADGE).length,

@@ -471,3 +471,96 @@ describe('이동 · 마이그레이션 안내', () => {
     expect(await screen.findByText(/20261118000100/)).toBeTruthy()
   })
 })
+
+describe('실제 식단표 형식: several dishes per meal, shared dishes, origin and labels', () => {
+  const MONDAY_LUNCH = '치즈닭갈비볶음밥\n새우튀김*타르타르\n참나물무침\n햄감자채볶음\n파래무침\n계란국'
+
+  it('keeps every dish as its own structured item with a guessed category, and a category change survives further typing', async () => {
+    await openWeek()
+    const u = user()
+    await fill(d(0), '중식', MONDAY_LUNCH)
+    await u.click(screen.getByText(/분류·공통·순서 \(6개 메뉴\)/))
+    expect((screen.getByLabelText(`${d(0)} 중식 치즈닭갈비볶음밥 분류`) as HTMLSelectElement).value).toBe('main')
+    expect((screen.getByLabelText(`${d(0)} 중식 계란국 분류`) as HTMLSelectElement).value).toBe('soup')
+    expect((screen.getByLabelText(`${d(0)} 중식 파래무침 분류`) as HTMLSelectElement).value).toBe('side')
+    await u.selectOptions(screen.getByLabelText(`${d(0)} 중식 파래무침 분류`), 'salad')
+    await u.type(screen.getByLabelText(`${d(0)} 중식 메뉴`), '\n쌀밥') // typing more must not reset the category chosen above
+    expect((screen.getByLabelText(`${d(0)} 중식 파래무침 분류`) as HTMLSelectElement).value).toBe('salad')
+    expect((screen.getByLabelText(`${d(0)} 중식 쌀밥 분류`) as HTMLSelectElement).value).toBe('rice')
+    await u.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/한 주 전체를 초안으로 저장했어요/)
+    const items = saved().p_data.meals[0].menu_items
+    expect(items).toEqual([
+      { name_ko: '치즈닭갈비볶음밥', kind: 'main' }, { name_ko: '새우튀김*타르타르', kind: 'side' }, { name_ko: '참나물무침', kind: 'side' },
+      { name_ko: '햄감자채볶음', kind: 'side' }, { name_ko: '파래무침', kind: 'salad' }, { name_ko: '계란국', kind: 'soup' }, { name_ko: '쌀밥', kind: 'rice' },
+    ])
+    liveWrites()
+  }, 30000)
+
+  it('applies the shared row (rice / kimchi / salad), the origin statement and the notice to several days at once, without touching empty cells', async () => {
+    await openWeek({ live: FIVE.flatMap((date) => [meal(date, 'breakfast'), meal(date, 'lunch')]) })   // no dinner at all
+    const u = user()
+    await u.click(screen.getByRole('button', { name: '공통 메뉴·공지' }))
+    const dlg = await screen.findByRole('dialog', { name: '공통 메뉴·공지 적용' })
+    expect((within(dlg).getByRole('button', { name: '적용' }) as HTMLButtonElement).disabled).toBe(true) // nothing typed yet
+    await u.type(within(dlg).getByLabelText('조식 공통 메뉴'), '아산쌀밥/김치/샐러드')
+    await u.type(within(dlg).getByLabelText('중식 공통 메뉴'), '김치/샐러드/후식차')
+    await u.type(within(dlg).getByLabelText('석식 공통 메뉴'), '김치/샐러드')
+    await u.type(within(dlg).getByLabelText('원산지 표시사항 (선택)'), '쌀:국내산 / 배추김치:중국산')
+    await u.type(within(dlg).getByLabelText('안내 문구 (선택)'), '재료수급상황에 따라 변경될 수 있습니다')
+    await u.click(within(dlg).getByLabelText(`적용할 요일 ${d(4)}`)) // Friday off: Monday-Thursday only
+    await u.click(within(dlg).getByRole('button', { name: '적용' }))
+    expect(await screen.findByText(/8개 식사에 공통 내용을 적용했어요/)).toBeTruthy()   // 4 days x (breakfast + lunch), each counted once
+    await u.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/한 주 전체를 초안으로 저장했어요/)
+    const meals = saved().p_data.meals
+    const monLunch = meals.find((m) => m.date === d(0) && m.meal_type === 'lunch')!
+    expect(monLunch.menu_items.map((i) => i.name_ko)).toEqual([`lunch ${d(0)}`, '김치', '샐러드', '후식차'])
+    expect(monLunch.menu_items.slice(1)).toEqual([{ name_ko: '김치', kind: 'kimchi', shared: true }, { name_ko: '샐러드', kind: 'salad', shared: true }, { name_ko: '후식차', kind: 'dessert', shared: true }])
+    expect(meals.find((m) => m.date === d(0) && m.meal_type === 'breakfast')!.menu_items.map((i) => i.name_ko)).toContain('아산쌀밥')
+    expect(monLunch.extra).toMatchObject({ origin: '쌀:국내산 / 배추김치:중국산', notice: '재료수급상황에 따라 변경될 수 있습니다' })
+    const friLunch = meals.find((m) => m.date === d(4) && m.meal_type === 'lunch')!
+    expect(friLunch.menu_items).toHaveLength(1)                    // an unchecked day is untouched
+    expect(friLunch.extra.origin).toBeUndefined()
+    expect(meals.some((m) => m.meal_type === 'dinner')).toBe(false) // no cell was created for the shared dinner row
+    liveWrites()
+  }, 30000)
+
+  it('applying the same shared dishes twice does not duplicate them, and "제거" removes only what was added as shared', async () => {
+    await openWeek({ live: [meal(d(0), 'lunch', { menu_items: [{ name_ko: '제육볶음', kind: 'main' }, { name_ko: '김치', kind: 'kimchi' }] })] })
+    const u = user()
+    const apply = async (text: string, remove = false) => {
+      await u.click(screen.getByRole('button', { name: '공통 메뉴·공지' }))
+      const dlg = await screen.findByRole('dialog', { name: '공통 메뉴·공지 적용' })
+      await u.type(within(dlg).getByLabelText('중식 공통 메뉴'), text)
+      if (remove) await u.click(within(dlg).getByLabelText(/^제거/))
+      await u.click(within(dlg).getByRole('button', { name: '적용' }))
+    }
+    await apply('김치/샐러드')   // 김치 is already on the menu (not shared): it is not added a second time
+    const box = screen.getByLabelText(`${d(0)} 중식 메뉴`) as HTMLTextAreaElement
+    expect(box.value).toBe('제육볶음\n김치\n샐러드')
+    await apply('김치/샐러드')   // nothing left to add
+    expect(await screen.findByText(/적용할 메뉴가 없었어요/)).toBeTruthy()
+    await apply('김치/샐러드', true)   // removes only the shared 샐러드; the typed-in 김치 was never shared
+    expect((screen.getByLabelText(`${d(0)} 중식 메뉴`) as HTMLTextAreaElement).value).toBe('제육볶음\n김치')
+  }, 30000)
+
+  it('HALAL is stored together with its confirmation, and unticking removes both', async () => {
+    await openWeek({ live: [meal(d(4), 'lunch')] })
+    const u = user()
+    await u.click(screen.getByLabelText(`${d(4)} 중식 HALAL`))
+    await u.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/한 주 전체를 초안으로 저장했어요/)
+    expect(saved().p_data.meals[0].extra).toMatchObject({ labels: ['HALAL'], labels_verified: true })
+  }, 30000)
+
+  it('unticking HALAL removes the label and its confirmation from the saved week', async () => {
+    await openWeek({ live: [meal(d(4), 'lunch', { extra: { labels: ['HALAL'], labels_verified: true, notice: '유지' } })] })
+    const u = user()
+    expect((screen.getByLabelText(`${d(4)} 중식 HALAL`) as HTMLInputElement).checked).toBe(true)
+    await u.click(screen.getByLabelText(`${d(4)} 중식 HALAL`))
+    await u.click(screen.getByRole('button', { name: '초안 저장' }))
+    await screen.findByText(/한 주 전체를 초안으로 저장했어요/)
+    expect(saved().p_data.meals[0].extra).toEqual({ notice: '유지' })
+  }, 30000)
+})

@@ -110,3 +110,69 @@ describe('the example template', () => {
     expect(readFileSync(join(process.cwd(), '..', 'supabase', 'cafeteria', 'weekly_import_template.csv'), 'utf8').replace(/^\uFEFF/, '')).toBe(TEMPLATE_CSV)
   })
 })
+
+describe('several dishes per meal', () => {
+  const HEAD = 'university,cafeteria_name,date,meal_type,menu_name,side_dishes,soup,rice,kimchi,salad,dessert,shared,origin,labels,labels_verified'
+  const row = (csv: string) => normalizeRow(toTable(parseCsv(`${HEAD}\n${csv}`)).rows[0])
+
+  it('reads the Monday lunch of a real menu table as structured dishes in table order', () => {
+    const r = row('순천향대학교,향설1관,2026-11-09,중식,치즈닭갈비볶음밥,새우튀김*타르타르/참나물무침/햄감자채볶음/파래무침,계란국,,,,,김치/샐러드/후식차,쌀:국내산 / 배추김치:중국산,,')
+    expect(r.errors).toEqual([])
+    expect(r.dishes).toEqual([
+      { name_ko: '새우튀김*타르타르', kind: 'side' }, { name_ko: '참나물무침', kind: 'side' }, { name_ko: '햄감자채볶음', kind: 'side' }, { name_ko: '파래무침', kind: 'side' },
+      { name_ko: '계란국', kind: 'soup' }, { name_ko: '김치', kind: 'kimchi', shared: true }, { name_ko: '샐러드', kind: 'salad', shared: true }, { name_ko: '후식차', kind: 'dessert', shared: true },
+    ])
+    expect(r.origin).toBe('쌀:국내산 / 배추김치:중국산')
+    expect(toRpcRow(r)).toMatchObject({ menu_name: '치즈닭갈비볶음밥', dishes: r.dishes, origin: '쌀:국내산 / 배추김치:중국산', labels: [], labels_verified: null })
+  })
+
+  it('accepts | ; and line breaks as separators, uses category columns, and drops a dish repeated in the same row', () => {
+    const r = row('A,B,2026-11-09,lunch,밥버거,"우동국\n파래무침|파래무침",,쌀밥,배추김치,,,,,,')
+    expect(r.dishes.map((d) => [d.name_ko, d.kind])).toEqual([['우동국', 'side'], ['파래무침', 'side'], ['쌀밥', 'rice'], ['배추김치', 'kimchi']])
+  })
+
+  it('a dietary label needs the confirmation column; unknown labels are errors; a confirmed one is sent with its confirmation', () => {
+    expect(row('A,B,2026-11-13,lunch,x,,,,,,,,,HALAL,').errors.join()).toContain('labels_verified')
+    expect(row('A,B,2026-11-13,lunch,x,,,,,,,,,KOSHER,예').errors.join()).toContain('KOSHER')
+    const ok = row('A,B,2026-11-13,lunch,x,,,,,,,,,halal,예')
+    expect(ok.errors).toEqual([])
+    expect(toRpcRow(ok)).toMatchObject({ labels: ['HALAL'], labels_verified: true })
+  })
+
+  it('the older menu_items column still works as a list of side dishes', () => {
+    const t = toTable(parseCsv('university,cafeteria_name,date,meal_type,menu_name,price,serving_time,menu_items\nA,B,2026-11-09,lunch,x,1,,우유|과일'))
+    expect(normalizeRow(t.rows[0]).dishes).toEqual([{ name_ko: '우유', kind: 'side' }, { name_ko: '과일', kind: 'side' }])
+  })
+})
+
+describe('the 향설1관 weekly menu table (supabase/cafeteria/examples)', () => {
+  const file = readFileSync(join(process.cwd(), '..', 'supabase', 'cafeteria', 'examples', 'hyangseol1_2026-11-09.csv'), 'utf8')
+  const rows = toTable(parseCsv(file)).rows.map(normalizeRow)
+
+  it('has 5 days x breakfast / lunch / dinner, all valid, in one cafeteria and one week', () => {
+    expect(rows).toHaveLength(15)
+    expect(rows.flatMap((r) => r.errors)).toEqual([])
+    expect(new Set(rows.map((r) => r.date))).toEqual(new Set(['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13']))
+    expect(new Set(rows.map((r) => `${r.date}|${r.meal_type}|${r.meal_option}`)).size).toBe(15)
+    expect(new Set(rows.map((r) => r.cafeteria_name))).toEqual(new Set(['향설1관']))
+  })
+
+  it("Monday lunch is exactly the menu table's: the main dish, four dishes, the soup, and the shared kimchi / salad / dessert", () => {
+    const r = rows.find((x) => x.date === '2026-11-09' && x.meal_type === 'lunch')!
+    expect(r.menu_name).toBe('치즈닭갈비볶음밥')
+    expect(r.dishes).toEqual([
+      { name_ko: '새우튀김*타르타르', kind: 'side' }, { name_ko: '참나물무침', kind: 'side' }, { name_ko: '햄감자채볶음', kind: 'side' }, { name_ko: '파래무침', kind: 'side' },
+      { name_ko: '계란국', kind: 'soup' }, { name_ko: '김치', kind: 'kimchi', shared: true }, { name_ko: '샐러드', kind: 'salad', shared: true }, { name_ko: '후식차', kind: 'dessert', shared: true },
+    ])
+    expect(r.origin).toContain('쌀:국내산')
+    expect(r.notes).toBe('상기 메뉴는 재료수급상황에 따라 변경될 수 있습니다')
+  })
+
+  it('a table cell holding two dishes ("도시락김/미소장국") becomes two dishes; the shared row differs per meal; no label is claimed', () => {
+    const wedBreakfast = rows.find((x) => x.date === '2026-11-11' && x.meal_type === 'breakfast')!
+    expect(wedBreakfast.dishes.map((d) => d.name_ko)).toEqual(expect.arrayContaining(['도시락김', '미소장국']))
+    expect(rows.find((x) => x.meal_type === 'breakfast')!.dishes.filter((d) => d.shared).map((d) => d.name_ko)).toEqual(['아산쌀밥', '김치', '샐러드'])
+    expect(rows.find((x) => x.meal_type === 'dinner')!.dishes.filter((d) => d.shared).map((d) => d.name_ko)).toEqual(['김치', '샐러드'])
+    expect(rows.every((r) => r.labels.length === 0)).toBe(true)
+  })
+})

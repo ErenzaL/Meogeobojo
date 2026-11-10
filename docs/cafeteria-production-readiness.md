@@ -1,13 +1,29 @@
 # 학식 weekly cafeteria management: production readiness report
 
-Branch `feature/cafeteria-weekly` / PR #2 (Draft). Written 2026-11-10/11. **Nothing in this document has been run against production
-except read-only probes.** Real Admin → Supabase → Flutter Web → Android integration is **not yet verified**.
+Branch `feature/cafeteria-weekly` / PR #2 (Draft). Written 2026-11-10/11, updated 2026-11-10 (structured dishes, CI, production check script).
+**Nothing in this document has been run against production except read-only probes.** The live Admin → Supabase → Flutter Web check is **not yet run**;
+it is `scripts/verify_cafeteria_production.py` (§7, step 4) and needs the release approval and the backup below.
+
+## 0. Update: what changed since the first version
+* **Structured dishes** (real menu tables such as the 향설1관 주간메뉴표): several dishes per meal with categories, shared dishes entered once for many days,
+  origin statement, notice, confirmed dietary labels (HALAL), CSV columns for all of it. Details: `docs/cafeteria-weekly.md` §3b. No table was rebuilt;
+  `cafeteria_meals` and `menu_items` are the same columns, so installed apps keep working (they show unknown categories as ordinary dishes).
+  Server validation lives in the still-unapplied migration `20261118000100` (categories, ≤ 40 dishes, ≤ 60 chars per name, origin ≤ 1200, label ⇒ confirmed).
+* **Bug found by the new tests and fixed:** the Flutter model threw on a non-string `extra` value (one malformed `notice`/`description`/`origin` would
+  have failed the whole week); it now ignores values of the wrong type.
+* **CI fixed:** the Admin job failed because CI used Node 22.12.0, which cannot start the test workers (the production build itself works on 22.12.0 and
+  Render keeps it); CI now tests on 22.19.0. The database job failed because Ubuntu's PostgreSQL 16 does not know the `MAINTAIN` privilege that an
+  already-applied migration revokes; CI now installs PostgreSQL 17 like hosted Supabase. Flutter passed from the start.
+* **Production verification script** `scripts/verify_cafeteria_production.py` (production only, one `[E2E]` cafeteria, structured week, selected days,
+  history/rollback, CSV with dishes, unpublish, optional pg_cron, cleanup, and "nothing else changed" proof). Unit-tested against an in-memory model.
+* **Staging is dropped** (decision 2026-11-10: no second Supabase project or Render service); `render.staging.yaml`, `staging_apply_migrations.sh` and
+  `verify_cafeteria_e2e.py` stay in the repository, unused.
 
 ## 1. Current system status (read-only audit)
 | Item | Finding | Evidence |
 |---|---|---|
 | GitHub | `main` = `c8f2f63`; PR #2 head = the branch (4 commits, fast-forwardable, mergeable, no conflicts) | `git`, GitHub API |
-| CI | the repo had **no** workflow; `.github/workflows/ci.yml` is added here (untested on GitHub until its first run) | repo |
+| CI | `.github/workflows/ci.yml` (new). First run: Flutter passed, Admin and Database failed for CI-environment reasons (see §0); fixed in `345fc05` and the next commit; **a green run on the final commit is a release gate** | GitHub API |
 | Render Admin / Web | serving `main` @ `c8f2f63`; a push to `main` redeployed **both** sites within ~2 min (observed on the last release) → auto-deploy is ON | live bundle commit, deploy timing |
 | Render config files | `render.yaml` (Admin: security headers declared but **not applied** on the live service, see risk R6) | `curl -I` |
 | Supabase `20261112…16` | applied (probes: functions, tables, `cms_health`, realtime on all 9 tables) | `verify_production.py`, SQL checks |
@@ -20,9 +36,9 @@ except read-only probes.** Real Admin → Supabase → Flutter Web → Android i
 ## 2. Tests performed (local) and results
 | Suite | Result |
 |---|---|
-| Admin: vitest / `tsc` / eslint / production build | 305 pass, clean |
-| Flutter: `dart analyze` / `flutter test` | clean, 712 pass |
-| SQL on a scratch PostgreSQL: **every migration** fresh and twice, upgrade path, preservation of live data/progress, weekly + import + signal suites | **195 checks OK**, 0 errors |
+| Admin: vitest / `tsc` / eslint / production build (also `tsc` + `vite build` on Node 22.12.0 = Render's version) | 323 pass, clean |
+| Flutter: `dart analyze` / `flutter test` (VM) / the weekly + dishes + sync tests again on the Chrome (Web) platform | clean, 724 pass; Chrome: 42 pass |
+| SQL on a scratch PostgreSQL: **every migration** fresh and twice, upgrade path, preservation of live data/progress, weekly + import + signal suites | **198 checks OK**, 0 errors |
 | `scripts/staging_apply_migrations.sh` full chain on a fresh DB | 20 files apply cleanly in order |
 | Python: weekly E2E script unit tests, Korean CSV importer tests | pass |
 | Android `flutter build apk --release` | builds (debug-key fallback) **and** builds signed with a throw-away keystore (verified with `apksigner`); no key file left behind |
@@ -47,7 +63,7 @@ except read-only probes.** Real Admin → Supabase → Flutter Web → Android i
   → either order is safe; **recommended: merge first (S1), then migrate (S3)** so the new UI is ready the moment the database is.
 * **Gap found and fixed during this audit:** a menu changed outside the weekly editor (older Admin tab, SQL editor, Python importer) after a week draft was saved would have been silently overwritten by publishing that draft. `20261118000100` §3b now records such a change as a new week version → the draft is flagged stale and publishing is refused until it is rebased (tested, including bulk changes and a week never opened in the weekly editor).
 
-## 4. Staging integration
+## 4. Staging integration (dropped on 2026-11-10: no second Supabase project or Render service will be created; kept for reference)
 **What was possible here:** a scratch PostgreSQL (the full migration chain, fresh and twice, all SQL suites, the two-university weekly/import scenarios, scheduler runner, RLS and student-visibility checks) and fakes for the Admin and Flutter. **No separate Supabase project exists, and I have no access to create one, so the staging steps that need a real Supabase (Auth, Realtime, pg_cron, Storage, the real Admin and real apps) have NOT been run.** Everything is prepared so you can run them in about an hour:
 
 1. Create a second Supabase project (the Free plan allows two): Dashboard → New project → name `meogeobojo-staging`. Enable the `pg_cron` extension (Database → Extensions).
@@ -105,8 +121,16 @@ python3 scripts/verify_production.py                    # every migration line O
 python3 scripts/prod_snapshot.py --compare before.json  # identical (nothing students see changed)
 ```
 Re-run `prod_readonly_checks.sql`: no FAIL, baseline counts not lower, `content_sync` PASS, weekly columns present.
-**4 Production E2E** (writes throw-away "[E2E]" data, removes it): follow §8 on production **only after** staging passed; use the Admin UI by hand (the automated script refuses production by design). Delete any leftover "[E2E]" cafeteria.
-**5 Mobile**: build and upload the Android bundle (§6), and iOS later; Flutter Web is already live from step 1.
+**4 Production E2E with throw-away data** (writes one `[E2E] 주간 점검 <time>` cafeteria in one university, removes it, and proves nothing else changed)
+```bash
+ADMIN_EMAIL='<admin email>' ADMIN_PASSWORD='<admin password>' python3 scripts/verify_cafeteria_production.py --yes-i-approve-production-write \
+    --university 순천향대학교 --with-schedule [--manual-check]
+```
+It reads the URL and the publishable key from `admin/.env`; the credentials only from your shell environment (never stored). It refuses any non-production
+project, a service-role key, and an earlier leftover `[E2E]` cafeteria. The cafeteria is active for a few minutes (students can only see active ones). Exit 0 =
+every check passed; any `FAIL` or "REMOVE … by hand" line needs your attention (delete the `[E2E]` cafeteria in Admin → 학식). Version/audit history rows of the
+test stay by design (immutable). `--manual-check` pauses twice so you can look at Flutter Web (and the app) and confirm the menus appear and then clear.
+**5 Mobile**: NOT part of this release (decision 2026-11-10: no Android/iOS build or upload yet). The mobile source is ready (same Dart code as Web, tested); the §6 steps apply when you decide to ship it. Flutter Web is live from step 1.
 
 ## 8. Final end-to-end verification (Admin → Supabase → Flutter Web → Android)
 Automated part (staging): `verify_cafeteria_e2e.py` above. Manual part (staging, then production), with two devices open (Flutter Web in a browser, the Android build) on the **student** account, both showing 학식 for the same university:

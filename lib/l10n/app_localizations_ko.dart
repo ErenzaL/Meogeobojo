@@ -2153,4 +2153,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mealSoldOutHint => '오늘 준비한 수량이 모두 판매됐어요.';
+
+  @override
+  String get mealServedWith => '함께 제공';
+
+  @override
+  String get mealOrigin => '원산지 표시사항';
 }

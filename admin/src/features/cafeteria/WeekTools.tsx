@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Field, Input, Modal, Select, Textarea } from '@/components/ui'
 import { MEAL_LABEL, MEAL_TYPES } from './meal'
-import { dayName, type MealPeriod, type MealStatus } from './week'
+import { dayName, splitDishes, type MealPeriod, type MealStatus } from './week'
 
 const Days = ({ dates, value, onChange, label }: { dates: string[]; value: string[]; onChange: (v: string[]) => void; label: string }) => (
   <fieldset className="space-y-1"><legend className="text-sm font-medium">{label}</legend>
@@ -105,6 +105,42 @@ export function PublishDaysDialog({ open, dates, changed, busy, onClose, onPubli
         <p className="text-xs text-muted">변경이 있는 날: {changed.length ? changed.map((d) => `${dayName(d)} ${d.slice(5)}`).join(', ') : '없음'}</p>
         <Field label="게시 메모 (선택)" htmlFor="pd_r"><Textarea id="pd_r" className="min-h-14" value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
         <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>취소</Button><Button disabled={busy || days.length === 0} onClick={() => onPublish(days, reason)}>{busy ? '게시 중…' : `${days.length}일 게시`}</Button></div>
+      </div>
+    </Modal>)
+}
+
+/** 공통 메뉴·공지: the shared row of a weekly menu table (rice / kimchi / salad ...), the origin statement and the footer notice,
+ *  applied to several days at once instead of typing them again and again. */
+export function SharedDialog({ open, dates, periods, onClose, onApply }: {
+  open: boolean; dates: string[]; periods: MealPeriod[]; onClose: () => void
+  onApply: (a: { dates: string[]; perMeal: Partial<Record<MealPeriod, string>>; mode: 'add' | 'remove'; origin: string; notice: string }) => void
+}) {
+  const [days, setDays] = useState<string[]>(dates.slice(0, 5))
+  const [perMeal, setPerMeal] = useState<Partial<Record<MealPeriod, string>>>({})
+  const [mode, setMode] = useState<'add' | 'remove'>('add')
+  const [origin, setOrigin] = useState('')
+  const [notice, setNotice] = useState('')
+  const dishCount = MEAL_TYPES.filter((t) => periods.includes(t)).reduce((n, t) => n + splitDishes(perMeal[t] ?? '').length, 0)
+  const ok = days.length > 0 && (dishCount > 0 || (mode === 'add' && (origin.trim() !== '' || notice.trim() !== '')))
+  return (
+    <Modal open={open} title="공통 메뉴·공지 적용" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-xs text-muted">식단표 맨 아래 칸처럼 모든 요일에 똑같이 나오는 메뉴(밥·김치·샐러드·후식 등)와 원산지, 안내 문구를 한 번에 넣어요. 이미 있는 메뉴는 두 번 추가하지 않고, 메뉴가 없는 칸은 건드리지 않아요.</p>
+        <Days dates={dates} value={days} onChange={setDays} label="적용할 요일" />
+        {MEAL_TYPES.filter((t) => periods.includes(t)).map((t) => (
+          <Field key={t} label={`${MEAL_LABEL[t]} 공통 메뉴`} htmlFor={`sh_${t}`}>
+            <Input id={`sh_${t}`} placeholder="예: 아산쌀밥/김치/샐러드" value={perMeal[t] ?? ''} onChange={(e) => setPerMeal({ ...perMeal, [t]: e.target.value })} />
+          </Field>))}
+        <fieldset className="flex gap-4 text-sm"><legend className="sr-only">적용 방식</legend>
+          <label className="flex items-center gap-1.5"><input type="radio" name="sh_mode" checked={mode === 'add'} onChange={() => setMode('add')} />추가</label>
+          <label className="flex items-center gap-1.5"><input type="radio" name="sh_mode" checked={mode === 'remove'} onChange={() => setMode('remove')} />제거 (공통으로 넣은 메뉴만)</label>
+        </fieldset>
+        {mode === 'add' && <>
+          <Field label="원산지 표시사항 (선택)" htmlFor="sh_origin"><Textarea id="sh_origin" className="min-h-16" value={origin} onChange={(e) => setOrigin(e.target.value)} /></Field>
+          <Field label="안내 문구 (선택)" htmlFor="sh_notice"><Input id="sh_notice" placeholder="예: 상기 메뉴는 재료수급상황에 따라 변경될 수 있습니다" value={notice} onChange={(e) => setNotice(e.target.value)} /></Field></>}
+        <p className="text-xs text-muted">{dishCount > 0 ? `공통 메뉴 ${dishCount}개` : '공통 메뉴를 적지 않으면 원산지·안내 문구만 적용돼요'} · 적용 후 &lsquo;초안 저장&rsquo;을 눌러야 저장돼요.</p>
+        <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose}>취소</Button>
+          <Button disabled={!ok} onClick={() => { onApply({ dates: days, perMeal, mode, origin, notice }); onClose() }}>적용</Button></div>
       </div>
     </Modal>)
 }

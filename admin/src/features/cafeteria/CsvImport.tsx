@@ -108,7 +108,7 @@ export default function CsvImport({ onClose, onDone }: { onClose: () => void; on
           </div>
         ) : (
           <>
-            <p className="text-xs text-muted">필수 열: {REQUIRED.join(', ')}. 선택 열: meal_option, program, description, notes, menu_items(<code>|</code>로 구분), location, source_url, university_id, cafeteria_id. 한 줄은 정확히 한 식당 · 한 날짜 · 한 식사 · 한 옵션이에요. 가져온 내용은 초안으로만 저장돼요.</p>
+            <p className="text-xs text-muted">필수 열: {REQUIRED.join(', ')}. 선택 열: side_dishes·soup·rice·kimchi·salad·dessert·shared(한 칸에 여러 메뉴는 <code>/</code> 또는 <code>|</code>로 구분), origin, labels·labels_verified, meal_option, program, description, notes, location, source_url, university_id, cafeteria_id. 한 줄은 정확히 한 식당 · 한 날짜 · 한 식사 · 한 옵션이에요. 가져온 내용은 초안으로만 저장돼요.</p>
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" size="sm" onClick={download}><Download className="size-4" />예시 파일 내려받기</Button>
               <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-xl bg-brand px-3 text-sm font-semibold text-brand-ink"><FileUp className="size-4" />CSV 파일 선택
@@ -141,7 +141,7 @@ export default function CsvImport({ onClose, onDone }: { onClose: () => void; on
                       <tr key={r.line} className="border-t border-line align-top">
                         <td className="p-2">{r.line}</td><td><Badge tone={STATUS[e.status].tone}>{STATUS[e.status].label}</Badge></td>
                         <td>{e.university ?? r.university} · {e.cafeteria ?? r.cafeteria_name}{e.new_cafeteria ? ' (새 식당)' : ''}</td><td>{r.date}</td>
-                        <td>{MEAL[r.meal_type] ?? r.meal_type}{r.meal_option ? ` (${r.meal_option})` : ''}{r.program ? ` · ${r.program}` : ''}</td><td>{r.menu_name}</td>
+                        <td>{MEAL[r.meal_type] ?? r.meal_type}{r.meal_option ? ` (${r.meal_option})` : ''}{r.program ? ` · ${r.program}` : ''}</td><td>{r.menu_name}{r.dishes.length > 0 && <span className="text-muted"> 외 {r.dishes.length}개 ({r.dishes.map((x) => x.name_ko).join(', ')})</span>}{r.labels.length > 0 && <Badge tone="brand">{r.labels.join(' · ')}</Badge>}</td>
                         <td>{r.price ? `${Number(r.price).toLocaleString('ko-KR')}원` : '미정'}</td><td className={e.status === 'error' ? 'text-red-700' : 'text-muted'}>{e.message ?? ''}</td>
                       </tr>))}</tbody>
                   </table>

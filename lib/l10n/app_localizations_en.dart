@@ -2252,4 +2252,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mealSoldOutHint => 'Today\'s portions have all been sold.';
+
+  @override
+  String get mealServedWith => 'Served with';
+
+  @override
+  String get mealOrigin => 'Ingredient origin';
 }

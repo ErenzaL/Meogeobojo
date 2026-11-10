@@ -401,6 +401,8 @@ CafeteriaMeal fakeMeal(
   String? notice,
   String? description,
   bool soldOut = false,
+  String? origin,
+  List<String> dietaryLabels = const [],
 }) => CafeteriaMeal(
   id: '$cafeteriaId-$date-${type.name}-$option',
   cafeteriaId: cafeteriaId,
@@ -419,6 +421,8 @@ CafeteriaMeal fakeMeal(
   notice: notice,
   description: description,
   soldOut: soldOut,
+  origin: origin,
+  dietaryLabels: dietaryLabels,
   verifiedAt: DateTime.utc(2026, 11, 2, 0),
 );
 

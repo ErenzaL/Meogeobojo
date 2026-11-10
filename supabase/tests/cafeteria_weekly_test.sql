@@ -313,6 +313,53 @@ do $$ begin
   assert not exists (select 1 from public.cafeteria_week_drift), 'and no helper rows remain';
 end $$;
 
+-- ===== 11. real university menus: several dishes per meal, shared dishes, origin, dietary labels =====
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f8000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare w uuid; m jsonb; r jsonb; v int; got jsonb; ex jsonb; bad jsonb; begin
+  w := public.cafeteria_week_entity('cafe0000-0000-4000-8000-000000000001', '2026-12-07');
+  ex := jsonb_build_object('origin', '쌀:국내산 / 배추김치:중국산 / 돈육:국내산', 'notice', '상기 메뉴는 재료수급상황에 따라 변경될 수 있습니다',
+                           'labels', '["HALAL"]'::jsonb, 'labels_verified', true);
+  m := jsonb_build_object('date', '2026-12-07', 'meal_type', 'lunch', 'option_name', '', 'option_order', 0,
+         'menu_items', '[{"name_ko":"치즈닭갈비볶음밥","kind":"main"},{"name_ko":"새우튀김*타르타르","kind":"side"},{"name_ko":"참나물무침","kind":"side"},
+                         {"name_ko":"계란국","kind":"soup"},{"name_ko":"아산쌀밥","kind":"rice","shared":true},{"name_ko":"김치","kind":"kimchi","shared":true},
+                         {"name_ko":"샐러드","kind":"salad","shared":true},{"name_ko":"후식차","kind":"dessert","shared":true}]'::jsonb,
+         'price_krw', null, 'start_time', null, 'end_time', null, 'status', 'published', 'badge', null, 'source_url', null,
+         'verified_at', '2026-12-07T00:00:00+09:00', 'extra', ex);
+  r := public.cms_save_draft('cafeteria_week', w, jsonb_build_object('meals', jsonb_build_array(m)), 0);
+  v := public.cms_publish('cafeteria_week', w, (r ->> 'revision')::int, '구조화 메뉴');
+  select menu_items, extra into got, ex from public.cafeteria_meals where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date = '2026-12-07' and meal_type = 'lunch';
+  assert jsonb_array_length(got) = 8, 'all eight dishes of the meal are stored as structured data (got ' || jsonb_array_length(got) || ')';
+  assert got -> 0 ->> 'kind' = 'main' and got -> 3 ->> 'kind' = 'soup' and got -> 5 ->> 'kind' = 'kimchi' and got -> 7 ->> 'kind' = 'dessert', 'categories survive in order';
+  assert (got -> 4 ->> 'shared')::boolean and (got -> 7 ->> 'shared')::boolean and not (got -> 0 ? 'shared'), 'shared dishes are marked, the others are not';
+  assert got -> 1 ->> 'name_ko' = '새우튀김*타르타르', 'a dish name keeps its own punctuation';
+  assert ex ->> 'origin' like '쌀:국내산%' and ex -> 'labels' = '["HALAL"]'::jsonb and (ex ->> 'labels_verified')::boolean, 'origin, label and its confirmation reach the live row';
+  -- the same meal read back through the week snapshot is identical (no information lost in the round trip)
+  assert (public.cms_state('cafeteria_week', w) -> 'live' -> 'meals' -> 0 -> 'menu_items') = got, 'the week snapshot returns the dishes unchanged';
+  perform set_config('test.dish_week', w::text, false);
+  raise notice 'OK weekly: a meal with main / sides / soup / rice / kimchi / salad / dessert, shared flags, origin and a verified HALAL label round-trips';
+
+  -- invalid structures are refused with a readable reason
+  foreach bad in array array[
+    m || '{"menu_items":[{"name_ko":"x","kind":"pizza"}]}',
+    m || '{"menu_items":[{"name_ko":"","kind":"main"}]}',
+    m || jsonb_build_object('menu_items', (select jsonb_agg(jsonb_build_object('name_ko', 'd' || g, 'kind', 'side')) from generate_series(1, 41) g)),
+    m || jsonb_build_object('extra', ex - 'labels_verified'),
+    m || jsonb_build_object('extra', ex || '{"labels":["KOSHER"]}'),
+    m || jsonb_build_object('extra', ex || jsonb_build_object('origin', repeat('가', 1201))),
+    m || '{"menu_items":[{"name_ko":"a","kind":"main","labels":["HALAL"]}],"extra":{}}'
+  ] loop
+    begin perform public.cms_save_draft('cafeteria_week', w, jsonb_build_object('meals', jsonb_build_array(bad)), (select revision from public.content_drafts where entity_type = 'cafeteria_week' and entity_id = w));
+      raise exception 'accepted a bad structure: %', left(bad::text, 80);
+    exception when sqlstate '22023' then null; end;
+  end loop;
+  -- an unlabelled, kind-less legacy item is still fine (older Admin versions wrote exactly this)
+  perform public.cms_save_draft('cafeteria_week', w, jsonb_build_object('meals', jsonb_build_array(m || '{"menu_items":[{"name_ko":"된장국"}],"extra":{}}')),
+          (select revision from public.content_drafts where entity_type = 'cafeteria_week' and entity_id = w));
+  raise notice 'OK weekly: unknown categories, blank or 41+ dishes, unverified/unknown labels and oversize origin are refused; legacy items still pass';
+end $$;
+reset role;
+
 -- cleanup (publish history is immutable by design: lift the guard only for this clean-up)
 delete from public.publication_jobs where entity_type = 'cafeteria_week';
 delete from public.content_drafts where entity_type = 'cafeteria_week';

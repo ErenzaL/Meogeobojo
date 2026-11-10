@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Badge, Button, Input, Select, Textarea } from '@/components/ui'
 import { MEAL_LABEL, MEAL_TYPES, THOUSAND_WON_BADGE } from './meal'
-import { dayName, linesToText, type MenuLine, mealsIn, parseLines, slotKey, type MealPeriod, type MealStatus, type WeekMeal } from './week'
+import { DISH_KINDS, DISH_LABEL, dayName, linesToText, type MenuLine, mealsIn, parseLines, sameNames, slotKey, type MealPeriod, type MealStatus, type WeekMeal } from './week'
 
 /** The text the admin is typing is kept as typed (trailing spaces, new lines); it is re-read from the menu only when the menu
  *  was changed from outside (copy tools, a loaded draft). */
@@ -11,9 +11,32 @@ function MenuText({ label, items, onChange }: { label: string; items: MenuLine[]
   const [seen, setSeen] = useState(items)
   if (items !== seen) {
     setSeen(items)
-    if (JSON.stringify(parseLines(text)) !== JSON.stringify(items)) setText(linesToText(items))
+    if (!sameNames(parseLines(text, items), items)) setText(linesToText(items))
   }
-  return <Textarea aria-label={label} className="min-h-14 text-xs" placeholder={'한 줄에 하나 (첫 줄이 메인)'} value={text} onChange={(e) => { setText(e.target.value); onChange(parseLines(e.target.value)) }} />
+  return <Textarea aria-label={label} className="min-h-14 text-xs" placeholder={'한 줄에 하나, 또는 / 로 구분 (첫 줄이 메인)'} value={text} onChange={(e) => { setText(e.target.value); onChange(parseLines(e.target.value, items)) }} />
+}
+
+/** The category of every dish (main / side / soup / rice / kimchi / salad / dessert ...) and whether it is a shared dish. */
+function DishList({ label, items, onChange }: { label: string; items: MenuLine[]; onChange: (items: MenuLine[]) => void }) {
+  if (items.length === 0) return null
+  const set = (i: number, patch: Partial<MenuLine>) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+  const move = (i: number, d: -1 | 1) => { const j = i + d; if (j < 0 || j >= items.length) return; const next = [...items]; [next[i], next[j]] = [next[j], next[i]]; onChange(next) }
+  return (
+    <details className="rounded-lg bg-page/60 px-2 py-1">
+      <summary className="cursor-pointer select-none text-muted">분류·공통·순서 ({items.length}개 메뉴)</summary>
+      <ul className="mt-1 space-y-1">
+        {items.map((it, i) => (
+          <li key={`${i}-${it.name_ko}`} className="flex items-center gap-1">
+            <span className="min-w-0 flex-1 truncate" title={it.name_ko}>{it.name_ko}</span>
+            <Select aria-label={`${label} ${it.name_ko} 분류`} className="h-7 w-[5.2rem] px-1 text-xs" value={it.kind ?? 'side'} onChange={(e) => set(i, { kind: e.target.value })}>
+              {DISH_KINDS.map((k) => <option key={k} value={k}>{DISH_LABEL[k]}</option>)}
+            </Select>
+            <label className="flex items-center gap-0.5"><input type="checkbox" aria-label={`${label} ${it.name_ko} 공통`} checked={!!it.shared} onChange={(e) => set(i, { shared: e.target.checked || undefined })} />공통</label>
+            <button type="button" className="px-1 text-muted disabled:opacity-30" aria-label={`${label} ${it.name_ko} 위로`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+            <button type="button" className="px-1 text-muted disabled:opacity-30" aria-label={`${label} ${it.name_ko} 아래로`} disabled={i === items.length - 1} onClick={() => move(i, 1)}>↓</button>
+          </li>))}
+      </ul>
+    </details>)
 }
 
 /** The option name is kept as typed. A name another option of the same meal already uses is flagged and NOT applied (and the field
@@ -60,7 +83,10 @@ function OptionCard({ m, ops, selected, liveKeys, problem }: { m: WeekMeal; ops:
         {m.badge === THOUSAND_WON_BADGE && <Badge tone="brand">천원</Badge>}
       </div>
       {m.status === 'published' ? (
-        <MenuText label={`${L} 메뉴`} items={m.menu_items} onChange={(menu_items) => ops.change(key, { menu_items })} />
+        <>
+          <MenuText label={`${L} 메뉴`} items={m.menu_items} onChange={(menu_items) => ops.change(key, { menu_items })} />
+          <DishList label={L} items={m.menu_items} onChange={(menu_items) => ops.change(key, { menu_items })} />
+        </>
       ) : <p className="rounded-lg bg-page p-2 text-muted">{STATUS_LABEL[m.status]}으로 표시돼요</p>}
       <div className="grid grid-cols-3 gap-1.5">
         <Input aria-label={`${L} 가격`} className="h-8 text-xs" inputMode="numeric" placeholder="가격(원)" value={m.price_krw ?? ''} onChange={(e) => ops.change(key, { price_krw: num(e.target.value) })} />
@@ -75,6 +101,10 @@ function OptionCard({ m, ops, selected, liveKeys, problem }: { m: WeekMeal; ops:
           onChange={(e) => ops.change(key, e.target.checked ? { badge: THOUSAND_WON_BADGE, price_krw: m.price_krw ?? 1000 } : { badge: null, source_url: null })} />천원의 아침밥</label>)}
       {m.badge === THOUSAND_WON_BADGE && <Input aria-label={`${L} 출처 주소`} className="h-8 text-xs" placeholder="공식 출처 https://" value={m.source_url ?? ''} onChange={(e) => ops.change(key, { source_url: e.target.value.trim() || null })} />}
       <Input aria-label={`${L} 공지`} className="h-8 text-xs" placeholder="특이사항 (선택)" value={m.extra.notice ?? ''} onChange={(e) => ops.extra(key, { notice: e.target.value })} />
+      <Textarea aria-label={`${L} 원산지`} className="min-h-10 text-xs" placeholder="원산지 표시사항 (선택)" value={m.extra.origin ?? ''} onChange={(e) => ops.extra(key, { origin: e.target.value })} />
+      <label className="flex items-start gap-1.5"><input type="checkbox" className="mt-0.5" aria-label={`${L} HALAL`} checked={!!m.extra.labels?.includes('HALAL')}
+        onChange={(e) => ops.extra(key, e.target.checked ? { labels: ['HALAL'], labels_verified: true } : { labels: [], labels_verified: false })} />
+        <span>HALAL 표시 <span className="text-muted">(공식 인증 자료로 확인한 경우에만)</span></span></label>
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-1.5"><input type="checkbox" aria-label={`${L} 품절`} checked={!!m.extra.sold_out} onChange={(e) => ops.extra(key, { sold_out: e.target.checked })} />품절</label>
         <Button size="sm" variant="ghost" aria-label={`${L} 삭제`} onClick={() => ops.remove(m)}><Trash2 className="size-3.5 text-red-600" />이 메뉴 삭제</Button>

@@ -129,10 +129,57 @@ begin
   return jsonb_build_object('meals', public._cafeteria_week_meals(w.cafeteria_id, w.week_start));
 end $$;
 
+-- What a meal's DISHES and EXTRA may contain. menu_items stays the existing jsonb array of objects
+--   {name_ko, name_en?, name_zh?, kind, shared?, labels?}
+-- (kind: main | side | soup | rice | kimchi | salad | dessert | drink | other; an installed app that does not know a newer kind shows
+-- the dish as "other", so older app versions keep working). extra adds optional keys origin (원산지 표시사항), notice, labels
+-- (e.g. HALAL) and labels_verified. A dietary label is shown to students only when an admin confirmed it from an official source.
+create or replace function public._cafeteria_content_problem(p_items jsonb, p_extra jsonb) returns text
+language plpgsql immutable set search_path = public, pg_temp as $$
+declare
+  it jsonb; k text; l text; any_label boolean := false;
+  kinds text[] := array['main', 'side', 'soup', 'rice', 'kimchi', 'salad', 'dessert', 'drink', 'other'];
+  labels text[] := array['HALAL', 'VEGETARIAN', 'VEGAN'];
+begin
+  if jsonb_typeof(p_items) is distinct from 'array' then return '메뉴 목록이 올바르지 않아요'; end if;
+  if jsonb_array_length(p_items) > 40 then return '한 식사에는 메뉴를 40개까지 둘 수 있어요'; end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    if jsonb_typeof(it) <> 'object' then return '메뉴 항목이 올바르지 않아요'; end if;
+    if btrim(coalesce(it ->> 'name_ko', '')) = '' then return '메뉴 이름은 비워 둘 수 없어요'; end if;
+    if char_length(it ->> 'name_ko') > 60 then return '메뉴 이름은 60자 이하여야 해요: ' || left(it ->> 'name_ko', 20); end if;
+    k := it ->> 'kind';
+    if k is not null and k <> all (kinds) then return '알 수 없는 메뉴 분류예요: ' || k; end if;
+    if it ? 'shared' and jsonb_typeof(it -> 'shared') <> 'boolean' then return '공통 메뉴 표시가 올바르지 않아요'; end if;
+    if it ? 'labels' then
+      if jsonb_typeof(it -> 'labels') <> 'array' then return '메뉴 표시(라벨)가 올바르지 않아요'; end if;
+      for l in select jsonb_array_elements_text(it -> 'labels') loop
+        if l <> all (labels) then return '알 수 없는 표시예요: ' || l; end if;
+        any_label := true;
+      end loop;
+    end if;
+  end loop;
+  if p_extra is not null and jsonb_typeof(p_extra) = 'object' then
+    if p_extra ? 'origin' and (jsonb_typeof(p_extra -> 'origin') <> 'string' or char_length(p_extra ->> 'origin') > 1200) then return '원산지 표시는 1200자 이하의 글이어야 해요'; end if;
+    if p_extra ? 'notice' and (jsonb_typeof(p_extra -> 'notice') <> 'string' or char_length(p_extra ->> 'notice') > 1000) then return '공지는 1000자 이하의 글이어야 해요'; end if;
+    if p_extra ? 'labels' then
+      if jsonb_typeof(p_extra -> 'labels') <> 'array' then return '식사 표시(라벨)가 올바르지 않아요'; end if;
+      for l in select jsonb_array_elements_text(p_extra -> 'labels') loop
+        if l <> all (labels) then return '알 수 없는 표시예요: ' || l; end if;
+        any_label := true;
+      end loop;
+    end if;
+    if any_label and p_extra -> 'labels_verified' is distinct from 'true'::jsonb then
+      return '식이 표시(HALAL 등)는 공식 자료로 확인했을 때만 쓸 수 있어요 (확인함을 체크해 주세요)';
+    end if;
+  end if;
+  return null;
+end $$;
+revoke all on function public._cafeteria_content_problem(jsonb, jsonb) from public, anon, authenticated;
+
 -- Friendly validation of one week's menus (the table CHECKs stay the last line of defence).
 create or replace function public._cafeteria_week_validate(p_data jsonb, p_week date) returns void
 language plpgsql stable set search_path = public, pg_temp as $$
-declare m jsonb; k text; seen text[] := '{}'; kk text; it jsonb; pr integer; n integer; ex jsonb;
+declare m jsonb; k text; seen text[] := '{}'; kk text; pr integer; n integer; ex jsonb; prob text;
 begin
   if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception '주간 식단이 올바르지 않아요' using errcode = '22023'; end if;
   for k in select jsonb_object_keys(p_data) loop
@@ -160,9 +207,6 @@ begin
     exception when others then raise exception '옵션 순서가 올바르지 않아요' using errcode = '22023'; end;
     if coalesce(m ->> 'status', '') not in ('published', 'closed', 'no_menu') then raise exception '식단 상태가 올바르지 않아요' using errcode = '22023'; end if;
     if jsonb_typeof(m -> 'menu_items') is distinct from 'array' then raise exception '메뉴 목록이 올바르지 않아요' using errcode = '22023'; end if;
-    for it in select * from jsonb_array_elements(m -> 'menu_items') loop
-      if jsonb_typeof(it) <> 'object' or btrim(coalesce(it ->> 'name_ko', '')) = '' then raise exception '메뉴 이름은 비워 둘 수 없어요' using errcode = '22023'; end if;
-    end loop;
     if m ->> 'status' = 'published' and jsonb_array_length(m -> 'menu_items') = 0 then
       raise exception '공개하려면 메뉴가 한 개 이상 필요해요 (% %)', m ->> 'date', m ->> 'meal_type' using errcode = '22023';
     end if;
@@ -177,7 +221,9 @@ begin
     if (m ->> 'verified_at') is null then raise exception '확인한 날짜가 필요해요' using errcode = '22023'; end if;
     begin perform (m ->> 'verified_at')::timestamptz; exception when others then raise exception '확인한 날짜 형식이 올바르지 않아요' using errcode = '22023'; end;
     ex := m -> 'extra';
-    if ex is not null and (jsonb_typeof(ex) <> 'object' or octet_length(ex::text) > 4000) then raise exception '추가 정보가 올바르지 않아요' using errcode = '22023'; end if;
+    if ex is not null and (jsonb_typeof(ex) <> 'object' or octet_length(ex::text) > 8000) then raise exception '추가 정보가 올바르지 않아요' using errcode = '22023'; end if;
+    prob := public._cafeteria_content_problem(m -> 'menu_items', ex);
+    if prob is not null then raise exception '%', prob using errcode = '22023'; end if;
     -- the 천원의 아침밥 programme: breakfast only, and only with an official source (the existing data policy)
     if btrim(coalesce(m ->> 'badge', '')) = '천원의 아침밥' then
       if m ->> 'meal_type' <> 'breakfast' then raise exception '천원의 아침밥은 조식에만 쓸 수 있어요 (%)', m ->> 'date' using errcode = '22023'; end if;
@@ -408,7 +454,8 @@ $$;
 revoke all on function public._cafeteria_sort_meals(jsonb) from public, anon, authenticated;
 
 -- p_rows: [{line, university, university_id, cafeteria_name, cafeteria_id, cafeteria_type, location, date, meal_type, menu_name,
---           price, start_time, end_time, meal_option, program, description, notes, menu_items:[..], source_url}]
+--           price, start_time, end_time, meal_option, program, description, notes, menu_items:[..], source_url,
+--           dishes:[{name_ko, kind, shared}] (after the main dish, in order; replaces menu_items), origin, labels:[..], labels_verified, sold_out}]
 -- Modes: 'create_only' (never touches an existing menu), 'update_only' (never creates one), 'upsert'.
 -- Nothing is published: every change lands in the week's DRAFT, which an admin then previews and publishes.
 -- Retrying the same file changes nothing (identical rows are reported as "unchanged").
@@ -545,10 +592,26 @@ begin
 
     -- the new content of this row
     items := jsonb_build_array(jsonb_build_object('name_ko', btrim(e ->> 'menu_name'), 'kind', 'main'))
-             || coalesce((select jsonb_agg(jsonb_build_object('name_ko', btrim(x), 'kind', 'side')) from jsonb_array_elements_text(case when jsonb_typeof(e -> 'menu_items') = 'array' then e -> 'menu_items' else '[]'::jsonb end) x where btrim(x) <> ''), '[]'::jsonb);
+             || case when jsonb_typeof(e -> 'dishes') = 'array' then
+                  -- structured dishes (CSV columns soup / side_dishes / rice / kimchi / salad / dessert / shared): kept in the given order
+                  coalesce((select jsonb_agg(jsonb_build_object('name_ko', btrim(x ->> 'name_ko'), 'kind', coalesce(nullif(btrim(coalesce(x ->> 'kind', '')), ''), 'side'))
+                                             || case when x ->> 'shared' = 'true' then jsonb_build_object('shared', true) else '{}'::jsonb end)
+                              from jsonb_array_elements(e -> 'dishes') x where jsonb_typeof(x) = 'object' and btrim(coalesce(x ->> 'name_ko', '')) <> ''), '[]'::jsonb)
+                else coalesce((select jsonb_agg(jsonb_build_object('name_ko', btrim(x), 'kind', 'side')) from jsonb_array_elements_text(case when jsonb_typeof(e -> 'menu_items') = 'array' then e -> 'menu_items' else '[]'::jsonb end) x where btrim(x) <> ''), '[]'::jsonb)
+                end;
     extra := '{}'::jsonb;
     if nullif(btrim(coalesce(e ->> 'description', '')), '') is not null then extra := extra || jsonb_build_object('description', btrim(e ->> 'description')); end if;
     if nullif(btrim(coalesce(e ->> 'notes', '')), '') is not null then extra := extra || jsonb_build_object('notice', btrim(e ->> 'notes')); end if;
+    if nullif(btrim(coalesce(e ->> 'origin', '')), '') is not null then extra := extra || jsonb_build_object('origin', btrim(e ->> 'origin')); end if;
+    if jsonb_typeof(e -> 'labels') = 'array' and jsonb_array_length(e -> 'labels') > 0 then
+      extra := extra || jsonb_build_object('labels', e -> 'labels', 'labels_verified', coalesce(e ->> 'labels_verified', '') = 'true');
+    end if;
+    if (e ->> 'sold_out') = 'true' then extra := extra || jsonb_build_object('sold_out', true); end if;
+    msg := public._cafeteria_content_problem(items, extra);
+    if msg is not null then
+      entries[ord] := ent || jsonb_build_object('status', 'error', 'message', msg, 'university', uni_name, 'cafeteria', cname);
+      continue;
+    end if;
 
     if idx is not null and p_mode = 'create_only' then
       row_status := 'skip'; msg := '이미 있는 식단이라 건너뛰었어요 (생성 전용)';

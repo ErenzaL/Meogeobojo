@@ -195,7 +195,19 @@ String cafeteriaLabel(
   return l10n.mealCafeteriaNth(base, sameKind.indexOf(cafeteria) + 1);
 }
 
-enum MenuItemKind { main, side, soup, rice, other }
+/// Dish categories. An older app version that does not know a newer category
+/// shows the dish as `other`, so adding categories never breaks installed apps.
+enum MenuItemKind {
+  main,
+  side,
+  soup,
+  rice,
+  kimchi,
+  salad,
+  dessert,
+  drink,
+  other,
+}
 
 @immutable
 class MenuItem {
@@ -204,12 +216,16 @@ class MenuItem {
     this.nameEn,
     this.nameZh,
     this.kind = MenuItemKind.other,
+    this.shared = false,
   });
 
   final String nameKo;
   final String? nameEn;
   final String? nameZh;
   final MenuItemKind kind;
+
+  /// A dish that comes with every menu of the day (rice, kimchi, salad ...).
+  final bool shared;
 
   /// Items arrive as objects ({name_ko, name_en, name_zh, kind}) or plain
   /// strings. Anything unusable is skipped, never guessed.
@@ -231,6 +247,7 @@ class MenuItem {
           (k) => k.name == j['kind'],
           orElse: () => MenuItemKind.other,
         ),
+        shared: j['shared'] == true,
       );
     }
     return null;
@@ -266,6 +283,8 @@ class CafeteriaMeal {
     this.notice,
     this.description,
     this.soldOut = false,
+    this.origin,
+    this.dietaryLabels = const [],
   });
 
   final String id;
@@ -300,6 +319,15 @@ class CafeteriaMeal {
   final String? description;
   final bool soldOut;
 
+  /// Ingredient origin statement (`extra.origin`, 원산지 표시사항).
+  final String? origin;
+
+  /// Dietary labels such as HALAL (`extra.labels`). Present ONLY when the admin
+  /// confirmed them from an official source (`extra.labels_verified == true`).
+  final List<String> dietaryLabels;
+
+  static const _knownLabels = {'HALAL', 'VEGETARIAN', 'VEGAN'};
+
   static CafeteriaMeal? fromJson(Map<String, dynamic> j) {
     final type = MealType.fromDb(j['meal_type'] as String?);
     final status = MealStatus.fromDb(j['status'] as String?);
@@ -310,8 +338,9 @@ class CafeteriaMeal {
     }
 
     final extra = j['extra'] is Map ? j['extra'] as Map : const {};
+    // `extra` is free-form JSON: a value of the wrong type is ignored, it must never fail the whole week.
     String? text(Object? v) {
-      final t = (v as String?)?.trim();
+      final t = v is String ? v.trim() : null;
       return (t == null || t.isEmpty) ? null : t;
     }
 
@@ -340,6 +369,14 @@ class CafeteriaMeal {
       notice: text(extra['notice']),
       description: text(extra['description']),
       soldOut: extra['sold_out'] == true,
+      origin: text(extra['origin']),
+      dietaryLabels: extra['labels_verified'] == true && extra['labels'] is List
+          ? [
+              for (final l in extra['labels'] as List)
+                if (l is String && _knownLabels.contains(l.toUpperCase()))
+                  l.toUpperCase(),
+            ]
+          : const [],
     );
   }
 }

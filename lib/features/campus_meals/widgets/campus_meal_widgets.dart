@@ -447,6 +447,18 @@ class MealCard extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final hasTime = meal.startTime != null && meal.endTime != null;
     final verified = seoulDate(meal.verifiedAt);
+    final mains = [
+      for (final i in meal.items)
+        if (i.kind == MenuItemKind.main) i,
+    ];
+    final accompaniments = [
+      for (final i in meal.items)
+        if (i.kind != MenuItemKind.main && _isAccompaniment(i)) i,
+    ];
+    final dishes = [
+      for (final i in meal.items)
+        if (i.kind != MenuItemKind.main && !_isAccompaniment(i)) i,
+    ];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -567,41 +579,52 @@ class MealCard extends StatelessWidget {
                 ],
               ),
             ),
-          // V5 menu chips: the main dish in the accent tint, sides neutral.
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final item in meal.items)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: item.kind == MenuItemKind.main
-                        ? context.palette.accentSoft
-                        : context.palette.fillMuted,
-                    borderRadius: BorderRadius.circular(10),
-                    border: item.kind == MenuItemKind.main
-                        ? null
-                        : Border.all(color: context.palette.border),
-                  ),
-                  child: Text(
-                    item.displayName(locale),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: item.kind == MenuItemKind.main
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: item.kind == MenuItemKind.main
-                          ? context.palette.accentStrong
-                          : context.palette.textPrimary,
+          if (meal.dietaryLabels.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final label in meal.dietaryLabels)
+                    _DietaryLabelChip(
+                      key: ValueKey('meal-label-$label'),
+                      label: label,
                     ),
-                  ),
-                ),
-            ],
-          ),
+                ],
+              ),
+            ),
+          // The menu as a table row reads: the main dish, the dishes of the
+          // day, then what comes with every meal (rice, kimchi, salad, dessert).
+          if (mains.isNotEmpty)
+            _DishWrap(
+              key: const ValueKey('meal-dishes-main'),
+              items: mains,
+              locale: locale,
+            ),
+          if (dishes.isNotEmpty) ...[
+            if (mains.isNotEmpty) const SizedBox(height: 8),
+            _DishWrap(
+              key: const ValueKey('meal-dishes-side'),
+              items: dishes,
+              locale: locale,
+            ),
+          ],
+          if (accompaniments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              l10n.mealServedWith,
+              style: AppText.caption(context)
+                  .copyWith(fontSize: 12.5, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            _DishWrap(
+              key: const ValueKey('meal-dishes-shared'),
+              items: accompaniments,
+              locale: locale,
+              subtle: true,
+            ),
+          ],
           if (meal.description != null) ...[
             const SizedBox(height: 10),
             Text(
@@ -616,6 +639,7 @@ class MealCard extends StatelessWidget {
               style: AppText.caption(context).copyWith(fontSize: 13.5),
             ),
           ],
+          if (meal.origin != null) _OriginNote(text: meal.origin!),
           const SizedBox(height: 8),
           Divider(height: 1, color: context.palette.border),
           const SizedBox(height: 8),
@@ -646,6 +670,162 @@ class MealCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Rice, kimchi, salad, dessert and drinks, and anything an admin marked as shared,
+/// are listed together under "served with" instead of among the dishes.
+bool _isAccompaniment(MenuItem i) =>
+    i.shared ||
+    switch (i.kind) {
+      MenuItemKind.rice ||
+      MenuItemKind.kimchi ||
+      MenuItemKind.salad ||
+      MenuItemKind.dessert ||
+      MenuItemKind.drink => true,
+      _ => false,
+    };
+
+/// A wrapped row of dish chips: the main dish in the accent tint, the others neutral.
+class _DishWrap extends StatelessWidget {
+  const _DishWrap({
+    super.key,
+    required this.items,
+    required this.locale,
+    this.subtle = false,
+  });
+
+  final List<MenuItem> items;
+  final Locale locale;
+  final bool subtle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final item in items)
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: subtle ? 10 : 12,
+              vertical: subtle ? 6 : 8,
+            ),
+            decoration: BoxDecoration(
+              color: item.kind == MenuItemKind.main
+                  ? context.palette.accentSoft
+                  : context.palette.fillMuted,
+              borderRadius: BorderRadius.circular(10),
+              border: item.kind == MenuItemKind.main
+                  ? null
+                  : Border.all(color: context.palette.border),
+            ),
+            child: Text(
+              item.displayName(locale),
+              style: TextStyle(
+                fontSize: subtle ? 13.5 : 15,
+                fontWeight: item.kind == MenuItemKind.main
+                    ? FontWeight.w600
+                    : FontWeight.w500,
+                color: item.kind == MenuItemKind.main
+                    ? context.palette.accentStrong
+                    : (subtle
+                          ? context.palette.textSecondary
+                          : context.palette.textPrimary),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _DietaryLabelChip extends StatelessWidget {
+  const _DietaryLabelChip({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: context.palette.accentSoft,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.verified_rounded,
+            size: 14,
+            color: context.palette.accentStrong,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: context.palette.accentStrong,
+              fontWeight: FontWeight.w800,
+              fontSize: 12.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The ingredient-origin statement: collapsed to one line, opened on tap.
+class _OriginNote extends StatefulWidget {
+  const _OriginNote({required this.text});
+
+  final String text;
+
+  @override
+  State<_OriginNote> createState() => _OriginNoteState();
+}
+
+class _OriginNoteState extends State<_OriginNote> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+        InkWell(
+          key: const ValueKey('meal-origin-toggle'),
+          onTap: () => setState(() => _open = !_open),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  context.l10n.mealOrigin,
+                  style: AppText.caption(context)
+                      .copyWith(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                Icon(
+                  _open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  size: 18,
+                  color: context.palette.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_open)
+          Text(
+            widget.text,
+            key: const ValueKey('meal-origin-text'),
+            style: AppText.caption(context).copyWith(fontSize: 13),
+          ),
+      ],
     );
   }
 }

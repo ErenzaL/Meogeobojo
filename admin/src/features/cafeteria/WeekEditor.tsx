@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock, Copy, CopyPlus, ListChecks } from 'lucide-react'
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock, Copy, CopyPlus, Layers, ListChecks } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import PublishingToolbar from '@/components/PublishingToolbar'
 import { Badge, Button, Card, ConfirmDialog, ErrorState, Skeleton } from '@/components/ui'
@@ -9,15 +9,15 @@ import { errorMessage } from '@/lib/utils'
 import { addDays, MEAL_LABEL, MEAL_TYPES, seoulToday } from './meal'
 import WeekGrid, { optionLabel } from './WeekGrid'
 import WeekPreview from './WeekPreview'
-import { BulkDialog, CopyDayDialog, CopyWeekDialog, HoursDialog, PublishDaysDialog } from './WeekTools'
+import { BulkDialog, CopyDayDialog, CopyWeekDialog, HoursDialog, PublishDaysDialog, SharedDialog } from './WeekTools'
 import {
-  addOption, applyHours, normalizeOrders, bulkPatch, changedDates, copyDay, copyWeek, isWeekend, mondayOf, prepareForSave, removeMeal, renameOption, slotKey, sortMeals,
+  addOption, applyHours, applyNotes, applyShared, normalizeOrders, bulkPatch, changedDates, copyDay, copyWeek, isWeekend, mondayOf, prepareForSave, removeMeal, renameOption, slotKey, sortMeals,
   updateExtra, updateMeal, validateWeek, weekCounts, weekDates, type MealPeriod, type MealStatus, type WeekMeal,
 } from './week'
 
 const TYPE = 'cafeteria_week' as const
 type Msg = { tone: 'ok' | 'bad'; text: string }
-type Dialog = null | 'copyDay' | 'copyWeek' | 'hours' | 'bulk' | 'publishDays'
+type Dialog = null | 'copyDay' | 'copyWeek' | 'hours' | 'shared' | 'bulk' | 'publishDays'
 
 /** One cafeteria, one week, ONE draft: all menus (Monday-Friday, optionally the weekend) are edited in the same grid and
  *  saved together. The publishing toolbar publishes / schedules / unpublishes / restores the WHOLE week atomically;
@@ -142,6 +142,7 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
         <Button size="sm" variant="outline" onClick={() => setDialog('copyDay')}><Copy className="size-3.5" />요일 복사</Button>
         <Button size="sm" variant="outline" onClick={() => setDialog('copyWeek')}><CopyPlus className="size-3.5" />다른 주 복사</Button>
         <Button size="sm" variant="outline" onClick={() => setDialog('hours')}><Clock className="size-3.5" />공통 운영 시간</Button>
+        <Button size="sm" variant="outline" onClick={() => setDialog('shared')}><Layers className="size-3.5" />공통 메뉴·공지</Button>
         <Button size="sm" variant="outline" disabled={selected.size === 0} onClick={() => setDialog('bulk')}><ListChecks className="size-3.5" />일괄 수정 ({selected.size})</Button>
         <Button size="sm" variant="soft" disabled={!state.draft || dirty || state.draft.stale || changed.length === 0} title={!state.draft ? '저장한 초안이 있어야 해요' : dirty ? '먼저 초안을 저장해 주세요' : undefined} onClick={() => setDialog('publishDays')}><CalendarDays className="size-3.5" />선택한 날만 게시</Button>
         <label className="ml-auto flex items-center gap-1.5 text-sm"><input type="checkbox" aria-label="주말 표시" checked={weekend} onChange={(e) => setWeekendOn(e.target.checked)} />토·일도 편집</label>
@@ -171,6 +172,14 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
       }} />}
       {dialog === 'copyWeek' && <CopyWeekDialog open thisMonday={week} previousMonday={addDays(week, -7)} nextMonday={addDays(week, 7)} busy={copying} onClose={() => setDialog(null)} onApply={(src, ow) => void copyFromWeek(src, ow)} />}
       {dialog === 'hours' && <HoursDialog open dates={dates} periods={periods} onClose={() => setDialog(null)} onApply={(ds, ps, s, e) => { change(applyHours(meals, ds, ps, s, e)); setMessage({ tone: 'ok', text: `${ds.length}일의 ${ps.map((p) => MEAL_LABEL[p]).join('·')} 이용 시간을 ${s}–${e}로 맞췄어요.` }) }} />}
+      {dialog === 'shared' && <SharedDialog open dates={dates} periods={periods} onClose={() => setDialog(null)} onApply={({ dates: ds, perMeal, mode, origin, notice }) => {
+        let next = meals
+        if (Object.values(perMeal).some((t) => t && t.trim())) next = applyShared(next, ds, perMeal, mode).meals
+        if (mode === 'add' && (origin.trim() || notice.trim())) next = applyNotes(next, ds, periods, { origin, notice }).meals
+        const touched = next.filter((m, i) => m !== meals[i]).length   // distinct meals that really changed
+        if (touched === 0) { setMessage({ tone: 'bad', text: '적용할 메뉴가 없었어요. 고른 요일에 공개 중인 메뉴가 있는지, 이미 같은 내용인지 확인해 주세요.' }); return }
+        change(next); setMessage({ tone: 'ok', text: `${touched}개 식사에 공통 내용을 적용했어요. 확인한 뒤 '초안 저장'을 눌러 주세요.` })
+      }} />}
       {dialog === 'bulk' && <BulkDialog open count={selected.size} onClose={() => setDialog(null)} onApply={(p) => {
         let next = bulkPatch(meals, [...selected], { ...(p.price !== undefined ? { price_krw: p.price } : {}), ...(p.start ? { start_time: p.start, end_time: p.end } : {}), ...(p.status ? { status: p.status } : {}) })
         if (p.soldOut !== undefined) for (const k of selected) next = updateExtra(next, k, { sold_out: p.soldOut })

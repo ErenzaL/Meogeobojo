@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeOrders, addOption, applyHours, bulkPatch, changedDates, copyDay, copyWeek, mealsIn, mondayOf, newOption, prepareForSave, removeMeal, renameOption, slotKey, sortMeals, updateExtra, updateMeal, validateWeek, weekCounts, weekDates, type WeekMeal } from './week'
+import { applyNotes, applyShared, guessKind, parseLines, splitDishes, normalizeOrders, addOption, applyHours, bulkPatch, changedDates, copyDay, copyWeek, mealsIn, mondayOf, newOption, prepareForSave, removeMeal, renameOption, slotKey, sortMeals, updateExtra, updateMeal, validateWeek, weekCounts, weekDates, type WeekMeal } from './week'
 
 const TODAY = '2026-11-10'
 const meal = (date: string, type: WeekMeal['meal_type'], over: Partial<WeekMeal> = {}): WeekMeal => ({
@@ -159,5 +159,62 @@ describe('which days changed', () => {
     expect(changedDates(live, draft)).toEqual(['2026-11-10', '2026-11-12'])
     expect(changedDates(live, live)).toEqual([])
     expect(changedDates(live, removeMeal(live, '2026-11-13|breakfast|'))).toEqual(['2026-11-13'])
+  })
+})
+
+describe('dishes of a real university menu table (향설1관)', () => {
+  it('splits a line into dishes at new lines and "/", and keeps "*" and "·" inside a name', () => {
+    expect(splitDishes('도시락김/미소장국')).toEqual(['도시락김', '미소장국'])
+    expect(splitDishes('새우튀김*타르타르\n참나물무침 \n\n')).toEqual(['새우튀김*타르타르', '참나물무침'])
+    expect(splitDishes('새우튀김·타르타르; 파래무침 | 계란국')).toEqual(['새우튀김·타르타르', '파래무침', '계란국'])
+  })
+
+  it('guesses the category of the dishes on the poster', () => {
+    const kinds = Object.fromEntries(['아산쌀밥', '김치', '샐러드', '후식차', '계란국', '미역국', '설렁탕', '김치찌개', '파래무침', '새우튀김*타르타르', '도시락김', '깍두기', '김치볶음', '배추김치'].map((n) => [n, guessKind(n)]))
+    expect(kinds).toEqual({ 아산쌀밥: 'rice', 김치: 'kimchi', 샐러드: 'salad', 후식차: 'dessert', 계란국: 'soup', 미역국: 'soup', 설렁탕: 'soup', 김치찌개: 'soup', 파래무침: 'side', '새우튀김*타르타르': 'side', 도시락김: 'side', 깍두기: 'kimchi', 김치볶음: 'side', 배추김치: 'kimchi' })
+  })
+
+  it('the first dish is the main dish; an existing dish keeps what the admin set when the text is edited', () => {
+    const first = parseLines('치즈닭갈비볶음밥\n파래무침\n계란국')
+    expect(first.map((i) => i.kind)).toEqual(['main', 'side', 'soup'])
+    const set = first.map((i) => (i.name_ko === '파래무침' ? { ...i, kind: 'salad', shared: true } : i))
+    const again = parseLines('치즈닭갈비볶음밥\n파래무침\n계란국\n김치', set)
+    expect(again[1]).toEqual({ name_ko: '파래무침', kind: 'salad', shared: true })
+    expect(again[3]).toEqual({ name_ko: '김치', kind: 'kimchi' })
+    // moving the old main dish down makes it an ordinary dish; the new first line becomes the main dish
+    expect(parseLines('계란국\n치즈닭갈비볶음밥', first).map((i) => [i.name_ko, i.kind])).toEqual([['계란국', 'main'], ['치즈닭갈비볶음밥', 'side']])
+  })
+
+  it('shared dishes are added once per meal, only to published meals of the chosen days, and removed only when they were shared', () => {
+    const ms = [meal('2026-11-09', 'lunch', { menu_items: [{ name_ko: '제육', kind: 'main' }, { name_ko: '김치', kind: 'kimchi' }] }), meal('2026-11-10', 'lunch'), meal('2026-11-10', 'dinner', { status: 'closed' }), meal('2026-11-11', 'lunch')]
+    const r = applyShared(ms, ['2026-11-09', '2026-11-10'], { lunch: '김치/샐러드/후식차', dinner: '김치' })
+    expect(r.touched).toBe(2) // Mon lunch (김치 already there), Tue lunch; the closed dinner and Wednesday are untouched
+    expect(r.meals[0].menu_items.map((i) => i.name_ko)).toEqual(['제육', '김치', '샐러드', '후식차'])
+    expect(r.meals[0].menu_items[1].shared).toBeUndefined()   // the typed-in 김치 is not turned into a shared one
+    expect(r.meals[1].menu_items.slice(1)).toEqual([{ name_ko: '김치', kind: 'kimchi', shared: true }, { name_ko: '샐러드', kind: 'salad', shared: true }, { name_ko: '후식차', kind: 'dessert', shared: true }])
+    expect(r.meals[2]).toBe(ms[2]); expect(r.meals[3]).toBe(ms[3])
+    expect(applyShared(r.meals, ['2026-11-09', '2026-11-10'], { lunch: '김치/샐러드/후식차' }).touched).toBe(0) // idempotent
+    const removed = applyShared(r.meals, ['2026-11-09', '2026-11-10'], { lunch: '김치/샐러드' }, 'remove')
+    expect(removed.meals[0].menu_items.map((i) => i.name_ko)).toEqual(['제육', '김치', '후식차'])
+    expect(removed.meals[1].menu_items.map((i) => i.name_ko)).toEqual([`lunch 2026-11-10`, '후식차'])
+  })
+
+  it('applies origin and notice to the chosen days and meals, blank fields change nothing', () => {
+    const ms = [meal('2026-11-09', 'lunch'), meal('2026-11-09', 'dinner'), meal('2026-11-10', 'lunch', { extra: { origin: '쌀:국내산' } })]
+    const r = applyNotes(ms, ['2026-11-09'], ['lunch'], { origin: ' 쌀:국내산 / 두부(콩):외국산 ', notice: '' })
+    expect(r.touched).toBe(1)
+    expect(r.meals[0].extra).toEqual({ origin: '쌀:국내산 / 두부(콩):외국산' })
+    expect(r.meals[1]).toBe(ms[1]); expect(r.meals[2]).toBe(ms[2])
+    expect(applyNotes(ms, ['2026-11-09'], ['lunch'], { origin: '', notice: '  ' }).touched).toBe(0)
+  })
+
+  it('refuses unverified dietary labels, unknown categories and oversized texts, with the meal named', () => {
+    const bad = (extra: WeekMeal['extra'], items?: WeekMeal['menu_items']) => validateWeek([meal('2026-11-13', 'lunch', { extra, ...(items ? { menu_items: items } : {}) })]).map((p) => p.message)
+    expect(bad({ labels: ['HALAL'] })[0]).toContain('HALAL')
+    expect(bad({ labels: ['HALAL'], labels_verified: true })).toEqual([])
+    expect(bad({}, [{ name_ko: 'x', kind: 'pizza' }])[0]).toContain('분류')
+    expect(bad({ origin: '가'.repeat(1201) })[0]).toContain('원산지')
+    expect(bad({}, Array.from({ length: 41 }, (_, i) => ({ name_ko: `d${i}`, kind: 'side' })))[0]).toContain('40개')
+    expect(bad({})).toEqual([])
   })
 })

@@ -3939,6 +3939,18 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘 준비한 수량이 모두 판매됐어요.'**
   String get mealSoldOutHint;
+
+  /// No description provided for @mealServedWith.
+  ///
+  /// In ko, this message translates to:
+  /// **'함께 제공'**
+  String get mealServedWith;
+
+  /// No description provided for @mealOrigin.
+  ///
+  /// In ko, this message translates to:
+  /// **'원산지 표시사항'**
+  String get mealOrigin;
 }
 
 class _AppLocalizationsDelegate

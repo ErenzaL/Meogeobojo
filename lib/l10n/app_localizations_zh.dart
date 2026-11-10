@@ -2141,4 +2141,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mealSoldOutHint => '今天准备的份数已全部售完。';
+
+  @override
+  String get mealServedWith => '配餐';
+
+  @override
+  String get mealOrigin => '原产地标示';
 }

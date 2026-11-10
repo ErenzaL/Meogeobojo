@@ -30,9 +30,42 @@ several options per cell, 천원의 아침밥 per breakfast date, **요일 복�
 미리보기 (week table + exact diff), 지금 게시, **선택한 날만 게시**, 예약 게시, 예약 취소, 게시 중단, 이전 버전 복원. New cafeterias start **inactive**.
 Clearing a published menu, "closed", copy-overwrite and moving a cafeteria to another university each ask for confirmation.
 
+## 3b. Real menu tables: several dishes per meal, shared dishes, origin, labels
+
+A university menu table (e.g. the 향설1관 주간메뉴표: per day and meal a list of dishes, one shared row per meal such as 아산쌀밥/김치/샐러드, an origin
+block and a footer notice) is stored as **structured data inside the existing columns**; no table was rebuilt and `cafeteria_meals` is unchanged:
+
+| Where | What |
+|---|---|
+| `menu_items` (jsonb array, existing) | one object per dish: `{name_ko, kind, shared?}`; `kind` = `main` `side` `soup` `rice` `kimchi` `salad` `dessert` `drink` `other`. The first dish is the main dish, the order is the table's order. |
+| `extra.origin` | 원산지 표시사항 (text, ≤ 1200 chars) |
+| `extra.notice` | the footer / shared notice (≤ 1000 chars) |
+| `extra.labels` + `extra.labels_verified` | dietary labels (`HALAL`, `VEGETARIAN`, `VEGAN`). The server refuses a label unless `labels_verified` is `true`, and the apps show a label only then. |
+
+* **Shared dishes** are marked `shared: true` and are listed once per meal. The Admin tool **공통 메뉴·공지** enters the shared row of each meal
+  (조식 / 중식 / 석식 separately), the origin statement and the notice for the chosen days at once; it adds a dish only to published meals that do not
+  already list it, never creates a cell, and can remove exactly what it added. Nothing is typed twice.
+* **Editing:** each cell has the dish text field (one dish per line, or separated by `/`, so `도시락김/미소장국` is two dishes; `*` and `·` stay in a name),
+  a collapsible list with a category selector, a 공통 checkbox and ↑/↓ reordering for every dish, an origin field and a **HALAL** checkbox ("공식 인증 자료로
+  확인한 경우에만"). Typing never resets a category the admin chose: a dish that is still in the text keeps its category, shared mark and order metadata;
+  a new dish gets a guessed category (국/탕/찌개 → soup, 김치 → kimchi, 샐러드 → salad, …밥 → rice, 후식/차 → dessert; otherwise side), shown and editable.
+* Copy day / copy week / bulk edit carry the dishes, shared marks, origin and labels along.
+* **Preview and the change list** show the dishes (shared ones separately) and mark category / shared changes, so a change that only moves a dish between
+  categories is visible before publishing.
+* **Flutter (Web and mobile, one codebase):** the card shows the main dish, then the dishes of the day, then **함께 제공** (shared dishes and rice / kimchi /
+  salad / dessert / drinks), a verified label chip, and the origin statement collapsed under "원산지 표시사항".
+* **Installed older apps keep working:** they read `name_ko` and `kind`, show an unknown category as an ordinary dish and ignore `shared`, `origin` and
+  `labels` (so they simply do not show them). An older Admin tab writes items without `kind`, which the server and the apps accept.
+* The importer's old `menu_items` column still works (as side dishes).
+
 ## 4. CSV import
 Required: `university,cafeteria_name,date,meal_type,menu_name,price,serving_time`.
-Optional: `meal_option, program, description, notes, menu_items (a|b|c), location, source_url, university_id, cafeteria_id, cafeteria_type`.
+Optional: `meal_option, program, description, notes, location, source_url, university_id, cafeteria_id, cafeteria_type` and the dish columns
+`side_dishes` (alias `menu_items`), `soup`, `rice`, `kimchi`, `salad`, `dessert`, `shared`, plus `origin`, `labels` (`HALAL`, …) with `labels_verified` (`예`; a label
+without it is a row error) and `sold_out`. Several dishes in one cell are separated by `/`, `|`, `;` or a line break. The dishes of a row are stored in the
+order main (`menu_name`) → side_dishes → soup → rice → kimchi → salad → dessert → shared (flagged shared). Korean headers (반찬, 국, 밥, 김치, 샐러드, 후식, 공통,
+원산지, 표시, 표시확인, 품절) work too. A real example, transcribed from the 향설1관 table: `supabase/cafeteria/examples/hyangseol1_2026-11-09.csv`
+(15 meals; no HALAL label is claimed in it: confirm where the table's HALAL mark applies before adding `labels`).
 Korean headers (대학교, 식당, 날짜, 식사, 메뉴, 가격, 이용시간 …), `조식/중식/석식`, `YYYY-MM-DD` or `YYYY.MM.DD`, `5,500원`, `11:30~13:30` are accepted. UTF-8 with or without BOM.
 Example: `supabase/cafeteria/weekly_import_template.csv` (also the Admin's 예시 파일 내려받기).
 

@@ -698,5 +698,7 @@
     }
   },
   "mealSoldOut": "Sold out",
-  "mealSoldOutHint": "Today's portions have all been sold."
+  "mealSoldOutHint": "Today's portions have all been sold.",
+  "mealServedWith": "Served with",
+  "mealOrigin": "Ingredient origin"
 }

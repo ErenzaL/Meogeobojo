@@ -78,7 +78,7 @@ export default function Contributions() {
     onError: (e) => { setReject(null); setNotice({ tone: 'bad', text: errorMessage(e) }) },
   })
 
-  /** Publish a student photo to the restaurant's gallery, then approve it. If the
+  /** Stage a student photo (hidden) in the restaurant's photos, then approve it. If the
    *  approval fails, the gallery copy is rolled back so nothing is left half done. */
   const promote = useMutation({
     mutationFn: async (c: Contribution) => {
@@ -101,6 +101,7 @@ export default function Contributions() {
       const ins = await supabase.from('restaurant_photos').insert({
         restaurant_id: place.id, kind: 'gallery', storage_path: path, url: publicUrl, caption: c.payload.caption || null,
         sort_order: order, source: 'student', credit: '학생 제공', bytes: blob.size,
+        status: 'archived', // staged hidden: it goes live only when published from 사진 관리
       })
       if (ins.error) { await supabase.storage.from(BUCKET).remove([path]); throw ins.error }
       const rv = await supabase.rpc('admin_review_contribution', { p_id: c.id, p_status: 'approved', p_note: '갤러리에 게시' })
@@ -111,7 +112,7 @@ export default function Contributions() {
       }
       await dropPrivate(c) // the public copy is the only one now
     },
-    onSuccess: async () => { await done('갤러리에 게시하고 승인했어요. 앱 식당 상세에 바로 보여요.') },
+    onSuccess: async () => { await done('승인했어요. 사진은 숨김 상태로 사진 관리의 보관된 사진에 들어갔어요. 사진 관리에서 복원·게시하면 앱에 보여요.') },
     onError: (e) => setNotice({ tone: 'bad', text: errorMessage(e) }),
   })
 
@@ -140,7 +141,7 @@ export default function Contributions() {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
-                {isPhoto(c) && <Button size="sm" disabled={busy || !place} title={place ? undefined : '식당을 먼저 관리 목록에 등록해야 해요'} onClick={() => promote.mutate(c)}>갤러리에 올리고 승인</Button>}
+                {isPhoto(c) && <Button size="sm" disabled={busy || !place} title={place ? undefined : '식당을 먼저 관리 목록에 등록해야 해요'} onClick={() => promote.mutate(c)}>사진 관리로 보내고 승인</Button>}
                 <Button size="sm" variant={isPhoto(c) ? 'outline' : 'primary'} disabled={busy} onClick={() => review.mutate({ c, status: 'approved', note: '' })}>{isPhoto(c) ? '승인만 (미션 반영)' : '승인'}</Button>
                 <Button size="sm" variant="outline" disabled={busy} onClick={() => setReject(c)}>반려</Button>
               </div>

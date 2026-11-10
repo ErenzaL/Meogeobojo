@@ -18,39 +18,56 @@ insert into public.restaurant_overrides (id, kakao_place_id, name_ko, visibility
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000a","role":"authenticated"}', false);
 do $$ declare mid uuid; v text; begin
-  insert into public.restaurant_photos (restaurant_id, kind, storage_path, url, caption)
-  values ('e2000000-0000-4000-8000-000000000001', 'cover', 'restaurants/a/cover1.webp',
-          'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/a/cover1.webp', '입구');
+  -- photos are live only by publishing: a direct API insert of a visible photo is refused
+  begin insert into public.restaurant_photos (restaurant_id, kind, storage_path, url) values ('e2000000-0000-4000-8000-000000000001', 'gallery', 'restaurants/a/direct.webp', 'https://x/direct.webp'); raise exception 'accepted#p1'; exception when insufficient_privilege then null; end;
+  -- publish the first cover
+  perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', jsonb_build_object('photos', jsonb_build_array(
+    '{"id":"aaaaaaaa-0000-4000-8000-0000000000c1","kind":"cover","storage_path":"restaurants/a/cover1.webp","url":"https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/a/cover1.webp","caption":"입구","sort_order":0,"status":"published","source":"admin","credit":null,"width":null,"height":null,"bytes":null}'::jsonb)), 0);
+  assert not exists (select 1 from public.restaurant_photos where storage_path = 'restaurants/a/cover1.webp'), 'a saved draft photo is not live';
+  perform public.cms_publish('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1, 'cover');
   select image_url into v from public.restaurant_overrides where id = 'e2000000-0000-4000-8000-000000000001';
   assert v like '%cover1.webp', 'the live cover is mirrored to restaurant_overrides.image_url';
 
   -- a second LIVE cover is refused (one per restaurant)
   begin
-    insert into public.restaurant_photos (restaurant_id, kind, storage_path, url)
-    values ('e2000000-0000-4000-8000-000000000001', 'cover', 'restaurants/a/cover2.webp', 'https://x/y.webp');
+    perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', jsonb_build_object('photos', jsonb_build_array(
+      (public.cms_state('restaurant_photos', 'e2000000-0000-4000-8000-000000000001') -> 'live' -> 'photos' -> 0),
+      '{"id":"aaaaaaaa-0000-4000-8000-0000000000c2","kind":"cover","storage_path":"restaurants/a/cover2.webp","url":"https://x/y.webp","caption":null,"sort_order":0,"status":"published","source":"admin","credit":null,"width":null,"height":null,"bytes":null}'::jsonb)), 0);
     raise exception 'accepted#1';
-  exception when unique_violation then null; end;
-  -- archiving the old cover then adding a new one works, and the mirror follows
-  update public.restaurant_photos set status = 'archived' where storage_path = 'restaurants/a/cover1.webp';
-  insert into public.restaurant_photos (restaurant_id, kind, storage_path, url)
-  values ('e2000000-0000-4000-8000-000000000001', 'cover', 'restaurants/a/cover2.webp',
-          'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/a/cover2.webp');
+  exception when invalid_parameter_value then null; end;
+  -- replacing the cover: the old one is archived (kept), the new one is live, and the mirror follows
+  perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', jsonb_build_object('photos', jsonb_build_array(
+    (public.cms_state('restaurant_photos', 'e2000000-0000-4000-8000-000000000001') -> 'live' -> 'photos' -> 0) || '{"status":"archived"}',
+    '{"id":"aaaaaaaa-0000-4000-8000-0000000000c2","kind":"cover","storage_path":"restaurants/a/cover2.webp","url":"https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/a/cover2.webp","caption":null,"sort_order":0,"status":"published","source":"admin","credit":null,"width":null,"height":null,"bytes":null}'::jsonb)), 0);
+  perform public.cms_publish('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1, 'new cover');
   select image_url into v from public.restaurant_overrides where id = 'e2000000-0000-4000-8000-000000000001';
   assert v like '%cover2.webp', 'the mirror follows the new cover';
-  -- removing the only live cover clears OUR mirrored link
-  delete from public.restaurant_photos where storage_path = 'restaurants/a/cover2.webp';
+  assert (select status from public.restaurant_photos where storage_path = 'restaurants/a/cover1.webp') = 'archived', 'the old cover is archived, not deleted';
+  -- no cover in the set: the mirrored link of OUR file is cleared
+  perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', '{"photos":[]}', 0);
+  perform public.cms_publish('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1, 'remove');
   select image_url into v from public.restaurant_overrides where id = 'e2000000-0000-4000-8000-000000000001';
   assert v is null, 'no live cover: the mirror is cleared';
+  assert (select count(*) from public.restaurant_photos where restaurant_id = 'e2000000-0000-4000-8000-000000000001') = 2, 'and no photo row was deleted';
   -- ... but a link typed by hand is never wiped
   update public.restaurant_overrides set image_url = 'https://example.org/hand.jpg' where id = 'e2000000-0000-4000-8000-000000000001';
-  insert into public.restaurant_photos (restaurant_id, kind, storage_path, url)
-  values ('e2000000-0000-4000-8000-000000000001', 'gallery', 'restaurants/a/g1.webp', 'https://x/g1.webp');
-  delete from public.restaurant_photos where storage_path = 'restaurants/a/g1.webp';
+  perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', jsonb_build_object('photos', jsonb_build_array(
+    '{"id":"aaaaaaaa-0000-4000-8000-0000000000c3","kind":"gallery","storage_path":"restaurants/a/g1.webp","url":"https://x/g1.webp","caption":null,"sort_order":1,"status":"published","source":"admin","credit":null,"width":null,"height":null,"bytes":null}'::jsonb)), 0);
+  perform public.cms_publish('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1, 'gallery');
+  perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', '{"photos":[]}', 0);
+  perform public.cms_publish('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1, 'gallery off');
   select image_url into v from public.restaurant_overrides where id = 'e2000000-0000-4000-8000-000000000001';
   assert v = 'https://example.org/hand.jpg', 'a hand-typed image link survives';
-  -- bad rows are refused by constraints
-  begin insert into public.restaurant_photos (restaurant_id, kind, storage_path, url) values ('e2000000-0000-4000-8000-000000000001', 'gallery', 'p/h.webp', 'http://insecure'); raise exception 'accepted#2'; exception when check_violation then null; end;
-  begin insert into public.restaurant_photos (restaurant_id, kind, storage_path, url) values ('e2000000-0000-4000-8000-000000000001', 'banner', 'p/b.webp', 'https://x/b'); raise exception 'accepted#3'; exception when check_violation then null; end;
+  -- bad rows are refused by validation
+  begin perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', '{"photos":[{"id":"aaaaaaaa-0000-4000-8000-0000000000c4","kind":"gallery","storage_path":"p/h.webp","url":"http://insecure","sort_order":1,"status":"published"}]}', 0); raise exception 'accepted#2'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', '{"photos":[{"id":"aaaaaaaa-0000-4000-8000-0000000000c5","kind":"banner","storage_path":"p/b.webp","url":"https://x/b","sort_order":1,"status":"published"}]}', 0); raise exception 'accepted#3'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', '{"photos":[{"id":"aaaaaaaa-0000-4000-8000-0000000000c5","kind":"gallery","storage_path":"p/b.webp","url":"https://x/b","sort_order":1,"status":"published","evil":1}]}', 0); raise exception 'accepted#p2'; exception when invalid_parameter_value then null; end;
+  -- a hidden (archived) staging row may be added, captioned and removed through the API
+  insert into public.restaurant_photos (restaurant_id, kind, storage_path, url, status) values ('e2000000-0000-4000-8000-000000000001', 'gallery', 'restaurants/a/staged.webp', 'https://x/staged.webp', 'archived');
+  update public.restaurant_photos set caption = '메모' where storage_path = 'restaurants/a/staged.webp';
+  begin update public.restaurant_photos set status = 'published' where storage_path = 'restaurants/a/staged.webp'; raise exception 'accepted#p3'; exception when insufficient_privilege then null; end;
+  delete from public.restaurant_photos where storage_path = 'restaurants/a/staged.webp';
+  perform public.cms_discard_draft('restaurant_photos', 'e2000000-0000-4000-8000-000000000001', 1);
   raise notice 'OK photos: one live cover, mirror, hand link kept, constraints';
 
   -- menu published by restaurant_id gets the Kakao id the app reads by (menus go live only by publishing)
@@ -101,7 +118,7 @@ reset role;
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000b","role":"authenticated"}', false);
 do $$ declare n int; begin
-  select count(*) into n from public.restaurant_photos; assert n = 4, 'moderator reads every photo incl. archived and draft places (got ' || n || ')';
+  select count(*) into n from public.restaurant_photos; assert n = 6, 'moderator reads every photo incl. archived and draft places (got ' || n || ')';
   update public.restaurant_photos set caption = 'mod'; get diagnostics n = row_count; assert n = 0, 'moderator cannot edit photos';
   raise notice 'OK moderator: read all, no edits';
 end $$;

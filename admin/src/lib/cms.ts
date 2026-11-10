@@ -2,7 +2,7 @@
  *  The database owns every rule: these are thin wrappers plus Seoul-time and diff helpers. */
 import { supabase } from '@/lib/supabase'
 
-export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus'
+export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus' | 'restaurant_photos'
 export type Snapshot = Record<string, unknown>
 
 export type Job = {
@@ -68,6 +68,32 @@ const ITEM_FIELD: Record<string, string> = {
   representative: '대표 메뉴', recommended: '추천 메뉴', status: '상태', image_url: '사진',
 }
 const itemSummary = (i: MenuItem) => `${i.name_ko}${i.price_krw != null ? ` ${i.price_krw.toLocaleString('ko-KR')}원` : ''}`
+/** One photo of a restaurant's photo set (snapshot shape of 'restaurant_photos'). */
+export type PhotoItem = {
+  id: string; kind: 'cover' | 'gallery'; storage_path: string; url: string; caption: string | null; sort_order: number
+  status: 'published' | 'archived'; source: 'admin' | 'student'; credit: string | null; width: number | null; height: number | null; bytes: number | null
+}
+const PHOTO_FIELD: Record<string, string> = { kind: '종류', caption: '설명', status: '상태', credit: '제공자', url: '사진 파일' }
+/** What a publish would do to a restaurant's photos: added / removed (archived) / changed, and the cover. */
+export function diffPhotoItems(live: Snapshot, draft: Snapshot): Change[] {
+  const a = ((live.photos as PhotoItem[] | undefined) ?? []); const b = ((draft.photos as PhotoItem[] | undefined) ?? [])
+  const before = new Map(a.map((i) => [i.id, i])); const after = new Map(b.map((i) => [i.id, i]))
+  const name = (p: PhotoItem) => `${p.kind === 'cover' ? '대표 사진' : '갤러리 사진'}${p.caption ? ` “${p.caption}”` : ''}`
+  const out: Change[] = []
+  for (const p of b) if (!before.has(p.id) && p.status === 'published') out.push({ key: `add:${p.id}`, label: '사진 공개', from: null, to: name(p) })
+  for (const p of b) if (!before.has(p.id) && p.status === 'archived') out.push({ key: `stage:${p.id}`, label: '숨김 사진 추가', from: null, to: name(p) })
+  for (const p of a) if (!after.has(p.id) && p.status === 'published') out.push({ key: `rm:${p.id}`, label: '사진 제거 (보관됨)', from: name(p), to: '앱에서 사라짐' })
+  for (const p of b) {
+    const o = before.get(p.id); if (!o) continue
+    for (const f of Object.keys(PHOTO_FIELD) as (keyof PhotoItem)[]) {
+      if (same(o[f] === '' ? null : o[f], p[f] === '' ? null : p[f])) continue
+      out.push({ key: `chg:${p.id}:${f}`, label: `${name(p)} · ${PHOTO_FIELD[f]}`, from: f === 'url' ? '이전 파일' : o[f], to: f === 'url' ? '새 파일' : p[f] })
+    }
+  }
+  const order = (xs: PhotoItem[]) => xs.filter((x) => x.status === 'published' && x.kind === 'gallery' && after.has(x.id) && before.has(x.id)).sort((x, y) => x.sort_order - y.sort_order).map((x) => x.id).join(',')
+  if (order(a) !== order(b.filter((x) => before.has(x.id)))) out.push({ key: 'order', label: '갤러리 순서', from: '이전 순서', to: '바뀜' })
+  return out
+}
 /** What a publish would do to a restaurant's menu list: added / removed (archived) / changed lines. */
 export function diffMenuItems(live: Snapshot, draft: Snapshot): Change[] {
   const a = ((live.items as MenuItem[] | undefined) ?? []); const b = ((draft.items as MenuItem[] | undefined) ?? [])
@@ -92,6 +118,7 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 /** Fields whose value differs between the live content and the pending draft. */
 export function diffSnapshots(live: Snapshot, draft: Snapshot): Change[] {
   if ('items' in draft || 'items' in live) return diffMenuItems(live, draft)
+  if ('photos' in draft || 'photos' in live) return diffPhotoItems(live, draft)
   const out: Change[] = []
   for (const key of Object.keys(FIELD_LABEL)) {
     if (!(key in draft) && !(key in live)) continue
@@ -119,6 +146,7 @@ export const showValue = (v: unknown): string => {
 export const isLiveVisible = (type: EntityType, live: Snapshot): boolean =>
   type === 'restaurant' ? live.visibility === 'published'
     : type === 'restaurant_menus' ? ((live.items as MenuItem[] | undefined) ?? []).some((i) => i.status === 'active')
+    : type === 'restaurant_photos' ? ((live.photos as PhotoItem[] | undefined) ?? []).some((i) => i.status === 'published')
     : ['published', 'closed', 'no_menu'].includes(String(live.status))
 
 // ---- Errors -------------------------------------------------------------------

@@ -4,7 +4,8 @@ Status: **foundation + restaurants + cafeteria meals (학식) built and tested l
 Other sections are listed under "Rollout" and still publish immediately.
 
 Entity types so far: `restaurant`, `cafeteria_meal` (one meal = one date × meal × corner) and
-`restaurant_menus` (a restaurant's whole menu list; entity id = the restaurant id).
+`restaurant_menus` (a restaurant's whole menu list; entity id = the restaurant id) and
+`restaurant_photos` (its cover + gallery, published together).
 The engine is generic (`_cms_keys / _cms_snapshot / _cms_validate / _cms_apply /
 _cms_unpublished`); a new type is one more branch plus its admin form.
 
@@ -33,6 +34,21 @@ _cms_unpublished`); a new type is one more branch plus its admin form.
   "게시 중단" archives every line (nothing is deleted). Unknown prices stay `null`, never 0.
 * Photos are staged in the draft; a published photo file is never deleted (same public-bucket
   limitation as meals).
+
+### Photos (`restaurant_photos`)
+* Cover + gallery of one restaurant are one set. Uploading a file only adds it to the draft;
+  `restaurant_photos` rows are live rows (RLS shows students only `published` ones of
+  published restaurants), written only by publishing. The cover mirror into
+  `restaurant_overrides.image_url` (existing trigger) follows the publish; at most one live cover.
+* A photo left out of a published set is **archived** (row and file kept); rollback restores it.
+  Files are never deleted by publishing or by the admin UI, except an upload no draft references yet.
+* Hidden (`archived`) rows are staging rows and may still be written through the API: an approved
+  student photo from 기여 검토 is staged hidden, then published from 사진 관리.
+* **Unpublished files are not discoverable**: the migration replaces the public LIST policy on the
+  `restaurant-images` bucket with an admin-only one. Files are still served by their random URL
+  (the bucket stays public, which the app needs), so a file that is in no published row is
+  reachable only by someone who already has its 122-bit random URL. A private staging bucket
+  would remove even that, but cannot be copied to public by a scheduled SQL job.
 
 ### Admin database compatibility (`campus_cafeterias.status` does not exist)
 **Root cause:** the Admin expects `campus_cafeterias.status` / `operating_note`, added by
@@ -151,8 +167,7 @@ E (missions) is not implemented yet. The cafeteria meal flow (draft invisible �
 ## 5. Rollout (safe order; not done)
 
 1. ~~Menus + prices~~ done (`restaurant_menus`).
-2. **Photos** (cover + gallery set). Needs a private staging bucket so unpublished photos
-   are not reachable by permanent public URLs (today they upload to the public bucket).
+2. ~~Photos~~ done (`restaurant_photos`; unlistable, random URLs; see above).
 3. ~~Cafeteria meals~~ done (single meal). A whole week as one publication is still open.
 4. **App content** (banners/announcements: schedule start + automatic expiry; the live
    window already exists, this adds drafts and history).

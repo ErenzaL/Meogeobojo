@@ -2,7 +2,8 @@
 -- now / schedule -> live, with immutable version history, rollback and a
 -- server-side scheduler. Entity types: 'restaurant' (restaurant_overrides) and
 -- 'cafeteria_meal' (cafeteria_meals) and 'restaurant_menus' (all menu items of one restaurant,
--- published together; entity id = the restaurant id). More types = one branch in each adapter below.
+-- published together; entity id = the restaurant id) and 'restaurant_photos' (the cover and
+-- gallery of one restaurant, published together). More types = one branch in each adapter below.
 --
 -- Additive and idempotent. Requires 20261109000100 (roles, audit) and
 -- 20261110000100 (_audit). Applying it changes nothing for students: the LIVE
@@ -38,6 +39,7 @@ do $$ begin
      or to_regclass('public.restaurant_university_links') is null
      or to_regclass('public.cafeteria_meals') is null
      or to_regclass('public.restaurant_menus') is null
+     or to_regclass('public.restaurant_photos') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -48,7 +50,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -62,7 +64,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -78,7 +80,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -140,6 +142,7 @@ language sql immutable as $$
   when 'cafeteria_meal' then array[
     'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
   when 'restaurant_menus' then array['items']
+  when 'restaurant_photos' then array['photos']
   else null end
 $$;
 
@@ -176,6 +179,15 @@ begin
           'available', x.available, 'representative', x.representative, 'recommended', x.recommended,
           'status', x.status, 'sort_order', x.sort_order, 'image_url', x.image_url) order by x.sort_order, x.id), '[]'::jsonb))
         into v from public.restaurant_menus x where x.restaurant_id = p_id;
+    end if;
+  elsif p_type = 'restaurant_photos' then
+    if not exists (select 1 from public.restaurant_overrides where id = p_id) then v := null;
+    else
+      select jsonb_build_object('photos', coalesce(jsonb_agg(jsonb_build_object(
+          'id', x.id, 'kind', x.kind, 'storage_path', x.storage_path, 'url', x.url, 'caption', x.caption,
+          'sort_order', x.sort_order, 'status', x.status, 'source', x.source, 'credit', x.credit,
+          'width', x.width, 'height', x.height, 'bytes', x.bytes) order by x.sort_order, x.id), '[]'::jsonb))
+        into v from public.restaurant_photos x where x.restaurant_id = p_id;
     end if;
   else
     raise exception 'unknown entity type' using errcode = '22023';
@@ -256,6 +268,42 @@ begin
       end if;
       if (it ->> 'image_url') is not null and (it ->> 'image_url') !~ '^https://' then raise exception '메뉴 사진 주소가 올바르지 않아요' using errcode = '22023'; end if;
     end loop;
+  elsif p_type = 'restaurant_photos' then
+    if jsonb_typeof(p_data -> 'photos') is distinct from 'array' then raise exception '사진 목록이 올바르지 않아요' using errcode = '22023'; end if;
+    if jsonb_array_length(p_data -> 'photos') > 200 then raise exception '사진은 200장까지 둘 수 있어요' using errcode = '22023'; end if;
+    n := 0;
+    for it in select * from jsonb_array_elements(p_data -> 'photos') loop
+      if jsonb_typeof(it) <> 'object' then raise exception '사진 항목이 올바르지 않아요' using errcode = '22023'; end if;
+      for k in select jsonb_object_keys(it) loop
+        if k <> all (array['id','kind','storage_path','url','caption','sort_order','status','source','credit','width','height','bytes']) then
+          raise exception '알 수 없는 사진 필드: %', k using errcode = '22023';
+        end if;
+      end loop;
+      begin iid := (it ->> 'id')::uuid::text; exception when others then raise exception '사진 id가 올바르지 않아요' using errcode = '22023'; end;
+      if iid = any (ids) then raise exception '사진 id가 겹쳐요' using errcode = '22023'; end if;
+      ids := ids || iid;
+      if p_id is not null and exists (select 1 from public.restaurant_photos x where (x.id = iid::uuid or x.storage_path = it ->> 'storage_path') and x.restaurant_id is distinct from p_id) then
+        raise exception '다른 식당의 사진이에요' using errcode = '22023';
+      end if;
+      if p_id is not null and exists (select 1 from public.restaurant_photos x where x.storage_path = it ->> 'storage_path' and x.id <> iid::uuid) then
+        raise exception '같은 파일을 두 번 쓸 수 없어요' using errcode = '22023';
+      end if;
+      if coalesce(it ->> 'kind', '') not in ('cover', 'gallery') then raise exception '사진 종류가 올바르지 않아요' using errcode = '22023'; end if;
+      if coalesce(it ->> 'status', '') not in ('published', 'archived') then raise exception '사진 상태가 올바르지 않아요' using errcode = '22023'; end if;
+      if coalesce(it ->> 'source', 'admin') not in ('admin', 'student') then raise exception '사진 출처가 올바르지 않아요' using errcode = '22023'; end if;
+      if btrim(coalesce(it ->> 'storage_path', '')) = '' then raise exception '파일 경로가 필요해요' using errcode = '22023'; end if;
+      if coalesce(it ->> 'url', '') !~ '^https://' then raise exception '사진 주소는 https:// 로 시작해야 해요' using errcode = '22023'; end if;
+      if char_length(coalesce(it ->> 'caption', '')) > 200 then raise exception '사진 설명은 200자 이하여야 해요' using errcode = '22023'; end if;
+      if char_length(coalesce(it ->> 'credit', '')) > 100 then raise exception '사진 제공자는 100자 이하여야 해요' using errcode = '22023'; end if;
+      begin
+        perform (it ->> 'sort_order')::integer;
+        if (it ->> 'width') is not null and (it ->> 'width')::integer <= 0 then raise exception 'x'; end if;
+        if (it ->> 'height') is not null and (it ->> 'height')::integer <= 0 then raise exception 'x'; end if;
+        if (it ->> 'bytes') is not null and (it ->> 'bytes')::integer <= 0 then raise exception 'x'; end if;
+      exception when others then raise exception '사진 크기·순서 값이 올바르지 않아요' using errcode = '22023'; end;
+      if it ->> 'kind' = 'cover' and it ->> 'status' = 'published' then n := n + 1; end if;
+    end loop;
+    if n > 1 then raise exception '대표 사진은 한 장만 공개할 수 있어요' using errcode = '22023'; end if;
   elsif p_type = 'cafeteria_meal' then
     if coalesce(p_data ->> 'status', '') not in ('draft', 'published', 'closed', 'no_menu') then
       raise exception '식단 상태가 올바르지 않아요' using errcode = '22023';
@@ -304,6 +352,8 @@ language sql immutable as $$
                      -- no menu is shown any more; every item is kept (archived), none is deleted
                      when 'restaurant_menus' then jsonb_build_object('items', coalesce(
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'items') i), '[]'::jsonb))
+                     when 'restaurant_photos' then jsonb_build_object('photos', coalesce(
+                       (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'photos') i), '[]'::jsonb))
                      else p_live end
 $$;
 
@@ -363,6 +413,25 @@ begin
       category = excluded.category, price_verified_on = excluded.price_verified_on, available = excluded.available,
       representative = excluded.representative, recommended = excluded.recommended, status = excluded.status,
       sort_order = excluded.sort_order, image_url = excluded.image_url
+      where x.restaurant_id = p_id;
+  elsif p_type = 'restaurant_photos' then
+    if not exists (select 1 from public.restaurant_overrides where id = p_id) then raise exception 'no such restaurant' using errcode = 'P0002'; end if;
+    -- a photo that is no longer in the set is archived (the file and the row are kept), and
+    -- every live cover that will not stay the live cover steps aside first (one live cover at a time)
+    update public.restaurant_photos x set status = 'archived'
+     where x.restaurant_id = p_id and x.status <> 'archived'
+       and (x.id not in (select (i ->> 'id')::uuid from jsonb_array_elements(p_data -> 'photos') i)
+            or (x.kind = 'cover' and x.id not in (select (i ->> 'id')::uuid from jsonb_array_elements(p_data -> 'photos') i
+                                                   where i ->> 'kind' = 'cover' and i ->> 'status' = 'published')));
+    insert into public.restaurant_photos as x (id, restaurant_id, kind, storage_path, url, caption, sort_order, status, source, credit, width, height, bytes)
+    select (i ->> 'id')::uuid, p_id, i ->> 'kind', i ->> 'storage_path', i ->> 'url', nullif(btrim(coalesce(i ->> 'caption', '')), ''),
+           coalesce((i ->> 'sort_order')::integer, 0), i ->> 'status', coalesce(i ->> 'source', 'admin'), nullif(btrim(coalesce(i ->> 'credit', '')), ''),
+           (i ->> 'width')::integer, (i ->> 'height')::integer, (i ->> 'bytes')::integer
+      from jsonb_array_elements(p_data -> 'photos') i
+    on conflict (id) do update set
+      kind = excluded.kind, storage_path = excluded.storage_path, url = excluded.url, caption = excluded.caption,
+      sort_order = excluded.sort_order, status = excluded.status, source = excluded.source, credit = excluded.credit,
+      width = excluded.width, height = excluded.height, bytes = excluded.bytes
       where x.restaurant_id = p_id;
   else
     raise exception 'unknown entity type' using errcode = '22023';
@@ -446,6 +515,30 @@ end $$;
 drop trigger if exists restaurant_menus_guard_live on public.restaurant_menus;
 create trigger restaurant_menus_guard_live before insert or update or delete on public.restaurant_menus
   for each row execute function public.restaurant_menus_guard_live();
+
+-- Guard: LIVE photos change only by publishing. A hidden (archived) photo is a staging row:
+-- it may be added (for instance an approved student photo), captioned and removed freely.
+create or replace function public.restaurant_photos_guard_live() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if current_user not in ('authenticated', 'anon') or coalesce(current_setting('app.cms_apply', true), '') = 'on' then
+    return coalesce(new, old);
+  end if;
+  if tg_op = 'INSERT' then
+    if new.status <> 'archived' then
+      raise exception 'new photos start hidden; publish them from the publishing toolbar' using errcode = '42501';
+    end if;
+    return new;
+  elsif tg_op = 'DELETE' then
+    if old.status <> 'archived' then raise exception 'a published photo cannot be deleted: unpublish it first' using errcode = '42501'; end if;
+    return old;
+  end if;
+  if old.status = 'archived' and new.status = 'archived' then return new; end if;
+  raise exception 'live photos are changed only by publishing (save a draft, then publish)' using errcode = '42501';
+end $$;
+drop trigger if exists restaurant_photos_guard_live on public.restaurant_photos;
+create trigger restaurant_photos_guard_live before insert or update or delete on public.restaurant_photos
+  for each row execute function public.restaurant_photos_guard_live();
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -749,7 +842,7 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus')
+      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos')
             union all
             select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)) e;
 end $$;
@@ -837,6 +930,19 @@ grant execute on function
   public.cms_cancel_job(bigint, text), public.cms_retry_job(bigint), public.cms_unpublish(text, uuid, text),
   public.cms_rollback(text, uuid, integer, text), public.cms_set_visibility(text, uuid, text, text), public.cms_overview(text, uuid)
   to authenticated;
+
+-- Unpublished photo files must not be discoverable. The bucket stays public (files are served by
+-- their unguessable URL, which is all the app and the published rows need), but the API may no
+-- longer LIST it: only admins can see the object list. A file that is not in any published
+-- row is therefore reachable only by someone who already has its random URL.
+do $$ begin
+  if to_regclass('storage.objects') is not null then
+    drop policy if exists "restaurant-images: public read" on storage.objects;
+    drop policy if exists "restaurant-images: admin read" on storage.objects;
+    create policy "restaurant-images: admin read" on storage.objects
+      for select to authenticated using (bucket_id = 'restaurant-images' and (select public.has_role('admin')));
+  end if;
+end $$;
 
 -- Schedule the runner (every minute) with pg_cron, where it is available.
 -- pg_cron must be enabled for the project (Dashboard -> Database -> Extensions).

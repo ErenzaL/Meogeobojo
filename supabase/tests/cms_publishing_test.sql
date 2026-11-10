@@ -494,6 +494,76 @@ delete from public.content_versions where entity_type = 'restaurant_menus';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.restaurant_menus where restaurant_id = 'e4000000-0000-4000-8000-000000000002';
 
+-- ===== restaurant_photos: cover + gallery of one restaurant, published together =====
+insert into storage.objects (bucket_id, name) values ('restaurant-images', 'restaurants/cms/unpublished.jpg');
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; d jsonb; v int; j bigint;
+  cov1 text := '{"id":"bbbbbbbb-0000-4000-8000-0000000000a1","kind":"cover","storage_path":"restaurants/cms/c1.jpg","url":"https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c1.jpg","caption":null,"sort_order":0,"status":"published","source":"admin","credit":null,"width":800,"height":600,"bytes":1000}';
+  cov2 text := '{"id":"bbbbbbbb-0000-4000-8000-0000000000a2","kind":"cover","storage_path":"restaurants/cms/c2.jpg","url":"https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c2.jpg","caption":null,"sort_order":0,"status":"published","source":"admin","credit":null,"width":800,"height":600,"bytes":1000}';
+begin
+  perform public.cms_save_draft('restaurant_photos', r, jsonb_build_object('photos', jsonb_build_array(cov1::jsonb)), 0);
+  assert not exists (select 1 from public.restaurant_photos where restaurant_id = r), 'a draft photo is not live';
+  assert (select image_url from public.restaurant_overrides where id = r) is null, 'and does not reach the card image';
+  begin insert into public.restaurant_photos (restaurant_id, kind, storage_path, url) values (r, 'gallery', 'restaurants/cms/direct.jpg', 'https://x/d.jpg'); raise exception 'accepted#p10'; exception when insufficient_privilege then null; end;
+  v := public.cms_publish('restaurant_photos', r, 1, '첫 대표 사진');
+  assert (select image_url from public.restaurant_overrides where id = r) = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c1.jpg', 'the published cover reaches the card image';
+  -- change the cover: scheduled, then applied by the server
+  perform public.cms_save_draft('restaurant_photos', r, jsonb_build_object('photos', jsonb_build_array(
+    (public.cms_state('restaurant_photos', r) -> 'live' -> 'photos' -> 0) || '{"status":"archived"}', cov2::jsonb)), 0);
+  j := public.cms_schedule('restaurant_photos', r, 1, now() + interval '1 day', null, '내일 사진 교체');
+  perform set_config('test.photojob', j::text, false);
+  assert (select image_url from public.restaurant_overrides where id = r) = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c1.jpg', 'a scheduled photo is not live yet';
+  raise notice 'OK cms photos: drafts and schedules do not change what students see; direct writes refused';
+end $$;
+reset role;
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.photojob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'photo job ran: ' || res::text;
+  assert (select image_url from public.restaurant_overrides where id = r) = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c2.jpg', 'the new cover is live';
+  assert (select status from public.restaurant_photos where storage_path = 'restaurants/cms/c1.jpg') = 'archived', 'the old cover is archived, its row kept';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  raise notice 'OK cms photos: the server swaps the cover once; the old photo is archived, not deleted';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; v int; begin
+  v := public.cms_rollback('restaurant_photos', r, 1, '이전 사진');
+  assert (select image_url from public.restaurant_overrides where id = r) = 'https://x.supabase.co/storage/v1/object/public/restaurant-images/restaurants/cms/c1.jpg', 'rollback brings the old cover back';
+  v := public.cms_unpublish('restaurant_photos', r, '점검');
+  assert (select image_url from public.restaurant_overrides where id = r) is null, 'unpublish clears the card image';
+  assert (select count(*) from public.restaurant_photos where restaurant_id = r) = 2, 'and deletes no photo';
+  -- an approved student photo is staged hidden; only publishing shows it
+  insert into public.restaurant_photos (restaurant_id, kind, storage_path, url, status, source, credit) values (r, 'gallery', 'restaurants/cms/s1.jpg', 'https://x/s1.jpg', 'archived', 'student', '학생 제공');
+  assert (select count(*) from public.restaurant_photos where restaurant_id = r and status = 'published') = 0, 'a staged student photo is hidden';
+  -- the storage list of unpublished files is admin-only
+  assert (select count(*) from storage.objects where bucket_id = 'restaurant-images' and name = 'restaurants/cms/unpublished.jpg') = 1, 'admins can list';
+  raise notice 'OK cms photos: rollback, unpublish keep every row; staging row stays hidden';
+end $$;
+reset role;
+set role anon; select set_config('request.jwt.claims', '{"role":"anon"}', false);
+do $$ begin
+  assert (select count(*) from storage.objects where bucket_id = 'restaurant-images') = 0, 'the public cannot list the bucket (unpublished files stay undiscoverable)';
+  raise notice 'OK storage: anon cannot enumerate restaurant-images';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('restaurant_photos', 'e4000000-0000-4000-8000-000000000002', 1, 'x'); raise exception 'accepted#p11'; exception when insufficient_privilege then null; end;
+  assert (select count(*) from storage.objects where bucket_id = 'restaurant-images') = 0, 'moderators cannot list unpublished files either';
+  raise notice 'OK cms photos: moderators cannot publish';
+end $$;
+reset role;
+delete from storage.objects where name = 'restaurants/cms/unpublished.jpg';
+delete from public.publication_jobs where entity_type = 'restaurant_photos';
+delete from public.content_drafts where entity_type = 'restaurant_photos';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'restaurant_photos';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.restaurant_photos where restaurant_id = 'e4000000-0000-4000-8000-000000000002';
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

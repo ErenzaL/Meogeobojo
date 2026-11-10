@@ -9,7 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 
-const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관', closed: '운영 안 함', no_menu: '메뉴 없음' }
+const VIS_LABEL: Record<string, string> = { draft: '초안', published: '공개', hidden: '숨김', archived: '보관', closed: '운영 안 함', no_menu: '메뉴 없음', no_photo: '사진 없음' }
 const short = (id: string | null) => (id ? id.slice(0, 8) : '—')
 
 /** Display names for admin user ids (profiles are readable by admins). */
@@ -107,7 +107,7 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
   if (error) return <div className="mb-5"><ErrorState error={error as Error} /></div>
   if (!state) return null
   const visible = isLiveVisible(type, state.live)
-  const vis = type === 'restaurant_menus' ? (visible ? 'published' : 'no_menu') : String(state.live.visibility ?? state.live.status ?? '')
+  const vis = type === 'restaurant_menus' ? (visible ? 'published' : 'no_menu') : type === 'restaurant_photos' ? (visible ? 'published' : 'no_photo') : String(state.live.visibility ?? state.live.status ?? '')
   const msg = message ?? note
 
   return (

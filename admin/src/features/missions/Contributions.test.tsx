@@ -47,14 +47,14 @@ describe('기여 검토: student photos', () => {
     fake.respond('rpc:admin_review_contribution', { data: null })
     await open([photo()])
     await screen.findByAltText('식당 사진 제출 사진') // the signed link has loaded
-    const publish = await screen.findByRole('button', { name: '갤러리에 올리고 승인' })
+    const publish = await screen.findByRole('button', { name: '사진 관리로 보내고 승인' })
     await waitFor(() => expect((publish as HTMLButtonElement).disabled).toBe(false)) // the place has loaded
     await userEvent.click(publish)
-    await screen.findByText(/갤러리에 게시하고 승인했어요/)
+    await screen.findByText(/승인했어요. 사진은 숨김 상태로/)
     // public copy first, in the right place
     expect(fake.uploads[0].bucket).toBe('restaurant-images')
     expect(fake.uploads[0].path).toMatch(/^restaurants\/r1\/[0-9a-f-]{36}\.jpg$/)
-    expect(fake.last('restaurant_photos', 'insert')!.payload).toMatchObject({ restaurant_id: 'r1', kind: 'gallery', source: 'student', credit: '학생 제공', caption: '입구', sort_order: 5 })
+    expect(fake.last('restaurant_photos', 'insert')!.payload).toMatchObject({ restaurant_id: 'r1', kind: 'gallery', source: 'student', credit: '학생 제공', caption: '입구', sort_order: 5, status: 'archived' })
     expect(fake.rpcs.map((r) => r.name)).toEqual(['admin_review_contribution'])
     expect(fake.rpcs[0].args).toMatchObject({ p_id: 'k1', p_status: 'approved' })
     expect(fake.removed).toEqual([`${UID}/a.jpg`]) // the private original is removed after publishing
@@ -64,7 +64,7 @@ describe('기여 검토: student photos', () => {
     fake.respond('rpc:admin_review_contribution', { error: { message: 'insufficient privileges' } })
     await open([photo()])
     await screen.findByAltText('식당 사진 제출 사진')
-    const publish = await screen.findByRole('button', { name: '갤러리에 올리고 승인' })
+    const publish = await screen.findByRole('button', { name: '사진 관리로 보내고 승인' })
     await waitFor(() => expect((publish as HTMLButtonElement).disabled).toBe(false)) // the place has loaded
     await userEvent.click(publish)
     await screen.findByText(/insufficient privileges/)
@@ -74,7 +74,7 @@ describe('기여 검토: student photos', () => {
 
   it('a photo for a place that is not managed cannot be published, with a clear reason', async () => {
     await open([photo()], [])
-    expect((await screen.findByRole('button', { name: '갤러리에 올리고 승인' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((await screen.findByRole('button', { name: '사진 관리로 보내고 승인' }) as HTMLButtonElement).disabled).toBe(true)
     expect(screen.getByText('관리 목록에 없음')).toBeTruthy()
     // approving for the mission is still possible
     expect((screen.getByRole('button', { name: '승인만 (미션 반영)' }) as HTMLButtonElement).disabled).toBe(false)

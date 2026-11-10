@@ -14,12 +14,14 @@ concurrency:
 
 jobs:
   admin:
+    # Node 22.19: the test workers need a newer Node than Render's NODE_VERSION 22.12.0 (the production build itself was
+    # verified on 22.12.0, so render.yaml stays as it is).
     runs-on: ubuntu-latest
     defaults: { run: { working-directory: admin } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22.12.0, cache: npm, cache-dependency-path: admin/package-lock.json }
+        with: { node-version: 22.19.0, cache: npm, cache-dependency-path: admin/package-lock.json }
       - run: npm ci
       - run: npx tsc -b --noEmit
       - run: npm run lint
@@ -49,9 +51,17 @@ jobs:
           echo "PGBIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)" >> "$GITHUB_ENV"
       - name: migrations + SQL suites on a scratch database (fresh, twice, populated, upgrade path)
         run: |
-          zsh supabase/tests/run_local.sh "$RUNNER_TEMP/pg" 2>&1 | tee sql.log
-          ! grep -E "^FAILED|ERROR:" sql.log
-          test "$(grep -c '^OK ' sql.log)" -ge 150
+          set +e
+          zsh supabase/tests/run_local.sh "$RUNNER_TEMP/pg" > sql.log 2>&1
+          rc=$?
+          cat sql.log
+          bad=$(grep -E "^FAILED|ERROR:" sql.log | head -5 | tr '\n' ' ' | cut -c1-500)
+          ok=$(grep -c '^OK' sql.log)
+          if [ "$rc" -ne 0 ] || [ -n "$bad" ] || [ "$ok" -lt 150 ]; then
+            # an annotation, so the reason is visible on the PR without opening the raw log
+            echo "::error title=SQL suites::exit=$rc ok=$ok problems=[$bad] tail=[$(tail -4 sql.log | tr '\n' ' ' | cut -c1-500)]"
+            exit 1
+          fi
       - name: python tools
         run: |
           python3 -m unittest supabase/cafeteria/test_import.py scripts/test_verify_cafeteria_e2e.py

@@ -54,6 +54,22 @@ Future<Harness> open(
 
 void main() {
   group('지도', () {
+    testWidgets(
+      'desktop: the places list is a panel beside the map, not a sheet over it',
+      (tester) async {
+        await open(tester, ShellTabs.map, size: const Size(1440, 900));
+        expect(find.byKey(const ValueKey('map-places-panel')), findsOneWidget);
+        expect(find.byType(DraggableScrollableSheet), findsNothing);
+        expect(find.textContaining('조건에 맞는'), findsWidgets);
+      },
+    );
+
+    testWidgets('phone: the places list stays a bottom sheet', (tester) async {
+      await open(tester, ShellTabs.map);
+      expect(find.byKey(const ValueKey('map-places-panel')), findsNothing);
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+    });
+
     testWidgets('V5 header, campus, chips and the matching-places sheet', (
       tester,
     ) async {

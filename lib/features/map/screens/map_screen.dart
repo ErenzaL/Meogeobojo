@@ -11,10 +11,13 @@ import '../../../core/config/env.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/mascot_message.dart';
+import '../../origin/models/origin.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../search/screens/search_screen.dart';
 import '../../university/widgets/university_sheet.dart';
 import '../../../core/widgets/v5_widgets.dart';
+import '../../../core/widgets/responsive.dart';
+import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
 import '../widgets/map_places_sheet.dart';
 import '../../recommendation/providers/ranking_providers.dart';
@@ -62,6 +65,10 @@ class MapScreen extends ConsumerStatefulWidget {
 class _MapScreenState extends ConsumerState<MapScreen> {
   KakaoMapController? _controller;
   bool _stylesReady = false;
+
+  /// Web: fit the first results (with the campus) into view once per campus, never again, so later filter changes
+  /// and the user's own panning/zooming are left alone.
+  bool _fitPending = kIsWeb;
   Restaurant? _selected;
   StreamSubscription<LabelClickEvent>? _clickSub;
 
@@ -74,7 +81,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   /// points, Android pixels.
   Future<void> _applyBottomPadding() async {
     final c = _controller;
-    if (c == null || _appliedInset == _bottomInset) return;
+    if (c == null || kIsWeb || _appliedInset == _bottomInset) return;
     _appliedInset = _bottomInset;
     final scale = defaultTargetPlatform == TargetPlatform.android
         ? MediaQuery.devicePixelRatioOf(context)
@@ -101,12 +108,15 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     _controller = c;
     unawaited(_applyBottomPadding());
     try {
-      // The plugin does not create the default label layer itself.
-      await c.addMarkerLayer(
-        layerId: KakaoMapController.defaultLabelLayerId,
-        zOrder: 10,
-        clickable: true,
-      );
+      // The plugin does not create the default label layer itself (native only: on the web the layer call is
+      // unsupported and used to abort the whole marker setup, leaving the web map without markers).
+      if (!kIsWeb) {
+        await c.addMarkerLayer(
+          layerId: KakaoMapController.defaultLabelLayerId,
+          zOrder: 10,
+          clickable: true,
+        );
+      }
       await c.registerMarkerStyles(
         styles: [
           MarkerStyle(
@@ -173,8 +183,56 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
         ],
       );
+      await _fitResultsOnce(origin, items);
     } catch (e) {
       debugPrint('Map marker update failed: $e');
+    }
+  }
+
+  /// Web only, once per campus: show the campus and the restaurants around it. With no results nothing happens
+  /// (the map stays on the campus, never on a whole country).
+  Future<void> _fitResultsOnce(Origin origin, List<Restaurant> items) async {
+    final c = _controller;
+    if (c == null || !_fitPending || !mounted) return;
+    final box = boundsToFit(GeoPoint(origin.latitude, origin.longitude), [
+      for (final r in items) GeoPoint(r.latitude, r.longitude),
+    ]);
+    if (box == null) return;
+    _fitPending = false;
+    try {
+      await c.moveCamera(
+        cameraUpdate: CameraUpdate.fromBounds(
+          LatLngBounds(
+            southwest: LatLng(latitude: box.south, longitude: box.west),
+            northeast: LatLng(latitude: box.north, longitude: box.east),
+          ),
+          padding: 60,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Map fit failed: $e');
+    }
+  }
+
+  /// A list row was chosen: select its pin's card and pan to it, keeping the current zoom.
+  Future<void> _focus(Restaurant r) async {
+    setState(() => _selected = r);
+    final c = _controller;
+    if (c == null) return;
+    try {
+      await c.moveCamera(
+        cameraUpdate: CameraUpdate(
+          position: LatLng(latitude: r.latitude, longitude: r.longitude),
+          type: 0,
+        ),
+        animation: const CameraAnimation(
+          duration: 400,
+          autoElevation: false,
+          isConsecutive: false,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Map focus failed: $e');
     }
   }
 
@@ -184,9 +242,14 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     setState(() => _selected = null);
     try {
       await c.moveCamera(
-        cameraUpdate: CameraUpdate.fromLatLng(
-          LatLng(latitude: lat, longitude: lng),
-        ),
+        cameraUpdate: kIsWeb
+            // The plugin's fromLatLng zooms to street level (17); on the web a campus view is the right size.
+            ? CameraUpdate(
+                position: LatLng(latitude: lat, longitude: lng),
+                type: 0,
+                zoomLevel: kWebCampusMoveLevel,
+              )
+            : CameraUpdate.fromLatLng(LatLng(latitude: lat, longitude: lng)),
         animation: const CameraAnimation(
           duration: 600,
           autoElevation: true,
@@ -203,6 +266,7 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     // Keep the map synchronised with the selected origin.
     ref.listen(originProvider, (prev, next) {
       if (next != null && next != prev) {
+        _fitPending = kIsWeb;
         _moveTo(next.latitude, next.longitude);
         _syncMarkers();
       }
@@ -219,12 +283,13 @@ class _MapScreenState extends ConsumerState<MapScreen> {
 
     final l10n = context.l10n;
     final p = context.palette;
-    final init = ref.watch(kakaoMapInitProvider);
     final univ = ref.watch(selectedUniversityProvider).value;
-    final origin = ref.watch(originProvider);
     final campus =
         univ?.displayName(Localizations.localeOf(context)) ??
         l10n.universityFallbackName;
+
+    // Same breakpoint as the shell's desktop header: a list panel beside the map instead of a bottom sheet.
+    final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
 
     return Scaffold(
       backgroundColor: p.background,
@@ -281,60 +346,79 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: Stack(
+              child: Row(
                 children: [
-                  Positioned.fill(
-                    child: init.when(
-                      loading: () =>
-                          const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => _MapError(
-                        onRetry: () => ref.invalidate(kakaoMapInitProvider),
-                      ),
-                      data: (_) => univ == null
-                          ? const Center(child: CircularProgressIndicator())
-                          : KakaoMap(
-                              onMapCreated: _onMapCreated,
-                              initialPosition: LatLng(
-                                latitude: origin?.latitude ?? univ.latitude,
-                                longitude: origin?.longitude ?? univ.longitude,
-                              ),
-                              initialLevel: 14,
-                            ),
-                    ),
-                  ),
-                  if (_selected != null)
-                    Positioned(
-                      left: AppSpacing.screenH,
-                      right: AppSpacing.screenH,
-                      top: 12,
-                      child: _SelectedCard(
-                        restaurant: _selected!,
-                        onClose: () => setState(() => _selected = null),
+                  Expanded(child: _mapStack(context, wide)),
+                  if (wide)
+                    SizedBox(
+                      width: 400,
+                      child: MapPlacesPanel(
+                        onFocus: _focus,
+                        focusedId: _selected?.kakaoId,
                       ),
                     ),
-                  if (origin != null)
-                    Positioned(
-                      right: 16,
-                      top: _selected != null ? 92 : 12,
-                      child: Material(
-                        color: p.card,
-                        elevation: 2,
-                        borderRadius: BorderRadius.circular(14),
-                        child: IconButton(
-                          tooltip: l10n.mapRecenter,
-                          onPressed: () =>
-                              _moveTo(origin.latitude, origin.longitude),
-                          icon: const Icon(Icons.my_location_rounded),
-                        ),
-                      ),
-                    ),
-                  const MapPlacesSheet(),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// The map with its floating cards. On a wide screen the places list is a panel beside it instead of a sheet over it.
+  Widget _mapStack(BuildContext context, bool wide) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final init = ref.watch(kakaoMapInitProvider);
+    final univ = ref.watch(selectedUniversityProvider).value;
+    final origin = ref.watch(originProvider);
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: init.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) =>
+                _MapError(onRetry: () => ref.invalidate(kakaoMapInitProvider)),
+            data: (_) => univ == null
+                ? const Center(child: CircularProgressIndicator())
+                : KakaoMap(
+                    onMapCreated: _onMapCreated,
+                    initialPosition: LatLng(
+                      latitude: origin?.latitude ?? univ.latitude,
+                      longitude: origin?.longitude ?? univ.longitude,
+                    ),
+                    initialLevel: kIsWeb ? kWebCampusInitialLevel : 14,
+                  ),
+          ),
+        ),
+        if (_selected != null)
+          Positioned(
+            left: AppSpacing.screenH,
+            right: AppSpacing.screenH,
+            top: 12,
+            child: _SelectedCard(
+              restaurant: _selected!,
+              onClose: () => setState(() => _selected = null),
+            ),
+          ),
+        if (origin != null)
+          Positioned(
+            right: 16,
+            top: _selected != null ? 92 : 12,
+            child: Material(
+              color: p.card,
+              elevation: 2,
+              borderRadius: BorderRadius.circular(14),
+              child: IconButton(
+                tooltip: l10n.mapRecenter,
+                onPressed: () => _moveTo(origin.latitude, origin.longitude),
+                icon: const Icon(Icons.my_location_rounded),
+              ),
+            ),
+          ),
+        if (!wide) const MapPlacesSheet(),
+      ],
     );
   }
 }

@@ -31,7 +31,7 @@ class SupabaseRestaurantOverrideRepository
           .from('restaurant_overrides')
           .select(
             'kakao_place_id,visibility,description,price_min_krw,'
-            'last_order_time,image_url,name_ko,address,phone',
+            'last_order_time,image_url,name_ko,address,phone,featured,display_order',
           )
           .inFilter('kakao_place_id', kakaoIds)
           .timeout(const Duration(seconds: 10));

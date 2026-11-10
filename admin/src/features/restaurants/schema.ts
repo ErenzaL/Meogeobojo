@@ -34,6 +34,8 @@ export const restaurantSchema = z
     dining_purposes: z.string().trim(),
     image_url: z.string().trim().refine((v) => v === '' || /^https:\/\/\S+$/.test(v), 'https:// 로 시작하는 주소여야 해요'),
     visibility: z.enum(VISIBILITIES),
+    featured: z.boolean(),
+    display_order: digits,
     university_ids: z.array(z.string()),
   })
   .refine((v) => v.price_min_krw === '' || v.price_max_krw === '' || Number(v.price_min_krw) <= Number(v.price_max_krw), {
@@ -45,7 +47,7 @@ export type RestaurantForm = z.infer<typeof restaurantSchema>
 export const emptyRestaurantForm: RestaurantForm = {
   name_ko: '', name_en: '', kakao_place_id: '', category: '', address: '', phone: '', latitude: '', longitude: '',
   description: '', break_time: '', last_order_time: '', business_status: '', price_min_krw: '', price_max_krw: '',
-  avg_cost_krw: '', dining_purposes: '', image_url: '', visibility: 'draft', university_ids: [],
+  avg_cost_krw: '', dining_purposes: '', image_url: '', visibility: 'draft', featured: false, display_order: '', university_ids: [],
 }
 
 const nul = (s: string) => (s.trim() === '' ? null : s.trim())
@@ -61,6 +63,7 @@ export function toRow(v: RestaurantForm) {
     price_min_krw: num(v.price_min_krw), price_max_krw: num(v.price_max_krw), avg_cost_krw: num(v.avg_cost_krw),
     dining_purposes: v.dining_purposes.split(',').map((s) => s.trim()).filter(Boolean),
     image_url: nul(v.image_url), visibility: v.visibility,
+    featured: v.featured, display_order: num(v.display_order),
   }
 }
 
@@ -77,6 +80,7 @@ export function fromRow(r: DbRow, universityIds: string[]): RestaurantForm {
     price_min_krw: str(r.price_min_krw), price_max_krw: str(r.price_max_krw), avg_cost_krw: str(r.avg_cost_krw),
     dining_purposes: Array.isArray(r.dining_purposes) ? (r.dining_purposes as string[]).join(', ') : '',
     image_url: str(r.image_url), visibility: (VISIBILITIES as readonly string[]).includes(str(r.visibility)) ? (str(r.visibility) as Visibility) : 'draft',
+    featured: r.featured === true, display_order: str(r.display_order),
     university_ids: universityIds,
   }
 }

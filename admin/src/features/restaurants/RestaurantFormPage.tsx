@@ -109,6 +109,10 @@ export default function RestaurantFormPage() {
       </Card>
 
       <Card className="space-y-4">
+        <Field label="추천 식당으로 노출" htmlFor="featured" hint="켜면 앱 홈의 '오늘의 추천' 목록에서 맨 앞에 보여요. 추천 순위 자체는 바뀌지 않아요. 공개 상태일 때만 적용돼요.">
+          <label className="flex items-center gap-2 text-sm"><input id="featured" type="checkbox" {...register('featured')} />추천 식당</label>
+        </Field>
+        <Field label="추천 표시 순서" htmlFor="display_order" hint="작을수록 먼저 (비우면 마지막)" error={errors.display_order?.message}><Input id="display_order" inputMode="numeric" {...register('display_order')} /></Field>
         <Field label="공개 상태" htmlFor="visibility" hint="초안은 관리자만 볼 수 있어요. 숨김·보관은 앱에서 이 식당을 감춰요.">
           <Select id="visibility" {...register('visibility')}>{VISIBILITIES.map((v) => <option key={v} value={v}>{VISIBILITY_LABEL[v]}</option>)}</Select>
         </Field>

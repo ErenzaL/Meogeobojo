@@ -450,7 +450,9 @@ void main() {
       expect(h.container.read(shellTabProvider), ShellTabs.home);
     });
 
-    testWidgets('a feature the app does not have yet says so', (tester) async {
+    testWidgets('a review mission sends the student to pick a restaurant', (
+      tester,
+    ) async {
       final h = await openMissions(
         tester,
         repo: FakeMissionRepository(
@@ -460,6 +462,27 @@ void main() {
       await tester.tap(find.text('첫 리뷰 도전'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('리뷰 작성하기'));
+      await tester.pumpAndSettle();
+      // reviews belong to a restaurant: the map tab opens with a hint
+      expect(find.textContaining('식당을 골라 상세 화면에서'), findsOneWidget);
+      expect(h.container.read(shellTabProvider), ShellTabs.map);
+    });
+
+    testWidgets('a correction suggestion (not built yet) says so', (
+      tester,
+    ) async {
+      final h = await openMissions(
+        tester,
+        repo: FakeMissionRepository(
+          dashboard: MissionDashboard.fromJson(
+            payload(missions: [mission('fix', '정보 해결사', action: 'correct')]),
+          ),
+        ),
+      );
+      await tester.ensureVisible(find.text('정보 해결사'));
+      await tester.tap(find.text('정보 해결사'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('정보 수정 제안하기'));
       await tester.pumpAndSettle();
       expect(find.textContaining('아직 준비 중'), findsOneWidget);
       expect(h.container.read(shellTabProvider), ShellTabs.missions);

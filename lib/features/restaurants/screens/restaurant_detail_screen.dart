@@ -10,6 +10,11 @@ import '../models/restaurant_override.dart';
 import '../providers/restaurant_providers.dart';
 import '../widgets/restaurant_photo_placeholder.dart';
 import '../../../core/l10n/l10n.dart';
+import '../../auth/providers/auth_providers.dart';
+import '../../auth/widgets/auth_prompt.dart';
+import '../../contributions/screens/my_contributions_screen.dart';
+import '../../contributions/widgets/photo_contribution_sheet.dart';
+import '../../reviews/widgets/reviews_section.dart';
 import '../../../core/theme/app_palette.dart';
 
 Future<void> openRestaurantDetail(BuildContext context, Restaurant r) {
@@ -131,6 +136,31 @@ class RestaurantDetailScreen extends ConsumerWidget {
                       style: AppText.caption(context),
                     ),
                   ],
+                  const SizedBox(height: 24),
+                  ReviewsSection(restaurant: r),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final ok = await requireAuth(
+                        context,
+                        ref,
+                        reason: AuthReason.contribute,
+                      );
+                      if (!ok || !context.mounted) return;
+                      await showPhotoContributionSheet(context, restaurant: r);
+                    },
+                    icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                    label: Text(l10n.photoUploadButton),
+                  ),
+                  if (ref.watch(currentUserProvider) != null)
+                    TextButton(
+                      onPressed: () => Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MyContributionsScreen(),
+                        ),
+                      ),
+                      child: Text(l10n.myContribOpen),
+                    ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
                     onPressed: r.placeUrl == null

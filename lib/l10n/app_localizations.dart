@@ -2914,6 +2914,366 @@ abstract class AppLocalizations {
   /// **'품절'**
   String get restaurantMenuSoldOut;
 
+  /// No description provided for @authReasonContribute.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰와 사진은 로그인한 뒤에 남길 수 있어요.'**
+  String get authReasonContribute;
+
+  /// No description provided for @reviewsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰'**
+  String get reviewsTitle;
+
+  /// No description provided for @reviewsSummary.
+  ///
+  /// In ko, this message translates to:
+  /// **'평균 {avg} · {count}개'**
+  String reviewsSummary(String avg, int count);
+
+  /// No description provided for @reviewsEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 리뷰가 없어요. 첫 리뷰를 남겨 보세요.'**
+  String get reviewsEmpty;
+
+  /// No description provided for @reviewWrite.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 쓰기'**
+  String get reviewWrite;
+
+  /// No description provided for @reviewEditMine.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 리뷰 수정'**
+  String get reviewEditMine;
+
+  /// No description provided for @reviewMine.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 리뷰'**
+  String get reviewMine;
+
+  /// No description provided for @reviewAuthor.
+  ///
+  /// In ko, this message translates to:
+  /// **'학생'**
+  String get reviewAuthor;
+
+  /// No description provided for @reviewEditorHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'맛, 가격, 분위기를 알려 주세요 (선택)'**
+  String get reviewEditorHint;
+
+  /// No description provided for @reviewRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'별점'**
+  String get reviewRating;
+
+  /// No description provided for @reviewSave.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장'**
+  String get reviewSave;
+
+  /// No description provided for @reviewDelete.
+  ///
+  /// In ko, this message translates to:
+  /// **'삭제'**
+  String get reviewDelete;
+
+  /// No description provided for @reviewDeleteConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 리뷰를 삭제할까요?'**
+  String get reviewDeleteConfirm;
+
+  /// No description provided for @reviewSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰를 저장했어요.'**
+  String get reviewSaved;
+
+  /// No description provided for @reviewDeleted.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰를 삭제했어요.'**
+  String get reviewDeleted;
+
+  /// No description provided for @reviewSaveFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'저장하지 못했어요. 잠시 후 다시 시도해 주세요.'**
+  String get reviewSaveFailed;
+
+  /// No description provided for @reviewRatingRequired.
+  ///
+  /// In ko, this message translates to:
+  /// **'별점을 선택해 주세요.'**
+  String get reviewRatingRequired;
+
+  /// No description provided for @reviewStatusVisible.
+  ///
+  /// In ko, this message translates to:
+  /// **'공개 중'**
+  String get reviewStatusVisible;
+
+  /// No description provided for @reviewStatusHidden.
+  ///
+  /// In ko, this message translates to:
+  /// **'관리자가 숨겼어요. 다른 학생에게는 보이지 않아요.'**
+  String get reviewStatusHidden;
+
+  /// No description provided for @reviewStatusRemoved.
+  ///
+  /// In ko, this message translates to:
+  /// **'삭제 처리됐어요.'**
+  String get reviewStatusRemoved;
+
+  /// No description provided for @reportAction.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고'**
+  String get reportAction;
+
+  /// No description provided for @reportTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 리뷰를 신고할까요?'**
+  String get reportTitle;
+
+  /// No description provided for @reportReasonAbuse.
+  ///
+  /// In ko, this message translates to:
+  /// **'욕설·비방'**
+  String get reportReasonAbuse;
+
+  /// No description provided for @reportReasonSpam.
+  ///
+  /// In ko, this message translates to:
+  /// **'광고·스팸'**
+  String get reportReasonSpam;
+
+  /// No description provided for @reportReasonFalse.
+  ///
+  /// In ko, this message translates to:
+  /// **'사실과 달라요'**
+  String get reportReasonFalse;
+
+  /// No description provided for @reportReasonOther.
+  ///
+  /// In ko, this message translates to:
+  /// **'기타'**
+  String get reportReasonOther;
+
+  /// No description provided for @reportSend.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고하기'**
+  String get reportSend;
+
+  /// No description provided for @reportSent.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고했어요. 관리자가 확인할게요.'**
+  String get reportSent;
+
+  /// No description provided for @reportAlready.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 신고한 리뷰예요.'**
+  String get reportAlready;
+
+  /// No description provided for @reportFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'신고하지 못했어요. 잠시 후 다시 시도해 주세요.'**
+  String get reportFailed;
+
+  /// No description provided for @photoUploadButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 올리기'**
+  String get photoUploadButton;
+
+  /// No description provided for @photoSheetTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 올리기'**
+  String get photoSheetTitle;
+
+  /// No description provided for @photoKindRestaurant.
+  ///
+  /// In ko, this message translates to:
+  /// **'식당 사진'**
+  String get photoKindRestaurant;
+
+  /// No description provided for @photoKindMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'메뉴 사진'**
+  String get photoKindMenu;
+
+  /// No description provided for @photoPick.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 고르기'**
+  String get photoPick;
+
+  /// No description provided for @photoChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 사진 고르기'**
+  String get photoChange;
+
+  /// No description provided for @photoCaptionHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 설명 (선택)'**
+  String get photoCaptionHint;
+
+  /// No description provided for @photoConsent.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 사진을 먹어보조에 게시해도 좋아요. 검토 후에 공개돼요.'**
+  String get photoConsent;
+
+  /// No description provided for @photoPrivateNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'검토가 끝나기 전에는 나만 볼 수 있어요.'**
+  String get photoPrivateNote;
+
+  /// No description provided for @photoSubmit.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출하기'**
+  String get photoSubmit;
+
+  /// No description provided for @photoSubmitting.
+  ///
+  /// In ko, this message translates to:
+  /// **'올리는 중…'**
+  String get photoSubmitting;
+
+  /// No description provided for @photoSubmitted.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출했어요. 관리자가 확인한 뒤 공개돼요.'**
+  String get photoSubmitted;
+
+  /// No description provided for @photoTooLarge.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진은 5MB 이하여야 해요.'**
+  String get photoTooLarge;
+
+  /// No description provided for @photoFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'올리지 못했어요. 잠시 후 다시 시도해 주세요.'**
+  String get photoFailed;
+
+  /// No description provided for @photoDuplicate.
+  ///
+  /// In ko, this message translates to:
+  /// **'이미 제출한 사진이에요.'**
+  String get photoDuplicate;
+
+  /// No description provided for @photoTooMany.
+  ///
+  /// In ko, this message translates to:
+  /// **'검토 대기 중인 사진이 너무 많아요. 처리된 뒤에 다시 올려 주세요.'**
+  String get photoTooMany;
+
+  /// No description provided for @myContribTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 리뷰·사진'**
+  String get myContribTitle;
+
+  /// No description provided for @myContribOpen.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 리뷰·사진 보기'**
+  String get myContribOpen;
+
+  /// No description provided for @myContribReviews.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 리뷰'**
+  String get myContribReviews;
+
+  /// No description provided for @myContribPhotos.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 사진'**
+  String get myContribPhotos;
+
+  /// No description provided for @myContribEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 남긴 리뷰나 사진이 없어요.'**
+  String get myContribEmpty;
+
+  /// No description provided for @myContribLoadFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'불러오지 못했어요.'**
+  String get myContribLoadFailed;
+
+  /// No description provided for @contribStatusPending.
+  ///
+  /// In ko, this message translates to:
+  /// **'검토 중'**
+  String get contribStatusPending;
+
+  /// No description provided for @contribStatusApproved.
+  ///
+  /// In ko, this message translates to:
+  /// **'게시됨'**
+  String get contribStatusApproved;
+
+  /// No description provided for @contribStatusRejected.
+  ///
+  /// In ko, this message translates to:
+  /// **'반려됨'**
+  String get contribStatusRejected;
+
+  /// No description provided for @contribRejectedReason.
+  ///
+  /// In ko, this message translates to:
+  /// **'사유: {reason}'**
+  String contribRejectedReason(String reason);
+
+  /// No description provided for @contribWithdraw.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출 취소'**
+  String get contribWithdraw;
+
+  /// No description provided for @contribWithdrawConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출을 취소할까요? 사진도 삭제돼요.'**
+  String get contribWithdrawConfirm;
+
+  /// No description provided for @contribWithdrawn.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출을 취소했어요.'**
+  String get contribWithdrawn;
+
+  /// No description provided for @missionActionPickPlace.
+  ///
+  /// In ko, this message translates to:
+  /// **'식당을 골라 상세 화면에서 남겨 주세요. 남기면 미션에 바로 반영돼요.'**
+  String get missionActionPickPlace;
+
   /// No description provided for @restaurantGalleryTitle.
   ///
   /// In ko, this message translates to:

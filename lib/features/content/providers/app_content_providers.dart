@@ -1,0 +1,45 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../university/providers/university_providers.dart';
+import '../models/app_content.dart';
+import '../repositories/app_content_repository.dart';
+
+final appContentRepositoryProvider = Provider<AppContentRepository>(
+  (ref) => SupabaseAppContentRepository(Supabase.instance.client),
+);
+
+/// Everything an admin currently publishes (all campuses).
+final appContentProvider = FutureProvider<List<AppContent>>(
+  (ref) => ref.watch(appContentRepositoryProvider).live(),
+);
+
+/// The items that apply to the selected campus: its own plus the ones for
+/// every campus.
+final campusContentProvider = Provider<List<AppContent>>((ref) {
+  final all = ref.watch(appContentProvider).value ?? const [];
+  final uni = ref.watch(selectedUniversityProvider).value?.id;
+  return [
+    for (final c in all)
+      if (c.universityId == null || c.universityId == uni) c,
+  ];
+});
+
+/// Notices and banners for Home (at most [limit]).
+final homeNoticesProvider = Provider<List<AppContent>>((ref) {
+  final items = ref
+      .watch(campusContentProvider)
+      .where((c) => c.kind != AppContentKind.featured)
+      .toList();
+  return items;
+});
+
+/// Kakao ids an admin featured through 앱 콘텐츠 (the other source of
+/// "featured" is `restaurant_overrides.featured`).
+final featuredContentIdsProvider = Provider<List<String>>(
+  (ref) => [
+    for (final c in ref.watch(campusContentProvider))
+      if (c.kind == AppContentKind.featured && c.kakaoPlaceId != null)
+        c.kakaoPlaceId!,
+  ],
+);

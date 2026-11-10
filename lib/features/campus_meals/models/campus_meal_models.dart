@@ -80,6 +80,7 @@ class CampusCafeteria {
     this.nameEn,
     this.nameZh,
     this.locationDescription,
+    this.operatingNote,
   });
 
   final String id;
@@ -90,6 +91,9 @@ class CampusCafeteria {
   final String? nameZh;
   final String? locationDescription;
 
+  /// Operating information an admin confirmed (`operating_note`).
+  final String? operatingNote;
+
   factory CampusCafeteria.fromJson(Map<String, dynamic> j) => CampusCafeteria(
     id: j['id'] as String,
     universityId: j['university_id'] as String,
@@ -98,6 +102,9 @@ class CampusCafeteria {
     nameEn: j['name_en'] as String?,
     nameZh: j['name_zh'] as String?,
     locationDescription: j['location_description'] as String?,
+    operatingNote: (j['operating_note'] as String?)?.trim().isEmpty ?? true
+        ? null
+        : (j['operating_note'] as String).trim(),
   );
 
   /// The official name in the active language when a verified translation

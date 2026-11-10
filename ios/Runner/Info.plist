@@ -83,5 +83,7 @@
 		</array>
 		<key>UIStatusBarHidden</key>
 		<false/>
-	</dict>
+		<key>NSPhotoLibraryUsageDescription</key>
+	<string>식당과 메뉴 사진을 올리려고 사진 보관함에서 사진을 골라요.</string>
+</dict>
 </plist>

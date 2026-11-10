@@ -20,9 +20,9 @@ String? missionActionLabel(AppLocalizations l10n, MissionAction a) =>
       MissionAction.correct => l10n.missionActionCorrect,
     };
 
-/// Takes the user to the existing feature that moves the mission. Features the
-/// app does not have yet (writing a review, uploading a photo, suggesting a
-/// correction) say so instead of pretending.
+/// Takes the user to the feature that moves the mission. Reviews and photos
+/// belong to a restaurant, so those send the student to pick one; suggesting a
+/// correction does not exist yet and says so instead of pretending.
 void runMissionAction(BuildContext context, WidgetRef ref, MissionAction a) {
   final tabs = ref.read(shellTabProvider.notifier);
   switch (a) {
@@ -42,6 +42,13 @@ void runMissionAction(BuildContext context, WidgetRef ref, MissionAction a) {
       );
     case MissionAction.review:
     case MissionAction.photo:
+      // Reviews and photos belong to a restaurant: pick one, then use its page.
+      tabs.select(ShellTabs.map);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(context.l10n.missionActionPickPlace)),
+        );
     case MissionAction.correct:
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()

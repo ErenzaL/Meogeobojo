@@ -106,3 +106,57 @@ Tested on a scratch PostgreSQL (migrations apply twice): `supabase/tests/admin_c
 4. End-to-end against the live project is **not verified**: it needs the migration
    and an admin login. What is verified is each side separately (SQL suite,
    admin vitest, Flutter tests) plus the live Kakao function call.
+
+## 학식 management (per university)
+
+* **Admin → 학식** works one university at a time: the university is always chosen
+  (first one by default, "학식 N곳" shown per university), its cafeterias are
+  listed, searched and picked, and only that cafeteria's meals are queried. There is no
+  "all universities" mode, and menus never cross universities (database test + Flutter test).
+* **학식 식당 추가 / 수정** (modal): university (required), Korean name (optional, only
+  when an official source gives it), en/zh names, kind (학생/기숙사/교직원/기타),
+  location, display order, operating note, status. **활성/비활성/보관** is a status
+  change (never a delete); inactive and archived cafeterias and their meals disappear
+  from the app, and can be restored.
+* **Meals**: week navigation, 조식 / 중식 / 석식 sections per day, missing meals shown as
+  "등록 안 함" (nothing is created automatically), several corners per meal, price,
+  hours, photo (with preview in the edit form), notice, official source URL, the date the
+  information was verified, draft/published, duplicate-to-next-week. A 천원의 아침밥
+  badge needs an official source and a breakfast.
+* Flutter: the screen shows the cafeteria's operating note, supports pull-to-refresh, and
+  re-reads on app resume and on live changes.
+* Migration `20261113000100_cafeteria_management.sql` (additive; existing cafeterias
+  become `active`): `status`, `operating_note`, audit triggers on cafeterias and meals,
+  public read limited to active cafeterias, a per-university unique name (skipped with a
+  notice if existing data already has duplicates).
+
+## Student reviews and photos
+
+* **Flutter**: the restaurant page shows the average and the visible reviews (authors
+  are "학생", never names), lets a signed-in student write / edit / delete their own
+  review, report someone else's (one open report per user and review) and submit a
+  restaurant or menu photo. **내 리뷰·사진** shows each item's status (공개 / 숨김 /
+  삭제됨, 검토 중 / 게시됨 / 반려됨 with the moderator's reason) and lets a student
+  withdraw a pending photo. Guests are asked to sign in. A saved review or photo makes
+  the app ask the server to recompute missions.
+* **Privacy**: an unapproved photo is stored in the PRIVATE bucket `contribution-photos`
+  in the student's own folder (`<user id>/<file>`); only that student and moderators/admins
+  can read it. The student must agree to publication; the server checks the path is in
+  the caller's own folder, the file exists, and the caption/size limits. A student can
+  withdraw only their own *pending* contribution.
+* **Admin → 미션 관리 → 기여 검토**: shows the private photo through a short-lived signed
+  link, the place name, caption and consent; **갤러리에 올리고 승인** copies it into the
+  public `restaurant-images` bucket as a gallery photo (source "student", credited as a
+  student photo), then approves it (rolled back if the approval fails) and removes the
+  private original; **승인만** approves for the mission without publishing; **반려** needs a
+  reason and deletes the private photo; recent decisions are listed. Choosing the official
+  *cover* stays a separate step in 사진 관리.
+* **Missions**: valid reviews and approved menu photos already count in the server rules;
+  approval updates progress at once. Restaurant photos do not count for the menu-photo mission.
+* Migration `20261114000100_student_contributions.sql` (additive): the `restaurant_photo`
+  kind, the private bucket and its storage policies, `submit_contribution` validation,
+  `delete_my_contribution`, and one open report per user and target. Tested on a scratch
+  PostgreSQL with a Storage stub (own folder only, others and anon see nothing, moderators
+  can read but not publish, withdrawal rules).
+* Not built: editing a submitted photo (withdraw and upload again), suggesting menu/price
+  corrections (the mission still says "준비 중"), push notifications for decisions.

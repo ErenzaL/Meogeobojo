@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:meogeobojo/features/content/providers/app_content_providers.dart';
+import 'package:meogeobojo/features/contributions/providers/contribution_providers.dart';
+import 'package:meogeobojo/features/reviews/providers/review_providers.dart';
 import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -59,6 +62,10 @@ Future<Harness> buildHarness({
   /// Home previews a pick right away (as before the "ask first" rule); set
   /// false to test the untouched Home.
   bool recsRequested = true,
+  FakeAppContentRepository? content,
+  FakeReviewRepository? reviews,
+  FakeContributionRepository? contributions,
+  FakePhotoPicker? photoPicker,
 }) async {
   SharedPreferences.setMockInitialValues(storage);
   final sp = await SharedPreferences.getInstance();
@@ -91,6 +98,16 @@ Future<Harness> buildHarness({
       preferencesRepositoryProvider.overrideWithValue(pr),
       favoritesRepositoryProvider.overrideWithValue(fav),
       missionRepositoryProvider.overrideWithValue(mission),
+      reviewRepositoryProvider.overrideWithValue(
+        reviews ?? FakeReviewRepository(),
+      ),
+      contributionRepositoryProvider.overrideWithValue(
+        contributions ?? FakeContributionRepository(),
+      ),
+      photoPickerProvider.overrideWithValue(photoPicker ?? FakePhotoPicker()),
+      appContentRepositoryProvider.overrideWithValue(
+        content ?? FakeAppContentRepository(),
+      ),
       restaurantOverrideRepositoryProvider.overrideWithValue(
         overridesRepo ?? FakeRestaurantOverrideRepository(),
       ),

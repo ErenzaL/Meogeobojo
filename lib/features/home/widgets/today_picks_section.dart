@@ -10,8 +10,43 @@ import '../../restaurants/models/food_category.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/screens/restaurant_category_screen.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
+import '../../restaurants/models/restaurant_override.dart';
 import 'home_header.dart';
 import 'restaurant_art.dart';
+
+/// [ranked] with the places an admin featured first (by display order, then
+/// the order of the featured list, then their own rank). The ranking itself is
+/// untouched: only this carousel's presentation changes, and the order of
+/// everything else is exactly the recommendation order.
+List<RankedRestaurant> featuredFirst(
+  List<RankedRestaurant> ranked,
+  Map<String, RestaurantOverride> overrides,
+  List<String> contentFeaturedIds,
+) {
+  int? slot(RankedRestaurant r) {
+    final id = r.restaurant.kakaoId;
+    final o = overrides[id];
+    final inContent = contentFeaturedIds.indexOf(id);
+    if (!(o?.featured ?? false) && inContent < 0) return null;
+    return o?.displayOrder ?? (inContent >= 0 ? 1000 + inContent : 9999);
+  }
+
+  final featured = <(int, int, RankedRestaurant)>[];
+  final rest = <RankedRestaurant>[];
+  for (var i = 0; i < ranked.length; i++) {
+    final s = slot(ranked[i]);
+    if (s == null) {
+      rest.add(ranked[i]);
+    } else {
+      featured.add((s, i, ranked[i]));
+    }
+  }
+  featured.sort((a, b) {
+    final c = a.$1.compareTo(b.$1);
+    return c != 0 ? c : a.$2.compareTo(b.$2);
+  });
+  return [for (final f in featured) f.$3, ...rest];
+}
 
 /// "오늘의 추천": a sideways list of the places that pass the current filters,
 /// in ranking order. Every fact on a card comes from the restaurant data or

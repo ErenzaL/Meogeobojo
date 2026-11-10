@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +10,8 @@ import '../../profile/screens/profile_screen.dart';
 import '../../missions/screens/mission_screen.dart';
 import '../../missions/widgets/mission_celebration_host.dart';
 import '../../../core/widgets/responsive.dart';
-import '../../restaurants/providers/restaurant_providers.dart';
+import '../../../core/sync/content_sync.dart';
+import '../../university/providers/university_account_sync.dart';
 import '../providers/shell_tab_provider.dart';
 import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
@@ -47,23 +50,48 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Coming back to the app (or the browser tab) re-reads what admins
     // published: photos, menus, hidden places. No rebuild or restart needed.
     _lifecycle = AppLifecycleListener(
-      onResume: () {
-        ref.invalidate(restaurantOverridesProvider);
-        ref.invalidate(restaurantMenusProvider);
-        ref.invalidate(restaurantPhotosProvider);
-      },
+      onResume: () => refreshAllContent(_container),
     );
   }
 
   @override
   void dispose() {
     _lifecycle.dispose();
+    _syncTimer?.cancel();
     super.dispose();
   }
 
+  ProviderContainer get _container =>
+      ProviderScope.containerOf(context, listen: false);
+
+  Timer? _syncTimer;
+  final _pendingTables = <String>{};
+
+  /// A burst of admin edits (a save touches several rows) becomes one refresh.
+  void _onContentChanged(String table) {
+    _pendingTables.add(table);
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      for (final t in _pendingTables) {
+        invalidateForTable(_container, t);
+      }
+      _pendingTables.clear();
+    });
+  }
+
   @override
-  Widget build(BuildContext context) =>
-      MissionCelebrationHost(child: _shell(context));
+  Widget build(BuildContext context) {
+    // Published changes arrive live (Realtime) and refresh the screens that
+    // show them. Silent when Realtime is unavailable.
+    // The campus follows the account (server-side mission eligibility).
+    ref.watch(universityAccountSyncProvider);
+    ref.listen(contentChangesProvider, (_, next) {
+      final table = next.value;
+      if (table != null) _onContentChanged(table);
+    });
+    return MissionCelebrationHost(child: _shell(context));
+  }
 
   Widget _shell(BuildContext context) {
     final index = ref.watch(shellTabProvider);

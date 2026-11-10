@@ -76,13 +76,21 @@ class V5Page extends StatelessWidget {
     required this.children,
     this.scrollKey,
     this.backgroundColor,
+    this.onRefresh,
   });
 
   final List<Widget> children;
   final Key? scrollKey;
 
+  /// When set, pulling the page down calls it (pull-to-refresh).
+  final Future<void> Function()? onRefresh;
+
   /// Overrides the page colour (MY is pure white); defaults to the palette.
   final Color? backgroundColor;
+
+  Widget _refreshable(Widget list) => onRefresh == null
+      ? list
+      : RefreshIndicator(onRefresh: onRefresh!, child: list);
 
   @override
   Widget build(BuildContext context) {
@@ -94,15 +102,20 @@ class V5Page extends StatelessWidget {
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720),
-            child: ListView(
-              key: scrollKey,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                12,
-                16,
-                24 + MediaQuery.paddingOf(context).bottom,
+            child: _refreshable(
+              ListView(
+                key: scrollKey,
+                physics: onRefresh == null
+                    ? null
+                    : const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  12,
+                  16,
+                  24 + MediaQuery.paddingOf(context).bottom,
+                ),
+                children: children,
               ),
-              children: children,
             ),
           ),
         ),

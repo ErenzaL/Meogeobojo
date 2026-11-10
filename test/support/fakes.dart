@@ -3,6 +3,12 @@ import 'dart:async';
 import 'package:meogeobojo/features/auth/models/user_profile.dart';
 import 'package:meogeobojo/features/campus_meals/models/campus_meal_models.dart';
 import 'package:meogeobojo/features/campus_meals/repositories/campus_meal_repository.dart';
+import 'package:meogeobojo/features/content/models/app_content.dart';
+import 'package:meogeobojo/features/contributions/models/contribution.dart';
+import 'package:meogeobojo/features/contributions/repositories/contribution_repository.dart';
+import 'package:meogeobojo/features/reviews/models/student_review.dart';
+import 'package:meogeobojo/features/reviews/repositories/review_repository.dart';
+import 'package:meogeobojo/features/content/repositories/app_content_repository.dart';
 import 'package:meogeobojo/features/campus_meals/utils/seoul_date.dart';
 import 'package:meogeobojo/features/auth/repositories/profile_repository.dart';
 import 'package:meogeobojo/features/auth/services/auth_gateway.dart';
@@ -247,8 +253,14 @@ class FakeProfileRepository implements ProfileRepository {
   /// Thrown by the next updateAvatar() calls, in order.
   final avatarErrors = <Object>[];
 
+  /// Stored campus (`profiles.selected_university_id`) and every write to it.
+  String? selectedUniversityId;
+  final universityWrites = <String>[];
+  final universityErrors = <Object>[];
+
   UserProfile _profile() => UserProfile(
     avatarPath: avatarPath,
+    selectedUniversityId: selectedUniversityId,
     id: _userId,
     nickname: nickname,
     nicknameIsCustom: nicknameIsCustom,
@@ -283,6 +295,13 @@ class FakeProfileRepository implements ProfileRepository {
     if (avatarErrors.isNotEmpty) throw avatarErrors.removeAt(0);
     avatarWrites.add(avatarKey);
     avatarPath = avatarKey;
+  }
+
+  @override
+  Future<void> updateUniversity(String userId, String universityId) async {
+    if (universityErrors.isNotEmpty) throw universityErrors.removeAt(0);
+    universityWrites.add(universityId);
+    selectedUniversityId = universityId;
   }
 }
 
@@ -346,6 +365,7 @@ CampusCafeteria fakeCafeteria(
   String? nameKo,
   String? nameEn,
   String? nameZh,
+  String? operatingNote,
 }) => CampusCafeteria(
   id: id,
   universityId: universityId,
@@ -353,6 +373,7 @@ CampusCafeteria fakeCafeteria(
   nameKo: nameKo,
   nameEn: nameEn,
   nameZh: nameZh,
+  operatingNote: operatingNote,
 );
 
 CafeteriaMeal fakeMeal(
@@ -500,5 +521,167 @@ class FakeMissionRepository implements MissionRepository {
     final out = [...completionsOnActivity];
     completionsOnActivity.clear();
     return out;
+  }
+}
+
+/// `app_content` rows that are live (the database filters drafts and expired items).
+class FakeAppContentRepository implements AppContentRepository {
+  FakeAppContentRepository([this.items = const []]);
+
+  List<AppContent> items;
+  int loads = 0;
+
+  @override
+  Future<List<AppContent>> live() async {
+    loads++;
+    return items;
+  }
+}
+
+/// `student_reviews` for a test: rows are what row-level security would return
+/// (visible ones + the signed-in user's own), so the test sets them directly.
+class FakeReviewRepository implements ReviewRepository {
+  FakeReviewRepository([List<StudentReview>? reviews])
+    : reviews = reviews ?? [];
+
+  List<StudentReview> reviews;
+  Object? saveError;
+  final saves =
+      <({String kakaoId, int rating, String? body, String? universityId})>[];
+  final deletes = <String>[];
+  final reports = <({String reviewId, String reason})>[];
+  ReportOutcome reportOutcome = ReportOutcome.sent;
+  Object? reportError;
+
+  @override
+  Future<List<StudentReview>> forPlace(String kakaoId) async => [
+    for (final r in reviews)
+      if (r.kakaoPlaceId == kakaoId) r,
+  ];
+
+  @override
+  Future<void> save({
+    required String userId,
+    required String kakaoId,
+    required String? universityId,
+    required int rating,
+    required String? body,
+  }) async {
+    if (saveError != null) throw saveError!;
+    saves.add((
+      kakaoId: kakaoId,
+      rating: rating,
+      body: body,
+      universityId: universityId,
+    ));
+    reviews = [
+      for (final r in reviews)
+        if (!(r.userId == userId && r.kakaoPlaceId == kakaoId)) r,
+      StudentReview(
+        id: 'r-${saves.length}',
+        userId: userId,
+        kakaoPlaceId: kakaoId,
+        rating: rating,
+        body: body?.trim().isEmpty ?? true ? null : body!.trim(),
+        createdAt: DateTime.utc(2026, 11, 10),
+      ),
+    ];
+  }
+
+  @override
+  Future<void> delete(String reviewId) async {
+    deletes.add(reviewId);
+    reviews = [
+      for (final r in reviews)
+        if (r.id != reviewId) r,
+    ];
+  }
+
+  @override
+  Future<List<StudentReview>> mine(String userId) async => [
+    for (final r in reviews)
+      if (r.userId == userId) r,
+  ];
+
+  @override
+  Future<ReportOutcome> report({
+    required String reviewId,
+    required String reason,
+    String? description,
+  }) async {
+    if (reportError != null) throw reportError!;
+    reports.add((reviewId: reviewId, reason: reason));
+    return reportOutcome;
+  }
+}
+
+class FakePhotoPicker implements PhotoPicker {
+  FakePhotoPicker([this.next]);
+
+  PickedPhoto? next;
+  int picks = 0;
+
+  @override
+  Future<PickedPhoto?> pick() async {
+    picks++;
+    return next;
+  }
+}
+
+class FakeContributionRepository implements ContributionRepository {
+  FakeContributionRepository([List<Contribution>? items]) : items = items ?? [];
+
+  List<Contribution> items;
+  ContributionException? submitError;
+  final submissions =
+      <
+        ({
+          ContributionKind kind,
+          String kakaoPlaceId,
+          String? caption,
+          int bytes,
+        })
+      >[];
+  final withdrawn = <String>[];
+
+  @override
+  Future<void> submitPhoto({
+    required String userId,
+    required ContributionKind kind,
+    required String kakaoPlaceId,
+    required PickedPhoto photo,
+    String? caption,
+  }) async {
+    if (submitError != null) throw submitError!;
+    submissions.add((
+      kind: kind,
+      kakaoPlaceId: kakaoPlaceId,
+      caption: caption?.trim(),
+      bytes: photo.bytes.length,
+    ));
+    items = [
+      Contribution(
+        id: 'c-${submissions.length}',
+        kind: kind,
+        kakaoPlaceId: kakaoPlaceId,
+        status: 'pending',
+        createdAt: DateTime.utc(2026, 11, 10),
+        caption: caption?.trim().isEmpty ?? true ? null : caption!.trim(),
+        path: '$userId/x.jpg',
+      ),
+      ...items,
+    ];
+  }
+
+  @override
+  Future<List<Contribution>> mine(String userId) async => items;
+
+  @override
+  Future<void> withdraw(Contribution c) async {
+    withdrawn.add(c.id);
+    items = [
+      for (final i in items)
+        if (i.id != c.id) i,
+    ];
   }
 }

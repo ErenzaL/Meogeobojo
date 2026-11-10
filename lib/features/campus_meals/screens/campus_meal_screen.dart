@@ -135,70 +135,86 @@ class _Body extends ConsumerWidget {
     String labelOf(CampusCafeteria c) =>
         cafeteriaLabel(l10n, locale, c, cafeterias);
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.screenH,
-        4,
-        AppSpacing.screenH,
-        28,
-      ),
-      children: [
-        if (cafeterias.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: CafeteriaSelector(
-              cafeterias: cafeterias,
-              selected: cafeteria,
-              labelOf: labelOf,
-              onSelect: (c) => ctrl.selectCafeteria(c.id),
+    return RefreshIndicator(
+      // Pull down to re-read what the admin published.
+      onRefresh: () async {
+        ref.invalidate(campusWeekMealsProvider);
+        ref.invalidate(campusCafeteriasProvider);
+        await ref.read(campusCafeteriasProvider.future);
+      },
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          4,
+          AppSpacing.screenH,
+          28,
+        ),
+        children: [
+          if (cafeterias.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: CafeteriaSelector(
+                cafeterias: cafeterias,
+                selected: cafeteria,
+                labelOf: labelOf,
+                onSelect: (c) => ctrl.selectCafeteria(c.id),
+              ),
             ),
+          WeekNavigator(
+            weekStart: sel.weekStart,
+            showTodayButton: !(sel.date == today),
+            onPrevious: () => ctrl.shiftWeek(-1),
+            onNext: () => ctrl.shiftWeek(1),
+            onToday: ctrl.goToToday,
           ),
-        WeekNavigator(
-          weekStart: sel.weekStart,
-          showTodayButton: !(sel.date == today),
-          onPrevious: () => ctrl.shiftWeek(-1),
-          onNext: () => ctrl.shiftWeek(1),
-          onToday: ctrl.goToToday,
-        ),
-        DaySelector(
-          weekStart: sel.weekStart,
-          selected: sel.date,
-          today: today,
-          onSelect: ctrl.selectDate,
-        ),
-        const SizedBox(height: 10),
-        MealTabs(selected: sel.mealType, onSelect: ctrl.selectMealType),
-        const SizedBox(height: 16),
-        Text(
-          l10n.mealHeading(
-            sel.date == today
-                ? l10n.mealToday
-                : sel.date ==
-                      DateTime.utc(today.year, today.month, today.day + 1)
-                ? l10n.mealDayTomorrow
-                : l10n.mealSelectedDate(sel.date),
-            sel.mealType.label(l10n),
+          DaySelector(
+            weekStart: sel.weekStart,
+            selected: sel.date,
+            today: today,
+            onSelect: ctrl.selectDate,
           ),
-          style: AppText.heroTitle,
-        ),
-        if (cafeterias.length == 1) ...[
-          const SizedBox(height: 2),
+          const SizedBox(height: 10),
+          MealTabs(selected: sel.mealType, onSelect: ctrl.selectMealType),
+          const SizedBox(height: 16),
           Text(
-            labelOf(cafeteria),
-            style: AppText.caption(context).copyWith(fontSize: 13),
+            l10n.mealHeading(
+              sel.date == today
+                  ? l10n.mealToday
+                  : sel.date ==
+                        DateTime.utc(today.year, today.month, today.day + 1)
+                  ? l10n.mealDayTomorrow
+                  : l10n.mealSelectedDate(sel.date),
+              sel.mealType.label(l10n),
+            ),
+            style: AppText.heroTitle,
           ),
+          if (cafeterias.length == 1) ...[
+            const SizedBox(height: 2),
+            Text(
+              labelOf(cafeteria),
+              style: AppText.caption(context).copyWith(fontSize: 13),
+            ),
+          ],
+          if (cafeteria.locationDescription != null &&
+              cafeteria.locationDescription!.trim().isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              cafeteria.locationDescription!,
+              style: AppText.caption(context).copyWith(fontSize: 12.5),
+            ),
+          ],
+          if (cafeteria.operatingNote != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              cafeteria.operatingNote!,
+              style: AppText.caption(context).copyWith(fontSize: 12.5),
+            ),
+          ],
+          const SizedBox(height: 12),
+          _WeekContent(cafeteria: cafeteria),
         ],
-        if (cafeteria.locationDescription != null &&
-            cafeteria.locationDescription!.trim().isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            cafeteria.locationDescription!,
-            style: AppText.caption(context).copyWith(fontSize: 12.5),
-          ),
-        ],
-        const SizedBox(height: 12),
-        _WeekContent(cafeteria: cafeteria),
-      ],
+      ),
     );
   }
 }

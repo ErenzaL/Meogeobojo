@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { AlertTriangle, Loader2, X } from 'lucide-react'
 import { forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -93,6 +93,27 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
       <span className="flex-1">{msg}</span>
       {onRetry && <Button size="sm" variant="outline" onClick={onRetry}>다시 시도</Button>}
     </div>
+  )
+}
+
+/** A form dialog (native <dialog>: focus trap, Esc to close). */
+export function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const d = ref.current
+    if (!d) return
+    if (open && !d.open) d.showModal?.()
+    if (!open && d.open) d.close?.()
+  }, [open])
+  if (!open) return null
+  return (
+    <dialog ref={ref} onCancel={onClose} aria-label={title} className="m-auto max-h-[90vh] w-[min(36rem,94vw)] overflow-auto rounded-2xl border border-line p-6 backdrop:bg-black/40">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <h2 className="text-lg font-bold">{title}</h2>
+        <button type="button" aria-label="닫기" onClick={onClose} className="rounded-lg p-1 text-muted hover:bg-black/5"><X className="size-5" /></button>
+      </div>
+      {children}
+    </dialog>
   )
 }
 

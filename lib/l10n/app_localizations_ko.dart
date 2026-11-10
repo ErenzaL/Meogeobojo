@@ -1604,6 +1604,191 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restaurantMenuSoldOut => '품절';
 
   @override
+  String get authReasonContribute => '리뷰와 사진은 로그인한 뒤에 남길 수 있어요.';
+
+  @override
+  String get reviewsTitle => '리뷰';
+
+  @override
+  String reviewsSummary(String avg, int count) {
+    return '평균 $avg · $count개';
+  }
+
+  @override
+  String get reviewsEmpty => '아직 리뷰가 없어요. 첫 리뷰를 남겨 보세요.';
+
+  @override
+  String get reviewWrite => '리뷰 쓰기';
+
+  @override
+  String get reviewEditMine => '내 리뷰 수정';
+
+  @override
+  String get reviewMine => '내 리뷰';
+
+  @override
+  String get reviewAuthor => '학생';
+
+  @override
+  String get reviewEditorHint => '맛, 가격, 분위기를 알려 주세요 (선택)';
+
+  @override
+  String get reviewRating => '별점';
+
+  @override
+  String get reviewSave => '저장';
+
+  @override
+  String get reviewDelete => '삭제';
+
+  @override
+  String get reviewDeleteConfirm => '이 리뷰를 삭제할까요?';
+
+  @override
+  String get reviewSaved => '리뷰를 저장했어요.';
+
+  @override
+  String get reviewDeleted => '리뷰를 삭제했어요.';
+
+  @override
+  String get reviewSaveFailed => '저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get reviewRatingRequired => '별점을 선택해 주세요.';
+
+  @override
+  String get reviewStatusVisible => '공개 중';
+
+  @override
+  String get reviewStatusHidden => '관리자가 숨겼어요. 다른 학생에게는 보이지 않아요.';
+
+  @override
+  String get reviewStatusRemoved => '삭제 처리됐어요.';
+
+  @override
+  String get reportAction => '신고';
+
+  @override
+  String get reportTitle => '이 리뷰를 신고할까요?';
+
+  @override
+  String get reportReasonAbuse => '욕설·비방';
+
+  @override
+  String get reportReasonSpam => '광고·스팸';
+
+  @override
+  String get reportReasonFalse => '사실과 달라요';
+
+  @override
+  String get reportReasonOther => '기타';
+
+  @override
+  String get reportSend => '신고하기';
+
+  @override
+  String get reportSent => '신고했어요. 관리자가 확인할게요.';
+
+  @override
+  String get reportAlready => '이미 신고한 리뷰예요.';
+
+  @override
+  String get reportFailed => '신고하지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get photoUploadButton => '사진 올리기';
+
+  @override
+  String get photoSheetTitle => '사진 올리기';
+
+  @override
+  String get photoKindRestaurant => '식당 사진';
+
+  @override
+  String get photoKindMenu => '메뉴 사진';
+
+  @override
+  String get photoPick => '사진 고르기';
+
+  @override
+  String get photoChange => '다른 사진 고르기';
+
+  @override
+  String get photoCaptionHint => '사진 설명 (선택)';
+
+  @override
+  String get photoConsent => '이 사진을 먹어보조에 게시해도 좋아요. 검토 후에 공개돼요.';
+
+  @override
+  String get photoPrivateNote => '검토가 끝나기 전에는 나만 볼 수 있어요.';
+
+  @override
+  String get photoSubmit => '제출하기';
+
+  @override
+  String get photoSubmitting => '올리는 중…';
+
+  @override
+  String get photoSubmitted => '제출했어요. 관리자가 확인한 뒤 공개돼요.';
+
+  @override
+  String get photoTooLarge => '사진은 5MB 이하여야 해요.';
+
+  @override
+  String get photoFailed => '올리지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get photoDuplicate => '이미 제출한 사진이에요.';
+
+  @override
+  String get photoTooMany => '검토 대기 중인 사진이 너무 많아요. 처리된 뒤에 다시 올려 주세요.';
+
+  @override
+  String get myContribTitle => '내 리뷰·사진';
+
+  @override
+  String get myContribOpen => '내 리뷰·사진 보기';
+
+  @override
+  String get myContribReviews => '내 리뷰';
+
+  @override
+  String get myContribPhotos => '내 사진';
+
+  @override
+  String get myContribEmpty => '아직 남긴 리뷰나 사진이 없어요.';
+
+  @override
+  String get myContribLoadFailed => '불러오지 못했어요.';
+
+  @override
+  String get contribStatusPending => '검토 중';
+
+  @override
+  String get contribStatusApproved => '게시됨';
+
+  @override
+  String get contribStatusRejected => '반려됨';
+
+  @override
+  String contribRejectedReason(String reason) {
+    return '사유: $reason';
+  }
+
+  @override
+  String get contribWithdraw => '제출 취소';
+
+  @override
+  String get contribWithdrawConfirm => '제출을 취소할까요? 사진도 삭제돼요.';
+
+  @override
+  String get contribWithdrawn => '제출을 취소했어요.';
+
+  @override
+  String get missionActionPickPlace =>
+      '식당을 골라 상세 화면에서 남겨 주세요. 남기면 미션에 바로 반영돼요.';
+
+  @override
   String get restaurantGalleryTitle => '사진';
 
   @override

@@ -18,6 +18,11 @@ abstract class ProfileRepository {
   /// Saves the chosen profile picture (`profiles.avatar_path`) so it follows
   /// the account to every device. Throws if the update did not happen.
   Future<void> updateAvatar(String userId, String avatarKey);
+
+  /// Saves the chosen campus (`profiles.selected_university_id`). The server
+  /// decides which university-specific missions a student gets from this
+  /// column, so it must match what the app shows.
+  Future<void> updateUniversity(String userId, String universityId);
 }
 
 const _maxNicknameLength = 30;
@@ -103,6 +108,19 @@ class SupabaseProfileRepository implements ProfileRepository {
         .timeout(const Duration(seconds: 20));
     if (rows.isEmpty) {
       throw const PostgrestException(message: 'avatar not saved');
+    }
+  }
+
+  @override
+  Future<void> updateUniversity(String userId, String universityId) async {
+    final rows = await _db
+        .from('profiles')
+        .update({'selected_university_id': universityId})
+        .eq('id', userId)
+        .select('id')
+        .timeout(const Duration(seconds: 20));
+    if (rows.isEmpty) {
+      throw const PostgrestException(message: 'university not saved');
     }
   }
 }

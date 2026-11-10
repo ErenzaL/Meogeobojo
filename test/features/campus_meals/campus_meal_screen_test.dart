@@ -67,6 +67,79 @@ Future<(Harness, FakeCampusMealRepository)> open(
 }
 
 void main() {
+  group('admin changes reach the screen', () {
+    testWidgets('the cafeteria\'s operating note is shown', (tester) async {
+      await open(
+        tester,
+        repo: FakeCampusMealRepository(
+          cafeteriasByUniversity: {
+            univ1: [fakeCafeteria('c1', operatingNote: '방학 중에는 평일만 운영해요')],
+          },
+        ),
+      );
+      expect(find.text('방학 중에는 평일만 운영해요'), findsOneWidget);
+    });
+
+    testWidgets('pull-to-refresh asks Supabase again and shows what changed', (
+      tester,
+    ) async {
+      final (h, repo) = await open(tester);
+      expect(find.text('김치찌개'), findsOneWidget);
+      final before = repo.weekCalls.length;
+      // an admin edits the menu; the student pulls down
+      repo.meals = [
+        fakeMeal(
+          '2026-11-03',
+          MealType.lunch,
+          items: const [MenuItem(nameKo: '된장찌개', kind: MenuItemKind.main)],
+        ),
+      ];
+      await tester.fling(
+        find.byType(Scrollable).first,
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(repo.weekCalls.length, greaterThan(before));
+      expect(find.text('된장찌개'), findsOneWidget);
+      expect(find.text('김치찌개'), findsNothing);
+      expect(
+        h.container.read(campusMealSelectionProvider).mealType,
+        MealType.lunch,
+      );
+    });
+
+    testWidgets('a campus never shows another campus\'s cafeterias', (
+      tester,
+    ) async {
+      final repo = FakeCampusMealRepository(
+        cafeteriasByUniversity: {
+          univ1: [fakeCafeteria('c1', nameKo: '순천향 식당')],
+          univ2: [fakeCafeteria('c2', universityId: univ2, nameKo: '호서 식당')],
+        },
+        meals: [
+          fakeMeal(
+            '2026-11-03',
+            MealType.lunch,
+            cafeteriaId: 'c2',
+            items: const [MenuItem(nameKo: '호서 메뉴', kind: MenuItemKind.main)],
+          ),
+          fakeMeal(
+            '2026-11-03',
+            MealType.lunch,
+            items: const [MenuItem(nameKo: '순천향 메뉴', kind: MenuItemKind.main)],
+          ),
+        ],
+      );
+      await open(tester, repo: repo);
+      expect(find.text('순천향 메뉴'), findsOneWidget);
+      expect(find.text('호서 메뉴'), findsNothing);
+      expect(repo.cafeteriaCalls, everyElement(univ1));
+    });
+  });
+
   group('Home 학식 shortcut', () {
     Future<Harness> home(
       WidgetTester tester, {

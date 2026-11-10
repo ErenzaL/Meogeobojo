@@ -14,6 +14,8 @@ class RestaurantOverride {
     this.name,
     this.address,
     this.phone,
+    this.featured = false,
+    this.displayOrder,
     this.insight = RestaurantInsight.unknown,
   });
 
@@ -28,6 +30,10 @@ class RestaurantOverride {
   final String? name;
   final String? address;
   final String? phone;
+
+  /// Featured by an admin; [displayOrder] (lower first) orders the featured places.
+  final bool featured;
+  final int? displayOrder;
   final RestaurantInsight insight;
 
   /// [r] with this override's non-empty, published display fields applied.
@@ -64,6 +70,8 @@ class RestaurantOverride {
       name: text(j['name_ko']),
       address: text(j['address']),
       phone: text(j['phone']),
+      featured: (j['featured'] as bool?) ?? false,
+      displayOrder: (j['display_order'] as num?)?.toInt(),
       insight: RestaurantInsight(
         minPriceKrw: (j['price_min_krw'] as num?)?.toInt(),
         lastOrderMinutes: minutes(j['last_order_time']),

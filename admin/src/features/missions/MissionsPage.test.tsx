@@ -244,7 +244,7 @@ describe('user progress and contributions', () => {
     fake.respond('rpc:admin_review_contribution', { data: null })
     open()
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: '승인' }))
+    await user.click(await screen.findByRole('button', { name: '승인만 (미션 반영)' }))
     await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'admin_review_contribution')).toBe(true))
     expect(fake.rpcs[0].args).toEqual({ p_id: 'c1', p_status: 'approved', p_note: null })
     await user.click(await screen.findByRole('button', { name: '반려' }))

@@ -1594,6 +1594,190 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restaurantMenuSoldOut => '已售罄';
 
   @override
+  String get authReasonContribute => '登录后才能发布评价和照片。';
+
+  @override
+  String get reviewsTitle => '评价';
+
+  @override
+  String reviewsSummary(String avg, int count) {
+    return '平均 $avg · $count条';
+  }
+
+  @override
+  String get reviewsEmpty => '还没有评价，来写第一条吧。';
+
+  @override
+  String get reviewWrite => '写评价';
+
+  @override
+  String get reviewEditMine => '修改我的评价';
+
+  @override
+  String get reviewMine => '我的评价';
+
+  @override
+  String get reviewAuthor => '学生';
+
+  @override
+  String get reviewEditorHint => '说说味道、价格、氛围（可选）';
+
+  @override
+  String get reviewRating => '评分';
+
+  @override
+  String get reviewSave => '保存';
+
+  @override
+  String get reviewDelete => '删除';
+
+  @override
+  String get reviewDeleteConfirm => '删除这条评价？';
+
+  @override
+  String get reviewSaved => '评价已保存。';
+
+  @override
+  String get reviewDeleted => '评价已删除。';
+
+  @override
+  String get reviewSaveFailed => '保存失败，请稍后再试。';
+
+  @override
+  String get reviewRatingRequired => '请选择评分。';
+
+  @override
+  String get reviewStatusVisible => '已公开';
+
+  @override
+  String get reviewStatusHidden => '已被管理员隐藏，其他同学看不到。';
+
+  @override
+  String get reviewStatusRemoved => '已被删除。';
+
+  @override
+  String get reportAction => '举报';
+
+  @override
+  String get reportTitle => '举报这条评价？';
+
+  @override
+  String get reportReasonAbuse => '辱骂或攻击';
+
+  @override
+  String get reportReasonSpam => '广告或垃圾信息';
+
+  @override
+  String get reportReasonFalse => '与事实不符';
+
+  @override
+  String get reportReasonOther => '其他';
+
+  @override
+  String get reportSend => '举报';
+
+  @override
+  String get reportSent => '已举报，管理员会查看。';
+
+  @override
+  String get reportAlready => '你已经举报过这条评价。';
+
+  @override
+  String get reportFailed => '举报失败，请稍后再试。';
+
+  @override
+  String get photoUploadButton => '上传照片';
+
+  @override
+  String get photoSheetTitle => '上传照片';
+
+  @override
+  String get photoKindRestaurant => '餐厅照片';
+
+  @override
+  String get photoKindMenu => '菜单照片';
+
+  @override
+  String get photoPick => '选择照片';
+
+  @override
+  String get photoChange => '换一张';
+
+  @override
+  String get photoCaptionHint => '照片说明（可选）';
+
+  @override
+  String get photoConsent => '同意审核通过后在먹어보조展示这张照片。';
+
+  @override
+  String get photoPrivateNote => '审核前只有你自己能看到。';
+
+  @override
+  String get photoSubmit => '提交';
+
+  @override
+  String get photoSubmitting => '上传中…';
+
+  @override
+  String get photoSubmitted => '已提交，管理员审核后公开。';
+
+  @override
+  String get photoTooLarge => '照片不能超过5MB。';
+
+  @override
+  String get photoFailed => '上传失败，请稍后再试。';
+
+  @override
+  String get photoDuplicate => '你已经提交过这张照片。';
+
+  @override
+  String get photoTooMany => '待审核的照片太多，请稍后再试。';
+
+  @override
+  String get myContribTitle => '我的评价和照片';
+
+  @override
+  String get myContribOpen => '查看我的评价和照片';
+
+  @override
+  String get myContribReviews => '我的评价';
+
+  @override
+  String get myContribPhotos => '我的照片';
+
+  @override
+  String get myContribEmpty => '你还没有发布评价或照片。';
+
+  @override
+  String get myContribLoadFailed => '加载失败。';
+
+  @override
+  String get contribStatusPending => '审核中';
+
+  @override
+  String get contribStatusApproved => '已公开';
+
+  @override
+  String get contribStatusRejected => '未通过';
+
+  @override
+  String contribRejectedReason(String reason) {
+    return '原因：$reason';
+  }
+
+  @override
+  String get contribWithdraw => '撤回';
+
+  @override
+  String get contribWithdrawConfirm => '撤回提交？照片也会被删除。';
+
+  @override
+  String get contribWithdrawn => '已撤回。';
+
+  @override
+  String get missionActionPickPlace => '选一家餐厅，在详情页留下评价或照片，会立即计入任务。';
+
+  @override
   String get restaurantGalleryTitle => '照片';
 
   @override

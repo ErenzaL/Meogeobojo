@@ -1688,6 +1688,198 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restaurantMenuSoldOut => 'Sold out';
 
   @override
+  String get authReasonContribute => 'Sign in to leave reviews and photos.';
+
+  @override
+  String get reviewsTitle => 'Reviews';
+
+  @override
+  String reviewsSummary(String avg, int count) {
+    return 'Average $avg · $count';
+  }
+
+  @override
+  String get reviewsEmpty => 'No reviews yet. Be the first to write one.';
+
+  @override
+  String get reviewWrite => 'Write a review';
+
+  @override
+  String get reviewEditMine => 'Edit my review';
+
+  @override
+  String get reviewMine => 'My review';
+
+  @override
+  String get reviewAuthor => 'Student';
+
+  @override
+  String get reviewEditorHint =>
+      'Tell us about the food, price, atmosphere (optional)';
+
+  @override
+  String get reviewRating => 'Rating';
+
+  @override
+  String get reviewSave => 'Save';
+
+  @override
+  String get reviewDelete => 'Delete';
+
+  @override
+  String get reviewDeleteConfirm => 'Delete this review?';
+
+  @override
+  String get reviewSaved => 'Review saved.';
+
+  @override
+  String get reviewDeleted => 'Review deleted.';
+
+  @override
+  String get reviewSaveFailed => 'Couldn\'t save. Please try again.';
+
+  @override
+  String get reviewRatingRequired => 'Please choose a rating.';
+
+  @override
+  String get reviewStatusVisible => 'Visible';
+
+  @override
+  String get reviewStatusHidden =>
+      'Hidden by a moderator. Other students can\'t see it.';
+
+  @override
+  String get reviewStatusRemoved => 'Removed.';
+
+  @override
+  String get reportAction => 'Report';
+
+  @override
+  String get reportTitle => 'Report this review?';
+
+  @override
+  String get reportReasonAbuse => 'Abuse';
+
+  @override
+  String get reportReasonSpam => 'Spam or ads';
+
+  @override
+  String get reportReasonFalse => 'Not accurate';
+
+  @override
+  String get reportReasonOther => 'Other';
+
+  @override
+  String get reportSend => 'Report';
+
+  @override
+  String get reportSent => 'Reported. A moderator will take a look.';
+
+  @override
+  String get reportAlready => 'You already reported this review.';
+
+  @override
+  String get reportFailed => 'Couldn\'t send the report. Please try again.';
+
+  @override
+  String get photoUploadButton => 'Add a photo';
+
+  @override
+  String get photoSheetTitle => 'Add a photo';
+
+  @override
+  String get photoKindRestaurant => 'Restaurant photo';
+
+  @override
+  String get photoKindMenu => 'Menu photo';
+
+  @override
+  String get photoPick => 'Choose a photo';
+
+  @override
+  String get photoChange => 'Choose another';
+
+  @override
+  String get photoCaptionHint => 'Caption (optional)';
+
+  @override
+  String get photoConsent =>
+      'I agree this photo may be shown in 먹어보조 after review.';
+
+  @override
+  String get photoPrivateNote =>
+      'Only you can see it until it has been reviewed.';
+
+  @override
+  String get photoSubmit => 'Submit';
+
+  @override
+  String get photoSubmitting => 'Uploading…';
+
+  @override
+  String get photoSubmitted =>
+      'Submitted. It will be published after a moderator checks it.';
+
+  @override
+  String get photoTooLarge => 'The photo must be 5 MB or smaller.';
+
+  @override
+  String get photoFailed => 'Couldn\'t upload. Please try again.';
+
+  @override
+  String get photoDuplicate => 'You already submitted this photo.';
+
+  @override
+  String get photoTooMany =>
+      'Too many photos are waiting for review. Please try again later.';
+
+  @override
+  String get myContribTitle => 'My reviews & photos';
+
+  @override
+  String get myContribOpen => 'See my reviews & photos';
+
+  @override
+  String get myContribReviews => 'My reviews';
+
+  @override
+  String get myContribPhotos => 'My photos';
+
+  @override
+  String get myContribEmpty => 'You haven\'t left any reviews or photos yet.';
+
+  @override
+  String get myContribLoadFailed => 'Couldn\'t load.';
+
+  @override
+  String get contribStatusPending => 'In review';
+
+  @override
+  String get contribStatusApproved => 'Published';
+
+  @override
+  String get contribStatusRejected => 'Not published';
+
+  @override
+  String contribRejectedReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get contribWithdraw => 'Withdraw';
+
+  @override
+  String get contribWithdrawConfirm =>
+      'Withdraw this submission? The photo will be deleted.';
+
+  @override
+  String get contribWithdrawn => 'Withdrawn.';
+
+  @override
+  String get missionActionPickPlace =>
+      'Pick a restaurant and leave it on its page. It counts for the mission right away.';
+
+  @override
   String get restaurantGalleryTitle => 'Photos';
 
   @override

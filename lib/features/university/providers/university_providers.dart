@@ -6,7 +6,9 @@ import '../models/university.dart';
 import '../models/verified_universities.dart';
 import '../repositories/university_repository.dart';
 
-const _prefsKey = 'selected_university_id';
+/// Where this device remembers the campus choice (see
+/// `universityAccountSyncProvider` for how it follows the account).
+const selectedUniversityPrefsKey = 'selected_university_id';
 
 /// Overridden in `main()` with the real instance.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -32,7 +34,9 @@ class SelectedUniversityNotifier extends AsyncNotifier<University> {
   @override
   Future<University> build() async {
     final all = await ref.watch(universityListProvider.future);
-    final storedId = ref.read(sharedPreferencesProvider).getString(_prefsKey);
+    final storedId = ref
+        .read(sharedPreferencesProvider)
+        .getString(selectedUniversityPrefsKey);
     return all.firstWhere(
       (u) => u.id == storedId,
       orElse: () => all.firstWhere(
@@ -46,7 +50,7 @@ class SelectedUniversityNotifier extends AsyncNotifier<University> {
     if (state.value == university) return;
     await ref
         .read(sharedPreferencesProvider)
-        .setString(_prefsKey, university.id);
+        .setString(selectedUniversityPrefsKey, university.id);
     state = AsyncData(university);
   }
 }

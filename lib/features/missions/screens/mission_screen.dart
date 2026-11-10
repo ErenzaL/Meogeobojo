@@ -47,6 +47,10 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
 
     return V5Page(
       backgroundColor: whitePageColor(context),
+      // Pull down to re-read the missions an admin may have just changed.
+      onRefresh: signedIn
+          ? () => ref.read(missionDashboardProvider.notifier).refresh()
+          : null,
       children: [
         V5Header(title: l10n.missionPageTitle),
         const SizedBox(height: 14),

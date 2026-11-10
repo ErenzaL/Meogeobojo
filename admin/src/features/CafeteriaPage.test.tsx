@@ -34,8 +34,11 @@ const meal = (over: Record<string, unknown> = {}) => ({
   id: 'm1', cafeteria_id: 'c1', meal_date: '2026-11-10', meal_type: 'lunch', option_name: '', option_order: 0, menu_items: [{ name_ko: '김치찌개', kind: 'main' }],
   price_krw: 5500, start_time: '11:30:00', end_time: '13:30:00', badge: null, status: 'published', source_url: null, extra: {}, ...over,
 })
-async function openPage(rows: unknown[]) {
-  fake.respond('campus_cafeterias:select', { data: [{ id: 'c1', name_ko: '학생식당', kind: 'student', universities: { name_ko: '순천향대학교' } }] })
+const CAF = { id: 'c1', university_id: 'u1', kind: 'student', name_ko: '학생식당', name_en: null, name_zh: null, location_description: '학생회관 1층', sort_order: 0, status: 'active', operating_note: null, universities: { name_ko: '순천향대학교' } }
+const UNIS = [{ id: 'u1', name_ko: '순천향대학교', is_active: true }, { id: 'u2', name_ko: '호서대학교', is_active: true }]
+async function openPage(rows: unknown[], cafeterias: unknown[] = [CAF]) {
+  fake.respond('universities:select', { data: UNIS })
+  fake.respond('campus_cafeterias:select', { data: cafeterias })
   fake.respond('cafeteria_meals:select', { data: rows })
   render(<MemoryRouter initialEntries={['/cafeteria']}><App client={makeQueryClient()} /></MemoryRouter>)
   await waitFor(() => expect(screen.getByRole('option', { name: /학생식당/ })).toBeTruthy())

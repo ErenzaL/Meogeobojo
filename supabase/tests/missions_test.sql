@@ -161,8 +161,9 @@ do $$ declare r jsonb; begin
   assert (select (x ->> 'completed')::boolean from jsonb_array_elements(r -> 'missions') x where x ->> 'slug' = 't-review'), 'a valid review completes it';
   assert (r ->> 'points_total')::int = 70, 'review reward 30';
   -- contributions wait for approval, and duplicates are refused
-  perform public.submit_contribution('menu_photo', 'p1', '{"path":"a.jpg"}');
-  begin perform public.submit_contribution('menu_photo', 'p1', '{"path":"a.jpg"}'); raise exception 'accepted'; exception when unique_violation then null; end;
+  insert into storage.objects (bucket_id, name) values ('contribution-photos', 'f1000000-0000-4000-8000-000000000001/a.jpg');
+  perform public.submit_contribution('menu_photo', 'p1', '{"path":"f1000000-0000-4000-8000-000000000001/a.jpg","consent":true}');
+  begin perform public.submit_contribution('menu_photo', 'p1', '{"path":"f1000000-0000-4000-8000-000000000001/a.jpg","consent":true}'); raise exception 'accepted'; exception when unique_violation then null; end;
   begin perform public.submit_contribution('badkind', 'p1'); raise exception 'accepted'; exception when invalid_parameter_value then null; end;
   r := public.sync_my_missions();
   assert (select (x ->> 'progress')::int from jsonb_array_elements(r -> 'missions') x where x ->> 'slug' = 't-photo') = 0, 'a pending photo does not count';
@@ -269,7 +270,8 @@ do $$ declare r jsonb; begin
   perform set_config('request.jwt.claims', '{"sub":"f1000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
   r := public.sync_my_missions();
   assert (select (x ->> 'progress')::int from jsonb_array_elements(r -> 'missions') x where x ->> 'slug' = 't-photo') = 0, 'a rejected photo never counts';
-  perform public.submit_contribution('menu_photo', 'p1', '{"path":"b.jpg"}');
+  insert into storage.objects (bucket_id, name) values ('contribution-photos', 'f1000000-0000-4000-8000-000000000001/b.jpg');
+  perform public.submit_contribution('menu_photo', 'p1', '{"path":"f1000000-0000-4000-8000-000000000001/b.jpg","consent":true}');
   reset role;
   raise notice 'OK rejected contributions do not count';
 end $$;

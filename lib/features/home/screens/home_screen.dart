@@ -16,6 +16,8 @@ import '../widgets/home_filter_bar.dart';
 import '../widgets/home_recommend_button.dart';
 import '../widgets/home_search_field.dart';
 import '../widgets/home_top_bar.dart';
+import '../../content/providers/app_content_providers.dart';
+import '../../content/widgets/home_notices.dart';
 import '../widgets/recs_states.dart';
 import '../widgets/today_picks_section.dart';
 
@@ -89,6 +91,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const Padding(padding: pad, child: HomeTopBar()),
               const SizedBox(height: 8),
             ],
+            const Padding(padding: pad, child: HomeNotices()),
             const Padding(padding: pad, child: HomeSearchField()),
             const SizedBox(height: 14),
             const HomeCategoryBar(padding: pad),
@@ -149,7 +152,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     const SizedBox(height: 28),
                                     // Before 학식: the places that fit the filters.
                                     TodayPicksSection(
-                                      ranked: data.ranked,
+                                      ranked: featuredFirst(
+                                        data.ranked,
+                                        ref
+                                                .watch(
+                                                  restaurantOverridesProvider,
+                                                )
+                                                .value ??
+                                            const {},
+                                        ref.watch(featuredContentIdsProvider),
+                                      ),
                                       categories: categories,
                                       bleed: twoColumn ? 0 : gutter,
                                     ),

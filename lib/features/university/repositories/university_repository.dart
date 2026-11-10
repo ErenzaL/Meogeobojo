@@ -19,6 +19,8 @@ class SupabaseUniversityRepository implements UniversityRepository {
       final rows = await _client
           .from('universities')
           .select('id, name_ko, name_en, city, latitude, longitude')
+          // a campus the admin switched off (published change) is not offered
+          .eq('is_active', true)
           .not('latitude', 'is', null)
           .not('longitude', 'is', null)
           .order('name_ko')

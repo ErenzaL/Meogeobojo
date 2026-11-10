@@ -8,6 +8,7 @@ import '../../features/campus_meals/providers/campus_meal_providers.dart';
 import '../../features/content/providers/app_content_providers.dart';
 import '../../features/missions/providers/mission_providers.dart';
 import '../../features/restaurants/providers/restaurant_providers.dart';
+import '../../features/university/providers/university_providers.dart';
 
 /// Tables whose changes should reach a running app without a restart. The
 /// subscription uses the signed-in (or anonymous) user's own permissions, so
@@ -22,6 +23,7 @@ const syncedTables = <String>[
   'missions',
   'monthly_campaigns',
   'app_content',
+  'universities',
 ];
 
 /// Emits the table name each time a synced table changes. Overridable in
@@ -78,6 +80,9 @@ void invalidateForTable(ProviderContainer ref, String table) {
       ref.invalidate(campusWeekMealsProvider);
     case 'app_content':
       ref.invalidate(appContentProvider);
+    case 'universities':
+      // the selected campus is derived from this list, so it follows
+      ref.invalidate(universityListProvider);
     case 'missions':
     case 'monthly_campaigns':
       unawaited(ref.read(missionDashboardProvider.notifier).refresh());
@@ -91,6 +96,7 @@ void refreshAllContent(ProviderContainer ref) {
     'cafeteria_meals',
     'app_content',
     'missions',
+    'universities',
   ]) {
     invalidateForTable(ref, t);
   }

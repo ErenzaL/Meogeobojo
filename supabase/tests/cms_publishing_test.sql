@@ -789,6 +789,56 @@ delete from public.content_versions where entity_type = 'campaign';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.monthly_campaigns where id = 'ca000000-0000-4000-8000-0000000000e1';
 
+-- ===== cms_health: the /settings overview =====
+insert into public.app_content (id, kind, title, active) values ('ac000000-0000-4000-8000-0000000000f1', 'announcement', '건강 점검 공지', true);
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare h jsonb; c constant uuid := 'ac000000-0000-4000-8000-0000000000f1'; j bigint; begin
+  perform public.cms_save_draft('app_content', c, (public.cms_state('app_content', c) -> 'live') || '{"title":"수정한 공지"}', 0);
+  j := public.cms_schedule('app_content', c, 1, now() + interval '2 days', null, '모레');
+  perform public.cms_save_draft('app_content', c, (public.cms_state('app_content', c) -> 'live') || '{"title":"또 수정"}', 1);
+  h := public.cms_health();
+  assert (h -> 'cron' ->> 'available')::boolean is not null, 'cron section present';
+  assert (h -> 'jobs' ->> 'scheduled')::int >= 1, 'a scheduled job is counted';
+  assert (h -> 'jobs' ->> 'overdue')::int = 0, 'nothing is overdue';
+  assert exists (select 1 from jsonb_array_elements(h -> 'drafts') d where d ->> 'entity_id' = c::text and d ->> 'label' = '건강 점검 공지'), 'the pending draft is listed with a readable label';
+  assert exists (select 1 from jsonb_array_elements(h -> 'scheduled') d where (d ->> 'id')::bigint = j and d ->> 'label' = '건강 점검 공지'), 'the scheduled job is listed';
+  assert jsonb_array_length(h -> 'recent') >= 1, 'recent publications are listed';
+  assert jsonb_typeof(h -> 'guards' -> 'missing') = 'array' and (h -> 'guards' -> 'missing') = '[]'::jsonb, 'all live-content guards are in place: ' || (h -> 'guards')::text;
+  assert (h -> 'schema' ->> 'cafeteria_status')::boolean, 'cafeteria status column present';
+  raise notice 'OK cms health: drafts, scheduled jobs, recent publications, scheduler and guards are reported';
+end $$;
+reset role;
+update public.publication_jobs set run_at = now() - interval '10 minutes' where entity_type = 'app_content' and status = 'scheduled';
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare h jsonb; begin
+  h := public.cms_health();
+  assert (h -> 'jobs' ->> 'overdue')::int >= 1, 'a job that should have run but did not is flagged overdue (scheduler stalled)';
+  raise notice 'OK cms health: a stalled scheduler shows up as overdue jobs';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_health(); raise exception 'accepted#h1'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms health: moderators cannot read it';
+end $$;
+reset role;
+set role anon; select set_config('request.jwt.claims', '{"role":"anon"}', false);
+do $$ begin
+  begin perform public.cms_health(); raise exception 'accepted#h2'; exception when insufficient_privilege then null; end;
+  begin perform public._cms_label('app_content', gen_random_uuid()); raise exception 'accepted#h3'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms health: anonymous callers are refused';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'app_content';
+delete from public.content_drafts where entity_type = 'app_content';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'app_content';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.app_content where id = 'ac000000-0000-4000-8000-0000000000f1';
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

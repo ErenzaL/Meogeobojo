@@ -113,6 +113,14 @@ pending('20261115000100 publishing: functions (cms_state, ...)', s_ in (401, 403
 for t_ in ('content_drafts', 'content_versions', 'publication_jobs'):
     s_, b_, _ = call(f'/rest/v1/{t_}?select=*&limit=1')
     pending(f'20261115000100 publishing: table {t_} exists and refuses anonymous reads', s_ in (401, 403) and '42501' in b_)
+# the FINAL 20261115000100 (all content types) versus an earlier edition that only knew restaurants / meals
+for fn_, body_, what_ in (('_campaign_save', {'p': {}}, 'campaigns + app content + universities + missions'),
+                          ('_mission_save', {'p': {}}, 'missions'),
+                          ('cms_overview', {'p_type': 'restaurant', 'p_parent': None}, 'cms_overview(p_type, p_parent)')):
+    s_, b_, _ = call(f'/rest/v1/rpc/{fn_}', body_)
+    pending(f'20261115000100 publishing: final edition ({what_})', s_ in (401, 403) and '42501' in b_)
+s_, b_, _ = call('/rest/v1/rpc/cms_health', {})
+pending('20261116000100 publishing health (cms_health) for the /settings page', s_ in (401, 403) and '42501' in b_)
 print('  (pg_cron must also be enabled for scheduled publishing: check Dashboard -> Database -> Extensions and cron.job)')
 print()
 

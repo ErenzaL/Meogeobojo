@@ -8,13 +8,27 @@ import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
 
+import 'package:meogeobojo/features/university/models/university.dart';
+import 'package:meogeobojo/features/university/models/verified_universities.dart';
+import 'package:meogeobojo/features/university/repositories/university_repository.dart';
+
 import '../support/fakes.dart';
 import '../support/harness.dart';
 
 /// Admin changes reach a running app: live (Realtime), on resume, and by
 /// pull-to-refresh. The Realtime source is replaced by a controllable stream;
 /// what is tested is "a change event -> the right screens re-read".
+class _CountingUniversities implements UniversityRepository {
+  int fetches = 0;
+  @override
+  Future<List<University>> fetchAll() async {
+    fetches++;
+    return kVerifiedUniversities;
+  }
+}
+
 void main() {
+  late _CountingUniversities universities;
   late StreamController<String> changes;
   late FakeMissionRepository missions;
   late FakeRestaurantOverrideRepository overrides;
@@ -22,6 +36,7 @@ void main() {
   Future<Harness> open(WidgetTester tester) async {
     changes = StreamController<String>.broadcast();
     addTearDown(changes.close);
+    universities = _CountingUniversities();
     missions = FakeMissionRepository();
     overrides = FakeRestaurantOverrideRepository(
       overrides: {
@@ -37,6 +52,7 @@ void main() {
       restaurants: FakeRestaurantRepository(items: [fakeRestaurant('a')]),
       missions: missions,
       overridesRepo: overrides,
+      universities: universities,
       extraOverrides: [
         contentChangesProvider.overrideWith((ref) => changes.stream),
       ],
@@ -102,6 +118,17 @@ void main() {
     expect(overrides.forPlacesCalls - before, lessThan(6));
   });
 
+  testWidgets('a published university change re-reads the campus list', (
+    tester,
+  ) async {
+    await open(tester);
+    final before = universities.fetches;
+    changes.add('universities');
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+    expect(universities.fetches, greaterThan(before));
+  });
+
   testWidgets('unrelated tables change nothing', (tester) async {
     await open(tester);
     final before = overrides.forPlacesCalls;
@@ -119,6 +146,7 @@ void main() {
     await tester.pumpAndSettle();
     final mBefore = missions.syncs;
     final oBefore = overrides.forPlacesCalls;
+    final uBefore = universities.fetches;
     for (final s in [
       AppLifecycleState.inactive,
       AppLifecycleState.hidden,
@@ -132,6 +160,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(missions.syncs, greaterThan(mBefore));
     expect(overrides.forPlacesCalls, greaterThan(oBefore));
+    expect(universities.fetches, greaterThan(uBefore));
   });
 
   testWidgets('pull-to-refresh on the mission page asks the server again', (

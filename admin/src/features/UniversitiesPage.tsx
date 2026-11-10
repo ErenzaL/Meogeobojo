@@ -80,8 +80,8 @@ function Editor({ uni, onClose, onChanged }: { uni: Uni; onClose: () => void; on
           <Field label="위도" htmlFor="u_lat" error={errors.latitude}><Input id="u_lat" value={form.latitude} onChange={(e) => set({ latitude: e.target.value })} /></Field>
           <Field label="경도" htmlFor="u_lng" error={errors.longitude}><Input id="u_lng" value={form.longitude} onChange={(e) => set({ longitude: e.target.value })} /></Field>
         </div>
-        <Field label="검색 반경 (m)" htmlFor="u_r" error={errors.radius}><Input id="u_r" value={form.radius} onChange={(e) => set({ radius: e.target.value })} /></Field>
-        <p className="text-xs text-muted">저장은 초안이에요. 게시하면 앱의 대학교 목록과 식당 검색 범위에 반영돼요.</p>
+        <Field label="검색 반경 (m)" htmlFor="u_r" error={errors.radius} hint="참고용이에요. 지금 앱은 이 값을 쓰지 않아요 (식당 검색 범위는 앱의 필터와 검색 서비스가 정해요)."><Input id="u_r" value={form.radius} onChange={(e) => set({ radius: e.target.value })} /></Field>
+        <p className="text-xs text-muted">저장은 초안이에요. 게시하면 앱의 대학교 목록(이름·위치·표시 여부)에 반영돼요.</p>
       </Card>
       <Modal open={previewing} title="미리보기" onClose={() => setPreviewing(false)}>
         <div className="space-y-4">
@@ -130,7 +130,7 @@ export default function UniversitiesPage() {
   const editing = list.data?.find((u) => u.id === editingId) ?? null
   return (
     <>
-      <PageHeader title="대학교" description="캠퍼스 좌표, 식당 검색 반경, 앱 표시 여부를 관리해요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 반영돼요. 식당 연결은 식당 편집 화면에서 해요." />
+      <PageHeader title="대학교" description="캠퍼스 이름·좌표와 앱 표시 여부를 관리해요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 반영돼요. 식당 연결은 식당 편집 화면에서 해요." />
       {notice && <p role="status" className="mb-4 rounded-xl bg-brand/30 p-3 text-sm">{notice}</p>}
       {list.data?.length === 0 && <EmptyState>등록된 대학교가 없어요.</EmptyState>}
       <div className="grid gap-4 lg:grid-cols-[1fr_26rem]">

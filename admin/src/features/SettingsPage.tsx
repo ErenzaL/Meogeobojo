@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import PublishingCenter from '@/components/PublishingCenter'
 import { Badge, Button, Card, ConfirmDialog, ErrorState, Field, Input, PageHeader, Select } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { ROLE_LABEL, type Role } from '@/lib/roles'
@@ -48,6 +49,7 @@ export default function SettingsPage() {
             <Button disabled={run.isPending || !/^[0-9a-f-]{36}$/i.test(uid.trim())} onClick={() => run.mutate(() => supabase.rpc('admin_grant_role', { p_user: uid.trim(), p_role: role }))}>부여</Button>
           </div>
         </Card>)}
+      {can('admin') && <PublishingCenter />}
       <ConfirmDialog open={!!revoke} danger title="역할을 해제할까요?" description={revoke ?? undefined} confirmLabel="해제" onCancel={() => setRevoke(null)}
         onConfirm={() => revoke && run.mutate(() => supabase.rpc('admin_revoke_role', { p_user: revoke }))} />
     </>

@@ -18,6 +18,7 @@ import 'package:meogeobojo/features/recommendation/providers/ranking_providers.d
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
 import 'package:meogeobojo/features/university/models/verified_universities.dart';
 import 'package:meogeobojo/features/university/providers/university_providers.dart';
+import 'package:meogeobojo/features/university/repositories/university_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes.dart';
@@ -67,6 +68,7 @@ Future<Harness> buildHarness({
   FakeReviewRepository? reviews,
   FakeContributionRepository? contributions,
   FakePhotoPicker? photoPicker,
+  UniversityRepository? universities,
 }) async {
   SharedPreferences.setMockInitialValues(storage);
   final sp = await SharedPreferences.getInstance();
@@ -91,7 +93,7 @@ Future<Harness> buildHarness({
       sharedPreferencesProvider.overrideWithValue(sp),
       deviceLocalesProvider.overrideWithValue(deviceLocales),
       universityRepositoryProvider.overrideWithValue(
-        FakeUniversityRepository(kVerifiedUniversities),
+        universities ?? FakeUniversityRepository(kVerifiedUniversities),
       ),
       restaurantRepositoryProvider.overrideWithValue(r),
       authGatewayProvider.overrideWithValue(a),

@@ -839,6 +839,26 @@ delete from public.content_versions where entity_type = 'app_content';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.app_content where id = 'ac000000-0000-4000-8000-0000000000f1';
 
+-- ===== upgrade path: a database that got an EARLIER edition of 20261115 (shorter entity_type lists) =====
+alter table public.content_drafts drop constraint content_drafts_entity_type_check;
+alter table public.content_drafts add constraint content_drafts_entity_type_check check (entity_type in ('restaurant'));
+alter table public.content_versions drop constraint content_versions_entity_type_check;
+alter table public.content_versions add constraint content_versions_entity_type_check check (entity_type in ('restaurant', 'cafeteria_meal'));
+alter table public.publication_jobs drop constraint publication_jobs_entity_type_check;
+alter table public.publication_jobs add constraint publication_jobs_entity_type_check check (entity_type in ('restaurant'));
+do $$ begin
+  begin insert into public.content_drafts (entity_type, entity_id, data, base_version) values ('university', gen_random_uuid(), '{}', 0); raise exception 'accepted#old'; exception when check_violation then null; end;
+  raise notice 'OK upgrade path: the old shorter constraint really refuses newer types (the problem being fixed)';
+end $$;
+\ir ../migrations/20261116000100_cms_health.sql
+do $$ declare n int; begin
+  insert into public.content_drafts (entity_type, entity_id, data, base_version) values ('university', 'd0000000-0000-4000-8000-0000000000e9', '{}', 0), ('campaign', 'd0000000-0000-4000-8000-0000000000e9', '{}', 0);
+  delete from public.content_drafts where entity_id = 'd0000000-0000-4000-8000-0000000000e9';
+  select count(*) into n from pg_constraint where conrelid in ('public.content_drafts'::regclass, 'public.content_versions'::regclass, 'public.publication_jobs'::regclass) and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \(\(entity_type = ';
+  assert n = 3, 'exactly one entity_type check per publishing table (got ' || n || ')';
+  raise notice 'OK upgrade path: re-applying 20261116000100 widens an older entity_type check on all three publishing tables, no duplicates';
+end $$;
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

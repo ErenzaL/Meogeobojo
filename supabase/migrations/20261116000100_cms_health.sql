@@ -3,6 +3,9 @@
 -- update channel and the database guards are in place.
 --
 -- READ-ONLY and admin-only. Additive and idempotent. Requires 20261115000100 (the publishing tables).
+-- It also makes sure the publishing tables accept EVERY content type. 20261115000100 uses
+-- `create table if not exists`, so a database that first received an earlier edition of it (fewer
+-- content types) would keep the old entity_type CHECK and refuse drafts for the newer types.
 -- It changes no content. Besides these two functions its only effect is to add `universities` to the
 -- live-update channel (supabase_realtime), so a published campus change reaches a running app.
 
@@ -11,6 +14,21 @@ do $$ begin
      or to_regclass('public.content_versions') is null or to_regprocedure('public._cms_admin_check()') is null then
     raise exception 'Apply 20261115000100 first.';
   end if;
+end $$;
+
+-- Make the entity_type CHECK of the three publishing tables the full list (replaces an older, shorter one).
+do $$
+declare t text; c record;
+  types constant text := $l$('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'campaign', 'app_content', 'university')$l$;
+begin
+  foreach t in array array['content_drafts', 'content_versions', 'publication_jobs'] loop
+    for c in select conname from pg_constraint
+              where conrelid = ('public.' || t)::regclass and contype = 'c' and pg_get_constraintdef(oid) ~ '^CHECK \(\(entity_type = '
+    loop
+      execute format('alter table public.%I drop constraint %I', t, c.conname);
+    end loop;
+    execute format('alter table public.%I add constraint %I check (entity_type in %s)', t, t || '_entity_type_check', types);
+  end loop;
 end $$;
 
 -- A published campus change (or hiding a campus) should reach a running app: add it to the channel

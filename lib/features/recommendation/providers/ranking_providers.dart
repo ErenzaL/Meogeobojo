@@ -54,15 +54,16 @@ final hiddenPlaceIdsProvider = Provider<Set<String>>(
   },
 );
 
-/// Places that pass the shared conditions, measured from the chosen origin
-/// and ordered. Home, the map and search all read this one list.
-final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
-  ref,
-) {
-  final places = ref.watch(allNearbyRestaurantsProvider);
+/// Ranks [places] with the shared conditions, measured from the chosen origin.
+/// One implementation for every list (Home, map, search, category-filtered Home).
+AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
+  Ref ref,
+  AsyncValue<List<Restaurant>> places, {
+  Map<String, RestaurantInsight> extraInsights = const {},
+}) {
   final origin = ref.watch(originProvider);
   final conditions = ref.watch(conditionsProvider);
-  final insights = ref.watch(restaurantInsightsProvider);
+  final insights = {...ref.watch(restaurantInsightsProvider), ...extraInsights};
   final now = ref.watch(seoulNowProvider);
   final hidden = ref.watch(hiddenPlaceIdsProvider);
   if (origin == null) {
@@ -82,7 +83,14 @@ final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
       nowMinutes: minutesOfDay(now),
     ),
   );
-});
+}
+
+/// Places that pass the shared conditions, measured from the chosen origin
+/// and ordered. Home, the map and search all read this one list.
+final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>(
+  (ref) =>
+      rankWithSharedConditions(ref, ref.watch(allNearbyRestaurantsProvider)),
+);
 
 /// Same list without the ranking details (map markers, search filtering).
 final filteredRestaurantsProvider = Provider<AsyncValue<List<Restaurant>>>(

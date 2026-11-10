@@ -28,6 +28,12 @@ import 'package:meogeobojo/features/home/games/game_sheet.dart';
 import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:meogeobojo/features/home/widgets/home_filter_bar.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
+import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
+
+import 'package:meogeobojo/features/university/models/university.dart';
+
+import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart'
+    show restaurantOverridesProvider;
 
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
@@ -58,7 +64,7 @@ final _places = [
 
 Future<Harness> openHome(
   WidgetTester tester, {
-  FakeRestaurantRepository? repo,
+  RestaurantRepository? repo,
   FakeCampusMealRepository? meals,
   Stream<DateTime>? clock,
   List<dynamic> overrides = const [],
@@ -120,7 +126,276 @@ Finder inHero(Finder f) =>
 Finder inAlternatives(Finder f) =>
     find.descendant(of: find.byType(AlternativesSection), matching: f);
 
+/// Kakao returns a different list per category keyword: the generic query holds
+/// only the 15 nearest places of any kind, the 중식 query holds Chinese places.
+class _PerCategoryRepo implements RestaurantRepository {
+  _PerCategoryRepo(this.byCategory);
+
+  final Map<FoodCategory, List<Restaurant>> byCategory;
+  final calls = <FoodCategory>[];
+
+  @override
+  Future<List<Restaurant>> nearby({
+    required University university,
+    FoodCategory category = FoodCategory.all,
+    GlobalCuisine cuisine = GlobalCuisine.all,
+  }) async {
+    calls.add(category);
+    return byCategory[category] ?? const [];
+  }
+
+  @override
+  Future<List<Restaurant>> search({
+    required University university,
+    required String query,
+  }) async => const [];
+}
+
 void main() {
+  group('category + conditions stay in sync with the result', () {
+    testWidgets(
+      'a chosen category is searched in its own results, not in the generic 15 nearest',
+      (tester) async {
+        final repo = _PerCategoryRepo({
+          FoodCategory.all: [
+            spot('한식집', 0.0005),
+            spot('분식집', 0.0006, category: '음식점 > 분식'),
+          ],
+          FoodCategory.chinese: [
+            spot('짜장집', 0.0010, category: '음식점 > 중식 > 중국요리'),
+            spot('짬뽕집', 0.0020, category: '음식점 > 중식'),
+          ],
+        });
+        await openHome(tester, repo: repo);
+        expect(find.text('한식집'), findsWidgets); // 전체: the generic pool
+        await tester.tap(
+          find.descendant(
+            of: find.byType(HomeCategoryBar),
+            matching: find.text('중식'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(repo.calls, contains(FoodCategory.chinese));
+        expect(
+          find.text('짜장집'),
+          findsWidgets,
+        ); // the nearest 중식 place, even though none was in the generic pool
+        expect(find.text('한식집'), findsNothing);
+        expect(find.text('조건에 맞는 곳이 없어요'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'the budget condition applies on top of the category, with unknown prices kept',
+      (tester) async {
+        final repo = _PerCategoryRepo({
+          FoodCategory.chinese: [
+            spot('짜장집', 0.0010, category: '음식점 > 중식'),
+            spot('비싼중식', 0.0020, category: '음식점 > 중식'),
+          ],
+        });
+        final prices = FakeRestaurantOverrideRepository(
+          overrides: {
+            '비싼중식': const RestaurantOverride(
+              kakaoId: '비싼중식',
+              visibility: 'published',
+              insight: RestaurantInsight(minPriceKrw: 15000),
+            ),
+          },
+        );
+        final h = await buildHarness(
+          restaurants: repo,
+          overridesRepo: prices,
+          extraOverrides: [
+            campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
+          ],
+        );
+        await pumpApp(tester, h, home: const AppShell());
+        await h.container.read(restaurantOverridesProvider.future);
+        h.container
+            .read(homeCategoryProvider.notifier)
+            .toggle(FoodCategory.chinese);
+        h.container
+            .read(conditionsProvider.notifier)
+            .update((c) => c.copyWith(budget: BudgetOption.max8000));
+        await tester.pumpAndSettle();
+        final recs = h.container.read(homeRecsProvider).value!;
+        expect(recs.ranked.map((r) => r.restaurant.kakaoId), [
+          '짜장집',
+        ]); // unknown price stays, the 15,000원 place goes
+      },
+    );
+
+    testWidgets(
+      '양식 + 중식 with 도보 10분 and 조용한 대화: every result is a 양식 or 중식 place within 10 minutes',
+      (tester) async {
+        // Real Kakao results around the campus (paths and distances as returned),
+        // including 멕시칸 places that Kakao files under 양식 but the app lists as 세계 음식.
+        Restaurant at(String name, String path, int meters) =>
+            spot(name, meters / 111000.0, category: path);
+        final western = [
+          at('버거운버거', '음식점 > 양식 > 햄버거', 406),
+          at('밀플랜비', '음식점 > 양식 > 멕시칸,브라질', 411),
+          at('도스마스', '음식점 > 양식 > 멕시칸,브라질', 439),
+          at('스코르피온', '음식점 > 양식', 460),
+          at('온달파스타', '음식점 > 양식 > 이탈리안', 483),
+          at('케밥하우스', '음식점 > 양식 > 멕시칸,브라질', 674),
+          at('우골록', '음식점 > 양식', 829), // beyond 10 minutes
+          at('피자스쿨', '음식점 > 양식 > 피자', 2502),
+        ];
+        final chinese = [
+          at('마라취웨이', '음식점 > 중식 > 중국요리', 413),
+          at('해피마라탕', '음식점 > 중식', 423),
+          at('중국집', '음식점 > 중식 > 중국요리', 491),
+          at('짬뽕119', '음식점 > 중식 > 중국요리', 1479),
+        ];
+        final generic = [
+          at('어굿플레이스', '음식점 > 한식', 3),
+          at('홍대쌀국수', '음식점 > 아시아음식 > 동남아음식 > 베트남음식', 284),
+        ];
+        // like the real repository: each category query returns only its own places
+        final repo = _PerCategoryRepo({
+          FoodCategory.all: generic,
+          FoodCategory.western: [
+            for (final r in western)
+              if (FoodCategory.western.matches(r)) r,
+          ],
+          FoodCategory.chinese: [
+            for (final r in chinese)
+              if (FoodCategory.chinese.matches(r)) r,
+          ],
+        });
+        final h = await buildHarness(restaurants: repo);
+        await pumpApp(tester, h, home: const AppShell());
+        final n = h.container.read(homeCategoryProvider.notifier);
+        n.toggle(FoodCategory.western);
+        n.toggle(FoodCategory.chinese);
+        h.container
+            .read(conditionsProvider.notifier)
+            .update(
+              (c) => c.copyWith(
+                distance: DistanceOption.walk10,
+                needs: {Need.quietTalk},
+              ),
+            );
+        await tester.pumpAndSettle();
+        final recs = h.container.read(homeRecsProvider).value!;
+        final names = recs.ranked.map((r) => r.restaurant.name).toList();
+        expect(names.toSet(), {
+          '버거운버거',
+          '스코르피온',
+          '온달파스타',
+          '마라취웨이',
+          '해피마라탕',
+          '중국집',
+        });
+        expect(recs.total, 6);
+        for (final r in recs.ranked) {
+          expect(r.walkMinutes, lessThanOrEqualTo(10));
+          expect(
+            FoodCategory.global.matches(r.restaurant),
+            isFalse,
+          ); // no 세계 음식 / 멕시칸 / 쌀국수
+        }
+        // the card the student sees is the same list
+        expect(find.text('6곳 중 1순위'), findsOneWidget);
+        expect(find.text(recs.hero.restaurant.name), findsWidgets);
+      },
+    );
+
+    testWidgets('only when nothing in the category exists does it say so', (
+      tester,
+    ) async {
+      final repo = _PerCategoryRepo({
+        FoodCategory.all: [spot('한식집', 0.0005)],
+      });
+      await openHome(tester, repo: repo);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(HomeCategoryBar),
+          matching: find.text('중식'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
+    });
+  });
+
+  group('다음 추천', () {
+    testWidgets(
+      'steps down the ranking one place at a time and back, stopping at the ends',
+      (tester) async {
+        final h = await openHome(tester, size: const Size(390, 1600));
+        final ranked = h.container.read(homeRecsProvider).value!.ranked;
+        expect(ranked.length, greaterThan(2));
+        final first = ranked[0].restaurant.name;
+        final second = ranked[1].restaurant.name;
+        expect(find.text('1순위', findRichText: true), findsNothing);
+        Finder inHeroText(String t) =>
+            find.descendant(of: find.byType(HeroCard), matching: find.text(t));
+        expect(inHeroText(first), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(HeroCard),
+            matching: find.text('‹ 이전'),
+          ),
+          findsNothing,
+        ); // nothing before #1
+        await tester.ensureVisible(find.text('다음 추천 ›'));
+        await tester.tap(find.text('다음 추천 ›'));
+        await tester.pumpAndSettle();
+        expect(inHeroText(second), findsOneWidget);
+        expect(h.container.read(homeRecsProvider).value!.heroRank, 2);
+        expect(find.text('‹ 이전'), findsOneWidget);
+        await tester.tap(find.text('‹ 이전'));
+        await tester.pumpAndSettle();
+        expect(inHeroText(first), findsOneWidget);
+        // walk to the last place: no "next" there
+        for (var i = 1; i < ranked.length; i++) {
+          h.container
+              .read(heroPickProvider.notifier)
+              .step(h.container.read(homeRecsProvider).value!, 1);
+        }
+        await tester.pumpAndSettle();
+        expect(
+          h.container.read(homeRecsProvider).value!.heroRank,
+          ranked.length,
+        );
+        expect(find.text('다음 추천 ›'), findsNothing);
+        expect(
+          h.container
+              .read(heroPickProvider.notifier)
+              .step(h.container.read(homeRecsProvider).value!, 1),
+          isFalse,
+        );
+      },
+    );
+
+    testWidgets('a single result has no navigation buttons', (tester) async {
+      await openHome(
+        tester,
+        repo: FakeRestaurantRepository(items: [spot('하나뿐', 0.0005)]),
+      );
+      expect(find.text('다음 추천 ›'), findsNothing);
+      expect(find.text('‹ 이전'), findsNothing);
+    });
+
+    testWidgets('changing a condition starts again from the best place', (
+      tester,
+    ) async {
+      final h = await openHome(tester, size: const Size(390, 1600));
+      await tester.ensureVisible(find.text('다음 추천 ›'));
+      await tester.tap(find.text('다음 추천 ›'));
+      await tester.pumpAndSettle();
+      expect(h.container.read(homeRecsProvider).value!.heroRank, 2);
+      h.container
+          .read(conditionsProvider.notifier)
+          .update((c) => c.copyWith(budget: BudgetOption.max12000));
+      await tester.pumpAndSettle();
+      expect(h.container.read(homeRecsProvider).value!.heroRank, 1);
+    });
+  });
+
   group('header, title and chips', () {
     testWidgets('header: university, search, categories, filters, button', (
       tester,

@@ -2284,6 +2284,18 @@ abstract class AppLocalizations {
   /// **'하나 골라줘'**
   String get homePickForMe;
 
+  /// No description provided for @homeNextPick.
+  ///
+  /// In ko, this message translates to:
+  /// **'다음 추천 ›'**
+  String get homeNextPick;
+
+  /// No description provided for @homePrevPick.
+  ///
+  /// In ko, this message translates to:
+  /// **'‹ 이전'**
+  String get homePrevPick;
+
   /// No description provided for @homeRestart.
   ///
   /// In ko, this message translates to:

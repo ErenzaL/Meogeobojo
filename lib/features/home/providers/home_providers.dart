@@ -7,6 +7,8 @@ import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/food_category.dart';
+import '../../restaurants/models/restaurant.dart';
+import '../../restaurants/providers/restaurant_providers.dart';
 
 /// What the Home cards show: the hero, and the alternatives under it.
 class HomeRecs {
@@ -101,6 +103,15 @@ class HeroPickNotifier extends Notifier<String?> {
   /// Back to the top-ranked place for the current filters.
   void reset() => state = null;
 
+  /// Moves the shown pick [delta] places down (+1, "다음 추천") or up (-1)
+  /// the current ranking. Stops at the ends.
+  bool step(HomeRecs recs, int delta) {
+    final i = recs.heroRank - 1 + delta;
+    if (i < 0 || i >= recs.ranked.length) return false;
+    state = recs.ranked[i].restaurant.kakaoId;
+    return true;
+  }
+
   /// Shows the place with [kakaoId] as the top pick (a game's winner).
   void choose(String kakaoId) => state = kakaoId;
 
@@ -118,19 +129,57 @@ class HeroPickNotifier extends Notifier<String?> {
   }
 }
 
+/// What Home ranks. With nothing chosen (전체) it is the shared list. With
+/// categories chosen it is built from Kakao's results FOR THOSE CATEGORIES
+/// (not by filtering the 15 nearest places of any kind, which usually holds
+/// only a few places of the chosen category), then ranked by the same
+/// conditions, so the result always agrees with the filters.
+final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
+  ref,
+) {
+  final categories = ref.watch(homeCategoryProvider);
+  if (categories.isEmpty) return ref.watch(rankedRestaurantsProvider);
+  final lists = [
+    for (final c in categories)
+      ref.watch(
+        categoryRestaurantsProvider(categoryQuery(c, GlobalCuisine.all)),
+      ),
+  ];
+  final AsyncValue<List<Restaurant>> pool;
+  if (lists.any((l) => l.isLoading) && lists.every((l) => !l.hasError)) {
+    pool = const AsyncLoading();
+  } else if (lists.every((l) => l.hasError)) {
+    pool = AsyncError(
+      lists.first.error!,
+      lists.first.stackTrace ?? StackTrace.empty,
+    );
+  } else {
+    final seen = <String>{};
+    pool = AsyncData([
+      for (final l in lists)
+        for (final r in l.value ?? const <Restaurant>[])
+          if (categories.any((c) => c.matches(r)) && seen.add(r.kakaoId)) r,
+    ]);
+  }
+  // Prices / hours an admin entered for THESE places (the generic overrides
+  // were fetched for the nearby pool only).
+  final ids = [for (final r in pool.value ?? const <Restaurant>[]) r.kakaoId]
+    ..sort();
+  final extra = ref.watch(overridesForIdsProvider(ids.join(',')));
+  if (pool.hasValue && extra.isLoading) return const AsyncLoading();
+  return rankWithSharedConditions(
+    ref,
+    pool,
+    extraInsights: {
+      for (final o in (extra.value ?? const {}).values) o.kakaoId: o.insight,
+    },
+  );
+});
+
 /// Null data means "nothing matches the conditions".
 final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
   final pick = ref.watch(heroPickProvider);
-  final categories = ref.watch(homeCategoryProvider);
-  return ref.watch(rankedRestaurantsProvider).whenData((all) {
-    // The category bar narrows the list to places in ANY chosen category;
-    // nothing chosen (전체) keeps everything as before.
-    final ranked = categories.isEmpty
-        ? all
-        : [
-            for (final r in all)
-              if (categories.any((c) => c.matches(r.restaurant))) r,
-          ];
+  return ref.watch(homePoolRankedProvider).whenData((ranked) {
     if (ranked.isEmpty) return null;
     var index = ranked.indexWhere((r) => r.restaurant.kakaoId == pick);
     if (index < 0) index = 0;

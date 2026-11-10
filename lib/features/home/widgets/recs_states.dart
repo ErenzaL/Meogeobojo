@@ -84,7 +84,10 @@ class RecsError extends ConsumerWidget {
             ? (error as RestaurantException).localizedMessage(l10n)
             : l10n.tryAgainLater,
         actionLabel: l10n.commonRetry,
-        onAction: () => ref.invalidate(allNearbyRestaurantsProvider),
+        onAction: () {
+          ref.invalidate(allNearbyRestaurantsProvider);
+          ref.invalidate(categoryRestaurantsProvider);
+        },
       ),
     );
   }

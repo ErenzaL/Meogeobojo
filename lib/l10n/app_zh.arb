@@ -364,6 +364,8 @@
   "homeInfo": "详情",
   "homeAltTitle": "不喜欢的话",
   "homePickForMe": "帮我选一个",
+  "homeNextPick": "下一个 ›",
+  "homePrevPick": "‹ 上一个",
   "homeRestart": "重新开始",
   "homePromptTitle": "先选好条件再看推荐",
   "homePromptMessage": "选好预算、距离等条件，或点“获取今日推荐”。",

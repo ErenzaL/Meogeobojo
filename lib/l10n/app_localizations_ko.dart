@@ -1255,6 +1255,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homePickForMe => '하나 골라줘';
 
   @override
+  String get homeNextPick => '다음 추천 ›';
+
+  @override
+  String get homePrevPick => '‹ 이전';
+
+  @override
   String get homeRestart => '처음부터 다시';
 
   @override

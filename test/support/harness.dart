@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:meogeobojo/features/restaurants/repositories/restaurant_repository.dart';
 import 'package:meogeobojo/features/content/providers/app_content_providers.dart';
 import 'package:meogeobojo/features/contributions/providers/contribution_providers.dart';
 import 'package:meogeobojo/features/reviews/providers/review_providers.dart';
@@ -50,7 +51,7 @@ Future<Harness> buildHarness({
   FakeAuthGateway? auth,
   FakeProfileRepository? profiles,
   FakePreferencesRepository? prefs,
-  FakeRestaurantRepository? restaurants,
+  RestaurantRepository? restaurants,
   FakeFavoritesRepository? favorites,
   FakeMissionRepository? missions,
   FakeCampusMealRepository? meals,
@@ -134,7 +135,7 @@ Future<Harness> buildHarness({
     auth: a,
     profiles: p,
     prefs: pr,
-    restaurants: r,
+    restaurants: r is FakeRestaurantRepository ? r : FakeRestaurantRepository(),
     favorites: fav,
     missions: mission,
     sp: sp,

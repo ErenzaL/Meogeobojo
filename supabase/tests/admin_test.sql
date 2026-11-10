@@ -121,9 +121,14 @@ set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"b0000000-0000-4000-8000-00000000000b","role":"authenticated"}', false);
 do $$ declare n int; begin
   assert public.has_role('admin') and not public.has_role('super_admin'), 'admin rank';
-  update public.restaurant_overrides set description = '새 설명', visibility = 'published' where kakao_place_id = 'k2';
-  assert (select description from public.restaurant_overrides where kakao_place_id = 'k2') = '새 설명', 'admin edits restaurants';
-  insert into public.restaurant_overrides (name_ko, visibility) values ('수제식당', 'published');   -- hand-made, no kakao id
+  -- live content is edited only by publishing: a direct edit is refused, the draft -> publish flow works
+  begin update public.restaurant_overrides set description = '직접 수정', visibility = 'published' where kakao_place_id = 'k2'; raise exception 'accepted#c1'; exception when insufficient_privilege then null; end;
+  begin insert into public.restaurant_overrides (name_ko, visibility) values ('바로공개', 'published'); raise exception 'accepted#c2'; exception when insufficient_privilege then null; end;
+  perform public.cms_save_draft('restaurant', (select id from public.restaurant_overrides where kakao_place_id = 'k2'),
+    jsonb_set(jsonb_set(public.cms_state('restaurant', (select id from public.restaurant_overrides where kakao_place_id = 'k2')) -> 'live', '{description}', '"새 설명"'), '{visibility}', '"published"'), 0);
+  perform public.cms_publish('restaurant', (select id from public.restaurant_overrides where kakao_place_id = 'k2'), 1, 'test');
+  assert (select description from public.restaurant_overrides where kakao_place_id = 'k2') = '새 설명', 'admin edits restaurants by publishing';
+  insert into public.restaurant_overrides (name_ko, visibility) values ('수제식당', 'draft');   -- hand-made, no kakao id; starts as a draft
   begin insert into public.restaurant_overrides (kakao_place_id, name_ko) values ('k1', 'dup'); raise exception 'accepted#23'; exception when unique_violation then null; end;
   insert into public.restaurant_university_links values ('11111111-0000-4000-8000-000000000001', '5c0a8f3e-0001-4a6e-9b1d-000000000001');
   insert into public.restaurant_menus (restaurant_id, name_ko, price_krw, source, representative, sort_order)

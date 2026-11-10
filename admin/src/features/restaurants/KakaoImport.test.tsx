@@ -64,13 +64,13 @@ describe('카카오 식당 불러오기', () => {
     expect((within(list).getByLabelText('가 선택') as HTMLInputElement).disabled).toBe(true) // already managed: cannot be picked again
     expect(fake.invokes).toHaveLength(KAKAO_QUERIES.length)
     expect(fake.invokes[0]).toMatchObject({ name: 'search_restaurants', body: { latitude: 36.76999, longitude: 126.9315 } })
-    expect(fake.rpcs).toHaveLength(0) // nothing is stored before the admin chooses
+    expect(fake.rpcs.filter((r) => r.name !== 'cms_overview')).toHaveLength(0) // nothing is stored before the admin chooses
 
     expect((within(list).getByRole('button', { name: '0곳 등록하기' }) as HTMLButtonElement).disabled).toBe(true)
     await userEvent.click(within(list).getByLabelText('나 선택'))
     await userEvent.click(within(list).getByRole('button', { name: '1곳 등록하기' }))
     expect(await screen.findByText(/1곳을 초안으로 등록했어요/)).toBeTruthy()
-    const args = fake.rpcs[0].args as { p_university: string; p_places: Record<string, unknown>[] }
+    const args = fake.rpcs.find((r) => r.name === 'admin_register_kakao_places')!.args as { p_university: string; p_places: Record<string, unknown>[] }
     expect(args.p_university).toBe('u1')
     expect(args.p_places.map((p) => p.id)).toEqual(['2'])
     // only what the server needs to validate and label: no address, phone or category path is sent for storage
@@ -103,7 +103,7 @@ describe('카카오 식당 불러오기', () => {
     open(); await pickUniversity()
     await userEvent.click(screen.getByRole('button', { name: /카카오에서 찾기/ }))
     expect(await screen.findByText(/카카오 검색에 실패했어요/)).toBeTruthy()
-    expect(fake.rpcs).toHaveLength(0)
+    expect(fake.rpcs.filter((r) => r.name !== 'cms_overview')).toHaveLength(0)
   })
 
   it('moderators cannot reach the restaurants page', async () => {
@@ -115,8 +115,9 @@ describe('카카오 식당 불러오기', () => {
 
 describe('카카오 실시간 정보', () => {
   const editPage = () => {
-    fake.respond('restaurant_overrides:select', { data: [{ id: 'r1', kakao_place_id: '1', name_ko: '수정된 이름', visibility: 'draft' }] })
+    fake.respond('restaurant_overrides:select', { data: [{ id: 'r1', kakao_place_id: '1', name_ko: '수정된 이름', visibility: 'draft', image_url: null }] })
     fake.respond('restaurant_university_links:select', { data: [{ university_id: 'u1', universities: { latitude: 36.77, longitude: 126.93 } }] })
+    fake.respond('rpc:cms_state', { data: { live: { name_ko: '수정된 이름', visibility: 'draft', featured: false, university_ids: [], dining_purposes: [], opening_hours: {} }, live_version: 0, last_published: null, draft: null, jobs: [] } })
     render(<MemoryRouter initialEntries={['/restaurants/r1']}><App client={makeQueryClient()} /></MemoryRouter>)
   }
   it('fetches the Kakao original LIVE around the linked campus and shows it read-only, separate from the editable values', async () => {
@@ -130,6 +131,7 @@ describe('카카오 실시간 정보', () => {
     expect(await screen.findByDisplayValue('수정된 이름')).toBeTruthy()
     // nothing from Kakao was written anywhere
     expect(fake.calls.filter((c) => c.op !== 'select')).toHaveLength(0)
+    expect(fake.rpcs.filter((r) => r.name !== 'cms_state')).toHaveLength(0)
   })
   it('says so when Kakao no longer returns the place', async () => {
     fake.respond('fn:search_restaurants', { data: { success: true, restaurants: [doc('9', '없는 곳')] } })

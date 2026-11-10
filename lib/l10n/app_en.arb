@@ -364,6 +364,8 @@
   "homeInfo": "Info",
   "homeAltTitle": "Not feeling it?",
   "homePickForMe": "Pick one for me",
+  "homeNextPick": "Next pick ›",
+  "homePrevPick": "‹ Previous",
   "homeRestart": "Start over",
   "homePromptTitle": "Set your conditions to get a pick",
   "homePromptMessage": "Choose a budget or distance, or tap “Get today’s pick”.",

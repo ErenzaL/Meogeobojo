@@ -1333,6 +1333,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePickForMe => 'Pick one for me';
 
   @override
+  String get homeNextPick => 'Next pick ›';
+
+  @override
+  String get homePrevPick => '‹ Previous';
+
+  @override
   String get homeRestart => 'Start over';
 
   @override

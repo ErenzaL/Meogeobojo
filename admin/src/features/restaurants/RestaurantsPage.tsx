@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/DataTable'
 import { Badge, Button, ConfirmDialog, ErrorState, Input, PageHeader, Select } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
+import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage, formatDateTime } from '@/lib/utils'
 import KakaoImport from './KakaoImport'
@@ -63,6 +64,7 @@ export default function RestaurantsPage() {
   const [university, setUniversity] = useState('')
   const [category, setCategory] = useState('')
   const [photo, setPhoto] = useState('')
+  const [pub, setPub] = useState('')
   const [menu, setMenu] = useState('')
   const [sorting, setSorting] = useState<SortingState>([{ id: 'updated_at', desc: true }])
   const [confirm, setConfirm] = useState<{ row: Row; to: Visibility } | null>(null)
@@ -70,9 +72,12 @@ export default function RestaurantsPage() {
   const unis = useUniversities()
 
   const sort = sorting[0] ?? { id: 'updated_at', desc: true }
+  const overview = useQuery({ queryKey: ['cms-overview'], queryFn: () => cmsOverview('restaurant'), staleTime: 10_000 })
+  const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
+  const pubIds = (pred: (r: OverviewRow) => boolean) => (overview.data ?? []).filter(pred).map((r) => r.entity_id)
   const coverage = useCoverage()
   const menuIds = coverage.data?.menuIds
-  const filters = { page, search, visibility, university, category, photo, menu, sort, menuIds: menu ? menuIds?.length : 0 }
+  const filters = { page, search, visibility, university, category, photo, menu, sort, menuIds: menu ? menuIds?.length : 0, pub, pubCount: overview.data?.length ?? 0 }
   const list = useQuery({
     queryKey: ['restaurants', filters],
     placeholderData: keepPreviousData,
@@ -84,6 +89,14 @@ export default function RestaurantsPage() {
       if (visibility) q = q.eq('visibility', visibility)
       if (category.trim()) q = q.ilike('category', `%${clean(category)}%`)
       if (university) q = q.eq('restaurant_university_links.university_id', university)
+      // publishing status: draft / scheduled / failed come from the publishing overview, published / archived from the live row
+      if (pub === 'published') q = q.eq('visibility', 'published')
+      if (pub === 'archived') q = q.in('visibility', ['archived', 'hidden'])
+      if (pub === 'draft') { const ids = pubIds((r) => r.has_draft); q = ids.length ? q.or(`visibility.eq.draft,id.in.(${ids.join(',')})`) : q.eq('visibility', 'draft') }
+      if (pub === 'scheduled' || pub === 'failed') {
+        const ids = pubIds((r) => (pub === 'scheduled' ? r.scheduled_at !== null : r.failed_jobs > 0))
+        q = q.in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
+      }
       if (photo === 'none') q = q.is('image_url', null)
       if (photo === 'has') q = q.not('image_url', 'is', null)
       if (menu === 'has') q = q.in('id', menuIds?.length ? menuIds : ['00000000-0000-0000-0000-000000000000'])
@@ -94,12 +107,10 @@ export default function RestaurantsPage() {
     },
   })
 
+  // An immediate, versioned change (history + audit), not a silent edit of the live row.
   const setVis = useMutation({
-    mutationFn: async ({ id, to }: { id: string; to: Visibility }) => {
-      const { error } = await supabase.from('restaurant_overrides').update({ visibility: to }).eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: async () => { setConfirm(null); setNotice('저장했어요.'); await qc.invalidateQueries({ queryKey: ['restaurants'] }) },
+    mutationFn: async ({ id, to, reason }: { id: string; to: Visibility; reason: string }) => { await cmsSetVisibility('restaurant', id, to, reason) },
+    onSuccess: async () => { setConfirm(null); setNotice('공개 상태를 바꿨어요. 게시 이력에 남았어요.'); await qc.invalidateQueries({ queryKey: ['restaurants'] }); await qc.invalidateQueries({ queryKey: ['cms-overview'] }) },
     onError: (e) => { setConfirm(null); setNotice(errorMessage(e)) },
   })
 
@@ -112,7 +123,18 @@ export default function RestaurantsPage() {
     { accessorKey: 'category', header: '카테고리', enableSorting: false, cell: ({ getValue }) => (getValue() as string | null) ?? '—' },
     { id: 'university', header: '대학교', enableSorting: false, cell: ({ row: { original: r } }) => (r.restaurant_university_links?.map((l) => l.universities?.name_ko).filter(Boolean).join(', ') || '—') },
     { accessorKey: 'address', header: '주소', enableSorting: false, cell: ({ getValue }) => <span className="text-sm text-muted">{(getValue() as string | null) ?? '—'}</span> },
-    { accessorKey: 'visibility', header: '상태', enableSorting: false, cell: ({ getValue }) => <Badge tone={tone[getValue() as Visibility]}>{VISIBILITY_LABEL[getValue() as Visibility]}</Badge> },
+    { accessorKey: 'visibility', header: '라이브 상태', enableSorting: false, cell: ({ getValue }) => <Badge tone={tone[getValue() as Visibility]}>{VISIBILITY_LABEL[getValue() as Visibility]}</Badge> },
+    { id: 'publishing', header: '게시', enableSorting: false, cell: ({ row: { original: r } }) => {
+      const o = ov.get(r.id)
+      if (!o) return <span className="text-xs text-muted">—</span>
+      return (
+        <div className="flex flex-wrap gap-1">
+          {o.has_draft && <Badge tone="brand">초안 있음</Badge>}
+          {o.scheduled_at && <Badge tone="amber">예약 {formatKst(o.scheduled_at)}</Badge>}
+          {o.failed_jobs > 0 && <Badge tone="red">실패 {o.failed_jobs}</Badge>}
+          {!o.has_draft && !o.scheduled_at && o.failed_jobs === 0 && <span className="text-xs text-muted">{o.live_version > 0 ? `v${o.live_version}` : '—'}</span>}
+        </div>)
+    } },
     { id: 'complete', header: '정보', enableSorting: false, cell: ({ row: { original: r } }) => (r.description ? <Badge tone="green">설명 있음</Badge> : <Badge tone="amber">설명 없음</Badge>) },
     { accessorKey: 'updated_at', header: '수정일', cell: ({ getValue }) => formatDateTime(getValue() as string) },
     { id: 'actions', header: '', enableSorting: false, cell: ({ row: { original: r } }) => (
@@ -122,7 +144,7 @@ export default function RestaurantsPage() {
           ? <Button size="sm" variant="soft" onClick={() => setConfirm({ row: r, to: 'published' })}>공개</Button>
           : <Button size="sm" variant="outline" onClick={() => setConfirm({ row: r, to: 'hidden' })}>숨기기</Button>}
       </div>) },
-  ], [])
+  ], [ov])
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
@@ -149,7 +171,7 @@ export default function RestaurantsPage() {
       }
       const fresh = valid.filter((r) => !existing.has(r.values!.kakao_place_id))
       for (let i = 0; i < fresh.length; i += 200) {
-        const { error } = await supabase.from('restaurant_overrides').insert(fresh.slice(i, i + 200).map((r) => toRow(r.values!)))
+        const { error } = await supabase.from('restaurant_overrides').insert(fresh.slice(i, i + 200).map((r) => ({ ...toRow(r.values!), visibility: 'draft', featured: false })))  // imported places always start as drafts
         if (error) throw error
       }
       return { added: fresh.length, skippedDuplicates: valid.length - fresh.length, invalid: rows.length - valid.length }
@@ -185,6 +207,9 @@ export default function RestaurantsPage() {
           <option value="">모든 대학교</option>{unis.data?.map((u) => <option key={u.id} value={u.id}>{u.name_ko}</option>)}
         </Select>
         <Input aria-label="카테고리" placeholder="카테고리 (예: 한식)" value={category} onChange={(e) => { setCategory(e.target.value); setPage(0) }} />
+        <Select aria-label="게시 상태 필터" value={pub} onChange={(e) => { setPub(e.target.value); setPage(0) }}>
+          <option value="">게시: 전체</option><option value="draft">초안</option><option value="scheduled">예약됨</option><option value="published">게시됨</option><option value="archived">보관·숨김</option><option value="failed">실패</option>
+        </Select>
         <Select aria-label="사진 필터" value={photo} onChange={(e) => { setPhoto(e.target.value); setPage(0) }}>
           <option value="">사진: 전체</option><option value="none">대표 사진 없음</option><option value="has">대표 사진 있음</option>
         </Select>
@@ -204,11 +229,11 @@ export default function RestaurantsPage() {
         loading={list.isLoading} error={list.error} onRetry={() => void list.refetch()} sorting={sorting} onSorting={(s) => { setSorting(s); setPage(0) }}
         empty="조건에 맞는 식당이 없어요. 위의 '카카오 식당 불러오기'로 대학교 주변 식당을 불러올 수 있어요." />
 
-      <ConfirmDialog open={!!confirm} busy={setVis.isPending}
+      <ConfirmDialog open={!!confirm} busy={setVis.isPending} askReason
         title={confirm?.to === 'published' ? '이 식당을 공개할까요?' : '이 식당을 숨길까요?'}
         description={confirm ? `${confirm.row.name_ko} — ${confirm.to === 'published' ? '앱 사용자에게 보여요.' : '앱에서 이 식당이 숨겨져요.'}` : undefined}
         confirmLabel={confirm?.to === 'published' ? '공개' : '숨기기'} danger={confirm?.to !== 'published'}
-        onConfirm={() => confirm && setVis.mutate({ id: confirm.row.id, to: confirm.to })} onCancel={() => setConfirm(null)} />
+        onConfirm={(reason) => confirm && setVis.mutate({ id: confirm.row.id, to: confirm.to, reason })} onCancel={() => setConfirm(null)} />
 
       {importRows && (
         <ConfirmDialog open title="CSV 가져오기 미리보기" confirmLabel="가져오기" busy={runImport.isPending}

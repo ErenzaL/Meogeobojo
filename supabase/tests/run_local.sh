@@ -25,6 +25,7 @@ echo "--- cafeteria schema / RLS suite"; P -f $HERE/cafeteria_test.sql 2>&1 | gr
 echo "--- admin foundation / authorization suite"; P -f $HERE/admin_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- mission system suite"; P -f $HERE/missions_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- admin content (photos / menus) suite"; P -f $HERE/admin_content_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
+echo "--- CMS publishing suite"; P -f $HERE/cms_publishing_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260
 echo "--- CSV importer end to end"
 U=5c0a8f3e-0001-4a6e-9b1d-000000000001; PY=$HERE/../cafeteria/import_cafeteria_csv.py; T=$WORK/csv; mkdir -p $T
 printf 'university_id,cafeteria_id,kind,name_ko,name_en,name_zh,location_description,sort_order\n%s,c9c9c9c9-0000-4000-8000-000000000009,student,,,,,0\n%s,,dormitory,,,,,1\n' $U $U > $T/caf.csv

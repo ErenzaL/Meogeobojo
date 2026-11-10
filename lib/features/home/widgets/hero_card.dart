@@ -192,6 +192,33 @@ class HeroCard extends ConsumerWidget {
               ),
             ],
           ),
+          // Walk through the ranking: the next best place (and back).
+          if (recs.total > 1) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                if (recs.heroRank > 1) ...[
+                  Expanded(
+                    child: OutlineActionButton(
+                      label: l10n.homePrevPick,
+                      onPressed: () =>
+                          ref.read(heroPickProvider.notifier).step(recs, -1),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                if (recs.heroRank < recs.total)
+                  Expanded(
+                    flex: 2,
+                    child: OutlineActionButton(
+                      label: l10n.homeNextPick,
+                      onPressed: () =>
+                          ref.read(heroPickProvider.notifier).step(recs, 1),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );

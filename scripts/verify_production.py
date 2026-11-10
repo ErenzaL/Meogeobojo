@@ -108,6 +108,12 @@ pending('20261113000100 cafeteria management (campus_cafeterias.status, operatin
 s_, b_, _ = call('/rest/v1/rpc/delete_my_contribution', {'p_id': U0})
 pending('20261114000100 student contributions (delete_my_contribution)', s_ in (401, 403) and '42501' in b_)
 # (the private bucket cannot be told apart from a missing one with the anon key: check it in the Supabase dashboard)
+s_, b_, _ = call('/rest/v1/rpc/cms_state', {'p_type': 'restaurant', 'p_id': U0})
+pending('20261115000100 publishing: functions (cms_state, ...)', s_ in (401, 403) and '42501' in b_)
+for t_ in ('content_drafts', 'content_versions', 'publication_jobs'):
+    s_, b_, _ = call(f'/rest/v1/{t_}?select=*&limit=1')
+    pending(f'20261115000100 publishing: table {t_} exists and refuses anonymous reads', s_ in (401, 403) and '42501' in b_)
+print('  (pg_cron must also be enabled for scheduled publishing: check Dashboard -> Database -> Extensions and cron.job)')
 print()
 
 # --- the Kakao edge function, with a real campus

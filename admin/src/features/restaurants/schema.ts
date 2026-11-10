@@ -84,3 +84,14 @@ export function fromRow(r: DbRow, universityIds: string[]): RestaurantForm {
     university_ids: universityIds,
   }
 }
+
+/** The publishable content (a snapshot) from the form: the base snapshot with the
+ *  form-managed fields on top. Fields the form does not edit (opening hours) are
+ *  carried over, so publishing never wipes them. Identity (Kakao id) and the
+ *  cover image are not part of a snapshot: the Kakao id never changes and the
+ *  cover is published from 사진 관리. */
+export function snapshotFromForm(v: RestaurantForm, base: Record<string, unknown>): Record<string, unknown> {
+  const { kakao_place_id: _k, image_url: _i, ...row } = toRow(v)
+  void _k; void _i
+  return { ...base, ...row, university_ids: v.university_ids }
+}

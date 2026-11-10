@@ -1249,6 +1249,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePickForMe => '帮我选一个';
 
   @override
+  String get homeNextPick => '下一个 ›';
+
+  @override
+  String get homePrevPick => '‹ 上一个';
+
+  @override
   String get homeRestart => '重新开始';
 
   @override

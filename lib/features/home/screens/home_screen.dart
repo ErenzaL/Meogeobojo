@@ -47,6 +47,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     logMissionActivity(ref, 'recommendation_view');
     if (ref.read(homeRecsProvider).hasError) {
       ref.invalidate(allNearbyRestaurantsProvider);
+      ref.invalidate(categoryRestaurantsProvider);
     }
     ref.read(homeRecsRequestedProvider.notifier).request();
     ref.read(heroPickProvider.notifier).reset();

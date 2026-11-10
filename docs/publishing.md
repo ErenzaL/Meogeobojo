@@ -1,0 +1,126 @@
+# Controlled publishing (draft → preview → publish / schedule → live)
+
+Status: **foundation + restaurants built and tested locally; not applied to production.**
+Other sections are listed under "Rollout" and still publish immediately.
+
+## 1. Audit: which Admin pages write public data directly (before this work)
+
+| Page | Writes to | Live immediately? | Existing draft/publish rule | Flutter reads |
+|---|---|---|---|---|
+| 식당 (edit) | `restaurant_overrides` (+ campus links) | yes | `visibility` draft/published/hidden/archived (a *state*, not a staging area) | `restaurant_override_repository`, merged repo |
+| 식당 (list hide/publish) | `restaurant_overrides.visibility` | yes | same | same |
+| 카카오 식당 불러오기 | `admin_register_kakao_places` → new **draft** rows | no (drafts) | draft rows hidden by RLS | n/a |
+| 메뉴·가격 | `restaurant_menus` | yes (active/archived flag) | `status` active/archived | `menus()` |
+| 사진 관리 | `restaurant_photos` + public bucket | yes (`status`) | published/archived | `photos()`, cover mirror |
+| 학식 | `campus_cafeterias`, `cafeteria_meals` | yes | cafeteria active/inactive/archived; meal draft/published (RLS hides drafts) | `campus_meal_repository` |
+| 미션 관리 | RPCs → `missions`, `monthly_campaigns` | yes | mission status; campaign draft/published | `sync_my_missions` |
+| 앱 콘텐츠 | `app_content` | yes (`active` + start/end window) | active flag, optional window | `appContentProvider` |
+| 대학교 | `universities` | yes | `is_active` | `universityListProvider` |
+| 추천 | read-only stats | n/a | n/a | n/a |
+
+Findings: only meals, cafeterias, campaigns and app content have any staging notion
+(and it is a status flag on the live row, with no history, no scheduling and no
+conflict detection); restaurants, menus, photos, universities were edited live.
+
+## 2. Architecture (no second source of truth)
+
+```
+ Admin form ──cms_save_draft──▶ content_drafts      (one per entity, admins only)
+                                   │  Preview = this saved draft vs live (diff)
+        ┌──────────────────────────┤
+        │ cms_publish (now)        │ cms_schedule (frozen snapshot, one per entity)
+        ▼                          ▼
+   _cms_commit  ◀── cms_run_due_jobs ◀── pg_cron, every minute, inside the database
+        │  validate → apply to the LIVE row → append content_versions
+        ▼
+ restaurant_overrides  (the live row the app already reads; unchanged schema)
+```
+
+* **Live** = the existing row. Students read it exactly as before: **no Flutter
+  change was needed** (a test pins that the app never reads the publishing tables).
+* **Draft** (`content_drafts`): separate, `revision` bumped on every save, remembers
+  the live `base_version` it started from. Invisible to students (admin-only RLS).
+* **Versions** (`content_versions`): immutable (a trigger refuses update/delete, even
+  for the superuser). Version N holds exactly what became live. Rollback = publish an
+  old snapshot as a **new** version (`kind = rollback`, `rolled_back_from`).
+* **Jobs** (`publication_jobs`): a scheduled publish holds a **frozen snapshot**; later
+  edits to the draft never change it. An optional end time creates a linked
+  *unpublish* job. One scheduled publish per entity (partial unique index).
+* **Atomic**: validate → apply → record version in one transaction; any error leaves
+  live untouched. Scheduler errors are caught per job (sub-transaction) and recorded
+  (`failed`, `last_error`, audit `cms_job_failed`).
+* **Guard**: a trigger on `restaurant_overrides` refuses API edits of live content
+  (and inserts that are not drafts); only the publishing functions (and the SQL editor
+  / service role) can change it. Photos still mirror `image_url`, Kakao registration
+  still adds draft rows.
+* **Concurrency**: saving with a stale `revision`, publishing/scheduling when live moved
+  since the draft started, discarding someone else's newer draft → SQLSTATE 40001, shown
+  as a conflict with a choice (load latest / overwrite knowingly / rebase). Nothing is
+  silently overwritten. A scheduled job whose live version changed refuses to run.
+* **Permissions**: every `cms_*` function checks the **admin** role in the database;
+  moderators, students and anon are refused. At run time the scheduler re-checks that
+  the person who scheduled it still has the admin role, and re-validates the snapshot.
+* **Non-destructive**: "게시 중단" = new version with `visibility = hidden`; nothing is
+  deleted (not the row, the links, the menus, the photos, the favorites or reviews).
+* **Times**: the UI uses Asia/Seoul (UTC+9, no DST) and sends UTC; the database stores UTC.
+
+### What the toolbar shows (restaurant page)
+Live status + version, pending changes ("게시되지 않은 변경 N건"), last saved (when/who),
+last published (when/who/kind), scheduled time (and end), conflicts, failed jobs;
+buttons: 초안 저장, 미리보기, 지금 게시, 예약 게시, 예약 취소, 게시 중단,
+게시 이력 (versions with 이 버전으로 복원; jobs with 시간 변경 / 다시 시도 / 취소).
+The restaurant list has a 게시 column and a filter: 초안 / 예약됨 / 게시됨 / 보관·숨김 / 실패.
+
+## 3. Migration `20261115000100_cms_publishing.sql` (not applied)
+
+Additive and idempotent. New: `content_drafts`, `content_versions`, `publication_jobs`,
+the `cms_*` functions, the guard trigger, and a `pg_cron` job `cms-run-due-jobs`
+(every minute) when the extension is available.
+
+**Before it is applied** the old Admin Web still edits live directly; **after** it is
+applied that no longer works (by design), so **apply the migration and deploy the new
+Admin Web together** (the new Admin needs the migration to open a restaurant).
+
+**pg_cron**: enable it in the Supabase dashboard (Database → Extensions → pg_cron), then
+run the migration (or re-run it). If it cannot be enabled, scheduled publications will
+not run: `select * from cron.job where jobname = 'cms-run-due-jobs'` must return a row.
+The runner `cms_run_due_jobs()` is **not** callable through the API; it needs no browser,
+Flutter app or laptop.
+
+## 4. Tests (all local)
+
+* `supabase/tests/cms_publishing_test.sql` (scratch PostgreSQL): A draft never changes
+  live · concurrency conflicts · validation · the guard · B publish creates version 1,
+  audited · scheduling rules · frozen snapshot · runner not callable via API · C/H runner
+  publishes once and is idempotent · automatic end hides without deleting · failure is
+  atomic and recorded · retry publishes exactly once · scheduler who lost the role cannot
+  publish · a stale scheduled snapshot never overwrites newer live · D cancel/reschedule ·
+  F unpublish/rollback are new versions · versions immutable · G moderators, students and
+  anon refused.
+* Admin (vitest): status panel, publish with a change summary, dirty-form gating, conflicts,
+  stale-draft rebase, schedule (Seoul → UTC), validation, cancel, unpublish with reason,
+  history + rollback, failed-job surfacing + retry, preview + diff, list filters, the
+  versioned visibility change; plus unit tests for KST conversion and the diff.
+* Flutter: the app never reads the publishing tables or writes restaurant content.
+
+Mapping to your scenarios: A, B, D, F, G, H are covered by the SQL suite and the admin
+tests; C (7 AM KST) is covered as "a due job published by the runner without any client";
+the actual wall-clock firing by **pg_cron in production is not verified** until it is enabled.
+E (missions) is not implemented yet.
+
+## 5. Rollout (safe order; not done)
+
+1. **Menus + prices** (per restaurant menu set → snapshot of the items; publish together).
+2. **Photos** (cover + gallery set). Needs a private staging bucket so unpublished photos
+   are not reachable by permanent public URLs (today they upload to the public bucket).
+3. **Cafeteria weeks** (a week or one meal; keeps verified-source rules).
+4. **App content** (banners/announcements: schedule start + automatic expiry; the live
+   window already exists, this adds drafts and history).
+5. **Missions/campaigns**: publish versions without touching progress, points or badges
+   (the existing mission versioning already preserves them; draft/schedule goes on top).
+6. **Universities / recommendation settings**: only student-facing configuration, separate
+   from operational changes.
+
+Each step = one more branch in `_cms_keys / _cms_snapshot / _cms_validate / _cms_apply /
+_cms_unpublished` plus its admin form. Account suspension, role changes and fraud
+moderation stay immediate, confirmed and audited; they never go through publishing.

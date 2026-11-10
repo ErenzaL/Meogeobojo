@@ -136,7 +136,9 @@ do $$ declare r jsonb; o public.restaurant_overrides; places jsonb; n int; begin
   assert (select count(*) from public.restaurant_university_links where restaurant_id = o.id) = 1, 'linked to the campus';
 
   -- an admin edits; registering again must not overwrite anything
-  update public.restaurant_overrides set name_ko = '어굿플레이스 (수정)', category = '백반', visibility = 'published' where kakao_place_id = '1001';
+  perform public.cms_save_draft('restaurant', (select id from public.restaurant_overrides where kakao_place_id = '1001'),
+    jsonb_set(jsonb_set(jsonb_set(public.cms_state('restaurant', (select id from public.restaurant_overrides where kakao_place_id = '1001')) -> 'live', '{name_ko}', '"어굿플레이스 (수정)"'), '{category}', '"백반"'), '{visibility}', '"published"'), 0);
+  perform public.cms_publish('restaurant', (select id from public.restaurant_overrides where kakao_place_id = '1001'), 1, 'edit');
   r := public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', replace(places::text, '어굿플레이스', '이름이 바뀐 카카오')::jsonb);
   assert (r ->> 'added')::int = 0 and (r ->> 'already_managed')::int = 2, 're-registering adds nothing: ' || r::text;
   select * into o from public.restaurant_overrides where kakao_place_id = '1001';
@@ -145,11 +147,11 @@ do $$ declare r jsonb; o public.restaurant_overrides; places jsonb; n int; begin
   select count(*) into n from public.restaurant_university_links l join public.restaurant_overrides x on x.id = l.restaurant_id where x.kakao_place_id in ('1001', '1002'); assert n = 2, 'no duplicate campus links';
 
   -- a hand-made row for the same Kakao id is reused, not duplicated or changed
-  insert into public.restaurant_overrides (kakao_place_id, name_ko, visibility) values ('1003', '손으로 만든', 'published');
+  insert into public.restaurant_overrides (kakao_place_id, name_ko, visibility) values ('1003', '손으로 만든', 'draft');
   perform public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001',
     '[{"id":"1003","place_name":"카카오 이름","category_group_code":"FD6","x":"126.9","y":"36.7"}]');
   select * into o from public.restaurant_overrides where kakao_place_id = '1003';
-  assert o.name_ko = '손으로 만든' and o.visibility = 'published', 'existing row untouched';
+  assert o.name_ko = '손으로 만든' and o.visibility = 'draft', 'existing row untouched';
   select count(*) into n from public.restaurant_overrides where kakao_place_id = '1003'; assert n = 1, 'still one row';
 
   begin perform public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', '{"a":1}'); raise exception 'accepted#7'; exception when invalid_parameter_value then null; end;

@@ -28,16 +28,18 @@ describe('식당 편집', () => {
     HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) { this.setAttribute('open', '') }
     HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) { this.removeAttribute('open') }
   })
-  it('saves featured + display order to restaurant_overrides', async () => {
-    fake.respond('restaurant_overrides:select', { data: [{ id: 'r1', kakao_place_id: '1', name_ko: '온기식당', visibility: 'published', featured: false, display_order: null }] })
+  it('saves featured + display order into the DRAFT', async () => {
+    const live = { name_ko: '온기식당', visibility: 'published', featured: false, display_order: null, university_ids: [], dining_purposes: [], opening_hours: {} }
+    fake.respond('restaurant_overrides:select', { data: [{ id: 'r1', kakao_place_id: '1', image_url: null }] })
+    fake.respond('rpc:cms_state', { data: { live, live_version: 1, last_published: null, draft: null, jobs: [] } })
+    fake.respond('rpc:cms_save_draft', { data: { revision: 1, base_version: 1, updated_at: '2026-11-10T00:00:00Z' } })
     fake.respond('restaurant_university_links:select', { data: [] })
     render(<MemoryRouter initialEntries={['/restaurants/r1']}><App client={makeQueryClient()} /></MemoryRouter>)
     await userEvent.click(await screen.findByLabelText('추천 식당'))
     await userEvent.type(screen.getByLabelText('추천 표시 순서'), '2')
-    await userEvent.click(screen.getByRole('button', { name: '저장' }))
-    const dialogSave = await screen.findAllByRole('button', { name: /저장|확인/, hidden: true })
-    await userEvent.click(dialogSave.at(-1)!)
-    await waitFor(() => expect(fake.last('restaurant_overrides', 'update')).toBeTruthy())
-    expect(fake.last('restaurant_overrides', 'update')!.payload).toMatchObject({ featured: true, display_order: 2, name_ko: '온기식당' })
+    await userEvent.click(screen.getByRole('button', { name: '초안 저장' }))
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'cms_save_draft')).toBe(true))
+    expect((fake.rpcs.find((r) => r.name === 'cms_save_draft')!.args as { p_data: unknown }).p_data).toMatchObject({ featured: true, display_order: 2, name_ko: '온기식당' })
+    expect(fake.last('restaurant_overrides', 'update')).toBeUndefined()
   })
 })

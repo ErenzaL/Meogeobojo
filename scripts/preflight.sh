@@ -31,6 +31,9 @@ if [ -x "${PGBIN:-/Library/PostgreSQL/18/bin}/initdb" ]; then
   N=$(grep -c "OK" "$W/sql.log"); if grep -qE "ERROR|FAILED" "$W/sql.log"; then bad "sql suite ($(grep -E 'ERROR|FAILED' "$W/sql.log" | head -1))"; else ok "sql suite: $N checks OK"; fi
 else printf 'SKIP no local PostgreSQL (set PGBIN)\n'; fi
 
+step "4b. release scripts: unit tests (no network)"
+python3 -m unittest scripts/test_verify_publish_e2e.py 2>&1 | tail -3 | grep -q "^OK" && ok "verify_publish_e2e unit tests" || bad "verify_publish_e2e unit tests"
+
 step "5. production: read-only probes with the publishable key"
 python3 scripts/verify_production.py 2>&1 | grep -E "^(OK|PENDING|FAIL)|passed" ; python3 scripts/verify_production.py >/dev/null 2>&1 && ok "verify_production" || bad "verify_production"
 step "6. what Render serves right now"

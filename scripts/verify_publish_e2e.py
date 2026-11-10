@@ -17,7 +17,9 @@ for app_content, so they show what a student's app shows after a refresh.
 
 Needs: SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY (or admin/.env VITE_*), and an ADMIN account:
   ADMIN_EMAIL=... ADMIN_PASSWORD=... python3 scripts/verify_publish_e2e.py --yes-i-approve-production-write [--with-schedule]
-Credentials are read from the environment only; nothing is stored. Exit status 0 = every step passed.
+Credentials are read from the environment only; nothing is stored.
+Exit status: 0 = every check passed; 1 = a check failed or the run crashed (cleanup is still attempted);
+2 = refused to start (missing approval flag or configuration). Unit tests: python3 -m unittest scripts/test_verify_publish_e2e.py
 """
 import datetime as dt, json, os, pathlib, re, sys, time, urllib.error, urllib.request
 
@@ -38,13 +40,54 @@ def env():
 E = env()
 URL = (E.get('SUPABASE_URL') or E.get('VITE_SUPABASE_URL') or '').rstrip('/')
 KEY = E.get('SUPABASE_PUBLISHABLE_KEY') or E.get('VITE_SUPABASE_ANON_KEY') or ''
-results = []
 
 
-def step(name, ok, detail=''):
-    results.append(ok)
-    print(('PASS ' if ok else 'FAIL ') + name + (f'  [{detail}]' if detail else ''), flush=True)
-    return ok
+class Results:
+    """Every check is one record (passed: bool, name, detail), whatever expression produced it.
+
+    The previous version appended the raw expression, so `a and b and some_list` stored the LIST and
+    the final sum() crashed. Values are coerced to a real bool here, in one place."""
+
+    def __init__(self, echo=True):
+        self.items = []
+        self.echo = echo
+
+    def add(self, name, ok, detail=''):
+        passed = bool(ok)
+        self.items.append((passed, name, str(detail)))
+        if self.echo:
+            print(('PASS ' if passed else 'FAIL ') + name + (f'  [{detail}]' if detail else ''), flush=True)
+        return passed
+
+    @property
+    def total(self):
+        return len(self.items)
+
+    @property
+    def passed(self):
+        return sum(1 for ok, _, _ in self.items if ok)
+
+    @property
+    def failed(self):
+        return [name for ok, name, _ in self.items if not ok]
+
+    def summary(self):
+        line = f'{self.passed}/{self.total} checks passed.'
+        if self.failed:
+            line += f' {len(self.failed)} FAILED: ' + '; '.join(self.failed)
+        return line
+
+    def exit_code(self):
+        """0 only when at least one check ran and every check passed (nothing verified is not a success)."""
+        return 0 if self.total > 0 and not self.failed else 1
+
+    def finish(self):
+        print('\n' + self.summary(), flush=True)
+        return self.exit_code()
+
+
+class _Abort(Exception):
+    """A step the rest of the run depends on failed (already recorded): stop, clean up, report."""
 
 
 def http(method, path, body=None, token=None, extra=None):
@@ -73,17 +116,23 @@ def public_row(row_id):
     return rows[0] if s == 200 and rows else None
 
 
-def main():
-    if '--yes-i-approve-production-write' not in sys.argv:
-        sys.exit('Refusing to write to the project without --yes-i-approve-production-write (see the docstring).')
+def main(argv=None):
+    """Runs the checks and returns the process exit code (0 = every check passed)."""
+    argv = sys.argv[1:] if argv is None else argv
+    if '--yes-i-approve-production-write' not in argv:
+        print('Refusing to write to the project without --yes-i-approve-production-write (see the docstring).', file=sys.stderr)
+        return 2
     if not URL or not KEY:
-        sys.exit('Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or admin/.env).')
+        print('Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or admin/.env).', file=sys.stderr)
+        return 2
     email, pw = E.get('ADMIN_EMAIL'), E.get('ADMIN_PASSWORD')
     if not email or not pw:
-        sys.exit('Set ADMIN_EMAIL and ADMIN_PASSWORD (an admin account) in the environment.')
+        print('Set ADMIN_EMAIL and ADMIN_PASSWORD (an admin account) in the environment.', file=sys.stderr)
+        return 2
+    R = Results()
     s, auth = http('POST', '/auth/v1/token?grant_type=password', {'email': email, 'password': pw})
-    if not step('admin sign-in', s == 200 and isinstance(auth, dict) and 'access_token' in auth, f'HTTP {s}'):
-        sys.exit(1)
+    if not R.add('admin sign-in', s == 200 and isinstance(auth, dict) and 'access_token' in auth, f'HTTP {s}'):
+        return R.finish()
     tok = auth['access_token']
     stamp = dt.datetime.now().strftime('%H%M%S')
     title0, title1 = f'[E2E] 게시 점검 {stamp}', f'[E2E] 게시 점검 {stamp} (수정됨)'
@@ -97,38 +146,40 @@ def main():
 
         s, r = http('POST', '/rest/v1/app_content', {'kind': 'announcement', 'title': title0, 'body': 'publishing check', 'active': False},
                     tok, {'Prefer': 'return=representation'})
-        if not step('1. staged (switched-off) row can be created', s in (200, 201) and isinstance(r, list) and r, f'HTTP {s} {r if s >= 300 else ""}'):
-            return
-        row_id = r[0]['id']
-        step('1. the app cannot see the staged row', public_row(row_id) is None)
+        created = s in (200, 201) and isinstance(r, list) and len(r) > 0
+        if created:
+            row_id = r[0]['id']           # set before anything can fail, so cleanup always knows the row
+        if not R.add('1. staged (switched-off) row can be created', created, f'HTTP {s} {r if s >= 300 else ""}'):
+            raise _Abort()
+        R.add('1. the app cannot see the staged row', public_row(row_id) is None)
 
         s, d = rpc('cms_save_draft', {'p_type': 'app_content', 'p_id': row_id,
                    'p_data': {'title': title1, 'body': 'publishing check', 'image_url': None, 'link_url': None, 'kakao_place_id': None,
                               'university_id': None, 'active': True, 'sort_order': 0, 'starts_at': None, 'ends_at': None},
                    'p_expected_revision': 0}, tok)
-        step('2. save draft (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
-        step('2. a saved draft is invisible to the app', public_row(row_id) is None)
+        R.add('2. save draft (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
+        R.add('2. a saved draft is invisible to the app', public_row(row_id) is None)
         s, live = http('GET', f'/rest/v1/app_content?id=eq.{row_id}&select=title,active', None, tok)
-        step('2. the live row is unchanged by the draft', s == 200 and live and live[0]['title'] == title0 and live[0]['active'] is False)
+        R.add('2. the live row is unchanged by the draft', s == 200 and isinstance(live, list) and len(live) == 1 and live[0]['title'] == title0 and live[0]['active'] is False)
 
         s, d = rpc('cms_publish', {'p_type': 'app_content', 'p_id': row_id, 'p_expected_revision': 1, 'p_reason': 'E2E 게시 점검'}, tok)
-        step('3. publish now (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
+        R.add('3. publish now (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
         pub = public_row(row_id)
-        step('3. the app now sees the published title (no rebuild, no code deploy)', bool(pub) and pub['title'] == title1, str(pub))
+        R.add('3. the app now sees the published title (no rebuild, no code deploy)', pub is not None and pub.get('title') == title1, str(pub))
 
         s, d = rpc('cms_unpublish', {'p_type': 'app_content', 'p_id': row_id, 'p_reason': 'E2E 게시 점검 종료'}, tok)
-        step('5. unpublish (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
-        step('5. the app no longer sees it', public_row(row_id) is None)
+        R.add('5. unpublish (RPC)', s == 200, f'HTTP {s} {d if s >= 300 else ""}')
+        R.add('5. the app no longer sees it', public_row(row_id) is None)
 
-        if '--with-schedule' in sys.argv:
+        if '--with-schedule' in argv:
             s, st = rpc('cms_state', {'p_type': 'app_content', 'p_id': row_id}, tok)
-            live2 = st['live'] if s == 200 else {}
+            live2 = st['live'] if s == 200 and isinstance(st, dict) else {}
             s, d = rpc('cms_save_draft', {'p_type': 'app_content', 'p_id': row_id, 'p_data': {**live2, 'title': title1 + ' (예약)', 'active': True}, 'p_expected_revision': 0}, tok)
-            step('4. save draft for the schedule', s == 200, f'HTTP {s}')
+            R.add('4. save draft for the schedule', s == 200, f'HTTP {s}')
             run_at = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=2)).isoformat()
             s, job = rpc('cms_schedule', {'p_type': 'app_content', 'p_id': row_id, 'p_expected_revision': 1, 'p_run_at': run_at, 'p_unpublish_at': None, 'p_reason': 'E2E 예약 점검'}, tok)
-            step('4. schedule (RPC)', s == 200, f'HTTP {s} {job if s >= 300 else ""}')
-            step('4. invisible before the scheduled time', public_row(row_id) is None)
+            R.add('4. schedule (RPC)', s == 200, f'HTTP {s} {job if s >= 300 else ""}')
+            R.add('4. invisible before the scheduled time', public_row(row_id) is None)
             print('     waiting for pg_cron (cms-run-due-jobs) - up to 4 minutes ...', flush=True)
             seen = None
             for _ in range(24):
@@ -136,17 +187,25 @@ def main():
                 seen = public_row(row_id)
                 if seen:
                     break
-            step('4. the SERVER (pg_cron) published it on schedule, with no browser open', bool(seen), str(seen))
+            R.add('4. the SERVER (pg_cron) published it on schedule, with no browser open', seen is not None, str(seen))
             rpc('cms_unpublish', {'p_type': 'app_content', 'p_id': row_id, 'p_reason': 'E2E 예약 점검 종료'}, tok)
-            step('4. unpublished again', public_row(row_id) is None)
+            R.add('4. unpublished again', public_row(row_id) is None)
+    except _Abort:
+        pass                                   # the failing check is already recorded
+    except Exception as e:                     # a crash is a failed run, not a pass and not a stack trace only
+        R.add('unexpected error: ' + type(e).__name__, False, str(e)[:200])
     finally:
         if row_id:
             # make sure nothing stays visible, then remove the staged row (allowed only while switched off)
-            rpc('cms_unpublish', {'p_type': 'app_content', 'p_id': row_id, 'p_reason': 'E2E cleanup'}, tok)
-            s, _ = http('DELETE', f'/rest/v1/app_content?id=eq.{row_id}', None, tok)
-            step('6. cleanup: the staged row is deleted', s in (200, 204) and public_row(row_id) is None, f'HTTP {s}')
-    print(f'\n{sum(results)}/{len(results)} checks passed.')
-    sys.exit(0 if all(results) else 1)
+            try:
+                rpc('cms_unpublish', {'p_type': 'app_content', 'p_id': row_id, 'p_reason': 'E2E cleanup'}, tok)
+                s, _ = http('DELETE', f'/rest/v1/app_content?id=eq.{row_id}', None, tok)
+                gs, left = http('GET', f'/rest/v1/app_content?id=eq.{row_id}&select=id', None, tok)
+                R.add('6. cleanup: the staged row is deleted', s in (200, 204) and gs == 200 and left == [] and public_row(row_id) is None, f'HTTP {s}')
+            except Exception as e:             # report it; never hide the original outcome
+                R.add('6. cleanup: the staged row is deleted', False, f'cleanup raised {type(e).__name__}: {str(e)[:150]} - REMOVE the "[E2E]" announcement by hand')
+    return R.finish()
 
 
-main()
+if __name__ == '__main__':
+    sys.exit(main())

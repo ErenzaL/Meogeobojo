@@ -26,8 +26,10 @@ echo "--- admin foundation / authorization suite"; P -f $HERE/admin_test.sql 2>&
 echo "--- mission system suite"; P -f $HERE/missions_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- admin content (photos / menus) suite"; P -f $HERE/admin_content_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- CMS publishing suite"; P -f $HERE/cms_publishing_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260
+echo "--- weekly cafeteria management"; P -f $HERE/cafeteria_weekly_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300 || true
+echo "--- cafeteria CSV import (server side)"; P -f $HERE/cafeteria_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320 || true
 echo "--- live-update signal (content_sync)"; P -f $HERE/content_sync_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260 || true
-echo "--- preservation (migrations 20261112..17 on populated data)"; P -f $HERE/preservation_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+echo "--- preservation (migrations 20261112..18 on populated data)"; P -f $HERE/preservation_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- production read-only checklist (scratch DB has no pg_cron, so only scheduler rows may fail)"
 P -f $HERE/../../scripts/prod_readonly_checks.sql > $WORK/checks.out 2>&1 || true
 grep -E "ERROR" $WORK/checks.out || true

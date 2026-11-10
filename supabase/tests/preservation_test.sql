@@ -54,6 +54,7 @@ reset role;
 \ir ../migrations/20261115000100_cms_publishing.sql
 \ir ../migrations/20261116000100_cms_health.sql
 \ir ../migrations/20261117000100_content_sync_signal.sql
+\ir ../migrations/20261118000100_cafeteria_weekly.sql
 
 create temp table after_sum as
 select 'restaurant_overrides' t, md5(string_agg(x::text, '|' order by id)) h, count(*) n from public.restaurant_overrides x where id::text like 'e9000000%'
@@ -72,7 +73,7 @@ do $$ declare bad text; b record; a record; begin
   assert bad is null, 'content changed by the migrations: ' || coalesce(bad, '');
   assert (select count(*) from before_sum) = (select count(*) from after_sum), 'same tables compared';
   assert (select n from after_sum where t = 'user_mission_progress') = 1 and (select n from after_sum where t = 'missions') = 1, 'progress and missions are there';
-  raise notice 'OK preservation: restaurants, menus, photos, announcements, cafeteria data, campaigns, missions, user progress and universities are byte-for-byte unchanged by 20261112..20261117';
+  raise notice 'OK preservation: restaurants, menus, photos, announcements, cafeteria data, campaigns, missions, user progress and universities are byte-for-byte unchanged by 20261112..20261118';
 end $$;
 
 set local role anon;
@@ -91,6 +92,7 @@ reset role;
 \ir ../migrations/20261115000100_cms_publishing.sql
 \ir ../migrations/20261116000100_cms_health.sql
 \ir ../migrations/20261117000100_content_sync_signal.sql
+\ir ../migrations/20261118000100_cafeteria_weekly.sql
 do $$ begin
   assert (select count(*) from public.restaurant_overrides where id::text like 'e9000000%') = 2 and (select count(*) from public.content_versions where entity_id::text like 'e9%') = 0, 'a second pass changes nothing';
   raise notice 'OK preservation: re-running 20261115 and 20261116 on populated data is harmless';

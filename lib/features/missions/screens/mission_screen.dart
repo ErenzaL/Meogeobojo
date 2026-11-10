@@ -6,6 +6,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pill_chip.dart';
+import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -45,7 +46,9 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
     final signedIn = ref.watch(currentUserProvider) != null;
     final dash = ref.watch(missionDashboardProvider);
 
+    final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
     return V5Page(
+      maxWidth: wide ? 1120 : 720,
       backgroundColor: whitePageColor(context),
       // Pull down to re-read the missions an admin may have just changed.
       onRefresh: signedIn
@@ -55,7 +58,7 @@ class _MissionScreenState extends ConsumerState<MissionScreen> {
         V5Header(title: l10n.missionPageTitle),
         const SizedBox(height: 14),
         if (!signedIn)
-          const _GuestView()
+          const Center(child: SizedBox(width: 520, child: _GuestView()))
         else
           dash.when(
             loading: () => const _Skeleton(),
@@ -105,46 +108,87 @@ class _Content extends ConsumerWidget {
     ];
     final shown = d.byKind(kinds[tab]);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (campaign != null) ...[
-          CampaignBanner(campaign: campaign),
-          const SizedBox(height: 14),
-          MissionDashboardCard(dashboard: d),
-          const SizedBox(height: 18),
-        ],
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var i = 0; i < labels.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                PillChip(
-                  label: labels[i],
-                  selected: i == tab,
-                  onTap: () => onTab(i),
-                ),
+    return LayoutBuilder(
+      builder: (context, box) {
+        // Desktop: the banner and the progress card side by side, the missions in two columns.
+        final wide = box.maxWidth >= 900;
+        final cardWidth = (box.maxWidth - 16) / 2;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (campaign != null) ...[
+              if (wide)
+                Row(
+                  key: const ValueKey('missions-overview'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: CampaignBanner(campaign: campaign),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: MissionDashboardCard(dashboard: d),
+                    ),
+                  ],
+                )
+              else ...[
+                CampaignBanner(campaign: campaign),
+                const SizedBox(height: 14),
+                MissionDashboardCard(dashboard: d),
               ],
+              const SizedBox(height: 18),
             ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        if (shown.isEmpty)
-          V5EmptyState(
-            icon: Icons.emoji_events_outlined,
-            title: l10n.missionEmptyTitle,
-            message: l10n.missionEmptyBody,
-          )
-        else
-          for (final m in shown) ...[
-            MissionCard(
-              mission: m,
-              onTap: () => showMissionDetailSheet(context, ref, m),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (var i = 0; i < labels.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    PillChip(
+                      label: labels[i],
+                      selected: i == tab,
+                      onTap: () => onTab(i),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+            if (shown.isEmpty)
+              V5EmptyState(
+                icon: Icons.emoji_events_outlined,
+                title: l10n.missionEmptyTitle,
+                message: l10n.missionEmptyBody,
+              )
+            else if (wide)
+              Wrap(
+                key: const ValueKey('missions-grid'),
+                spacing: 16,
+                runSpacing: 12,
+                children: [
+                  for (final m in shown)
+                    SizedBox(
+                      width: cardWidth,
+                      child: MissionCard(
+                        mission: m,
+                        onTap: () => showMissionDetailSheet(context, ref, m),
+                      ),
+                    ),
+                ],
+              )
+            else
+              for (final m in shown) ...[
+                MissionCard(
+                  mission: m,
+                  onTap: () => showMissionDetailSheet(context, ref, m),
+                ),
+                const SizedBox(height: 12),
+              ],
           ],
-      ],
+        );
+      },
     );
   }
 }

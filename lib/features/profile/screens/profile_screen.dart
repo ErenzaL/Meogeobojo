@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/l10n/language_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pill_chip.dart';
+import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../origin/providers/origin_providers.dart';
@@ -141,130 +142,190 @@ class _SignedInView extends ConsumerWidget {
         Navigator.of(context)
             .push<void>(MaterialPageRoute<void>(builder: (_) => screen));
 
-    return V5Page(
-      backgroundColor: whitePageColor(context),
-      children: [
-        V5Header(
-          title: l10n.myTitle,
-          trailing: IconButton(
-            tooltip: l10n.profileAccount,
-            onPressed: () => push(const AccountSettingsScreen()),
-            icon: const Icon(Icons.settings_outlined),
+    final heroW = ProfileHero(
+      nickname: (profile?.nickname ?? '').isNotEmpty
+          ? profile!.nickname!
+          : l10n.profileDefaultNickname,
+      email: user.email,
+      avatar: ProfileAvatar.resolve(profile?.avatarPath),
+      // Choosing a picture needs a loaded profile row to save into.
+      onChangeAvatar: profile == null
+          ? null
+          : () => showProfileAvatarSheet(context),
+      onEditNickname: profile == null
+          ? null
+          : () => showNicknameEditor(context, ref, profile.nickname),
+    );
+    final campusW = ProfileCampusCard(
+      university: university,
+      onTap: () => showUniversitySheet(context),
+    );
+    final statsW = ProfileStatsCard(
+      stats: [
+        // Real count of the user's Supabase favorites.
+        ProfileStat(
+          icon: Icons.favorite_border_rounded,
+          label: l10n.profileStatSaved,
+          value: favorites.hasValue ? favorites.requireValue.length : null,
+          loading: favorites.isLoading,
+          onTap: () => push(const SavedRestaurantsScreen()),
+        ),
+        // Neither food records nor plans can be created in the app yet,
+        // so there is no real number to show.
+        ProfileStat(
+          icon: Icons.bookmark_border_rounded,
+          label: l10n.profileStatRecords,
+          value: null,
+        ),
+        ProfileStat(
+          icon: Icons.event_outlined,
+          label: l10n.profileStatPlans,
+          value: null,
+        ),
+      ],
+    );
+    final activity = <Widget>[
+      V5SectionTitle(l10n.myActivityTitle),
+      V5RowGroup(
+        elevated: true,
+        rows: [
+          V5Row(
+            icon: Icons.menu_book_outlined,
+            title: l10n.profileRecords,
+            // The original Records page, now a page of its own (the bottom
+            // tab became 미션). Back returns here.
+            onTap: () => push(const RecordsScreen()),
           ),
-        ),
-        ProfileHero(
-          nickname: (profile?.nickname ?? '').isNotEmpty
-              ? profile!.nickname!
-              : l10n.profileDefaultNickname,
-          email: user.email,
-          avatar: ProfileAvatar.resolve(profile?.avatarPath),
-          // Choosing a picture needs a loaded profile row to save into.
-          onChangeAvatar: profile == null
-              ? null
-              : () => showProfileAvatarSheet(context),
-          onEditNickname: profile == null
-              ? null
-              : () => showNicknameEditor(context, ref, profile.nickname),
-        ),
-        if (hasProfileError) ...[
-          const SizedBox(height: 12),
-          _ProfileError(
-            failure: snapshot.failure ?? AuthFailure.profileLoadFailed,
-            onRetry: () =>
-                ref.read(authControllerProvider.notifier).retryProfile(),
+          V5Row(
+            icon: Icons.favorite_border_rounded,
+            title: l10n.profileSaved,
+            // Real count from the user's favorites; nothing is shown while
+            // it loads or if it failed.
+            subtitle: favorites.hasValue
+                ? l10n.profileSavedCount(favorites.requireValue.length)
+                : null,
+            onTap: () => push(const SavedRestaurantsScreen()),
+          ),
+          V5Row(
+            icon: Icons.tune_rounded,
+            title: l10n.profilePreferences,
+            // Preferences need a loaded profile (and a completed onboarding).
+            onTap: hasProfileError || profile == null
+                ? null
+                : () =>
+                      push(const PreferencesScreen(mode: PreferencesMode.edit)),
+          ),
+          V5Row(
+            icon: Icons.manage_accounts_outlined,
+            title: l10n.profileAccount,
+            onTap: () => push(const AccountSettingsScreen()),
           ),
         ],
-        const SizedBox(height: 12),
-        ProfileCampusCard(
-          university: university,
-          onTap: () => showUniversitySheet(context),
-        ),
-        const SizedBox(height: 12),
-        ProfileStatsCard(
-          stats: [
-            // Real count of the user's Supabase favorites.
-            ProfileStat(
-              icon: Icons.favorite_border_rounded,
-              label: l10n.profileStatSaved,
-              value: favorites.hasValue ? favorites.requireValue.length : null,
-              loading: favorites.isLoading,
-              onTap: () => push(const SavedRestaurantsScreen()),
-            ),
-            // Neither food records nor plans can be created in the app yet,
-            // so there is no real number to show.
-            ProfileStat(
-              icon: Icons.bookmark_border_rounded,
-              label: l10n.profileStatRecords,
-              value: null,
-            ),
-            ProfileStat(
-              icon: Icons.event_outlined,
-              label: l10n.profileStatPlans,
-              value: null,
-            ),
-          ],
-        ),
-        const _MyConditions(),
-        V5SectionTitle(l10n.myActivityTitle),
-        V5RowGroup(
-          elevated: true,
-          rows: [
-            V5Row(
-              icon: Icons.menu_book_outlined,
-              title: l10n.profileRecords,
-              // The original Records page, now a page of its own (the bottom
-              // tab became 미션). Back returns here.
-              onTap: () => push(const RecordsScreen()),
-            ),
-            V5Row(
-              icon: Icons.favorite_border_rounded,
-              title: l10n.profileSaved,
-              // Real count from the user's favorites; nothing is shown while
-              // it loads or if it failed.
-              subtitle: favorites.hasValue
-                  ? l10n.profileSavedCount(favorites.requireValue.length)
-                  : null,
-              onTap: () => push(const SavedRestaurantsScreen()),
-            ),
-            V5Row(
-              icon: Icons.tune_rounded,
-              title: l10n.profilePreferences,
-              // Preferences need a loaded profile (and a completed onboarding).
-              onTap: hasProfileError || profile == null
-                  ? null
-                  : () => push(
-                      const PreferencesScreen(mode: PreferencesMode.edit),
-                    ),
-            ),
-            V5Row(
-              icon: Icons.manage_accounts_outlined,
-              title: l10n.profileAccount,
-              onTap: () => push(const AccountSettingsScreen()),
-            ),
-          ],
-        ),
-        const MyBadgesSection(),
-        V5SectionTitle(l10n.settingsAppTitle),
-        V5RowGroup(
-          elevated: true,
-          rows: [
-            V5Row(
-              icon: Icons.language_rounded,
-              title: l10n.profileLanguage,
-              trailing: language.nativeName,
-              onTap: () => showLanguageSheet(context),
-            ),
-            _themeRow(context, themeMode),
-          ],
-        ),
-        const SizedBox(height: 20),
-        OutlinedButton(
-          onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: context.palette.accentStrong,
-            side: BorderSide(color: context.palette.accent, width: 1.5),
+      ),
+    ];
+    final settings = <Widget>[
+      V5SectionTitle(l10n.settingsAppTitle),
+      V5RowGroup(
+        elevated: true,
+        rows: [
+          V5Row(
+            icon: Icons.language_rounded,
+            title: l10n.profileLanguage,
+            trailing: language.nativeName,
+            onTap: () => showLanguageSheet(context),
           ),
-          child: Text(l10n.profileLogout),
+          _themeRow(context, themeMode),
+        ],
+      ),
+    ];
+    final logoutW = OutlinedButton(
+      onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: context.palette.accentStrong,
+        side: BorderSide(color: context.palette.accent, width: 1.5),
+      ),
+      child: Text(l10n.profileLogout),
+    );
+    final header = V5Header(
+      title: l10n.myTitle,
+      trailing: IconButton(
+        tooltip: l10n.profileAccount,
+        onPressed: () => push(const AccountSettingsScreen()),
+        icon: const Icon(Icons.settings_outlined),
+      ),
+    );
+    final errorW = hasProfileError
+        ? <Widget>[
+            const SizedBox(height: 12),
+            _ProfileError(
+              failure: snapshot.failure ?? AuthFailure.profileLoadFailed,
+              onRetry: () =>
+                  ref.read(authControllerProvider.notifier).retryProfile(),
+            ),
+          ]
+        : const <Widget>[];
+
+    final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
+    if (!wide) {
+      return V5Page(
+        backgroundColor: whitePageColor(context),
+        children: [
+          header,
+          heroW,
+          ...errorW,
+          const SizedBox(height: 12),
+          campusW,
+          const SizedBox(height: 12),
+          statsW,
+          const _MyConditions(),
+          ...activity,
+          const MyBadgesSection(),
+          ...settings,
+          const SizedBox(height: 20),
+          logoutW,
+        ],
+      );
+    }
+    // Desktop: the account on the left (who, which campus, app settings, sign out); what the user has done and
+    // chosen (counts, conditions, activity, badges) on the right. Same widgets and the same real data.
+    return V5Page(
+      maxWidth: 1120,
+      backgroundColor: whitePageColor(context),
+      children: [
+        header,
+        Row(
+          key: const ValueKey('my-desktop'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  heroW,
+                  ...errorW,
+                  const SizedBox(height: 12),
+                  campusW,
+                  ...settings,
+                  const SizedBox(height: 20),
+                  logoutW,
+                ],
+              ),
+            ),
+            const SizedBox(width: 24),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  statsW,
+                  const _MyConditions(),
+                  ...activity,
+                  const MyBadgesSection(),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

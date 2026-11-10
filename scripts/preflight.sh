@@ -35,6 +35,7 @@ step "5. production: read-only probes with the publishable key"
 python3 scripts/verify_production.py 2>&1 | grep -E "^(OK|PENDING|FAIL)|passed" ; python3 scripts/verify_production.py >/dev/null 2>&1 && ok "verify_production" || bad "verify_production"
 step "6. what Render serves right now"
 LIVE=$(curl -sS -m 20 https://meogeobojo-admin.onrender.com/ | grep -o 'assets/index-[A-Za-z0-9_-]*\.js' | head -1); echo "     live admin bundle: ${LIVE:-unreachable}"
+python3 scripts/prod_snapshot.py | head -3 | sed "s/^/     /"
 echo "     this release's bundle: $(ls admin/dist/assets/index-*.js 2>/dev/null | head -1 | xargs -n1 basename 2>/dev/null) (hash depends on the VITE_* values: compare commits in /settings instead)"
 
 printf '\n'; [ $FAIL -eq 0 ] && echo "PREFLIGHT PASSED (local gates). Production steps still need your approval." || echo "PREFLIGHT FAILED"

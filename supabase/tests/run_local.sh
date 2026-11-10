@@ -27,6 +27,11 @@ echo "--- mission system suite"; P -f $HERE/missions_test.sql 2>&1 | grep -E "NO
 echo "--- admin content (photos / menus) suite"; P -f $HERE/admin_content_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- CMS publishing suite"; P -f $HERE/cms_publishing_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260
 echo "--- preservation (migrations 20261112..16 on populated data)"; P -f $HERE/preservation_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+echo "--- production read-only checklist (scratch DB has no pg_cron, so only scheduler rows may fail)"
+P -f $HERE/../../scripts/prod_readonly_checks.sql > $WORK/checks.out 2>&1 || true
+grep -E "ERROR" $WORK/checks.out || true
+echo "checklist rows: $(grep -c -E "PASS|FAIL|INFO" $WORK/checks.out), unexpected FAIL outside the scheduler: $(grep FAIL $WORK/checks.out | grep -vc "6 scheduler" || true)"
+grep FAIL $WORK/checks.out | grep -v "6 scheduler" | cut -c1-200 || true
 echo "--- CSV importer end to end"
 U=5c0a8f3e-0001-4a6e-9b1d-000000000001; PY=$HERE/../cafeteria/import_cafeteria_csv.py; T=$WORK/csv; mkdir -p $T
 printf 'university_id,cafeteria_id,kind,name_ko,name_en,name_zh,location_description,sort_order\n%s,c9c9c9c9-0000-4000-8000-000000000009,student,,,,,0\n%s,,dormitory,,,,,1\n' $U $U > $T/caf.csv

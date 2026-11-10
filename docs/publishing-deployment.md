@@ -15,10 +15,27 @@ Two different things get "published"; keep them apart.
 | Render Admin | serves `main` @ `21affc9` (bundle `index-C0qWIz6m.js`: page toolbars for 학식, 메뉴, 사진, 미션, 캠페인, 앱 콘텐츠, 대학교; **no** `/settings` 게시 관리) | live bundle contains those screens and no `cms_health` |
 | Supabase `20261113000100`, `20261114000100` | applied | `scripts/verify_production.py` |
 | Supabase `20261115000100` | applied, **final edition** (`_campaign_save`, `_mission_save`, `cms_overview(p_type,p_parent)`) | same, signature probes |
-| Supabase `20261112000100` (live-update channel) | **unknown** without SQL access | run query C below |
+| Supabase `20261112000100` (live-update channel) | **effectively applied**: a real Realtime subscription is accepted for all 8 content tables; `universities` is **not** on the channel yet (a nonexistent table is rejected, so the probe discriminates) | Realtime probe |
+| Publishing functions | **23 of 24 exist** with the expected signatures; only `cms_health` is missing (it ships in `20261116`) | RPC signature probe (42501 = exists, PGRST202 = missing) |
 | Supabase `20261116000100` | **not applied** | `verify_production.py` → PENDING |
-| pg_cron job `cms-run-due-jobs` | **unknown** without SQL access | run queries A/B below |
+| pg_cron job `cms-run-due-jobs`, guards, CHECK constraints, storage policies, role grants | **cannot be seen with the publishable key** (no SQL / dashboard / Render access from here) → run `scripts/prod_readonly_checks.sql` | see step 1 |
+| What students can read today | 7 universities (all active, all with coordinates); **0** published restaurants, menus, photos, cafeterias, meals, announcements, reviews | `scripts/prod_snapshot.py` |
 | Release candidate | tip of `feature/cms-publishing` = `main` + 3 commits (`b17e36b` settings center / `cms_health` / campus sync, `86072fb` upgrade-path fix + preservation test + preflight, then docs) | `scripts/preflight.sh` |
+
+## Verification-stage findings (read-only, 2026-11-10)
+
+| # | Finding | Impact |
+|---|---|---|
+| 1 | The release changes **no applied migration**, **no dependency**, **no Render/build config**; only `20261116000100` is new (+ Admin/Flutter source, tests, scripts, docs) | safe to layer over `21affc9` |
+| 2 | Flutter Web builds with Render's own recipe (clean checkout, empty `.env`, `--dart-define`): ✓ builds, shipped `.env` is empty | the Render web build will not fail |
+| 3 | Admin build (`npm ci && npm run build`) ✓; tests 223, Flutter 647, SQL suite 156 checks | – |
+| 4 | Both sites point at the right Supabase project and embed only the publishable key (`sb_publishable_…`); no service-role / secret key / Gemini key in either bundle (`sb_secret_` hits are the Supabase library's own prefix check) | config OK |
+| 5 | **Admin response headers differ from `render.yaml`**: the live Admin has no `X-Frame-Options: DENY` / `Referrer-Policy: no-referrer` (the blueprint declares them) – the service was most likely created by hand, so blueprint headers never applied. HTML is also edge-cached for 5 minutes (`s-maxage=300`) | not a release blocker. Add the two headers in Render → meogeobojo-admin → Settings → Headers (your approval); after a deploy a hard refresh may be needed for up to 5 min |
+| 6 | `universities` is not on the live-update channel yet | step 3 adds it; until then the app refreshes campuses on resume / pull-to-refresh |
+| 7 | All 7 universities are active with coordinates, so the Flutter `is_active` filter changes nothing visible today | – |
+| 8 | Students currently see no published restaurants/menus/photos/meals/announcements (anon fingerprint). Whether unpublished rows exist (drafts) is shown by the SQL baseline | nothing to lose on the student side; the baseline covers admin-only rows |
+| 9 | Migration **history cannot be reconciled** from outside: `supabase_migrations.schema_migrations` is not readable with the publishable key, and `20261115000100` was edited several times in the repo before/while being applied. The object probes show the **final** edition's functions are present; its tables/constraints/policies are checked by the SQL script, and `20261116000100` repairs the one known gap (shorter `entity_type` CHECK) | run the SQL script; report FAIL rows |
+| 10 | Items I could **not** verify: pg_cron job, guards, grants, constraints, storage policies (SQL access needed); Render env var names/values and auto-deploy settings, Kakao JS key, Auth redirect URLs (dashboard access needed) | covered by the SQL script and the ◻ list below |
 
 ## What each migration does (all additive and idempotent; none drops or rewrites content)
 
@@ -51,25 +68,27 @@ Therefore: **never roll the Admin back below `21affc9`** without the emergency s
 
 **0. Preflight** (local, read-only): `scripts/preflight.sh` → must end `PREFLIGHT PASSED`.
 
-**1. Read-only checks in the Supabase SQL editor** (no changes):
-```sql
--- A. scheduler registered?   expect 1 row, '* * * * *', active = true
-select jobid, schedule, active from cron.job where jobname = 'cms-run-due-jobs';
--- B. is it running?          expect recent rows with status 'succeeded'
-select status, start_time, left(return_message, 120) from cron.job_run_details
- where jobid = (select jobid from cron.job where jobname = 'cms-run-due-jobs') order by start_time desc limit 10;
--- C. live-update channel     expect restaurant_overrides, restaurant_menus, restaurant_photos, cafeteria_meals, campus_cafeterias,
---                            missions, monthly_campaigns, app_content (universities appears after step 3)
-select tablename from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' order by 1;
--- D. publishing tables       expect one entity_type check per table; the list may be shorter (step 3 widens it)
-select conrelid::regclass, pg_get_constraintdef(oid) from pg_constraint
- where conrelid in ('public.content_drafts'::regclass, 'public.content_versions'::regclass, 'public.publication_jobs'::regclass) and pg_get_constraintdef(oid) like '%entity_type%';
--- E. guards present          expect 6 rows
-select tgname from pg_trigger where tgname like '%\_guard\_live' and not tgisinternal order by 1;
+**1. Read-only checks in the Supabase SQL editor** (no changes; the file only SELECTs and makes one session-local TEMP table)
+
+Paste the whole of `scripts/prod_readonly_checks.sql` into the SQL editor and run it once. It returns one row per check with PASS / FAIL / INFO:
+migration history, columns, the three publishing tables (RLS, entity types), 17 API + 9 internal functions (security definer, who may call them),
+the 6 live-content guards, immutability and one-scheduled-job index, **pg_cron + `cms-run-due-jobs` + its last 10 runs + overdue/failed jobs**,
+the live-update channel, storage policies and buckets, admin roles, and a **baseline of row counts** (restaurants by visibility, menus, photos, meals,
+missions by status, user progress, points ledger, reviews, profiles, `auth.users`, …).
+
+Expected before the release: everything PASS except `cms_health` (INFO: absent), `universities` on the channel (INFO: not yet) and possibly the entity_type
+check rows (FAIL → the widening in step 3 fixes them; harmless to the release). **Any other FAIL: stop and send me the rows.**
+Keep the result; after the release run it again and compare section "10 baseline counts": nothing may go down.
+
+If the `cms-run-due-jobs` row fails: Dashboard → Database → Extensions → enable `pg_cron`, then
+`select cron.schedule('cms-run-due-jobs', '* * * * *', 'select public.cms_run_due_jobs()');` (this only registers the schedule).
+If a live-update row fails: run `supabase/migrations/20261112000100_realtime_content.sql` (idempotent).
+
+Also take the **student-visible fingerprint** now (publishable key only, read-only) and compare it after the release:
+```bash
+python3 scripts/prod_snapshot.py --save before.json      # now
+python3 scripts/prod_snapshot.py --compare before.json   # after step 4: must print "identical"
 ```
-If **A** returns no row: Dashboard → Database → Extensions → enable `pg_cron`, then run
-`select cron.schedule('cms-run-due-jobs', '* * * * *', 'select public.cms_run_due_jobs()');`.
-If **C** lacks tables: run `supabase/migrations/20261112000100_realtime_content.sql` (idempotent).
 
 **2. Merge the release commits into `main`** (this redeploys BOTH Render sites: Admin and Flutter Web)
 ```bash
@@ -84,7 +103,9 @@ Render builds `main`; watch both deploys finish. The Admin works before step 3 (
 **4. Verify** (read-only):
 ```bash
 python3 scripts/verify_production.py            # expect 48/48 and every migration line "OK" including 20261116000100
+python3 scripts/prod_snapshot.py --compare before.json   # expect: identical (no student-visible content changed)
 ```
+Re-run `scripts/prod_readonly_checks.sql`: all PASS, `cms_health` present, `universities` on the channel, baseline counts not lower.
 Then open `https://meogeobojo-admin.onrender.com/settings` as an admin and check 게시 관리:
 - "지금 열려 있는 관리자 코드" = the commit Render shows for the Admin deploy (the release tip).
 - 동기화 상태 shows 정상 (or tells you exactly what to fix: scheduler, live-update tables, guards).

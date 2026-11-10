@@ -2159,4 +2159,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mealOrigin => '원산지 표시사항';
+
+  @override
+  String get homeMealChipTomorrowMenu => '내일 식단';
 }

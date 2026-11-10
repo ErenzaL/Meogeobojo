@@ -2147,4 +2147,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mealOrigin => '原产地标示';
+
+  @override
+  String get homeMealChipTomorrowMenu => '明天';
 }

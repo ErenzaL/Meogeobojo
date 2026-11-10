@@ -700,5 +700,6 @@
   "mealSoldOut": "已售罄",
   "mealSoldOutHint": "今天准备的份数已全部售完。",
   "mealServedWith": "配餐",
-  "mealOrigin": "原产地标示"
+  "mealOrigin": "原产地标示",
+  "homeMealChipTomorrowMenu": "明天"
 }

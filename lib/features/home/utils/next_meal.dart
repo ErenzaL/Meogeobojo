@@ -58,3 +58,37 @@ NextMeal? pickNextMeal(List<CafeteriaMeal> meals, DateTime nowWall) {
   }
   return null;
 }
+
+/// The meals the home card lists: all of today's published meals (breakfast, lunch, dinner; one row per meal, the
+/// first corner when there are several), or, once today's last meal has ended, all of tomorrow's. [next] is the
+/// meal being served or coming up next (highlighted), [when] says which day the list is for.
+class DayMeals {
+  const DayMeals(this.meals, this.next, this.when);
+
+  final List<CafeteriaMeal> meals;
+  final CafeteriaMeal next;
+  final MealWhen when;
+}
+
+DayMeals? pickDayMeals(List<CafeteriaMeal> meals, DateTime nowWall) {
+  final next = pickNextMeal(meals, nowWall);
+  if (next == null) return null;
+  final day = next.when == MealWhen.tomorrow ? 1 : 0;
+  final date = DateTime.utc(nowWall.year, nowWall.month, nowWall.day + day);
+  final rows = <CafeteriaMeal>[];
+  for (final type in MealType.values) {
+    final options =
+        meals
+            .where(
+              (m) =>
+                  m.date == date &&
+                  m.type == type &&
+                  m.status == MealStatus.published &&
+                  m.items.isNotEmpty,
+            )
+            .toList()
+          ..sort((a, b) => a.optionOrder.compareTo(b.optionOrder));
+    if (options.isNotEmpty) rows.add(options.first);
+  }
+  return DayMeals(rows, next.meal, next.when);
+}

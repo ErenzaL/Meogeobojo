@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/theme/theme_controller.dart';
 import 'package:meogeobojo/core/widgets/pill_chip.dart';
 import 'package:meogeobojo/features/campus_meals/models/campus_meal_models.dart';
+import 'package:meogeobojo/features/home/widgets/cafeteria_card.dart';
 import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
 import 'package:meogeobojo/features/campus_meals/screens/campus_meal_screen.dart';
 import 'package:meogeobojo/features/conditions/models/conditions.dart';
@@ -879,12 +880,140 @@ void main() {
       );
       await scrollDown(tester);
       expect(find.text('오늘의 학식'), findsOneWidget);
-      expect(find.text('지금 저녁'), findsOneWidget);
+      expect(
+        find.text('지금 저녁'),
+        findsNothing,
+      ); // no "today" chip in the header any more
+      expect(find.text('오늘 아침'), findsNothing);
+      expect(find.text('내일 식단'), findsNothing);
       expect(find.text('제육볶음'), findsOneWidget);
       expect(find.text('향설1관 한식뷔페'), findsOneWidget);
       expect(find.text('시금치나물 · 햄야채볶음'), findsOneWidget);
       expect(find.text('17:00–19:30'), findsOneWidget);
       expect(find.text('₩6,000'), findsOneWidget);
+    });
+
+    testWidgets(
+      'lists breakfast, lunch and dinner of today together, with the current one outlined',
+      (tester) async {
+        await openHome(
+          tester,
+          meals: repo([
+            fakeMeal(
+              '2026-11-09',
+              MealType.breakfast,
+              start: '08:00',
+              end: '09:30',
+              items: const [
+                MenuItem(nameKo: '뼈해장국', kind: MenuItemKind.main),
+                MenuItem(nameKo: '만두찜'),
+              ],
+            ),
+            fakeMeal(
+              '2026-11-09',
+              MealType.lunch,
+              start: '11:30',
+              end: '14:00',
+              price: 5500,
+              items: const [
+                MenuItem(nameKo: '치즈닭갈비볶음밥', kind: MenuItemKind.main),
+                MenuItem(nameKo: '계란국', kind: MenuItemKind.soup),
+              ],
+            ),
+            fakeMeal(
+              '2026-11-09',
+              MealType.dinner,
+              start: '17:00',
+              end: '19:30',
+              items: const [
+                MenuItem(nameKo: '고추장불고기', kind: MenuItemKind.main),
+                MenuItem(nameKo: '우동국'),
+              ],
+            ),
+          ]),
+        );
+        await scrollDown(tester);
+        expect(find.byKey(const ValueKey('home-meal-list')), findsOneWidget);
+        for (final t in ['breakfast', 'lunch', 'dinner']) {
+          expect(
+            find.byKey(ValueKey('home-meal-$t')),
+            findsOneWidget,
+            reason: t,
+          );
+        }
+        expect(find.text('뼈해장국'), findsOneWidget);
+        expect(find.text('치즈닭갈비볶음밥'), findsOneWidget);
+        expect(find.text('고추장불고기'), findsOneWidget);
+        expect(find.text('조식'), findsOneWidget);
+        expect(find.text('중식'), findsOneWidget);
+        expect(find.text('석식'), findsOneWidget);
+        expect(find.text('08:00–09:30'), findsOneWidget);
+        expect(find.text('17:00–19:30'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the 천원의 아침밥 mark sits under 조식, only on a badged breakfast', (
+      tester,
+    ) async {
+      await openHome(
+        tester,
+        meals: repo([
+          fakeMeal(
+            '2026-11-09',
+            MealType.breakfast,
+            start: '08:00',
+            end: '09:30',
+            price: 1000,
+            badge: '천원의 아침밥',
+          ),
+          fakeMeal(
+            '2026-11-09',
+            MealType.lunch,
+            start: '11:30',
+            end: '14:00',
+            price: 5500,
+          ),
+          fakeMeal(
+            '2026-11-09',
+            MealType.dinner,
+            start: '17:00',
+            end: '19:30',
+            badge: '천원의 아침밥',
+          ), // never on a dinner
+        ]),
+      );
+      await scrollDown(tester);
+      final mark = find.byKey(const ValueKey('home-thousand-won-mark'));
+      expect(mark, findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('home-meal-breakfast')),
+          matching: mark,
+        ),
+        findsOneWidget,
+      );
+      // under the meal name, not above it
+      expect(
+        tester.getTopLeft(mark).dy,
+        greaterThan(tester.getTopLeft(find.text('조식')).dy),
+      );
+      expect(
+        tester.widget<ThousandWonMark>(mark).label,
+        '천원의 아침밥',
+      ); // what screen readers say
+    });
+
+    testWidgets('a day with only some meals lists only those', (tester) async {
+      await openHome(
+        tester,
+        meals: repo([
+          fakeMeal('2026-11-09', MealType.dinner, start: '17:00', end: '19:30'),
+        ]),
+      );
+      await scrollDown(tester);
+      expect(find.byKey(const ValueKey('home-meal-dinner')), findsOneWidget);
+      expect(find.byKey(const ValueKey('home-meal-breakfast')), findsNothing);
+      expect(find.byKey(const ValueKey('home-meal-lunch')), findsNothing);
     });
 
     testWidgets('shows the admin-set 천원의 아침밥 badge', (tester) async {
@@ -915,7 +1044,8 @@ void main() {
         ]),
       );
       await scrollDown(tester);
-      expect(find.text('내일 아침'), findsOneWidget);
+      expect(find.text('내일 식단'), findsOneWidget); // the list is tomorrow's
+      expect(find.byKey(const ValueKey('home-meal-breakfast')), findsOneWidget);
       expect(find.text('₩1,000'), findsOneWidget);
     });
 
@@ -993,6 +1123,36 @@ void main() {
                   univId: [fakeCafeteria('c1', nameKo: '향설1관')],
                 },
                 meals: [
+                  // all three meals of the day, so the card's list is part of the overflow check
+                  fakeMeal(
+                    '2026-11-09',
+                    MealType.breakfast,
+                    start: '08:00',
+                    end: '09:30',
+                    price: 1000,
+                    badge: '천원의 아침밥',
+                    items: const [
+                      MenuItem(
+                        nameKo: '아주아주아주 긴 아침 메인 메뉴 이름입니다',
+                        kind: MenuItemKind.main,
+                      ),
+                      MenuItem(nameKo: '만두찜'),
+                    ],
+                  ),
+                  fakeMeal(
+                    '2026-11-09',
+                    MealType.lunch,
+                    start: '11:30',
+                    end: '14:00',
+                    price: 5500,
+                    items: const [
+                      MenuItem(
+                        nameKo: '아주아주아주 긴 점심 메인 메뉴 이름입니다',
+                        kind: MenuItemKind.main,
+                      ),
+                      MenuItem(nameKo: '계란국', kind: MenuItemKind.soup),
+                    ],
+                  ),
                   fakeMeal(
                     '2026-11-09',
                     MealType.dinner,

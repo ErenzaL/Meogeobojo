@@ -3951,6 +3951,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'원산지 표시사항'**
   String get mealOrigin;
+
+  /// No description provided for @homeMealChipTomorrowMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'내일 식단'**
+  String get homeMealChipTomorrowMenu;
 }
 
 class _AppLocalizationsDelegate

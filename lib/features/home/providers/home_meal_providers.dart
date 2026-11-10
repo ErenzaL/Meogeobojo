@@ -51,6 +51,14 @@ final homeNextMealProvider = Provider<AsyncValue<NextMeal?>>((ref) {
       .whenData((s) => pickNextMeal(s.meals, now));
 });
 
+/// All the meals of the day the card shows, re-evaluated every minute as meals end.
+final homeDayMealsProvider = Provider<AsyncValue<DayMeals?>>((ref) {
+  final now = ref.watch(seoulNowProvider);
+  return ref
+      .watch(homeMealSourceProvider)
+      .whenData((s) => pickDayMeals(s.meals, now));
+});
+
 /// Mean price of the cafeteria's lunches that have a price; null if none.
 final cafeteriaLunchAverageProvider = Provider<int?>((ref) {
   final source = ref.watch(homeMealSourceProvider).value;

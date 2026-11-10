@@ -27,12 +27,13 @@ class CafeteriaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final next = ref.watch(homeNextMealProvider);
+    final day = ref.watch(homeDayMealsProvider);
     final source = ref.watch(homeMealSourceProvider);
 
-    final String? chip = next.value == null
-        ? null
-        : _chipText(l10n, next.value!);
+    // No chip for today's list; after the last meal the list is tomorrow's, which the chip says.
+    final String? chip = day.value?.when == MealWhen.tomorrow
+        ? l10n.homeMealChipTomorrowMenu
+        : null;
 
     return HomeCard(
       child: Column(
@@ -73,26 +74,36 @@ class CafeteriaCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          next.when(
+          day.when(
             loading: () => const SkeletonBox(height: 110, radius: 16),
             error: (_, _) => _Notice(
               text: l10n.mealLoadFailed,
               actionLabel: l10n.commonRetry,
               onAction: () => ref.invalidate(homeMealSourceProvider),
             ),
-            data: (meal) {
+            data: (dayMeals) {
               final src = source.value;
-              if (meal == null || src?.cafeteria == null) {
+              if (dayMeals == null || src?.cafeteria == null) {
                 return _Notice(
                   text: src?.cafeteria == null
                       ? l10n.mealNoCafeteria
                       : l10n.homeMealNone,
                 );
               }
-              return _MealTile(
-                meal: meal.meal,
-                cafeteria: src!.cafeteria!,
-                all: src.all,
+              // breakfast, lunch and dinner of the day, one row each; the meal being served / coming up is outlined
+              return Column(
+                key: const ValueKey('home-meal-list'),
+                children: [
+                  for (var i = 0; i < dayMeals.meals.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 10),
+                    _MealTile(
+                      meal: dayMeals.meals[i],
+                      cafeteria: src!.cafeteria!,
+                      all: src.all,
+                      highlighted: dayMeals.meals[i] == dayMeals.next,
+                    ),
+                  ],
+                ],
               );
             },
           ),
@@ -140,19 +151,6 @@ class CafeteriaCard extends ConsumerWidget {
       ),
     );
   }
-
-  String _chipText(AppLocalizations l10n, NextMeal m) {
-    final meal = switch (m.meal.type) {
-      MealType.breakfast => l10n.dayPartBreakfast,
-      MealType.lunch => l10n.dayPartLunch,
-      MealType.dinner => l10n.dayPartDinner,
-    };
-    return switch (m.when) {
-      MealWhen.now => l10n.homeMealChipNow(meal),
-      MealWhen.today => l10n.homeMealChipToday(meal),
-      MealWhen.tomorrow => l10n.homeMealChipTomorrow(meal),
-    };
-  }
 }
 
 class _Notice extends StatelessWidget {
@@ -192,11 +190,15 @@ class _MealTile extends StatelessWidget {
     required this.meal,
     required this.cafeteria,
     required this.all,
+    this.highlighted = false,
   });
 
   final CafeteriaMeal meal;
   final CampusCafeteria cafeteria;
   final List<CampusCafeteria> all;
+
+  /// The meal being served or coming up next.
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -215,25 +217,71 @@ class _MealTile extends StatelessWidget {
     final where = meal.optionName.isEmpty ? place : '$place ${meal.optionName}';
     final secondary = TextStyle(fontSize: 14, color: p.textSecondary);
 
+    final thousandWon =
+        meal.type == MealType.breakfast && meal.badge == '천원의 아침밥';
+    final mealName = switch (meal.type) {
+      MealType.breakfast => l10n.mealBreakfast,
+      MealType.lunch => l10n.mealLunch,
+      MealType.dinner => l10n.mealDinner,
+    };
     return Container(
+      key: ValueKey('home-meal-${meal.type.name}'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: p.fillMuted,
         borderRadius: BorderRadius.circular(16),
+        border: highlighted
+            ? Border.all(color: p.rustText.withValues(alpha: 0.55), width: 1.4)
+            : null,
       ),
       child: Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              width: 56,
-              height: 56,
+              constraints: const BoxConstraints(
+                minWidth: 60,
+                maxWidth: 60,
+                minHeight: 56,
+              ),
               color: p.card,
-              padding: const EdgeInsets.all(6),
-              child: Image.asset(
-                AppAssets.categoryCampusMeals,
-                fit: BoxFit.contain,
-                excludeFromSemantics: true,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (thousandWon)
+                    // the 천원의 아침밥 mark sits right under the meal name (the generic picture makes room for it)
+                    const SizedBox.shrink()
+                  else
+                    Image.asset(
+                      AppAssets.categoryCampusMeals,
+                      width: 26,
+                      height: 26,
+                      fit: BoxFit.contain,
+                      excludeFromSemantics: true,
+                    ),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      mealName,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: highlighted ? p.rustText : p.textSecondary,
+                      ),
+                    ),
+                  ),
+                  if (thousandWon) ...[
+                    const SizedBox(height: 4),
+                    ThousandWonMark(
+                      key: const ValueKey('home-thousand-won-mark'),
+                      label: meal.badge!,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -326,6 +374,60 @@ class _MealTile extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// A small coin-style "천원" mark for the 천원의 아침밥 programme (the app's own drawing, not the official logo).
+class ThousandWonMark extends StatelessWidget {
+  const ThousandWonMark({super.key, required this.label});
+
+  /// The programme name, read out by screen readers.
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Semantics(
+      label: label,
+      // a logo-like mark keeps its size when the user enlarges the text
+      child: ExcludeSemantics(
+        child: MediaQuery.withNoTextScaling(
+          child: Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: p.rustSoft,
+              border: Border.all(color: p.rustText, width: 1.6),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '천원',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.05,
+                    fontWeight: FontWeight.w800,
+                    color: p.rustText,
+                  ),
+                ),
+                Text(
+                  '1000',
+                  style: TextStyle(
+                    fontSize: 8,
+                    height: 1.0,
+                    fontWeight: FontWeight.w700,
+                    color: p.rustText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

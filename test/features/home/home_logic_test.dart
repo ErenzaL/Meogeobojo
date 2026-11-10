@@ -307,6 +307,39 @@ void main() {
       expect(n.when, MealWhen.tomorrow);
     });
 
+    test(
+      'the card lists all of today\'s meals, or tomorrow\'s once today is over',
+      () {
+        DayMeals? day(int h, int m) =>
+            pickDayMeals(meals, DateTime.utc(2026, 11, 9, h, m));
+        final noon = day(12, 0)!;
+        expect(noon.meals.map((m) => m.type), [
+          MealType.breakfast,
+          MealType.lunch,
+          MealType.dinner,
+        ]); // the finished breakfast stays in the list
+        expect(noon.next.type, MealType.lunch);
+        expect(noon.when, MealWhen.now);
+        expect(day(7, 0)!.next.type, MealType.breakfast);
+        final tomorrow = day(19, 31)!;
+        expect(tomorrow.when, MealWhen.tomorrow);
+        expect(tomorrow.meals.map((m) => m.type), [MealType.breakfast]);
+        expect(pickDayMeals(const [], DateTime.utc(2026, 11, 9, 12)), isNull);
+      },
+    );
+
+    test('one row per meal: the first corner; closed meals and empty menus are left out', () {
+      final two = [
+        fakeMeal('2026-11-09', MealType.lunch, option: 'B코너', order: 1),
+        fakeMeal('2026-11-09', MealType.lunch, option: 'A코너', order: 0),
+        fakeMeal('2026-11-09', MealType.breakfast, status: MealStatus.closed),
+        fakeMeal('2026-11-09', MealType.dinner, items: const []),
+      ];
+      final d = pickDayMeals(two, DateTime.utc(2026, 11, 9, 8))!;
+      expect(d.meals.length, 1);
+      expect(d.meals.single.optionName, 'A코너');
+    });
+
     test('nothing when no published meal is coming', () {
       expect(pickNextMeal(const [], DateTime.utc(2026, 11, 9, 12)), isNull);
       final closed = [

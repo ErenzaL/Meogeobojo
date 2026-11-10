@@ -2258,4 +2258,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mealOrigin => 'Ingredient origin';
+
+  @override
+  String get homeMealChipTomorrowMenu => 'Tomorrow';
 }

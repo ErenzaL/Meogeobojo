@@ -242,6 +242,77 @@ do $$ declare w uuid := current_setting('test.wk')::uuid; v int; before_n int; b
 end $$;
 reset role;
 
+-- ===== 10. changes made OUTSIDE the weekly editor are never silently overwritten =====
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f8000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare w uuid := current_setting('test.wk')::uuid; live jsonb; m uuid; begin
+  perform set_config('test.v0', (public.cms_state('cafeteria_week', w) ->> 'live_version'), false);
+  assert (select count(*) from public.content_versions where entity_type = 'cafeteria_week' and entity_id = w and reason like '주간 편집 밖에서%') = 0,
+    'the week''s own publications (publish, selected days, unpublish, rollback) were never mistaken for outside changes';
+  -- an admin builds a week draft...
+  live := public.cms_state('cafeteria_week', w) -> 'live';
+  perform public.cms_save_draft('cafeteria_week', w, jsonb_build_object('meals', (select jsonb_agg(case when e ->> 'meal_type' = 'dinner' and e ->> 'date' = '2026-11-13' then e || '{"price_krw":6900}' else e end) from jsonb_array_elements(live -> 'meals') e)), 0);
+end $$;
+-- ... while an older Admin tab changes ONE meal through the single-meal editor (cafeteria_meal entity): its own transaction
+do $$ declare m uuid; begin
+  select id into m from public.cafeteria_meals where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date = '2026-11-09' and meal_type = 'lunch' and option_name = '';
+  perform public.cms_save_draft('cafeteria_meal', m, (public.cms_state('cafeteria_meal', m) -> 'live') || '{"price_krw":5999}', 0);
+  perform public.cms_publish('cafeteria_meal', m, 1, '단일 식단 수정 (구 Admin)');
+  assert (select price_krw from public.cafeteria_meals where id = m) = 5999, 'the old single-meal flow still works after the migration';
+end $$;
+do $$ declare w uuid := current_setting('test.wk')::uuid; v0 int := current_setting('test.v0')::int; vn int; rev int; v int; m uuid; begin
+  vn := (public.cms_state('cafeteria_week', w) ->> 'live_version')::int;
+  assert vn = v0 + 1, 'the outside change is a new week version (' || v0 || ' -> ' || vn || ')';
+  assert (public.cms_state('cafeteria_week', w) -> 'draft' ->> 'stale')::boolean, 'so the earlier week draft is flagged stale';
+  assert ((public.cms_state('cafeteria_week', w) -> 'live' -> 'meals') @> '[{"date":"2026-11-09","meal_type":"lunch","price_krw":5999}]'::jsonb), 'and the week snapshot shows the change';
+  select revision into rev from public.content_drafts where entity_type = 'cafeteria_week' and entity_id = w;
+  begin perform public.cms_publish('cafeteria_week', w, rev, 'overwrite?'); raise exception 'accepted#dr1'; exception when serialization_failure then null; end;
+  begin perform public.cms_publish_week_days(w, rev, array['2026-11-13']::date[], 'overwrite?'); raise exception 'accepted#dr2'; exception when serialization_failure then null; end;
+  select id into m from public.cafeteria_meals where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date = '2026-11-09' and meal_type = 'lunch' and option_name = '';
+  assert (select price_krw from public.cafeteria_meals where id = m) = 5999, 'the outside change survived the refused publication';
+  -- rebase makes the conflict explicit: the draft still holds the OLD Monday-lunch price, so the preview shows it reverting
+  perform public.cms_rebase_draft('cafeteria_week', w, rev);
+  select revision into rev from public.content_drafts where entity_type = 'cafeteria_week' and entity_id = w;
+  v := public.cms_publish('cafeteria_week', w, rev, '충돌을 확인하고 게시');
+  assert v = vn + 1, 'after an explicit rebase the week can be published (and its own publication is not an outside change)';
+  raise notice 'OK weekly: a change made outside the weekly editor is recorded as a version; an older draft is refused until rebased';
+end $$;
+reset role;
+-- the same through the SQL editor / a script (no logged-in user)
+do $$ declare w uuid := current_setting('test.wk')::uuid; v0 int; begin
+  v0 := public._cms_live_version('cafeteria_week', w);
+  update public.cafeteria_meals set price_krw = 5111 where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date = '2026-11-10' and meal_type = 'dinner';
+  update public.cafeteria_meals set price_krw = 5222 where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date = '2026-11-12' and meal_type = 'dinner';
+  raise notice 'OK weekly: (statements run, version check follows the commit)';
+end $$;
+do $$ declare w uuid := current_setting('test.wk')::uuid; n int; begin
+  select count(*) into n from public.content_versions where entity_type = 'cafeteria_week' and entity_id = w and reason like '주간 편집 밖에서%';
+  assert n = 2, 'one version per committed change, not per row (got ' || n || ')';
+  assert (public.cms_run_due_jobs() ->> 'failed')::int = 0, 'the scheduler is unaffected';
+  raise notice 'OK weekly: SQL-editor / importer edits are recorded too, once per commit';
+end $$;
+-- a bulk statement touching many rows of one week is ONE version
+do $$ declare w uuid := current_setting('test.wk')::uuid; before_n int; begin
+  select count(*) into before_n from public.content_versions where entity_type = 'cafeteria_week' and entity_id = w;
+  update public.cafeteria_meals set price_krw = price_krw + 1 where cafeteria_id = 'cafe0000-0000-4000-8000-000000000001' and meal_date between '2026-11-09' and '2026-11-13';
+end $$;
+do $$ declare w uuid := current_setting('test.wk')::uuid; n int; begin
+  select count(*) into n from public.content_versions where entity_type = 'cafeteria_week' and entity_id = w and reason like '주간 편집 밖에서%';
+  assert n = 3, 'a bulk update of the whole week is one more version (got ' || n || ')';
+  assert not exists (select 1 from public.cafeteria_week_drift), 'the helper table is empty after commit';
+  raise notice 'OK weekly: a bulk outside change is one version; nothing is left in the helper table';
+end $$;
+-- a cafeteria week that was never opened in the weekly editor costs nothing and creates nothing
+do $$ begin
+  update public.cafeteria_meals set price_krw = price_krw where cafeteria_id = 'cafe0000-0000-4000-8000-000000000003';
+  insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, verified_at, status) values ('cafe0000-0000-4000-8000-000000000003', '2026-11-09', 'lunch', '[{"name_ko":"x"}]', now(), 'draft');
+  raise notice 'OK weekly: weeks without a week row are not tracked';
+end $$;
+do $$ begin
+  assert not exists (select 1 from public.cafeteria_weeks w join public.campus_cafeterias c on c.id = w.cafeteria_id where c.id = 'cafe0000-0000-4000-8000-000000000003'), 'no week row was created as a side effect';
+  assert not exists (select 1 from public.cafeteria_week_drift), 'and no helper rows remain';
+end $$;
+
 -- cleanup (publish history is immutable by design: lift the guard only for this clean-up)
 delete from public.publication_jobs where entity_type = 'cafeteria_week';
 delete from public.content_drafts where entity_type = 'cafeteria_week';

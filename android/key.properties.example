@@ -1,0 +1,7 @@
+# Copy to android/key.properties (git-ignored) and fill in. NEVER commit key.properties or the keystore.
+# Create the upload keystore yourself, once, and back it up (losing it means you cannot update the app):
+#   keytool -genkey -v -keystore ~/meogeobojo-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+storeFile=/absolute/path/to/meogeobojo-upload.jks
+storePassword=CHANGE_ME
+keyAlias=upload
+keyPassword=CHANGE_ME

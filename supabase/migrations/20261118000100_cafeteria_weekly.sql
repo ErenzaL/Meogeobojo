@@ -202,6 +202,7 @@ declare w public.cafeteria_weeks;
 begin
   if p_type <> 'cafeteria_week' then perform public._cms_apply_v1(p_type, p_id, p_data); return; end if;
   perform set_config('app.cms_apply', 'on', true);
+  perform set_config('app.cafe_week_apply', 'on', true);   -- these writes are the week's own: they are not "drift"
   select * into w from public.cafeteria_weeks where id = p_id;
   if not found then raise exception 'no such cafeteria_week' using errcode = 'P0002'; end if;
   -- a menu that is no longer in the week is hidden (status 'draft'), never deleted; a blank cell changes nothing
@@ -219,6 +220,7 @@ begin
     option_order = excluded.option_order, menu_items = excluded.menu_items, price_krw = excluded.price_krw, start_time = excluded.start_time,
     end_time = excluded.end_time, status = excluded.status, badge = excluded.badge, source_url = excluded.source_url,
     verified_at = excluded.verified_at, extra = excluded.extra;
+  perform set_config('app.cafe_week_apply', 'off', true);
   perform set_config('app.cms_apply', 'off', true);
 end $$;
 
@@ -280,6 +282,73 @@ do $$ begin
 end $$;
 revoke all on function public.cafeteria_week_entity(uuid, date) from public, anon;
 grant execute on function public.cafeteria_week_entity(uuid, date) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 3b. Drift: a menu changed OUTSIDE the weekly editor (the single-meal editor of an older Admin tab, the Python
+--     importer, the SQL editor) must not be silently overwritten by a week draft saved earlier. Such a change is
+--     recorded as a new version of that week ("관리 밖 변경"), so a draft built before it is flagged stale and its
+--     publication is refused until the admin rebases it (the preview then shows exactly what would be reverted).
+--     Weeks that were never opened in the weekly editor have no week row and cost nothing here.
+-- ---------------------------------------------------------------------------
+create table if not exists public.cafeteria_week_drift (
+  id           bigint generated always as identity primary key,
+  cafeteria_id uuid not null,
+  week_start   date not null,
+  txid         bigint not null default txid_current()
+);
+alter table public.cafeteria_week_drift enable row level security;
+revoke all on public.cafeteria_week_drift from public, anon, authenticated;
+
+create or replace function public.cafeteria_meals_note_drift() returns trigger
+language plpgsql security definer set search_path = public, pg_temp as $$
+declare k record;
+begin
+  if coalesce(current_setting('app.cafe_week_apply', true), '') = 'on' then return null; end if;
+  for k in
+    select distinct x.cid, date_trunc('week', x.d)::date as ws
+      from (values (case when tg_op <> 'INSERT' then old.cafeteria_id end, case when tg_op <> 'INSERT' then old.meal_date end),
+                   (case when tg_op <> 'DELETE' then new.cafeteria_id end, case when tg_op <> 'DELETE' then new.meal_date end)) x(cid, d)
+     where x.cid is not null
+  loop
+    if exists (select 1 from public.cafeteria_weeks w where w.cafeteria_id = k.cid and w.week_start = k.ws)
+       and not exists (select 1 from public.cafeteria_week_drift q where q.txid = txid_current() and q.cafeteria_id = k.cid and q.week_start = k.ws) then
+      insert into public.cafeteria_week_drift (cafeteria_id, week_start) values (k.cid, k.ws);
+    end if;
+  end loop;
+  return null;
+end $$;
+revoke all on function public.cafeteria_meals_note_drift() from public, anon, authenticated;
+drop trigger if exists cafeteria_meals_note_drift on public.cafeteria_meals;
+create trigger cafeteria_meals_note_drift after insert or update or delete on public.cafeteria_meals
+  for each row execute function public.cafeteria_meals_note_drift();
+
+-- Runs at COMMIT (so the snapshot is the final one), once per touched (cafeteria, week).
+create or replace function public.cafeteria_week_drift_flush() returns trigger
+language plpgsql security definer set search_path = public, pg_temp as $$
+declare wid uuid; snap jsonb; lv integer; last jsonb;
+begin
+  delete from public.cafeteria_week_drift where id = new.id;
+  select id into wid from public.cafeteria_weeks where cafeteria_id = new.cafeteria_id and week_start = new.week_start;
+  if wid is null then return null; end if;
+  perform public._cms_lock('cafeteria_week', wid);
+  snap := jsonb_build_object('meals', public._cafeteria_week_meals(new.cafeteria_id, new.week_start));
+  lv := public._cms_live_version('cafeteria_week', wid);
+  if lv = 0 then
+    if snap = '{"meals": []}'::jsonb then return null; end if;
+  else
+    select data into last from public.content_versions where entity_type = 'cafeteria_week' and entity_id = wid and version = lv;
+    if last is not distinct from snap then return null; end if;   -- the week's own publication, or a no-op
+  end if;
+  insert into public.content_versions (entity_type, entity_id, version, kind, data, reason, published_by)
+  values ('cafeteria_week', wid, lv + 1, 'visibility', snap, '주간 편집 밖에서 식단이 바뀜 (단일 식단 편집 · SQL · 가져오기)', auth.uid());
+  insert into public.audit_log (actor_id, action, table_name, row_id, reason, details)
+  values (auth.uid(), 'cafeteria_week_external_change', 'cafeteria_weeks', wid::text, '주간 편집 밖의 변경', jsonb_build_object('version', lv + 1));
+  return null;
+end $$;
+revoke all on function public.cafeteria_week_drift_flush() from public, anon, authenticated;
+drop trigger if exists cafeteria_week_drift_flush on public.cafeteria_week_drift;
+create constraint trigger cafeteria_week_drift_flush after insert on public.cafeteria_week_drift
+  deferrable initially deferred for each row execute function public.cafeteria_week_drift_flush();
 
 -- ---------------------------------------------------------------------------
 -- 4. Publish only the chosen days of a week draft, atomically

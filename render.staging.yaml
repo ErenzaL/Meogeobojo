@@ -1,0 +1,60 @@
+# Render Blueprint for a STAGING copy of the web services. Apply it from a SEPARATE Render blueprint / dashboard entry,
+# never in place of render.yaml. Staging uses its OWN Supabase project (a different URL and key than production), so
+# nothing done here can touch production data.
+#
+# Secrets are set in the Render dashboard (sync: false) and are the STAGING project's publishable key only.
+services:
+  - type: web
+    runtime: static
+    name: meogeobojo-web-staging
+    branch: feature/cafeteria-weekly        # the branch under test; change it per release candidate
+    buildCommand: bash scripts/render_build.sh
+    staticPublishPath: build/web
+    autoDeploy: true
+    envVars:
+      - key: FLUTTER_VERSION
+        value: 3.47.8
+      - key: SUPABASE_URL                    # the STAGING project URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY        # the STAGING publishable key ONLY
+        sync: false
+      - key: KAKAO_JAVASCRIPT_KEY            # register the staging domain in Kakao, or leave unset (the web map is then off)
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+
+  - type: web
+    runtime: static
+    name: meogeobojo-admin-staging
+    rootDir: admin
+    branch: feature/cafeteria-weekly
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.12.0
+      - key: VITE_SUPABASE_URL               # the STAGING project URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY          # the STAGING publishable key ONLY, never a service-role key
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: no-referrer
+      - path: /*
+        name: X-Robots-Tag
+        value: noindex, nofollow

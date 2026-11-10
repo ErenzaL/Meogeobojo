@@ -1,0 +1,57 @@
+# Continuous integration. Runs on pull requests and on pushes to main. It uses NO secrets and never contacts Supabase:
+# every test runs against fakes or a throw-away PostgreSQL started inside the job.
+# NOTE: this workflow was written locally and could not be executed there; the first run on GitHub is its real test.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: admin } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22.12.0, cache: npm, cache-dependency-path: admin/package-lock.json }
+      - run: npm ci
+      - run: npx tsc -b --noEmit
+      - run: npm run lint
+      - run: npx vitest run
+      - run: npm run build
+
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { flutter-version: 3.47.8, channel: stable, cache: true }
+      - name: placeholder .env (the app lists it as an asset; it holds no secrets here)
+        run: ': > .env'
+      - run: flutter pub get
+      - run: dart analyze lib test
+      - run: flutter test
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PostgreSQL + zsh
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql postgresql-contrib zsh python3 >/dev/null
+          echo "PGBIN=$(ls -d /usr/lib/postgresql/*/bin | tail -1)" >> "$GITHUB_ENV"
+      - name: migrations + SQL suites on a scratch database (fresh, twice, populated, upgrade path)
+        run: |
+          zsh supabase/tests/run_local.sh "$RUNNER_TEMP/pg" 2>&1 | tee sql.log
+          ! grep -E "^FAILED|ERROR:" sql.log
+          test "$(grep -c '^OK ' sql.log)" -ge 150
+      - name: python tools
+        run: |
+          python3 -m unittest supabase/cafeteria/test_import.py scripts/test_verify_cafeteria_e2e.py

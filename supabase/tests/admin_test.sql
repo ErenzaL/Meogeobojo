@@ -131,8 +131,11 @@ do $$ declare n int; begin
   insert into public.restaurant_overrides (name_ko, visibility) values ('수제식당', 'draft');   -- hand-made, no kakao id; starts as a draft
   begin insert into public.restaurant_overrides (kakao_place_id, name_ko) values ('k1', 'dup'); raise exception 'accepted#23'; exception when unique_violation then null; end;
   insert into public.restaurant_university_links values ('11111111-0000-4000-8000-000000000001', '5c0a8f3e-0001-4a6e-9b1d-000000000001');
-  insert into public.restaurant_menus (restaurant_id, name_ko, price_krw, source, representative, sort_order)
-    values ('11111111-0000-4000-8000-000000000001', '비빔밥', 9000, 'admin', true, 1);
+  -- menus are live only by publishing; a direct insert is refused
+  begin insert into public.restaurant_menus (restaurant_id, name_ko, price_krw, source) values ('11111111-0000-4000-8000-000000000001', '직접', 1, 'admin'); raise exception 'accepted#c4'; exception when insufficient_privilege then null; end;
+  perform public.cms_save_draft('restaurant_menus', '11111111-0000-4000-8000-000000000001',
+    '{"items":[{"id":"aaaaaaaa-0000-4000-8000-000000000001","name_ko":"비빔밥","description_ko":null,"price_krw":9000,"category":null,"price_verified_on":null,"available":true,"representative":true,"recommended":false,"status":"active","sort_order":1,"image_url":null}]}', 0);
+  perform public.cms_publish('restaurant_menus', '11111111-0000-4000-8000-000000000001', 1, 'test');
   -- a meal is created as a hidden draft; publishing it goes through the publishing functions
   begin insert into public.cafeteria_meals (cafeteria_id, meal_date, meal_type, menu_items, price_krw, badge, verified_at, status)
     values ('c1c1c1c1-0000-4000-8000-0000000000f1', '2026-11-11', 'breakfast', '[{"name_ko":"북엇국"}]', 1000, '천원의 아침밥', now(), 'published'); raise exception 'accepted#c3'; exception when insufficient_privilege then null; end;
@@ -184,7 +187,7 @@ do $$ declare u uuid := gen_random_uuid(); begin
   delete from public.universities where id = u;
   assert (select count(*) from public.restaurant_university_links where university_id = u) = 0, 'links removed with the university';
   assert exists (select 1 from public.restaurant_overrides where id = '11111111-0000-4000-8000-000000000001'), 'restaurant kept';
-  begin insert into public.restaurant_menus (name_ko, source) values ('orphan', 'x'); raise exception 'accepted#30'; exception when check_violation then null; end;
+  begin insert into public.restaurant_menus (name_ko, source) values ('orphan', 'x'); raise exception 'accepted#30'; exception when insufficient_privilege or check_violation then null; end;
   raise notice 'OK integrity: deleting a university never deletes restaurants; menus need an owner';
 end $$;
 

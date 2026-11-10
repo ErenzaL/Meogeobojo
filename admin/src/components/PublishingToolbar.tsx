@@ -106,8 +106,8 @@ export default function PublishingToolbar({ type, id, state, loading, error, dir
   if (loading) return <Skeleton className="mb-5 h-24 w-full" />
   if (error) return <div className="mb-5"><ErrorState error={error as Error} /></div>
   if (!state) return null
-  const vis = String(state.live.visibility ?? state.live.status ?? '')
   const visible = isLiveVisible(type, state.live)
+  const vis = type === 'restaurant_menus' ? (visible ? 'published' : 'no_menu') : String(state.live.visibility ?? state.live.status ?? '')
   const msg = message ?? note
 
   return (

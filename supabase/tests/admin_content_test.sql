@@ -53,12 +53,14 @@ do $$ declare mid uuid; v text; begin
   begin insert into public.restaurant_photos (restaurant_id, kind, storage_path, url) values ('e2000000-0000-4000-8000-000000000001', 'banner', 'p/b.webp', 'https://x/b'); raise exception 'accepted#3'; exception when check_violation then null; end;
   raise notice 'OK photos: one live cover, mirror, hand link kept, constraints';
 
-  -- menu added by restaurant_id gets the Kakao id the app reads by
-  insert into public.restaurant_menus (restaurant_id, name_ko, price_krw, source, category, recommended)
-  values ('e2000000-0000-4000-8000-000000000001', '제육 정식', 8000, 'admin', '식사', true) returning id into mid;
+  -- menu published by restaurant_id gets the Kakao id the app reads by (menus go live only by publishing)
+  perform public.cms_save_draft('restaurant_menus', 'e2000000-0000-4000-8000-000000000001',
+    '{"items":[{"id":"aaaaaaaa-0000-4000-8000-0000000000e1","name_ko":"제육 정식","description_ko":null,"price_krw":8000,"category":"식사","price_verified_on":null,"available":true,"representative":false,"recommended":true,"status":"active","sort_order":0,"image_url":null}]}', 0);
+  perform public.cms_publish('restaurant_menus', 'e2000000-0000-4000-8000-000000000001', 1, 'test');
+  mid := 'aaaaaaaa-0000-4000-8000-0000000000e1';
   assert (select kakao_place_id from public.restaurant_menus where id = mid) = 'kp-pub', 'menu kakao_place_id filled from the restaurant';
   assert (select status from public.restaurant_menus where id = mid) = 'active', 'menus default to active';
-  begin update public.restaurant_menus set status = 'gone' where id = mid; raise exception 'accepted#4'; exception when check_violation then null; end;
+  begin update public.restaurant_menus set status = 'gone' where id = mid; raise exception 'accepted#4'; exception when insufficient_privilege or check_violation then null; end;
   raise notice 'OK menus: kakao_place_id sync, status check';
 end $$;
 reset role;

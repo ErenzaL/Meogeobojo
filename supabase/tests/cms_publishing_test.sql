@@ -420,6 +420,80 @@ delete from public.content_versions where entity_type = 'cafeteria_meal';
 alter table public.content_versions enable trigger content_versions_no_update;
 delete from public.campus_cafeterias where id = 'c4000000-0000-4000-8000-000000000001';
 
+-- ===== restaurant_menus: a restaurant's menu list is published as one set =====
+insert into public.restaurant_menus (id, restaurant_id, name_ko, price_krw, source, sort_order) values
+  ('aaaaaaaa-0000-4000-8000-0000000000b1', 'e4000000-0000-4000-8000-000000000002', '기존 메뉴', 8000, 'admin', 1);
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; live jsonb; d jsonb; v int; j bigint; begin
+  live := public.cms_state('restaurant_menus', r) -> 'live';
+  assert jsonb_array_length(live -> 'items') = 1 and live -> 'items' -> 0 ->> 'name_ko' = '기존 메뉴', 'live snapshot = the existing menu';
+  -- a draft: price change + a new item; live is untouched
+  d := jsonb_build_object('items', jsonb_build_array(
+    (live -> 'items' -> 0) || '{"price_krw":9000}',
+    '{"id":"aaaaaaaa-0000-4000-8000-0000000000b2","name_ko":"새 메뉴","description_ko":null,"price_krw":7000,"category":"식사","price_verified_on":"2026-11-10","available":true,"representative":false,"recommended":false,"status":"active","sort_order":2,"image_url":null}'::jsonb));
+  perform public.cms_save_draft('restaurant_menus', r, d, 0);
+  assert (select price_krw from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b1') = 8000, 'draft price is not live';
+  assert (select count(*) from public.restaurant_menus where restaurant_id = r) = 1, 'draft item is not live';
+  -- direct API writes are refused
+  begin update public.restaurant_menus set price_krw = 1 where id = 'aaaaaaaa-0000-4000-8000-0000000000b1'; raise exception 'accepted#m1'; exception when insufficient_privilege then null; end;
+  begin delete from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b1'; raise exception 'accepted#m2'; exception when insufficient_privilege then null; end;
+  -- validation: negative price, price date without price, duplicate id, unknown field, other restaurant's id
+  begin perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array((live -> 'items' -> 0) || '{"price_krw":-1}')), 1); raise exception 'accepted#m3'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array((live -> 'items' -> 0) || '{"price_krw":null,"price_verified_on":"2026-11-10"}')), 1); raise exception 'accepted#m4'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array(live -> 'items' -> 0, live -> 'items' -> 0)), 1); raise exception 'accepted#m5'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array((live -> 'items' -> 0) || '{"evil":1}')), 1); raise exception 'accepted#m6'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array((live -> 'items' -> 0) || '{"id":"aaaaaaaa-0000-4000-8000-0000000000b1"}', '{}'::jsonb)), 1); raise exception 'accepted#m7'; exception when invalid_parameter_value then null; end;
+  -- publish: both changes go live together as version 1
+  v := public.cms_publish('restaurant_menus', r, 1, '가격 인상');
+  assert v = 1, 'first menu version';
+  assert (select price_krw from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b1') = 9000, 'published price';
+  assert (select kakao_place_id from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b2') = 'cms-2', 'new menu gets the Kakao id the app reads by';
+  -- schedule the removal of the new item; the server runs it later
+  live := public.cms_state('restaurant_menus', r) -> 'live';
+  perform public.cms_save_draft('restaurant_menus', r, jsonb_build_object('items', jsonb_build_array(live -> 'items' -> 0)), 0);
+  j := public.cms_schedule('restaurant_menus', r, 1, now() + interval '1 day', null, '내일 메뉴 정리');
+  perform set_config('test.menujob', j::text, false);
+  assert (select count(*) from public.restaurant_menus where restaurant_id = r and status = 'active') = 2, 'scheduled change is not live';
+  raise notice 'OK cms menus: draft invisible, direct writes refused, validation, publish as one set, schedule';
+end $$;
+reset role;
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.menujob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'menu job ran: ' || res::text;
+  assert (select status from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b2') = 'archived', 'the removed item is archived, not deleted';
+  assert (select count(*) from public.restaurant_menus where restaurant_id = r) = 2, 'nothing was deleted';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  raise notice 'OK cms menus: the server applies the schedule once; removed menus are archived';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare r constant uuid := 'e4000000-0000-4000-8000-000000000002'; v int; begin
+  v := public.cms_rollback('restaurant_menus', r, 1, '되돌리기');
+  assert (select status from public.restaurant_menus where id = 'aaaaaaaa-0000-4000-8000-0000000000b2') = 'active', 'rollback restores the item';
+  v := public.cms_unpublish('restaurant_menus', r, '점검');
+  assert (select count(*) from public.restaurant_menus where restaurant_id = r and status = 'active') = 0, 'unpublish hides every menu';
+  assert (select count(*) from public.restaurant_menus where restaurant_id = r) = 2, 'and deletes none';
+  begin perform public.cms_set_visibility('restaurant_menus', r, 'published', 'x'); raise exception 'accepted#m8'; exception when invalid_parameter_value then null; end;
+  assert (select count(*) from public.cms_overview('restaurant_menus') where entity_id = r and live_version = 4) = 1, 'overview lists menu sets';
+  raise notice 'OK cms menus: rollback, unpublish keep every row; history';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_save_draft('restaurant_menus', 'e4000000-0000-4000-8000-000000000002', '{"items":[]}', 0); raise exception 'accepted#m9'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms menus: moderators cannot draft or publish menus';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'restaurant_menus';
+delete from public.content_drafts where entity_type = 'restaurant_menus';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'restaurant_menus';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.restaurant_menus where restaurant_id = 'e4000000-0000-4000-8000-000000000002';
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

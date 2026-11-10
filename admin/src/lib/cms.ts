@@ -2,7 +2,7 @@
  *  The database owns every rule: these are thin wrappers plus Seoul-time and diff helpers. */
 import { supabase } from '@/lib/supabase'
 
-export type EntityType = 'restaurant' | 'cafeteria_meal'
+export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus'
 export type Snapshot = Record<string, unknown>
 
 export type Job = {
@@ -58,9 +58,40 @@ export const FIELD_LABEL: Record<string, string> = {
   source_url: '출처 주소', verified_at: '확인한 날짜', extra: '사진·공지',
 }
 export type Change = { key: string; label: string; from: unknown; to: unknown }
+/** One menu line of a restaurant's menu set (snapshot shape of 'restaurant_menus'). */
+export type MenuItem = {
+  id: string; name_ko: string; description_ko: string | null; price_krw: number | null; category: string | null; price_verified_on: string | null
+  available: boolean; representative: boolean; recommended: boolean; status: 'active' | 'archived'; sort_order: number; image_url: string | null
+}
+const ITEM_FIELD: Record<string, string> = {
+  name_ko: '이름', description_ko: '설명', price_krw: '가격(원)', category: '분류', price_verified_on: '가격 확인일', available: '판매 중',
+  representative: '대표 메뉴', recommended: '추천 메뉴', status: '상태', image_url: '사진',
+}
+const itemSummary = (i: MenuItem) => `${i.name_ko}${i.price_krw != null ? ` ${i.price_krw.toLocaleString('ko-KR')}원` : ''}`
+/** What a publish would do to a restaurant's menu list: added / removed (archived) / changed lines. */
+export function diffMenuItems(live: Snapshot, draft: Snapshot): Change[] {
+  const a = ((live.items as MenuItem[] | undefined) ?? []); const b = ((draft.items as MenuItem[] | undefined) ?? [])
+  const before = new Map(a.map((i) => [i.id, i])); const after = new Map(b.map((i) => [i.id, i]))
+  const out: Change[] = []
+  for (const i of b) if (!before.has(i.id)) out.push({ key: `add:${i.id}`, label: '메뉴 추가', from: null, to: itemSummary(i) })
+  for (const i of a) if (!after.has(i.id) && i.status !== 'archived') out.push({ key: `rm:${i.id}`, label: '메뉴 제거 (보관됨)', from: itemSummary(i), to: '앱에서 사라짐' })
+  for (const i of b) {
+    const o = before.get(i.id); if (!o) continue
+    for (const f of Object.keys(ITEM_FIELD) as (keyof MenuItem)[]) {
+      if (same(o[f] === '' ? null : o[f], i[f] === '' ? null : i[f])) continue
+      const show = (v: unknown) => (f === 'image_url' ? (v ? '사진 있음' : null) : v)
+      out.push({ key: `chg:${i.id}:${f}`, label: `${i.name_ko} · ${ITEM_FIELD[f]}`, from: show(o[f]), to: show(i[f]) })
+    }
+  }
+  const order = (xs: MenuItem[]) => xs.filter((x) => after.has(x.id) && before.has(x.id)).map((x) => x.id).join(',')
+  const live2 = a.filter((x) => after.has(x.id)); const draft2 = b.filter((x) => before.has(x.id))
+  if (order(live2) !== order(draft2)) out.push({ key: 'order', label: '메뉴 순서', from: '이전 순서', to: '바뀜' })
+  return out
+}
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 /** Fields whose value differs between the live content and the pending draft. */
 export function diffSnapshots(live: Snapshot, draft: Snapshot): Change[] {
+  if ('items' in draft || 'items' in live) return diffMenuItems(live, draft)
   const out: Change[] = []
   for (const key of Object.keys(FIELD_LABEL)) {
     if (!(key in draft) && !(key in live)) continue
@@ -86,7 +117,9 @@ export const showValue = (v: unknown): string => {
 
 /** Does the live content show to students? (restaurants: visibility; meals: status) */
 export const isLiveVisible = (type: EntityType, live: Snapshot): boolean =>
-  type === 'restaurant' ? live.visibility === 'published' : ['published', 'closed', 'no_menu'].includes(String(live.status))
+  type === 'restaurant' ? live.visibility === 'published'
+    : type === 'restaurant_menus' ? ((live.items as MenuItem[] | undefined) ?? []).some((i) => i.status === 'active')
+    : ['published', 'closed', 'no_menu'].includes(String(live.status))
 
 // ---- Errors -------------------------------------------------------------------
 /** The database signals "someone else changed this" with SQLSTATE 40001. */

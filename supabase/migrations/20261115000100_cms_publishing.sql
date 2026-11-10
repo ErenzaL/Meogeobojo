@@ -1,7 +1,8 @@
 -- Controlled publishing for admin-managed content: draft -> preview -> publish
 -- now / schedule -> live, with immutable version history, rollback and a
 -- server-side scheduler. Entity types: 'restaurant' (restaurant_overrides) and
--- 'cafeteria_meal' (cafeteria_meals). More types = one branch in each adapter below.
+-- 'cafeteria_meal' (cafeteria_meals) and 'restaurant_menus' (all menu items of one restaurant,
+-- published together; entity id = the restaurant id). More types = one branch in each adapter below.
 --
 -- Additive and idempotent. Requires 20261109000100 (roles, audit) and
 -- 20261110000100 (_audit). Applying it changes nothing for students: the LIVE
@@ -36,6 +37,7 @@ do $$ begin
   if to_regclass('public.restaurant_overrides') is null
      or to_regclass('public.restaurant_university_links') is null
      or to_regclass('public.cafeteria_meals') is null
+     or to_regclass('public.restaurant_menus') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -46,7 +48,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -60,7 +62,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -76,7 +78,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -137,6 +139,7 @@ language sql immutable as $$
     'avg_cost_krw', 'dining_purposes', 'visibility', 'featured', 'display_order', 'university_ids']
   when 'cafeteria_meal' then array[
     'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
+  when 'restaurant_menus' then array['items']
   else null end
 $$;
 
@@ -163,6 +166,17 @@ begin
       'start_time', to_char(m.start_time, 'HH24:MI'), 'end_time', to_char(m.end_time, 'HH24:MI'),
       'status', m.status, 'badge', m.badge, 'source_url', m.source_url, 'verified_at', m.verified_at, 'extra', m.extra)
       into v from public.cafeteria_meals m where m.id = p_id;
+  elsif p_type = 'restaurant_menus' then
+    if not exists (select 1 from public.restaurant_overrides where id = p_id) then v := null;
+    else
+      -- every menu of the restaurant, archived ones included (so a rollback restores them)
+      select jsonb_build_object('items', coalesce(jsonb_agg(jsonb_build_object(
+          'id', x.id, 'name_ko', x.name_ko, 'description_ko', x.description_ko, 'price_krw', x.price_krw,
+          'category', x.category, 'price_verified_on', to_char(x.price_verified_on, 'YYYY-MM-DD'),
+          'available', x.available, 'representative', x.representative, 'recommended', x.recommended,
+          'status', x.status, 'sort_order', x.sort_order, 'image_url', x.image_url) order by x.sort_order, x.id), '[]'::jsonb))
+        into v from public.restaurant_menus x where x.restaurant_id = p_id;
+    end if;
   else
     raise exception 'unknown entity type' using errcode = '22023';
   end if;
@@ -173,7 +187,7 @@ end $$;
 -- Friendly validation (the table's CHECK constraints remain the last line of defence).
 create or replace function public._cms_validate(p_type text, p_data jsonb, p_id uuid default null) returns void
 language plpgsql stable set search_path = public, pg_temp as $$
-declare k text; mt text; it jsonb;
+declare k text; mt text; it jsonb; ids text[] := '{}'; iid text; pr integer; n integer;
 begin
   if p_data is null or jsonb_typeof(p_data) <> 'object' then raise exception 'content must be an object' using errcode = '22023'; end if;
   for k in select jsonb_object_keys(p_data) loop
@@ -207,6 +221,41 @@ begin
     if p_data ? 'university_ids' and jsonb_typeof(p_data -> 'university_ids') <> 'array' then
       raise exception '대학교 목록이 올바르지 않아요' using errcode = '22023';
     end if;
+  elsif p_type = 'restaurant_menus' then
+    if jsonb_typeof(p_data -> 'items') is distinct from 'array' then raise exception '메뉴 목록이 올바르지 않아요' using errcode = '22023'; end if;
+    if jsonb_array_length(p_data -> 'items') > 300 then raise exception '메뉴는 300개까지 둘 수 있어요' using errcode = '22023'; end if;
+    for it in select * from jsonb_array_elements(p_data -> 'items') loop
+      if jsonb_typeof(it) <> 'object' then raise exception '메뉴 항목이 올바르지 않아요' using errcode = '22023'; end if;
+      for k in select jsonb_object_keys(it) loop
+        if k <> all (array['id','name_ko','description_ko','price_krw','category','price_verified_on','available','representative','recommended','status','sort_order','image_url']) then
+          raise exception '알 수 없는 메뉴 필드: %', k using errcode = '22023';
+        end if;
+      end loop;
+      begin iid := (it ->> 'id')::uuid::text; exception when others then raise exception '메뉴 id가 올바르지 않아요' using errcode = '22023'; end;
+      if iid = any (ids) then raise exception '메뉴 id가 겹쳐요' using errcode = '22023'; end if;
+      ids := ids || iid;
+      if p_id is not null and exists (select 1 from public.restaurant_menus x where x.id = iid::uuid and x.restaurant_id is distinct from p_id) then
+        raise exception '다른 식당의 메뉴예요' using errcode = '22023';
+      end if;
+      if btrim(coalesce(it ->> 'name_ko', '')) = '' then raise exception '메뉴 이름은 비워 둘 수 없어요' using errcode = '22023'; end if;
+      if char_length(it ->> 'name_ko') > 120 then raise exception '메뉴 이름이 너무 길어요' using errcode = '22023'; end if;
+      if char_length(coalesce(it ->> 'description_ko', '')) > 500 then raise exception '메뉴 설명은 500자 이하여야 해요' using errcode = '22023'; end if;
+      if char_length(coalesce(it ->> 'category', '')) > 30 then raise exception '분류가 너무 길어요' using errcode = '22023'; end if;
+      if coalesce(it ->> 'status', '') not in ('active', 'archived') then raise exception '메뉴 상태가 올바르지 않아요' using errcode = '22023'; end if;
+      begin
+        pr := (it ->> 'price_krw')::integer;
+        if pr < 0 then raise exception 'x'; end if;
+        n := (it ->> 'sort_order')::integer;
+        if (it ->> 'available') is not null then perform (it ->> 'available')::boolean; end if;
+        if (it ->> 'representative') is not null then perform (it ->> 'representative')::boolean; end if;
+        if (it ->> 'recommended') is not null then perform (it ->> 'recommended')::boolean; end if;
+      exception when others then raise exception '메뉴 가격·순서 값이 올바르지 않아요 (가격은 0 이상의 정수)' using errcode = '22023'; end;
+      if (it ->> 'price_verified_on') is not null then
+        begin perform (it ->> 'price_verified_on')::date; exception when others then raise exception '가격 확인일 형식이 올바르지 않아요' using errcode = '22023'; end;
+        if pr is null then raise exception '가격이 없으면 확인일을 적을 수 없어요' using errcode = '22023'; end if;
+      end if;
+      if (it ->> 'image_url') is not null and (it ->> 'image_url') !~ '^https://' then raise exception '메뉴 사진 주소가 올바르지 않아요' using errcode = '22023'; end if;
+    end loop;
   elsif p_type = 'cafeteria_meal' then
     if coalesce(p_data ->> 'status', '') not in ('draft', 'published', 'closed', 'no_menu') then
       raise exception '식단 상태가 올바르지 않아요' using errcode = '22023';
@@ -251,7 +300,11 @@ end $$;
 create or replace function public._cms_unpublished(p_type text, p_live jsonb) returns jsonb
 language sql immutable as $$
   select case p_type when 'restaurant' then p_live || '{"visibility":"hidden"}'::jsonb
-                     when 'cafeteria_meal' then p_live || '{"status":"draft"}'::jsonb else p_live end
+                     when 'cafeteria_meal' then p_live || '{"status":"draft"}'::jsonb
+                     -- no menu is shown any more; every item is kept (archived), none is deleted
+                     when 'restaurant_menus' then jsonb_build_object('items', coalesce(
+                       (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'items') i), '[]'::jsonb))
+                     else p_live end
 $$;
 
 -- Write [p_data] into the live row. Only callable from the publishing functions
@@ -291,6 +344,26 @@ begin
       extra = coalesce(p_data -> 'extra', '{}'::jsonb)
      where m.id = p_id;
     if not found then raise exception 'no such meal' using errcode = 'P0002'; end if;
+  elsif p_type = 'restaurant_menus' then
+    if not exists (select 1 from public.restaurant_overrides where id = p_id) then raise exception 'no such restaurant' using errcode = 'P0002'; end if;
+    -- a menu that is no longer in the list is archived, never deleted
+    update public.restaurant_menus x set status = 'archived'
+     where x.restaurant_id = p_id and x.status <> 'archived'
+       and x.id not in (select (i ->> 'id')::uuid from jsonb_array_elements(p_data -> 'items') i);
+    insert into public.restaurant_menus as x (id, restaurant_id, name_ko, description_ko, price_krw, category, price_verified_on,
+                                              available, representative, recommended, status, sort_order, image_url, source)
+    select (i ->> 'id')::uuid, p_id, btrim(i ->> 'name_ko'), nullif(btrim(coalesce(i ->> 'description_ko', '')), ''),
+           (i ->> 'price_krw')::integer, nullif(i ->> 'category', ''), (i ->> 'price_verified_on')::date,
+           coalesce((i ->> 'available')::boolean, true), coalesce((i ->> 'representative')::boolean, false),
+           coalesce((i ->> 'recommended')::boolean, false), i ->> 'status', coalesce((i ->> 'sort_order')::integer, 0),
+           i ->> 'image_url', 'admin'
+      from jsonb_array_elements(p_data -> 'items') i
+    on conflict (id) do update set
+      name_ko = excluded.name_ko, description_ko = excluded.description_ko, price_krw = excluded.price_krw,
+      category = excluded.category, price_verified_on = excluded.price_verified_on, available = excluded.available,
+      representative = excluded.representative, recommended = excluded.recommended, status = excluded.status,
+      sort_order = excluded.sort_order, image_url = excluded.image_url
+      where x.restaurant_id = p_id;
   else
     raise exception 'unknown entity type' using errcode = '22023';
   end if;
@@ -360,6 +433,19 @@ end $$;
 drop trigger if exists cafeteria_meals_guard_live on public.cafeteria_meals;
 create trigger cafeteria_meals_guard_live before insert or update or delete on public.cafeteria_meals
   for each row execute function public.cafeteria_meals_guard_live();
+
+-- Guard: live menus change only by publishing (a restaurant's menu list is published as one set).
+create or replace function public.restaurant_menus_guard_live() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if current_user not in ('authenticated', 'anon') or coalesce(current_setting('app.cms_apply', true), '') = 'on' then
+    return coalesce(new, old);
+  end if;
+  raise exception 'live menus are changed only by publishing (save a draft, then publish)' using errcode = '42501';
+end $$;
+drop trigger if exists restaurant_menus_guard_live on public.restaurant_menus;
+create trigger restaurant_menus_guard_live before insert or update or delete on public.restaurant_menus
+  for each row execute function public.restaurant_menus_guard_live();
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -635,6 +721,7 @@ create or replace function public.cms_set_visibility(p_type text, p_id uuid, p_v
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   perform public._cms_admin_check();
+  if p_type not in ('restaurant', 'cafeteria_meal') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
   if p_visibility not in ('draft', 'published', 'hidden', 'archived') then raise exception '공개 상태가 올바르지 않아요' using errcode = '22023'; end if;
   if p_reason is null or btrim(p_reason) = '' then raise exception '사유를 입력해 주세요' using errcode = '22023'; end if;
   perform public._cms_lock(p_type, p_id);
@@ -662,7 +749,7 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from (select o.id from public.restaurant_overrides o where p_type = 'restaurant'
+      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus')
             union all
             select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)) e;
 end $$;

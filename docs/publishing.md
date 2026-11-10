@@ -3,7 +3,8 @@
 Status: **foundation + restaurants + cafeteria meals (학식) built and tested locally; not applied to production.**
 Other sections are listed under "Rollout" and still publish immediately.
 
-Entity types so far: `restaurant` and `cafeteria_meal` (one meal = one date × meal × corner).
+Entity types so far: `restaurant`, `cafeteria_meal` (one meal = one date × meal × corner) and
+`restaurant_menus` (a restaurant's whole menu list; entity id = the restaurant id).
 The engine is generic (`_cms_keys / _cms_snapshot / _cms_validate / _cms_apply /
 _cms_unpublished`); a new type is one more branch plus its admin form.
 
@@ -20,6 +21,18 @@ _cms_unpublished`); a new type is one more branch plus its admin form.
   (see Rollout 2: a private staging bucket).
 * Verified-source rules are kept (천원의 아침밥 needs an official source and breakfast).
 * Flutter keeps reading only `cafeteria_meals.status = 'published'` of active cafeterias.
+
+### Menus and prices (`restaurant_menus`)
+* The menu list of one restaurant is ONE publishable set: the snapshot is `{items: [...]}` with
+  every line (id, name, price, category, price-verified date, flags, status, order, photo).
+  Price and menu changes therefore go live together, atomically, and roll back together.
+* `restaurant_menus` rows are the live rows the app already reads (by `kakao_place_id`, archived
+  lines are filtered out by Flutter). A trigger refuses any API insert/update/delete of them;
+  only `cms_publish` / the scheduler / rollback write them.
+* A line missing from a published set is **archived, never deleted**; rollback restores it.
+  "게시 중단" archives every line (nothing is deleted). Unknown prices stay `null`, never 0.
+* Photos are staged in the draft; a published photo file is never deleted (same public-bucket
+  limitation as meals).
 
 ### Admin database compatibility (`campus_cafeterias.status` does not exist)
 **Root cause:** the Admin expects `campus_cafeterias.status` / `operating_note`, added by
@@ -137,7 +150,7 @@ E (missions) is not implemented yet. The cafeteria meal flow (draft invisible �
 
 ## 5. Rollout (safe order; not done)
 
-1. **Menus + prices** (per restaurant menu set → snapshot of the items; publish together).
+1. ~~Menus + prices~~ done (`restaurant_menus`).
 2. **Photos** (cover + gallery set). Needs a private staging bucket so unpublished photos
    are not reachable by permanent public URLs (today they upload to the public bucket).
 3. ~~Cafeteria meals~~ done (single meal). A whole week as one publication is still open.

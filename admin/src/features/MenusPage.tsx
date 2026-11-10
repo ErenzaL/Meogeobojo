@@ -1,41 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, ArrowDown, ArrowUp, ImageOff, Pencil, RotateCcw, Star, ThumbsUp, Trash2 } from 'lucide-react'
-import { useState } from 'react'
-import { Badge, Button, Card, ConfirmDialog, EmptyState, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
-import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage, storagePathFromUrl } from '@/lib/images'
+import { ArrowDown, ArrowUp, ImageOff, Pencil, RotateCcw, Star, ThumbsUp, Trash2, Archive } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import PublishingToolbar from '@/components/PublishingToolbar'
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
+import { cmsOverview, cmsSaveDraft, cmsState, diffSnapshots, isConflict, type MenuItem, type OverviewRow } from '@/lib/cms'
+import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import MenuPreview from './menus/MenuPreview'
+import { draftFromItem, emptyMenuDraft, itemFromDraft, MENU_CATEGORIES, sortItems, validateMenu, type MenuDraft } from './menus/menu'
 
 export { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, validateImageFile } from '@/lib/images'
+export { MENU_CATEGORIES, validateMenu }
 
-export const MENU_CATEGORIES = ['식사', '면류', '분식', '안주', '사이드', '음료', '디저트', '기타']
+const TYPE = 'restaurant_menus' as const
+type Msg = { tone: 'ok' | 'bad'; text: string }
 
-type Menu = {
-  id: string; name_ko: string; description_ko: string | null; price_krw: number | null; available: boolean; representative: boolean
-  recommended: boolean; category: string | null; price_verified_on: string | null; status: 'active' | 'archived'; sort_order: number; image_url: string | null
-}
-type Draft = { name: string; price: string; description: string; category: string; verified: string }
-const emptyDraft: Draft = { name: '', price: '', description: '', category: '', verified: '' }
-
-/** Pure form check: unknown prices stay unknown (empty = null), never 0. */
-export function validateMenu(d: Draft): { error: string | null; price: number | null } {
-  if (!d.name.trim()) return { error: '메뉴 이름을 입력해 주세요', price: null }
-  const price = d.price.trim() === '' ? null : Number(d.price.replace(/[,\s]/g, ''))
-  if (price != null && (!Number.isInteger(price) || price < 0)) return { error: '가격은 0 이상의 정수여야 해요', price: null }
-  if (d.verified && !/^\d{4}-\d{2}-\d{2}$/.test(d.verified)) return { error: '가격 확인일 형식이 올바르지 않아요', price: null }
-  if (d.verified && price == null) return { error: '가격이 없으면 확인일을 적을 수 없어요', price: null }
-  return { error: null, price }
-}
-
+/** A restaurant's menu list is edited as ONE draft and published together. Nothing here
+ *  writes the live menus: 초안 저장 stores the draft, the toolbar publishes / schedules it. */
 export default function MenusPage() {
   const qc = useQueryClient()
   const [restaurantId, setRestaurantId] = useState('')
   const [q, setQ] = useState('')
-  const [notice, setNotice] = useState<string | null>(null)
-  const [del, setDel] = useState<Menu | null>(null)
-  const [editing, setEditing] = useState<Menu | null>(null)
+  const [message, setMessage] = useState<Msg | null>(null)
+  const [editing, setEditing] = useState<MenuItem | null>(null)
   const [showArchived, setShowArchived] = useState(false)
-  const [draft, setDraft] = useState<Draft>(emptyDraft)
+  const [form, setForm] = useState<MenuDraft>(emptyMenuDraft)
+  const [edited, setEdited] = useState<MenuItem[] | null>(null) // null: nothing changed yet (the list shows the server draft / live)
+  const [editBase, setEditBase] = useState<number | null>(null)
+  const [unsaved, setUnsaved] = useState<Record<string, string>>({}) // item id -> storage path of an upload no draft references yet
+  const [previewing, setPreviewing] = useState(false)
 
   const restaurants = useQuery({
     queryKey: ['restaurant-picker', q],
@@ -47,152 +41,173 @@ export default function MenusPage() {
       return data as { id: string; name_ko: string }[]
     },
   })
-  const menus = useQuery({
-    queryKey: ['menus', restaurantId], enabled: !!restaurantId,
-    queryFn: async () => {
-      const { data, error } = await supabase.from('restaurant_menus').select('*').eq('restaurant_id', restaurantId).order('sort_order').order('created_at')
-      if (error) throw error
-      return data as Menu[]
-    },
-  })
-  const refresh = () => qc.invalidateQueries({ queryKey: ['menus', restaurantId] })
-  const run = useMutation({
-    mutationFn: async (fn: () => PromiseLike<{ error: unknown }>) => { const { error } = await fn(); if (error) throw error },
-    onSuccess: async () => { setNotice(null); await refresh() },
-    onError: (e) => setNotice(errorMessage(e)),
-  })
+  const overview = useQuery({ queryKey: ['cms-overview', TYPE], queryFn: () => cmsOverview(TYPE) })
+  const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
 
-  const all = menus.data ?? []
-  const visible = all.filter((m) => showArchived || m.status === 'active')
-  const archivedCount = all.filter((m) => m.status === 'archived').length
+  const cms = useQuery({ queryKey: ['cms', TYPE, restaurantId], enabled: !!restaurantId, queryFn: () => cmsState(TYPE, restaurantId) })
+  const state = cms.data
+  const base = state ? (state.draft?.data ?? state.live) : null
+  const serverRev = state?.draft?.revision ?? 0
+  const serverItems = useMemo(() => sortItems((base?.items as MenuItem[] | undefined) ?? []), [base])
+  const items = edited ?? serverItems
+  const dirty = edited !== null
+  const conflict = editBase !== null && editBase !== serverRev
+  const liveIds = useMemo(() => new Set(((state?.live.items as MenuItem[] | undefined) ?? []).map((i) => i.id)), [state])
+  const liveById = useMemo(() => new Map(((state?.live.items as MenuItem[] | undefined) ?? []).map((i) => [i.id, i])), [state])
+
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ['cms', TYPE, restaurantId] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['menus'] })
+  }
+  const change = (next: MenuItem[]) => { setEdited(sortItems(next)); setEditBase((b) => b ?? serverRev) }
+  const resetLocal = () => { setEdited(null); setEditBase(null); setEditing(null); setForm(emptyMenuDraft); setUnsaved({}) }
+
+  const save = useMutation({
+    mutationFn: () => cmsSaveDraft(TYPE, restaurantId, { items: sortItems(items) }, editBase ?? serverRev),
+    onSuccess: async () => {
+      setMessage({ tone: 'ok', text: '초안을 저장했어요. 앱에는 아직 보이지 않아요. 게시하면 반영돼요.' })
+      resetLocal(); await refresh()
+    },
+    onError: async (e) => { setMessage({ tone: 'bad', text: errorMessage(e) }); if (isConflict(e)) await refresh() },
+  })
 
   const submit = () => {
-    const { error, price } = validateMenu(draft)
-    if (error) return setNotice(error)
-    const row = {
-      name_ko: draft.name.trim(), description_ko: draft.description.trim() || null, price_krw: price,
-      category: draft.category || null, price_verified_on: price == null ? null : draft.verified || null,
+    const { error, price } = validateMenu(form)
+    if (error) return setMessage({ tone: 'bad', text: error })
+    if (editing) {
+      change(items.map((m) => (m.id === editing.id ? itemFromDraft(form, price, m) : m)))
+      setMessage({ tone: 'ok', text: `${form.name.trim()} 수정을 초안에 담았어요. '초안 저장'을 눌러 저장해 주세요.` })
+      setEditing(null)
+    } else {
+      const next = (items.at(-1)?.sort_order ?? 0) + 1
+      change([...items, itemFromDraft(form, price, { id: crypto.randomUUID(), sort_order: next })])
+      setMessage({ tone: 'ok', text: `${form.name.trim()}을(를) 초안에 담았어요. '초안 저장'을 눌러 저장해 주세요.` })
     }
-    run.mutate(async () => {
-      if (editing) {
-        const r = await supabase.from('restaurant_menus').update(row).eq('id', editing.id)
-        if (!r.error) { setEditing(null); setDraft(emptyDraft) }
-        return r
-      }
-      const next = (all.at(-1)?.sort_order ?? 0) + 1
-      const r = await supabase.from('restaurant_menus').insert({ ...row, restaurant_id: restaurantId, source: 'admin', sort_order: next })
-      if (!r.error) setDraft(emptyDraft)
-      return r
-    })
+    setForm(emptyMenuDraft)
   }
-  const startEdit = (m: Menu) => {
-    setEditing(m)
-    setDraft({ name: m.name_ko, price: m.price_krw == null ? '' : String(m.price_krw), description: m.description_ko ?? '', category: m.category ?? '', verified: m.price_verified_on ?? '' })
-  }
-  const move = (m: Menu, dir: -1 | 1) => {
-    const list = visible; const i = list.findIndex((x) => x.id === m.id); const o = list[i + dir]
+  const patch = (m: MenuItem, values: Partial<MenuItem>) => change(items.map((x) => (x.id === m.id ? { ...x, ...values } : x)))
+  const move = (m: MenuItem, dir: -1 | 1) => {
+    const list = items.filter((x) => showArchived || x.status === 'active'); const i = list.findIndex((x) => x.id === m.id); const o = list[i + dir]
     if (!o) return
-    run.mutate(async () => {
-      const a = await supabase.from('restaurant_menus').update({ sort_order: o.sort_order }).eq('id', m.id)
-      if (a.error) return a
-      return supabase.from('restaurant_menus').update({ sort_order: m.sort_order }).eq('id', o.id)
-    })
+    change(items.map((x) => (x.id === m.id ? { ...x, sort_order: o.sort_order } : x.id === o.id ? { ...x, sort_order: m.sort_order } : x)))
   }
-  const removeFile = async (url: string | null) => {
-    const path = storagePathFromUrl(url)
-    if (path) await supabase.storage.from(BUCKET).remove([path])
+  /** Removes a line from the draft. If it was published it becomes ARCHIVED when published (never deleted). */
+  const remove = (m: MenuItem) => {
+    change(items.filter((x) => x.id !== m.id))
+    const path = unsaved[m.id]
+    if (path) { void supabase.storage.from(BUCKET).remove([path]); setUnsaved(({ [m.id]: _gone, ...rest }) => { void _gone; return rest }) }
+    if (editing?.id === m.id) { setEditing(null); setForm(emptyMenuDraft) }
   }
-  const upload = async (m: Menu, file: File) => {
+  /** The photo is staged in the draft; a published photo file is never deleted (a rollback needs it). */
+  const upload = async (m: MenuItem, file: File) => {
     try {
-      setNotice(null)
+      setMessage(null)
       const img = await prepareImage(file)
       const path = imagePath(`menus/${restaurantId}`, img.type)
       const up = await supabase.storage.from(BUCKET).upload(path, img.blob, { contentType: img.type })
-      if (up.error) return setNotice(errorMessage(up.error))
-      const url = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl
-      const old = m.image_url
-      const r = await supabase.from('restaurant_menus').update({ image_url: url }).eq('id', m.id)
-      if (r.error) { await supabase.storage.from(BUCKET).remove([path]); return setNotice(errorMessage(r.error)) }
-      await removeFile(old) // the replaced file would be an orphan
-      await refresh()
-    } catch (e) { setNotice(errorMessage(e)) }
+      if (up.error) return setMessage({ tone: 'bad', text: errorMessage(up.error) })
+      if (unsaved[m.id]) await supabase.storage.from(BUCKET).remove([unsaved[m.id]]) // an earlier unsaved pick would be an orphan
+      patch(m, { image_url: supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl })
+      setUnsaved((u) => ({ ...u, [m.id]: path }))
+      setMessage({ tone: 'ok', text: '사진을 골랐어요. 초안을 저장하면 반영돼요. (게시 전에는 앱에 보이지 않아요)' })
+    } catch (e) { setMessage({ tone: 'bad', text: errorMessage(e) }) }
   }
-  const clearPhoto = (m: Menu) => run.mutate(async () => {
-    const r = await supabase.from('restaurant_menus').update({ image_url: null }).eq('id', m.id)
-    if (!r.error) await removeFile(m.image_url)
-    return r
-  })
-  const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }))
-  const patch = (m: Menu, values: Partial<Menu>) => run.mutate(() => supabase.from('restaurant_menus').update(values).eq('id', m.id))
+  const clearPhoto = (m: MenuItem) => {
+    // only an upload no draft references yet is removed; a saved or published file stays (rollback needs it)
+    if (unsaved[m.id]) { void supabase.storage.from(BUCKET).remove([unsaved[m.id]]); setUnsaved(({ [m.id]: _gone, ...rest }) => { void _gone; return rest }) }
+    patch(m, { image_url: null })
+  }
+  const set = <K extends keyof MenuDraft>(k: K, v: MenuDraft[K]) => setForm((d) => ({ ...d, [k]: v }))
+
+  const visible = items.filter((m) => showArchived || m.status === 'active')
+  const archivedCount = items.filter((m) => m.status === 'archived').length
+  const changed = (m: MenuItem) => {
+    const o = liveById.get(m.id)
+    return !o ? 'new' : diffSnapshots({ items: [o] }, { items: [m] }).some((c) => c.key.startsWith('chg:')) ? 'edited' : null
+  }
+  const label = (r: { id: string; name_ko: string }) => {
+    const o = ov.get(r.id)
+    return `${r.name_ko}${o?.scheduled_at ? ' · 예약됨' : o?.has_draft ? ' · 초안 있음' : ''}`
+  }
 
   return (
     <>
-      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 가격을 모르면 비워 두세요. 변경 내용은 앱 식당 상세에 바로 반영돼요." />
-      {notice && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
+      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요." />
+      {message && !restaurantId && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{message.text}</p>}
       <Card className="mb-5 grid gap-3 sm:grid-cols-2">
         <Field label="식당 검색" htmlFor="rq"><Input id="rq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름으로 검색" /></Field>
         <Field label="식당 선택" htmlFor="rs">
-          <Select id="rs" value={restaurantId} onChange={(e) => { setRestaurantId(e.target.value); setEditing(null); setDraft(emptyDraft) }}>
-            <option value="">선택하세요</option>{restaurants.data?.map((r) => <option key={r.id} value={r.id}>{r.name_ko}</option>)}
+          <Select id="rs" value={restaurantId} onChange={(e) => { setRestaurantId(e.target.value); resetLocal(); setMessage(null) }}>
+            <option value="">선택하세요</option>{restaurants.data?.map((r) => <option key={r.id} value={r.id}>{label(r)}</option>)}
           </Select>
         </Field>
       </Card>
       {!restaurantId && <EmptyState>식당을 선택하면 메뉴가 보여요.</EmptyState>}
-      {restaurantId && menus.isLoading && <Skeleton className="h-40 w-full" />}
-      {restaurantId && menus.error && <ErrorState error={menus.error} onRetry={() => void menus.refetch()} />}
-      {restaurantId && menus.data && (
-        <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
-          <div className="space-y-3">
-            {archivedCount > 0 && (
-              <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />보관된 메뉴 {archivedCount}개 보기</label>
-            )}
-            {visible.length === 0 && <EmptyState>등록된 메뉴가 없어요.</EmptyState>}
-            {visible.map((m, i) => (
-              <Card key={m.id} className={`flex flex-wrap items-center gap-3 ${m.status === 'archived' ? 'opacity-60' : ''}`}>
-                {m.image_url
-                  ? <img src={m.image_url} alt={`${m.name_ko} 사진`} className="size-16 rounded-lg object-cover" />
-                  : <span className="grid size-16 place-items-center rounded-lg bg-page text-muted" title="사진 없음"><ImageOff className="size-5" /></span>}
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{m.name_ko} {m.representative && <Badge tone="brand">대표</Badge>} {m.recommended && <Badge tone="brand">추천</Badge>} {!m.available && <Badge tone="amber">품절</Badge>} {m.status === 'archived' && <Badge tone="amber">보관됨</Badge>}</div>
-                  <div className="text-sm text-muted">
-                    {m.price_krw != null ? `${m.price_krw.toLocaleString('ko-KR')}원` : '가격 미정'}
-                    {m.category ? ` · ${m.category}` : ''}{m.description_ko ? ` · ${m.description_ko}` : ''}
+      {restaurantId && cms.isLoading && <Skeleton className="h-40 w-full" />}
+      {restaurantId && cms.error && <ErrorState error={cms.error} onRetry={() => void cms.refetch()} />}
+      {restaurantId && state && (
+        <>
+          <PublishingToolbar type={TYPE} id={restaurantId} state={state} loading={false} error={null} dirty={dirty} saving={save.isPending} message={message}
+            onSaveDraft={() => save.mutate()} onPreview={() => setPreviewing(true)} onChanged={async () => { await refresh(); setMessage(null) }} onConflict={() => void refresh()} />
+          {conflict && (
+            <div role="alert" className="mb-4 space-y-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
+              <p><b>다른 관리자가 이 식당의 메뉴 초안을 먼저 저장했어요.</b></p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" onClick={resetLocal}>최신 초안 불러오기 (내 수정 버리기)</Button>
+                <Button size="sm" onClick={() => setEditBase(serverRev)}>내 수정으로 덮어쓰기</Button>
+              </div>
+            </div>)}
+          <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+            <div className="space-y-3">
+              {archivedCount > 0 && (
+                <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />보관된 메뉴 {archivedCount}개 보기</label>
+              )}
+              {visible.length === 0 && <EmptyState>등록된 메뉴가 없어요.</EmptyState>}
+              {visible.map((m, i) => (
+                <Card key={m.id} className={`flex flex-wrap items-center gap-3 ${m.status === 'archived' ? 'opacity-60' : ''}`}>
+                  {m.image_url
+                    ? <img src={m.image_url} alt={`${m.name_ko} 사진`} className="size-16 rounded-lg object-cover" />
+                    : <span className="grid size-16 place-items-center rounded-lg bg-page text-muted" title="사진 없음"><ImageOff className="size-5" /></span>}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold">{m.name_ko} {m.representative && <Badge tone="brand">대표</Badge>} {m.recommended && <Badge tone="brand">추천</Badge>} {!m.available && <Badge tone="amber">품절</Badge>} {m.status === 'archived' && <Badge tone="amber">보관됨</Badge>} {changed(m) === 'new' && <Badge tone="neutral">새 메뉴 (게시 전)</Badge>} {changed(m) === 'edited' && <Badge tone="brand">수정됨 (게시 전)</Badge>}</div>
+                    <div className="text-sm text-muted">
+                      {m.price_krw != null ? `${m.price_krw.toLocaleString('ko-KR')}원` : '가격 미정'}
+                      {m.category ? ` · ${m.category}` : ''}{m.description_ko ? ` · ${m.description_ko}` : ''}
+                    </div>
+                    <div className="text-xs text-muted">{m.price_krw != null ? (m.price_verified_on ? `가격 확인 ${m.price_verified_on}` : '가격 확인일 없음') : ''}</div>
                   </div>
-                  <div className="text-xs text-muted">{m.price_krw != null ? (m.price_verified_on ? `가격 확인 ${m.price_verified_on}` : '가격 확인일 없음') : ''}</div>
-                </div>
-                <label className="cursor-pointer text-xs font-semibold text-brand-strong">{m.image_url ? '사진 교체' : '사진 추가'}
-                  <input type="file" accept={ALLOWED_IMAGE_TYPES.join(',')} hidden aria-label={`${m.name_ko} 사진 올리기`} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(m, f); e.target.value = '' }} /></label>
-                {m.image_url && <Button size="sm" variant="ghost" onClick={() => clearPhoto(m)}>사진 삭제</Button>}
-                <Button size="icon" variant="ghost" aria-label="수정" onClick={() => startEdit(m)}><Pencil className="size-4" /></Button>
-                <Button size="icon" variant="ghost" aria-label="대표 메뉴 전환" onClick={() => patch(m, { representative: !m.representative })}><Star className={`size-4 ${m.representative ? 'fill-brand text-brand-strong' : ''}`} /></Button>
-                <Button size="icon" variant="ghost" aria-label="추천 메뉴 전환" onClick={() => patch(m, { recommended: !m.recommended })}><ThumbsUp className={`size-4 ${m.recommended ? 'fill-brand text-brand-strong' : ''}`} /></Button>
-                <Button size="sm" variant="outline" onClick={() => patch(m, { available: !m.available })}>{m.available ? '품절 처리' : '판매 재개'}</Button>
-                <Button size="icon" variant="ghost" aria-label="위로" disabled={i === 0} onClick={() => move(m, -1)}><ArrowUp className="size-4" /></Button>
-                <Button size="icon" variant="ghost" aria-label="아래로" disabled={i === visible.length - 1} onClick={() => move(m, 1)}><ArrowDown className="size-4" /></Button>
-                {m.status === 'active'
-                  ? <Button size="icon" variant="ghost" aria-label="보관" onClick={() => patch(m, { status: 'archived' })}><Archive className="size-4" /></Button>
-                  : <Button size="icon" variant="ghost" aria-label="복원" onClick={() => patch(m, { status: 'active' })}><RotateCcw className="size-4" /></Button>}
-                <Button size="icon" variant="ghost" aria-label="삭제" onClick={() => setDel(m)}><Trash2 className="size-4 text-red-600" /></Button>
-              </Card>))}
+                  <label className="cursor-pointer text-xs font-semibold text-brand-strong">{m.image_url ? '사진 교체' : '사진 추가'}
+                    <input type="file" accept={ALLOWED_IMAGE_TYPES.join(',')} hidden aria-label={`${m.name_ko} 사진 올리기`} onChange={(e) => { const f = e.target.files?.[0]; if (f) void upload(m, f); e.target.value = '' }} /></label>
+                  {m.image_url && <Button size="sm" variant="ghost" onClick={() => clearPhoto(m)}>사진 삭제</Button>}
+                  <Button size="icon" variant="ghost" aria-label="수정" onClick={() => { setEditing(m); setForm(draftFromItem(m)) }}><Pencil className="size-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label="대표 메뉴 전환" onClick={() => patch(m, { representative: !m.representative })}><Star className={`size-4 ${m.representative ? 'fill-brand text-brand-strong' : ''}`} /></Button>
+                  <Button size="icon" variant="ghost" aria-label="추천 메뉴 전환" onClick={() => patch(m, { recommended: !m.recommended })}><ThumbsUp className={`size-4 ${m.recommended ? 'fill-brand text-brand-strong' : ''}`} /></Button>
+                  <Button size="sm" variant="outline" onClick={() => patch(m, { available: !m.available })}>{m.available ? '품절 처리' : '판매 재개'}</Button>
+                  <Button size="icon" variant="ghost" aria-label="위로" disabled={i === 0} onClick={() => move(m, -1)}><ArrowUp className="size-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label="아래로" disabled={i === visible.length - 1} onClick={() => move(m, 1)}><ArrowDown className="size-4" /></Button>
+                  {m.status === 'active'
+                    ? <Button size="icon" variant="ghost" aria-label="보관" onClick={() => patch(m, { status: 'archived' })}><Archive className="size-4" /></Button>
+                    : <Button size="icon" variant="ghost" aria-label="복원" onClick={() => patch(m, { status: 'active' })}><RotateCcw className="size-4" /></Button>}
+                  <Button size="icon" variant="ghost" aria-label="목록에서 제거" title={liveIds.has(m.id) ? '게시하면 보관 처리돼요 (삭제되지 않아요)' : '아직 게시되지 않은 메뉴예요'} onClick={() => remove(m)}><Trash2 className="size-4 text-red-600" /></Button>
+                </Card>))}
+            </div>
+            <Card className="space-y-3 self-start">
+              <h2 className="font-bold">{editing ? `메뉴 수정 · ${editing.name_ko}` : '새 메뉴'}</h2>
+              <Field label="메뉴 이름" htmlFor="mn"><Input id="mn" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="제육 정식" /></Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="가격 (원)" htmlFor="mp" hint="모르면 비워 두세요"><Input id="mp" inputMode="numeric" value={form.price} onChange={(e) => set('price', e.target.value)} /></Field>
+                <Field label="분류" htmlFor="mc"><Select id="mc" value={form.category} onChange={(e) => set('category', e.target.value)}><option value="">선택 안 함</option>{MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+              </div>
+              <Field label="가격 확인일" htmlFor="mv" hint="가격을 직접 확인한 날"><Input id="mv" type="date" value={form.verified} onChange={(e) => set('verified', e.target.value)} /></Field>
+              <Field label="설명" htmlFor="md"><Textarea id="md" className="min-h-16" value={form.description} onChange={(e) => set('description', e.target.value)} /></Field>
+              <div className="flex gap-2">
+                <Button onClick={submit}>{editing ? '수정 담기' : '메뉴 추가'}</Button>
+                {editing && <Button variant="outline" onClick={() => { setEditing(null); setForm(emptyMenuDraft) }}>취소</Button>}
+              </div>
+              <p className="text-xs text-muted">추가·수정은 먼저 초안에 담겨요. 위의 &lsquo;초안 저장&rsquo; 후 &lsquo;지금 게시&rsquo; 또는 &lsquo;예약 게시&rsquo;로 앱에 반영해요. 메뉴를 추가한 뒤 카드의 &lsquo;사진 추가&rsquo;로 사진을 올려요.</p>
+            </Card>
           </div>
-          <Card className="space-y-3 self-start">
-            <h2 className="font-bold">{editing ? `메뉴 수정 · ${editing.name_ko}` : '새 메뉴'}</h2>
-            <Field label="메뉴 이름" htmlFor="mn"><Input id="mn" value={draft.name} onChange={(e) => set('name', e.target.value)} placeholder="제육 정식" /></Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="가격 (원)" htmlFor="mp" hint="모르면 비워 두세요"><Input id="mp" inputMode="numeric" value={draft.price} onChange={(e) => set('price', e.target.value)} /></Field>
-              <Field label="분류" htmlFor="mc"><Select id="mc" value={draft.category} onChange={(e) => set('category', e.target.value)}><option value="">선택 안 함</option>{MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
-            </div>
-            <Field label="가격 확인일" htmlFor="mv" hint="가격을 직접 확인한 날"><Input id="mv" type="date" value={draft.verified} onChange={(e) => set('verified', e.target.value)} /></Field>
-            <Field label="설명" htmlFor="md"><Textarea id="md" className="min-h-16" value={draft.description} onChange={(e) => set('description', e.target.value)} /></Field>
-            <div className="flex gap-2">
-              <Button onClick={submit} disabled={run.isPending}>{editing ? '저장' : '메뉴 추가'}</Button>
-              {editing && <Button variant="outline" onClick={() => { setEditing(null); setDraft(emptyDraft) }}>취소</Button>}
-            </div>
-            {!editing && <p className="text-xs text-muted">메뉴를 추가한 뒤 카드의 &lsquo;사진 추가&rsquo;로 사진을 올려요.</p>}
-          </Card>
-        </div>)}
-      <ConfirmDialog open={!!del} danger title="메뉴를 삭제할까요?" description={del ? `${del.name_ko} — 삭제 대신 '보관'하면 나중에 복원할 수 있어요.` : undefined} confirmLabel="삭제"
-        onCancel={() => setDel(null)} onConfirm={() => { const m = del!; setDel(null); run.mutate(async () => { const r = await supabase.from('restaurant_menus').delete().eq('id', m.id); if (!r.error) await removeFile(m.image_url); return r }) }} />
+          <MenuPreview open={previewing} live={state.live} draft={state.draft?.data ?? state.live} onClose={() => setPreviewing(false)} />
+        </>)}
     </>
   )
 }

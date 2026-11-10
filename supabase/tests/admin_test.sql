@@ -144,7 +144,8 @@ do $$ declare n int; begin
   update public.cafeteria_meals set status = 'draft' where meal_date = '2026-11-10' and cafeteria_id = 'c1c1c1c1-0000-4000-8000-0000000000f1';  -- editing a draft is fine
   update public.universities set search_radius_m = 2000, is_active = true where id = '5c0a8f3e-0001-4a6e-9b1d-000000000001';
   begin update public.universities set search_radius_m = 10; raise exception 'accepted#24'; exception when check_violation then null; end;
-  insert into public.app_content (kind, title, active) values ('banner', '새 배너', true);
+  begin insert into public.app_content (kind, title, active) values ('banner', '바로 노출', true); raise exception 'accepted#c5'; exception when insufficient_privilege then null; end;   -- live content is published, not inserted
+  insert into public.app_content (kind, title, active) values ('banner', '새 배너', false);
   assert (select count(*) from public.audit_log) >= 6, 'admin changes are audited';
   -- cannot delete restaurants / universities, cannot manage roles
   delete from public.restaurant_overrides where kakao_place_id = 'k1'; get diagnostics n = row_count; assert n = 0, 'admin cannot delete restaurants (archive instead)';

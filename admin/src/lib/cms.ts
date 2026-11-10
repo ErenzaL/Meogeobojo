@@ -2,7 +2,7 @@
  *  The database owns every rule: these are thin wrappers plus Seoul-time and diff helpers. */
 import { supabase } from '@/lib/supabase'
 
-export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus' | 'restaurant_photos' | 'mission'
+export type EntityType = 'restaurant' | 'cafeteria_meal' | 'restaurant_menus' | 'restaurant_photos' | 'mission' | 'app_content'
 export type Snapshot = Record<string, unknown>
 
 export type Job = {
@@ -56,6 +56,7 @@ export const FIELD_LABEL: Record<string, string> = {
   featured: '추천 식당', display_order: '추천 순서', university_ids: '연결된 대학교',
   menu_items: '메뉴', price_krw: '가격', start_time: '시작 시간', end_time: '종료 시간', status: '상태', badge: '배지',
   source_url: '출처 주소', verified_at: '확인한 날짜', extra: '사진·공지',
+  body: '내용', image_url: '이미지 주소', link_url: '링크', kakao_place_id: '카카오 장소 ID', active: '노출',
   campaign_id: '캠페인', title: '제목', icon: '아이콘', reward_points: '보상 포인트', rule_type: '완료 규칙', rule_params: '완료 규칙 값',
   target_count: '목표 횟수', recurrence: '반복', university_id: '대상 캠퍼스', starts_at: '시작', ends_at: '종료', action_key: '버튼 동작',
   sort_order: '정렬 순서', reward_badge_key: '뱃지 키', reward_badge_name: '뱃지 이름', reward_badge_mascot: '뱃지 마스코트',
@@ -151,6 +152,7 @@ export const isLiveVisible = (type: EntityType, live: Snapshot): boolean =>
   type === 'restaurant' ? live.visibility === 'published'
     : type === 'restaurant_menus' ? ((live.items as MenuItem[] | undefined) ?? []).some((i) => i.status === 'active')
     : type === 'mission' ? live.status === 'active'
+    : type === 'app_content' ? live.active === true
     : type === 'restaurant_photos' ? ((live.photos as PhotoItem[] | undefined) ?? []).some((i) => i.status === 'published')
     : ['published', 'closed', 'no_menu'].includes(String(live.status))
 

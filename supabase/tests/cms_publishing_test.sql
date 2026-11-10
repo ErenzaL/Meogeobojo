@@ -633,6 +633,65 @@ delete from public.audit_log where row_id in (select id::text from public.missio
 update public.missions set supersedes_id = null where lineage_id = 'd4000000-0000-4000-8000-000000000001';
 delete from public.missions where lineage_id = 'd4000000-0000-4000-8000-000000000001';
 
+-- ===== app_content: announcements / banners / featured restaurants =====
+insert into public.app_content (id, kind, title, body, active) values ('ac000000-0000-4000-8000-000000000001', 'announcement', '원래 공지', '내용', true);
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare c constant uuid := 'ac000000-0000-4000-8000-000000000001'; d jsonb; v int; j bigint; begin
+  d := public.cms_state('app_content', c) -> 'live';
+  begin update public.app_content set title = '직접 수정' where id = c; raise exception 'accepted#ac1'; exception when insufficient_privilege then null; end;
+  begin delete from public.app_content where id = c; raise exception 'accepted#ac2'; exception when insufficient_privilege then null; end;
+  begin insert into public.app_content (kind, title, active) values ('banner', '바로 노출', true); raise exception 'accepted#ac3'; exception when insufficient_privilege then null; end;
+  perform public.cms_save_draft('app_content', c, d || '{"title":"새 공지"}', 0);
+  assert (select title from public.app_content where id = c) = '원래 공지', 'a draft notice is not live';
+  begin perform public.cms_save_draft('app_content', c, d || '{"link_url":"http://insecure"}', 1); raise exception 'accepted#ac4'; exception when invalid_parameter_value then null; end;
+  begin perform public.cms_save_draft('app_content', c, d || '{"starts_at":"2030-01-02T00:00:00Z","ends_at":"2030-01-01T00:00:00Z"}', 1); raise exception 'accepted#ac5'; exception when invalid_parameter_value then null; end;
+  j := public.cms_schedule('app_content', c, 1, now() + interval '1 day', now() + interval '3 days', '내일 공지 교체');
+  perform set_config('test.acjob', j::text, false);
+  assert (select title from public.app_content where id = c) = '원래 공지', 'a scheduled notice is not live';
+  -- a staged (switched-off) row is freely editable and deletable
+  insert into public.app_content (id, kind, title, active) values ('ac000000-0000-4000-8000-000000000002', 'banner', '숨김 배너', false);
+  update public.app_content set title = '숨김 배너 수정' where id = 'ac000000-0000-4000-8000-000000000002';
+  begin update public.app_content set active = true where id = 'ac000000-0000-4000-8000-000000000002'; raise exception 'accepted#ac6'; exception when insufficient_privilege then null; end;
+  perform public.cms_set_visibility('app_content', 'ac000000-0000-4000-8000-000000000002', 'published', '배너 시작');
+  assert (select active from public.app_content where id = 'ac000000-0000-4000-8000-000000000002'), 'a staged banner goes live by publishing';
+  raise notice 'OK cms app_content: drafts and schedules do not change live content; direct writes refused';
+end $$;
+reset role;
+do $$ declare c constant uuid := 'ac000000-0000-4000-8000-000000000001'; res jsonb; begin
+  update public.publication_jobs set run_at = now() - interval '1 minute' where id = current_setting('test.acjob')::bigint;
+  res := public.cms_run_due_jobs();
+  assert (res ->> 'published')::int = 1, 'content job ran: ' || res::text;
+  assert (select title from public.app_content where id = c) = '새 공지', 'the new notice is live';
+  assert (select ends_at is null from public.app_content where id = c), 'the publish carries the draft, the end is a separate unpublish job';
+  assert (public.cms_run_due_jobs() ->> 'published')::int = 0, 'exactly once';
+  raise notice 'OK cms app_content: the server publishes a scheduled notice once';
+end $$;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ declare c constant uuid := 'ac000000-0000-4000-8000-000000000001'; v int; begin
+  v := public.cms_unpublish('app_content', c, '내림');
+  assert not (select active from public.app_content where id = c) and (select title from public.app_content where id = c) = '새 공지', 'unpublish switches it off and keeps the content';
+  v := public.cms_rollback('app_content', c, 1, '처음 상태');
+  assert (select active from public.app_content where id = c), 'rollback restores a version';
+  assert (select count(*) from public.cms_overview('app_content')) >= 2, 'overview lists content';
+  raise notice 'OK cms app_content: unpublish and rollback keep everything';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f4000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.cms_publish('app_content', 'ac000000-0000-4000-8000-000000000001', 1, 'x'); raise exception 'accepted#ac7'; exception when insufficient_privilege then null; end;
+  raise notice 'OK cms app_content: moderators cannot publish content';
+end $$;
+reset role;
+delete from public.publication_jobs where entity_type = 'app_content';
+delete from public.content_drafts where entity_type = 'app_content';
+alter table public.content_versions disable trigger content_versions_no_update;
+delete from public.content_versions where entity_type = 'app_content';
+alter table public.content_versions enable trigger content_versions_no_update;
+delete from public.app_content where id in ('ac000000-0000-4000-8000-000000000001', 'ac000000-0000-4000-8000-000000000002');
+
 -- cleanup
 delete from public.publication_jobs where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');
 delete from public.content_drafts where entity_id in ('e4000000-0000-4000-8000-000000000001', 'e4000000-0000-4000-8000-000000000002');

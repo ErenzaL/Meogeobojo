@@ -41,6 +41,7 @@ do $$ begin
      or to_regclass('public.restaurant_menus') is null
      or to_regclass('public.restaurant_photos') is null
      or to_regclass('public.missions') is null
+     or to_regclass('public.app_content') is null
      or to_regprocedure('public.has_role(text)') is null
      or to_regprocedure('public._audit(text, text, text, text, jsonb)') is null then
     raise exception 'Apply 20261109000100 and 20261110000100 first.';
@@ -51,7 +52,7 @@ end $$;
 -- Tables
 -- ---------------------------------------------------------------------------
 create table if not exists public.content_drafts (
-  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
+  entity_type  text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
   entity_id    uuid not null,
   data         jsonb not null check (jsonb_typeof(data) = 'object'),
   base_version integer not null check (base_version >= 0),
@@ -65,7 +66,7 @@ create table if not exists public.content_drafts (
 
 create table if not exists public.content_versions (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
   entity_id        uuid not null,
   version          integer not null check (version >= 1),
   kind             text not null check (kind in ('publish', 'unpublish', 'rollback', 'visibility')),
@@ -81,7 +82,7 @@ create index if not exists content_versions_entity_idx on public.content_version
 
 create table if not exists public.publication_jobs (
   id               bigint generated always as identity primary key,
-  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission')),
+  entity_type      text not null check (entity_type in ('restaurant', 'cafeteria_meal', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')),
   entity_id        uuid not null,
   action           text not null default 'publish' check (action in ('publish', 'unpublish')),
   snapshot         jsonb check (snapshot is null or jsonb_typeof(snapshot) = 'object'),
@@ -144,6 +145,7 @@ language sql immutable as $$
     'menu_items', 'price_krw', 'start_time', 'end_time', 'status', 'badge', 'source_url', 'verified_at', 'extra']
   when 'restaurant_menus' then array['items']
   when 'restaurant_photos' then array['photos']
+  when 'app_content' then array['title', 'body', 'image_url', 'link_url', 'kakao_place_id', 'university_id', 'active', 'sort_order', 'starts_at', 'ends_at']
   when 'mission' then array[
     'campaign_id', 'title', 'description', 'category', 'icon', 'reward_points', 'rule_type', 'rule_params', 'target_count',
     'recurrence', 'university_id', 'starts_at', 'ends_at', 'action_key', 'sort_order', 'reward_badge_key',
@@ -185,6 +187,10 @@ begin
           'status', x.status, 'sort_order', x.sort_order, 'image_url', x.image_url) order by x.sort_order, x.id), '[]'::jsonb))
         into v from public.restaurant_menus x where x.restaurant_id = p_id;
     end if;
+  elsif p_type = 'app_content' then
+    select jsonb_build_object('title', c.title, 'body', c.body, 'image_url', c.image_url, 'link_url', c.link_url,
+      'kakao_place_id', c.kakao_place_id, 'university_id', c.university_id, 'active', c.active, 'sort_order', c.sort_order,
+      'starts_at', c.starts_at, 'ends_at', c.ends_at) into v from public.app_content c where c.id = p_id;
   elsif p_type = 'mission' then
     -- the current version of the mission lineage
     select jsonb_build_object(
@@ -282,6 +288,21 @@ begin
       end if;
       if (it ->> 'image_url') is not null and (it ->> 'image_url') !~ '^https://' then raise exception '메뉴 사진 주소가 올바르지 않아요' using errcode = '22023'; end if;
     end loop;
+  elsif p_type = 'app_content' then
+    if btrim(coalesce(p_data ->> 'title', '')) = '' then raise exception '제목을 입력해 주세요' using errcode = '22023'; end if;
+    if char_length(p_data ->> 'title') > 120 then raise exception '제목이 너무 길어요' using errcode = '22023'; end if;
+    if char_length(coalesce(p_data ->> 'body', '')) > 2000 then raise exception '내용은 2000자 이하여야 해요' using errcode = '22023'; end if;
+    if (p_data ->> 'image_url') is not null and (p_data ->> 'image_url') !~ '^https://' then raise exception '이미지 주소는 https:// 로 시작해야 해요' using errcode = '22023'; end if;
+    if (p_data ->> 'link_url') is not null and (p_data ->> 'link_url') !~ '^https://' then raise exception '링크는 https:// 로 시작해야 해요' using errcode = '22023'; end if;
+    if jsonb_typeof(p_data -> 'active') is distinct from 'boolean' then raise exception '노출 여부가 올바르지 않아요' using errcode = '22023'; end if;
+    begin n := (p_data ->> 'sort_order')::integer; exception when others then raise exception '정렬 순서가 올바르지 않아요' using errcode = '22023'; end;
+    begin
+      if (p_data ->> 'starts_at') is not null and (p_data ->> 'ends_at') is not null
+         and (p_data ->> 'starts_at')::timestamptz >= (p_data ->> 'ends_at')::timestamptz then raise exception 'x'; end if;
+    exception when others then raise exception '노출 종료는 시작보다 늦어야 해요' using errcode = '22023'; end;
+    if p_id is not null and (select kind from public.app_content where id = p_id) = 'featured' and btrim(coalesce(p_data ->> 'kakao_place_id', '')) = '' then
+      raise exception '추천 식당은 카카오 장소 ID가 필요해요' using errcode = '22023';
+    end if;
   elsif p_type = 'mission' then
     if btrim(coalesce(p_data ->> 'title', '')) = '' then raise exception '제목을 입력해 주세요' using errcode = '22023'; end if;
     if char_length(p_data ->> 'title') > 60 then raise exception '제목은 60자 이하여야 해요' using errcode = '22023'; end if;
@@ -396,6 +417,7 @@ language sql immutable as $$
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'items') i), '[]'::jsonb))
                      -- a stopped mission keeps its progress, rewards and badges; students just stop seeing it
                      when 'mission' then p_live || '{"status":"paused"}'::jsonb
+                     when 'app_content' then p_live || '{"active":false}'::jsonb
                      when 'restaurant_photos' then jsonb_build_object('photos', coalesce(
                        (select jsonb_agg(i || '{"status":"archived"}'::jsonb) from jsonb_array_elements(p_live -> 'photos') i), '[]'::jsonb))
                      else p_live end
@@ -458,6 +480,14 @@ begin
       representative = excluded.representative, recommended = excluded.recommended, status = excluded.status,
       sort_order = excluded.sort_order, image_url = excluded.image_url
       where x.restaurant_id = p_id;
+  elsif p_type = 'app_content' then
+    update public.app_content c set
+      title = btrim(p_data ->> 'title'), body = nullif(btrim(coalesce(p_data ->> 'body', '')), ''), image_url = p_data ->> 'image_url',
+      link_url = p_data ->> 'link_url', kakao_place_id = nullif(btrim(coalesce(p_data ->> 'kakao_place_id', '')), ''),
+      university_id = (p_data ->> 'university_id')::uuid, active = (p_data ->> 'active')::boolean,
+      sort_order = coalesce((p_data ->> 'sort_order')::integer, 0), starts_at = (p_data ->> 'starts_at')::timestamptz, ends_at = (p_data ->> 'ends_at')::timestamptz
+     where c.id = p_id;
+    if not found then raise exception 'no such content' using errcode = 'P0002'; end if;
   elsif p_type = 'mission' then
     -- the existing mission rules decide: a change to goal / reward / rule / audience / period of a
     -- mission that already has progress becomes a NEW VERSION (old row archived, rewards untouched)
@@ -657,6 +687,28 @@ begin
   update public.missions set status = p_status where id = p_id;
   perform public._audit('set_mission_status', 'missions', p_id::text, p_reason, jsonb_build_object('status', p_status));
 end $$;
+
+-- Guard: LIVE app content (an active announcement / banner / featured restaurant) changes only by
+-- publishing. A switched-off row is a staging row and may be created, edited and removed freely.
+create or replace function public.app_content_guard_live() returns trigger
+language plpgsql set search_path = public, pg_temp as $$
+begin
+  if current_user not in ('authenticated', 'anon') or coalesce(current_setting('app.cms_apply', true), '') = 'on' then
+    return coalesce(new, old);
+  end if;
+  if tg_op = 'INSERT' then
+    if new.active then raise exception 'new content starts switched off; publish it from the publishing toolbar' using errcode = '42501'; end if;
+    return new;
+  elsif tg_op = 'DELETE' then
+    if old.active then raise exception 'live content cannot be deleted: unpublish it first' using errcode = '42501'; end if;
+    return old;
+  end if;
+  if not old.active and not new.active then return new; end if;
+  raise exception 'live content is changed only by publishing (save a draft, then publish)' using errcode = '42501';
+end $$;
+drop trigger if exists app_content_guard_live on public.app_content;
+create trigger app_content_guard_live before insert or update or delete on public.app_content
+  for each row execute function public.app_content_guard_live();
 
 -- Guard: LIVE cafeteria meals change only by publishing. A meal that is a draft
 -- (status 'draft', hidden from students) may be created and removed freely.
@@ -1000,7 +1052,7 @@ create or replace function public.cms_set_visibility(p_type text, p_id uuid, p_v
 returns integer language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   perform public._cms_admin_check();
-  if p_type not in ('restaurant', 'cafeteria_meal', 'mission') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
+  if p_type not in ('restaurant', 'cafeteria_meal', 'mission', 'app_content') then raise exception 'visibility does not apply to %', p_type using errcode = '22023'; end if;
   if p_visibility not in ('draft', 'published', 'hidden', 'archived') then raise exception '공개 상태가 올바르지 않아요' using errcode = '22023'; end if;
   if p_reason is null or btrim(p_reason) = '' then raise exception '사유를 입력해 주세요' using errcode = '22023'; end if;
   perform public._cms_lock(p_type, p_id);
@@ -1009,6 +1061,7 @@ begin
     public._cms_snapshot(p_type, p_id) || case p_type
       when 'cafeteria_meal' then jsonb_build_object('status', case p_visibility when 'published' then 'published' else 'draft' end)
       when 'mission' then jsonb_build_object('status', case p_visibility when 'published' then 'active' when 'hidden' then 'paused' else p_visibility end)
+      when 'app_content' then jsonb_build_object('active', p_visibility = 'published')
       else jsonb_build_object('visibility', p_visibility) end,
     'visibility', p_reason, auth.uid());
 end $$;
@@ -1029,9 +1082,11 @@ begin
            (select count(*)::integer from public.publication_jobs j where j.entity_type = p_type and j.entity_id = e.id and j.status = 'failed'),
            public._cms_live_version(p_type, e.id),
            (select max(v.published_at) from public.content_versions v where v.entity_type = p_type and v.entity_id = e.id)
-      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos', 'mission')
+      from (select o.id from public.restaurant_overrides o where p_type in ('restaurant', 'restaurant_menus', 'restaurant_photos', 'mission', 'app_content')
             union all
             select m.id from public.cafeteria_meals m where p_type = 'cafeteria_meal' and (p_parent is null or m.cafeteria_id = p_parent)
+            union all
+            select c.id from public.app_content c where p_type = 'app_content'
             union all
             select distinct m.lineage_id from public.missions m where p_type = 'mission' and (p_parent is null or m.campaign_id = p_parent)) e;
 end $$;

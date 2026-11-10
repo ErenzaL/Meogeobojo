@@ -366,6 +366,9 @@ CampusCafeteria fakeCafeteria(
   String? nameEn,
   String? nameZh,
   String? operatingNote,
+  List<MealType> mealTypes = MealType.values,
+  Set<int> operatingDays = const {1, 2, 3, 4, 5},
+  String? photoUrl,
 }) => CampusCafeteria(
   id: id,
   universityId: universityId,
@@ -374,6 +377,9 @@ CampusCafeteria fakeCafeteria(
   nameEn: nameEn,
   nameZh: nameZh,
   operatingNote: operatingNote,
+  mealTypes: mealTypes,
+  operatingDays: operatingDays,
+  photoUrl: photoUrl,
 );
 
 CafeteriaMeal fakeMeal(
@@ -393,6 +399,8 @@ CafeteriaMeal fakeMeal(
   String? badge,
   String? photoUrl,
   String? notice,
+  String? description,
+  bool soldOut = false,
 }) => CafeteriaMeal(
   id: '$cafeteriaId-$date-${type.name}-$option',
   cafeteriaId: cafeteriaId,
@@ -409,6 +417,8 @@ CafeteriaMeal fakeMeal(
   badge: badge,
   photoUrl: photoUrl,
   notice: notice,
+  description: description,
+  soldOut: soldOut,
   verifiedAt: DateTime.utc(2026, 11, 2, 0),
 );
 

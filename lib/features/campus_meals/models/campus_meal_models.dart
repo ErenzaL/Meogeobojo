@@ -5,6 +5,9 @@ import 'package:flutter/foundation.dart';
 import '../../../l10n/app_localizations.dart';
 import '../utils/seoul_date.dart';
 
+/// The special breakfast programme's name, exactly as the Admin stores it in `badge`.
+const thousandWonBreakfast = '천원의 아침밥';
+
 enum MealType {
   breakfast('breakfast'),
   lunch('lunch'),
@@ -81,6 +84,9 @@ class CampusCafeteria {
     this.nameZh,
     this.locationDescription,
     this.operatingNote,
+    this.mealTypes = MealType.values,
+    this.operatingDays = const {1, 2, 3, 4, 5},
+    this.photoUrl,
   });
 
   final String id;
@@ -94,6 +100,20 @@ class CampusCafeteria {
   /// Operating information an admin confirmed (`operating_note`).
   final String? operatingNote;
 
+  /// The meals this cafeteria serves (never assumed to be all three) and the
+  /// ISO weekdays it is open (1 = Monday ... 7 = Sunday). A database without
+  /// these columns reports all three meals on Monday-Friday.
+  final List<MealType> mealTypes;
+  final Set<int> operatingDays;
+
+  /// Photo of the cafeteria (https only).
+  final String? photoUrl;
+
+  bool serves(MealType t) => mealTypes.contains(t);
+
+  /// Saturday / Sunday are shown only for a cafeteria that opens then.
+  bool get opensAtWeekend => operatingDays.any((d) => d >= 6);
+
   factory CampusCafeteria.fromJson(Map<String, dynamic> j) => CampusCafeteria(
     id: j['id'] as String,
     universityId: j['university_id'] as String,
@@ -105,7 +125,37 @@ class CampusCafeteria {
     operatingNote: (j['operating_note'] as String?)?.trim().isEmpty ?? true
         ? null
         : (j['operating_note'] as String).trim(),
+    mealTypes: _mealTypes(j['meal_periods']),
+    operatingDays: _days(j['operating_days']),
+    photoUrl: _https(j['photo_url']),
   );
+
+  static List<MealType> _mealTypes(Object? v) {
+    final list = [
+      if (v is List)
+        for (final x in v) ?MealType.fromDb(x as String?),
+    ];
+    return list.isEmpty
+        ? MealType.values
+        : [
+            for (final t in MealType.values)
+              if (list.contains(t)) t,
+          ];
+  }
+
+  static Set<int> _days(Object? v) {
+    final days = {
+      if (v is List)
+        for (final x in v)
+          if (x is num && x >= 1 && x <= 7) x.toInt(),
+    };
+    return days.isEmpty ? const {1, 2, 3, 4, 5} : days;
+  }
+
+  static String? _https(Object? v) {
+    final t = (v as String?)?.trim();
+    return (t != null && t.startsWith('https://')) ? t : null;
+  }
 
   /// The official name in the active language when a verified translation
   /// exists, else the Korean original; null when no name is known at all.
@@ -214,6 +264,8 @@ class CafeteriaMeal {
     this.badge,
     this.photoUrl,
     this.notice,
+    this.description,
+    this.soldOut = false,
   });
 
   final String id;
@@ -243,6 +295,10 @@ class CafeteriaMeal {
 
   /// Admin-written note for this meal (`extra.notice`).
   final String? notice;
+
+  /// Short description (`extra.description`) and the admin's sold-out flag (`extra.sold_out`).
+  final String? description;
+  final bool soldOut;
 
   static CafeteriaMeal? fromJson(Map<String, dynamic> j) {
     final type = MealType.fromDb(j['meal_type'] as String?);
@@ -282,6 +338,8 @@ class CafeteriaMeal {
       verifiedAt: DateTime.parse(j['verified_at'] as String),
       photoUrl: (photo != null && photo.startsWith('https://')) ? photo : null,
       notice: text(extra['notice']),
+      description: text(extra['description']),
+      soldOut: extra['sold_out'] == true,
     );
   }
 }

@@ -92,6 +92,7 @@ class DaySelector extends StatelessWidget {
     required this.selected,
     required this.today,
     required this.onSelect,
+    this.operatingDays = const {1, 2, 3, 4, 5},
   });
 
   final DateTime weekStart;
@@ -99,15 +100,23 @@ class DaySelector extends StatelessWidget {
   final DateTime today;
   final ValueChanged<DateTime> onSelect;
 
+  /// Monday-Friday are always shown; Saturday and/or Sunday only for a cafeteria that opens then.
+  final Set<int> operatingDays;
+
   @override
   Widget build(BuildContext context) {
-    final days = weekDays(weekStart).take(5).toList();
+    final days = [
+      for (final d in weekDays(weekStart))
+        if (d.weekday <= 5 || operatingDays.contains(d.weekday)) d,
+    ];
+    final weekend = days.length > 5;
     return Row(
       children: [
         for (var i = 0; i < days.length; i++) ...[
-          if (i > 0) const SizedBox(width: 8),
+          if (i > 0) SizedBox(width: weekend ? 4 : 8),
           Expanded(
             child: _DayCell(
+              key: ValueKey('day-${isoDate(days[i])}'),
               date: days[i],
               selected: days[i] == selected,
               isToday: days[i] == today,
@@ -122,6 +131,7 @@ class DaySelector extends StatelessWidget {
 
 class _DayCell extends StatelessWidget {
   const _DayCell({
+    super.key,
     required this.date,
     required this.selected,
     required this.isToday,
@@ -204,8 +214,15 @@ class _DayCell extends StatelessWidget {
 /// 조식 · 중식 · 석식 as a segmented control (V5 `.seg`). Changing the meal
 /// never changes the selected date.
 class MealTabs extends StatelessWidget {
-  const MealTabs({super.key, required this.selected, required this.onSelect});
+  const MealTabs({
+    super.key,
+    required this.selected,
+    required this.onSelect,
+    this.types = MealType.values,
+  });
 
+  /// The meals this cafeteria serves (not every cafeteria serves all three).
+  final List<MealType> types;
   final MealType selected;
   final ValueChanged<MealType> onSelect;
 
@@ -228,7 +245,7 @@ class MealTabs extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Row(
         children: [
-          for (final t in MealType.values)
+          for (final t in types)
             Expanded(
               child: Semantics(
                 button: true,
@@ -278,7 +295,8 @@ class MealTabs extends StatelessWidget {
 }
 
 /// "조식 · 천원의 아침밥" with the price and hours FROM THE DATA (never an
-/// assumed ₩1,000). Shown on the breakfast tab only.
+/// assumed ₩1,000). Shown only on a breakfast option an admin marked with the
+/// programme for THAT date (the programme is never assumed for a cafeteria or a day).
 class BreakfastProgramCard extends StatelessWidget {
   const BreakfastProgramCard({super.key, this.priceKrw, this.start, this.end});
 
@@ -464,6 +482,38 @@ class MealCard extends StatelessWidget {
                 ),
               ),
             ),
+          if (meal.soldOut)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                key: const ValueKey('meal-sold-out'),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: context.palette.fillMuted,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.block_rounded,
+                      size: 16,
+                      color: context.palette.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        '${l10n.mealSoldOut} · ${l10n.mealSoldOutHint}',
+                        style: AppText.caption(context).copyWith(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           if (meal.optionName.isNotEmpty || meal.priceKrw != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -552,6 +602,13 @@ class MealCard extends StatelessWidget {
                 ),
             ],
           ),
+          if (meal.description != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              meal.description!,
+              style: AppText.caption(context).copyWith(fontSize: 13.5),
+            ),
+          ],
           if (meal.notice != null) ...[
             const SizedBox(height: 10),
             Text(

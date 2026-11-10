@@ -16,11 +16,30 @@ import '../../../core/theme/app_palette.dart';
 /// 이번 주 학식: one week of cafeteria menus for the selected university,
 /// split into 조식 / 중식 / 석식. Shows only what an administrator imported
 /// from a verified source; nothing is invented.
-class CampusMealScreen extends ConsumerWidget {
+class CampusMealScreen extends ConsumerStatefulWidget {
   const CampusMealScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CampusMealScreen> createState() => _CampusMealScreenState();
+}
+
+class _CampusMealScreenState extends ConsumerState<CampusMealScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Coming back to 학식 re-reads what the admin published: a week cached a few
+    // minutes ago may be stale (an unpublish, a changed price). Weeks are the only
+    // thing that outlives the screen (the cafeteria list is auto-disposed), and
+    // invalidating a week nobody fetched yet costs nothing, so a first visit still
+    // makes exactly one request per list.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(campusWeekMealsProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final l10n = context.l10n;
     final locale = Localizations.localeOf(context);
     final university = ref.watch(selectedUniversityProvider).value;
@@ -72,7 +91,10 @@ class CampusMealScreen extends ConsumerWidget {
                   ),
                 ),
                 Expanded(
+                  // A failed REFRESH keeps the last answer on screen; a confirmed empty
+                  // answer (the admin switched everything off) shows the empty state.
                   child: cafeterias.when(
+                    skipError: cafeterias.hasValue,
                     loading: () => const _LoadingBody(),
                     error: (_, _) => MascotMessage(
                       asset: AppAssets.mascotMapConfused,
@@ -131,6 +153,9 @@ class _Body extends ConsumerWidget {
     final ctrl = ref.read(campusMealSelectionProvider.notifier);
     final cafeteria = ref.watch(effectiveCafeteriaProvider).value;
     if (cafeteria == null) return const SizedBox.shrink();
+    // Only the meals this cafeteria serves; a stale pick falls back to the first one.
+    final types = cafeteria.mealTypes;
+    final mealType = types.contains(sel.mealType) ? sel.mealType : types.first;
     final today = ctrl.today;
     String labelOf(CampusCafeteria c) =>
         cafeteriaLabel(l10n, locale, c, cafeterias);
@@ -161,6 +186,23 @@ class _Body extends ConsumerWidget {
                 onSelect: (c) => ctrl.selectCafeteria(c.id),
               ),
             ),
+          if (cafeteria.photoUrl != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: AspectRatio(
+                  aspectRatio: 16 / 7,
+                  child: Image.network(
+                    cafeteria.photoUrl!,
+                    key: const ValueKey('cafeteria-photo'),
+                    fit: BoxFit.cover,
+                    // a broken link is left out, never replaced by a stock photo
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
           WeekNavigator(
             weekStart: sel.weekStart,
             showTodayButton: !(sel.date == today),
@@ -173,9 +215,14 @@ class _Body extends ConsumerWidget {
             selected: sel.date,
             today: today,
             onSelect: ctrl.selectDate,
+            operatingDays: cafeteria.operatingDays,
           ),
           const SizedBox(height: 10),
-          MealTabs(selected: sel.mealType, onSelect: ctrl.selectMealType),
+          MealTabs(
+            selected: mealType,
+            onSelect: ctrl.selectMealType,
+            types: types,
+          ),
           const SizedBox(height: 16),
           Text(
             l10n.mealHeading(
@@ -185,7 +232,7 @@ class _Body extends ConsumerWidget {
                         DateTime.utc(today.year, today.month, today.day + 1)
                   ? l10n.mealDayTomorrow
                   : l10n.mealSelectedDate(sel.date),
-              sel.mealType.label(l10n),
+              mealType.label(l10n),
             ),
             style: AppText.heroTitle,
           ),
@@ -212,7 +259,7 @@ class _Body extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 12),
-          _WeekContent(cafeteria: cafeteria),
+          _WeekContent(cafeteria: cafeteria, mealType: mealType),
         ],
       ),
     );
@@ -220,9 +267,10 @@ class _Body extends ConsumerWidget {
 }
 
 class _WeekContent extends ConsumerWidget {
-  const _WeekContent({required this.cafeteria});
+  const _WeekContent({required this.cafeteria, required this.mealType});
 
   final CampusCafeteria cafeteria;
+  final MealType mealType;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -231,7 +279,9 @@ class _WeekContent extends ConsumerWidget {
     final key = (cafeteriaId: cafeteria.id, weekStart: sel.weekStart);
     final async = ref.watch(campusWeekMealsProvider(key));
 
+    // A failed refresh keeps the week we already have; only a first failure shows the error.
     return async.when(
+      skipError: async.hasValue,
       loading: () =>
           const Column(children: [SkeletonBox(height: 170, radius: 20)]),
       error: (_, _) => Padding(
@@ -257,7 +307,7 @@ class _WeekContent extends ConsumerWidget {
             hint: l10n.mealNotCollectedHint,
           );
         }
-        final options = week.options(sel.date, sel.mealType);
+        final options = week.options(sel.date, mealType);
         if (options.isEmpty) {
           return MealNoticeCard(
             icon: Icons.no_meals_rounded,
@@ -270,13 +320,21 @@ class _WeekContent extends ConsumerWidget {
         ];
         return Column(
           children: [
-            if (sel.mealType == MealType.breakfast && published.isNotEmpty)
+            // The programme is shown only where an admin marked THIS breakfast with it.
+            if (mealType == MealType.breakfast &&
+                published.any((m) => m.badge == thousandWonBreakfast))
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: BreakfastProgramCard(
-                  priceKrw: published.first.priceKrw,
-                  start: published.first.startTime,
-                  end: published.first.endTime,
+                  priceKrw: published
+                      .firstWhere((m) => m.badge == thousandWonBreakfast)
+                      .priceKrw,
+                  start: published
+                      .firstWhere((m) => m.badge == thousandWonBreakfast)
+                      .startTime,
+                  end: published
+                      .firstWhere((m) => m.badge == thousandWonBreakfast)
+                      .endTime,
                 ),
               ),
             for (final m in options)

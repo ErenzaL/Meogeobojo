@@ -3927,6 +3927,18 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{count}개'**
   String missionBadgeCount(int count);
+
+  /// No description provided for @mealSoldOut.
+  ///
+  /// In ko, this message translates to:
+  /// **'품절'**
+  String get mealSoldOut;
+
+  /// No description provided for @mealSoldOutHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 준비한 수량이 모두 판매됐어요.'**
+  String get mealSoldOutHint;
 }
 
 class _AppLocalizationsDelegate

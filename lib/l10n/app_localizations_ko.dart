@@ -2147,4 +2147,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String missionBadgeCount(int count) {
     return '$count개';
   }
+
+  @override
+  String get mealSoldOut => '품절';
+
+  @override
+  String get mealSoldOutHint => '오늘 준비한 수량이 모두 판매됐어요.';
 }

@@ -155,6 +155,7 @@ void main() {
         fakeMeal(
           '2026-11-09',
           MealType.breakfast,
+          badge: thousandWonBreakfast,
           price: 1200,
           start: '08:00',
           end: '09:30',
@@ -172,7 +173,7 @@ void main() {
 
     testWidgets('no price in the data means no price is shown', (tester) async {
       final h = await openPage(tester, [
-        fakeMeal('2026-11-09', MealType.breakfast),
+        fakeMeal('2026-11-09', MealType.breakfast, badge: thousandWonBreakfast),
       ]);
       h.container
           .read(campusMealSelectionProvider.notifier)
@@ -182,6 +183,22 @@ void main() {
       // "천원의 아침밥" is the programme name; a PRICE is digits + 원.
       expect(find.textContaining(RegExp(r'\d원')), findsNothing);
     });
+
+    testWidgets(
+      'an ordinary breakfast is NOT labelled 천원의 아침밥: the programme is per date and per option',
+      (tester) async {
+        final h = await openPage(tester, [
+          fakeMeal('2026-11-09', MealType.breakfast, price: 3000),
+        ]);
+        h.container
+            .read(campusMealSelectionProvider.notifier)
+            .selectMealType(MealType.breakfast);
+        await tester.pumpAndSettle();
+        expect(find.byType(BreakfastProgramCard), findsNothing);
+        expect(find.text('조식 · 천원의 아침밥'), findsNothing);
+        expect(find.text('3,000원'), findsOneWidget);
+      },
+    );
 
     testWidgets('no breakfast data: empty state, no program claim', (
       tester,

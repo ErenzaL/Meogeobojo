@@ -2135,4 +2135,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String missionBadgeCount(int count) {
     return '$count';
   }
+
+  @override
+  String get mealSoldOut => '已售罄';
+
+  @override
+  String get mealSoldOutHint => '今天准备的份数已全部售完。';
 }

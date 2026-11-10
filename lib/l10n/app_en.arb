@@ -696,5 +696,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mealSoldOut": "Sold out",
+  "mealSoldOutHint": "Today's portions have all been sold."
 }

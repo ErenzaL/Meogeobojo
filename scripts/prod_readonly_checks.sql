@@ -125,6 +125,10 @@ begin
     n || ' triggers, ' || case when ok then 'on the channel' else 'not on the channel' end, case when n = 9 and ok then 'PASS' else 'INFO' end,
     'Without it a running app learns about a take-down only on resume, on its 60 s refresh or on pull-to-refresh.');
 
+  -- 7c. weekly cafeterias (20261118000100)
+  select exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'campus_cafeterias' and column_name = 'meal_periods') into ok;
+  insert into _chk (section, item, expected, actual, status, hint) values ('7 live updates', 'weekly cafeteria columns (migration 20261118000100)', 'present after the migration', case when ok then 'present' else 'absent' end, 'INFO', 'Apply 20261118000100 to use weekly editing, selected-day publishing and the CSV import.');
+
   -- 8. storage
   if to_regclass('storage.objects') is not null then
     select exists (select 1 from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname = 'restaurant-images: public read') into ok;

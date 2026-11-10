@@ -1304,5 +1304,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mealSoldOut": "품절",
+  "mealSoldOutHint": "오늘 준비한 수량이 모두 판매됐어요."
 }

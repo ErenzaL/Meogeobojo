@@ -696,5 +696,7 @@
         "type": "int"
       }
     }
-  }
+  },
+  "mealSoldOut": "已售罄",
+  "mealSoldOutHint": "今天准备的份数已全部售完。"
 }

@@ -2246,4 +2246,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String missionBadgeCount(int count) {
     return '$count';
   }
+
+  @override
+  String get mealSoldOut => 'Sold out';
+
+  @override
+  String get mealSoldOutHint => 'Today\'s portions have all been sold.';
 }

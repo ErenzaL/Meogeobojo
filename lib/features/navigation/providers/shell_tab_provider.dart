@@ -5,7 +5,7 @@ abstract final class ShellTabs {
   static const home = 0;
   static const map = 1;
   static const community = 2;
-  static const records = 3;
+  static const missions = 3;
   static const profile = 4;
 }
 

@@ -12,7 +12,7 @@ $PGBIN/pg_ctl -D $WORK/pgdata -o "-p $PORT -c unix_socket_directories='' -c list
 trap "$PGBIN/pg_ctl -D $WORK/pgdata stop -m fast >/dev/null" EXIT
 P() { $PGBIN/psql -h 127.0.0.1 -p $PORT -U postgres -v ON_ERROR_STOP=1 -q "$@"; }
 P -f $HERE/auth_stub.sql
-for f in $(ls $MIG/*.sql | sort | grep -v -E '2026110100050|20261101000[6-9]|2026110[2-9]'); do P -f $f >/dev/null 2>&1 || { echo "FAILED: $f"; exit 1; }; done
+for f in $(ls $MIG/*.sql | sort | grep -v -E '2026110100050|20261101000[6-9]|202611(0[2-9]|[1-9][0-9])'); do P -f $f >/dev/null 2>&1 || { echo "FAILED: $f"; exit 1; }; done
 P -f $HERE/legacy_seed.sql >/dev/null
 echo "--- apply 20261101000500 (1st run)"; P -f $MIG/20261101000500_nickname_and_companions.sql >/dev/null
 P -f $HERE/migration_0500_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR" | sed 's/^psql:[^ ]* NOTICE:  //'
@@ -20,9 +20,10 @@ echo "--- apply 20261101000500 (2nd run: idempotent)"; P -f $MIG/20261101000500_
 P -c "select count(*) filter (where cardinality(companion_types)>0) as migrated from public.user_preferences" | sed -n 3p
 P -c "delete from auth.users"
 echo "--- RLS / RPC suite"; P -f $HERE/rls_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-120
-for f in $(ls $MIG/*.sql | sort | grep -E '20261101000[6-9]|2026110[2-9]'); do echo "--- apply $(basename $f) (twice: idempotent)"; P -f $f >/dev/null 2>&1; P -f $f >/dev/null 2>&1 || { echo "FAILED re-run: $f"; exit 1; }; done
+for f in $(ls $MIG/*.sql | sort | grep -E '20261101000[6-9]|202611(0[2-9]|[1-9][0-9])'); do echo "--- apply $(basename $f) (twice: idempotent)"; P -f $f >/dev/null 2>&1; P -f $f >/dev/null 2>&1 || { echo "FAILED re-run: $f"; exit 1; }; done
 echo "--- cafeteria schema / RLS suite"; P -f $HERE/cafeteria_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR" | sed 's/^psql:[^ ]* NOTICE:  //'
 echo "--- admin foundation / authorization suite"; P -f $HERE/admin_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
+echo "--- mission system suite"; P -f $HERE/missions_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-220
 echo "--- CSV importer end to end"
 U=5c0a8f3e-0001-4a6e-9b1d-000000000001; PY=$HERE/../cafeteria/import_cafeteria_csv.py; T=$WORK/csv; mkdir -p $T
 printf 'university_id,cafeteria_id,kind,name_ko,name_en,name_zh,location_description,sort_order\n%s,c9c9c9c9-0000-4000-8000-000000000009,student,,,,,0\n%s,,dormitory,,,,,1\n' $U $U > $T/caf.csv

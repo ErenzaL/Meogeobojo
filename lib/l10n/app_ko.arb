@@ -817,6 +817,34 @@
   "homeInfo": "정보",
   "homeAltTitle": "마음에 안 들면",
   "homePickForMe": "하나 골라줘",
+  "homeRestart": "처음부터 다시",
+  "homePromptTitle": "조건을 고르고 추천받아 보세요",
+  "homePromptMessage": "예산·거리 같은 조건을 정하거나 ‘오늘의 추천 받기’를 눌러 보세요.",
+  "homeGameButton": "게임으로 정하기",
+  "homeGameTitle": "오늘 뭐 먹지? 게임으로!",
+  "homeGameSub": "지금 조건에 맞는 곳 중에서 골라요.",
+  "homeGameRoulette": "룰렛",
+  "homeGameRouletteHint": "돌려서 멈춘 곳으로",
+  "homeGameLadder": "사다리타기",
+  "homeGameLadderHint": "한 줄을 골라 내려가요",
+  "homeGameCards": "카드 뽑기",
+  "homeGameCardsHint": "뒤집어서 나온 곳으로",
+  "homeGameSpin": "돌리기!",
+  "homeGameSpinning": "돌아가는 중…",
+  "homeGameLadderPrompt": "출발할 줄을 골라요",
+  "homeGameCardsPrompt": "카드를 한 장 골라요",
+  "homeGameResult": "오늘은 여기!",
+  "homeGameAgain": "다시 하기",
+  "homeGameConfirm": "여기로 정하기",
+  "homeGameBack": "다른 게임",
+  "homeGameChosen": "{name}(으)로 정했어요. 맨 위 추천 카드에서 확인하세요.",
+  "@homeGameChosen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeCmpCloser": "{minutes}분 더 가까워요",
   "@homeCmpCloser": {
     "placeholders": {
@@ -971,6 +999,7 @@
   "condSortRating": "평점순",
   "condSoftNote": "지금은 가까운 순으로 추천해요. 함께 먹는 사람·필요한 것은 데이터가 생기면 순서에 반영돼요.",
   "condResetAll": "모두 풀기",
+  "condResetThis": "이 설정만 풀기",
   "condShowCount": "{count}곳 보기",
   "@condShowCount": {
     "placeholders": {
@@ -1098,5 +1127,101 @@
       }
     }
   },
-  "mapRecenter": "기준 위치로 이동"
+  "mapRecenter": "기준 위치로 이동",
+  "profileAvatarEdit": "꾸미기",
+  "profileAvatarSheetTitle": "프로필 이미지 선택",
+  "profileAvatarSheetSubtitle": "마스코트에서 선택",
+  "profileAvatarConfirm": "선택 완료",
+  "profileAvatarSaveFailed": "프로필 이미지를 저장하지 못했어요. 다시 시도해주세요.",
+  "profileAvatarOption": "마스코트 {n}",
+  "@profileAvatarOption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "profileAvatarChange": "프로필 이미지 바꾸기",
+  "homeSearchFieldHint": "식당, 메뉴, 카테고리 검색",
+  "homeRecommendButton": "오늘의 추천 받기",
+  "homeTodayPicksTitle": "오늘의 추천",
+  "homeFilterBudget": "예산",
+  "homeFilterDistance": "거리",
+  "homeFilterParty": "인원",
+  "homeFilterPurpose": "목적",
+  "homeFilterSort": "정렬",
+  "navMissions": "미션",
+  "missionPageTitle": "미션",
+  "missionTabMonthlyFallback": "이달의 미션",
+  "missionTabDaily": "데일리",
+  "missionTabWeekly": "주간",
+  "missionTabChallenge": "도전과제",
+  "missionCompletedLabel": "완료한 미션",
+  "missionProgressLabel": "이번 달 진행률",
+  "missionPointsMonth": "이번 달 획득 포인트",
+  "missionBadgePreview": "이달의 뱃지",
+  "missionBadgeLockedHint": "미션 {count}개를 완료하면 받을 수 있어요",
+  "@missionBadgeLockedHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "missionBadgeUnlocked": "획득 완료",
+  "missionDone": "완료",
+  "missionBadgeReward": "한정 뱃지",
+  "missionExpired": "기간 종료",
+  "missionUpcoming": "예정",
+  "missionDetailRequirement": "완료 조건",
+  "missionDetailProgress": "진행 상황",
+  "missionDetailReward": "보상",
+  "missionDetailPeriod": "기간",
+  "missionResetsDaily": "매일 0시(한국 시간)에 새로 시작돼요",
+  "missionResetsWeekly": "매주 월요일 0시(한국 시간)에 새로 시작돼요",
+  "missionUntil": "{date}까지",
+  "@missionUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "missionAlwaysOn": "상시 진행",
+  "missionActionRecommend": "추천 받기",
+  "missionActionMap": "맛집 찾으러 가기",
+  "missionActionFavorites": "저렴한 맛집 찾기",
+  "missionActionCategories": "카테고리 둘러보기",
+  "missionActionReview": "리뷰 작성하기",
+  "missionActionPhoto": "메뉴 사진 올리기",
+  "missionActionCorrect": "정보 수정 제안하기",
+  "missionActionSoon": "이 기능은 아직 준비 중이에요. 열리면 미션에 바로 반영돼요.",
+  "missionCelebrationTitle": "미션 완료!",
+  "missionCelebrationPoints": "+{points}P 획득",
+  "@missionCelebrationPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "missionCelebrationBadge": "뱃지를 얻었어요",
+  "missionGuestTitle": "로그인하고 미션에 참여해요",
+  "missionGuestBody": "맛집을 찜하고 둘러볼 때마다 진행 상황이 쌓여요. 포인트와 뱃지는 계정에 저장돼요.",
+  "missionEmptyTitle": "진행 중인 미션이 없어요",
+  "missionEmptyBody": "새 미션이 열리면 여기에 나타나요.",
+  "missionLoadFailed": "미션을 불러오지 못했어요",
+  "missionMyBadges": "내 뱃지",
+  "missionBadgesNone": "아직 얻은 뱃지가 없어요. 미션을 완료해 보세요.",
+  "missionBadgesAll": "전체 보기",
+  "missionBadgeCollectionTitle": "뱃지 컬렉션",
+  "missionTotalPoints": "누적 포인트",
+  "missionBadgeCount": "{count}개",
+  "@missionBadgeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

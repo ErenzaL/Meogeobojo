@@ -5,6 +5,8 @@ import 'package:meogeobojo/features/conditions/providers/conditions_providers.da
 import 'package:meogeobojo/features/navigation/providers/shell_tab_provider.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
+import 'package:meogeobojo/features/profile/screens/profile_screen.dart';
+import 'package:meogeobojo/features/records/screens/records_screen.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 
 import '../support/fakes.dart';
@@ -141,43 +143,64 @@ void main() {
     });
   });
 
-  group('기록', () {
-    testWidgets('guest: figures are unknown ("—"), adding asks to sign in', (
+  group('Records (opened from MY → 내 활동 → 나의 기록)', () {
+    Future<void> openRecords(
+      WidgetTester tester, {
+      Set<String> favorites = const {},
+    }) async {
+      await open(
+        tester,
+        ShellTabs.profile,
+        signedIn: true,
+        favorites: favorites,
+        size: const Size(390, 1400),
+      );
+      // (the stats card has a 나의 기록 label too: the menu row is the last)
+      await tester.ensureVisible(find.text('나의 기록').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('나의 기록').last);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the original Records page opens and keeps its content', (
       tester,
     ) async {
-      await open(tester, ShellTabs.records);
+      await openRecords(tester);
+      expect(find.byType(RecordsScreen), findsOneWidget);
       expect(find.text('내 기록'), findsOneWidget);
       expect(find.text('나만 볼 수 있는 맛집 일기예요'), findsOneWidget);
       expect(find.text('11월 리포트'), findsOneWidget);
-      expect(find.text('—'), findsNWidgets(3));
-      expect(find.text('먹은 기록 —'), findsOneWidget);
-      expect(find.text('가고 싶은 곳 —'), findsOneWidget);
       expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
-      await tester.tap(find.text('첫 기록 남기기'));
-      await tester.pumpAndSettle();
-      expect(find.text('이메일로 로그인'), findsOneWidget);
     });
 
-    testWidgets('signed in: "가고 싶은 곳" is the real saved count; add is honest', (
+    testWidgets('"가고 싶은 곳" is still the real saved count; add is honest', (
       tester,
     ) async {
-      await open(
-        tester,
-        ShellTabs.records,
-        signedIn: true,
-        favorites: {'a', 'b'},
-      );
+      await openRecords(tester, favorites: {'a', 'b'});
       expect(find.text('가고 싶은 곳 2'), findsOneWidget);
       await tester.tap(find.text('기록하기'));
       await tester.pump();
       expect(find.textContaining('준비 중'), findsOneWidget);
     });
+
+    testWidgets('back returns to MY', (tester) async {
+      await openRecords(tester);
+      await tester.tap(find.byIcon(Icons.arrow_back_ios_new_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byType(RecordsScreen), findsNothing);
+      expect(find.byType(ProfileScreen), findsOneWidget);
+      expect(find.text('나의 기록'), findsWidgets);
+    });
+
+    testWidgets('the bottom nav no longer has a 기록 tab', (tester) async {
+      await open(tester, ShellTabs.home);
+      expect(find.text('기록'), findsNothing);
+      expect(find.text('미션'), findsOneWidget);
+    });
   });
 
   group('MY', () {
-    testWidgets('V5 sections: greeting, campus, stats, 내 조건, 내 활동', (
-      tester,
-    ) async {
+    testWidgets('V5 sections: hero, campus, stats, 내 조건, 내 활동', (tester) async {
       await open(
         tester,
         ShellTabs.profile,
@@ -186,7 +209,8 @@ void main() {
         size: const Size(390, 1400),
       );
       expect(find.text('마이페이지'), findsOneWidget);
-      expect(find.text('안녕하세요, 민수님'), findsOneWidget);
+      expect(find.text('민수'), findsOneWidget);
+      expect(find.text('꾸미기'), findsNothing);
       expect(find.text('내 조건'), findsOneWidget);
       expect(find.text('처음부터 다시 설정 →'), findsOneWidget);
       expect(find.text('아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.'), findsOneWidget);

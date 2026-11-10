@@ -1249,6 +1249,71 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePickForMe => '帮我选一个';
 
   @override
+  String get homeRestart => '重新开始';
+
+  @override
+  String get homePromptTitle => '先选好条件再看推荐';
+
+  @override
+  String get homePromptMessage => '选好预算、距离等条件，或点“获取今日推荐”。';
+
+  @override
+  String get homeGameButton => '玩游戏来选';
+
+  @override
+  String get homeGameTitle => '吃什么？玩游戏决定！';
+
+  @override
+  String get homeGameSub => '从符合当前条件的餐厅里选。';
+
+  @override
+  String get homeGameRoulette => '转盘';
+
+  @override
+  String get homeGameRouletteHint => '转到哪家去哪家';
+
+  @override
+  String get homeGameLadder => '爬梯子';
+
+  @override
+  String get homeGameLadderHint => '选一条线往下走';
+
+  @override
+  String get homeGameCards => '翻牌';
+
+  @override
+  String get homeGameCardsHint => '翻开哪张去哪家';
+
+  @override
+  String get homeGameSpin => '开转！';
+
+  @override
+  String get homeGameSpinning => '转动中…';
+
+  @override
+  String get homeGameLadderPrompt => '选一条线出发';
+
+  @override
+  String get homeGameCardsPrompt => '选一张牌';
+
+  @override
+  String get homeGameResult => '今天就去这家！';
+
+  @override
+  String get homeGameAgain => '再来一次';
+
+  @override
+  String get homeGameConfirm => '就这家';
+
+  @override
+  String get homeGameBack => '换个游戏';
+
+  @override
+  String homeGameChosen(String name) {
+    return '已选定$name，请在最上面的推荐卡片查看。';
+  }
+
+  @override
   String homeCmpCloser(int minutes) {
     return '近$minutes分钟';
   }
@@ -1494,6 +1559,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condResetAll => '全部清除';
 
   @override
+  String get condResetThis => '清除此项';
+
+  @override
   String condShowCount(int count) {
     return '查看$count家';
   }
@@ -1678,4 +1746,197 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mapRecenter => '回到出发位置';
+
+  @override
+  String get profileAvatarEdit => '装扮';
+
+  @override
+  String get profileAvatarSheetTitle => '选择头像';
+
+  @override
+  String get profileAvatarSheetSubtitle => '从吉祥物中选择';
+
+  @override
+  String get profileAvatarConfirm => '选择完成';
+
+  @override
+  String get profileAvatarSaveFailed => '无法保存头像，请重试。';
+
+  @override
+  String profileAvatarOption(int n) {
+    return '吉祥物 $n';
+  }
+
+  @override
+  String get profileAvatarChange => '更换头像';
+
+  @override
+  String get homeSearchFieldHint => '搜索餐厅、菜单、类别';
+
+  @override
+  String get homeRecommendButton => '获取今日推荐';
+
+  @override
+  String get homeTodayPicksTitle => '今日推荐';
+
+  @override
+  String get homeFilterBudget => '预算';
+
+  @override
+  String get homeFilterDistance => '距离';
+
+  @override
+  String get homeFilterParty => '人数';
+
+  @override
+  String get homeFilterPurpose => '用途';
+
+  @override
+  String get homeFilterSort => '排序';
+
+  @override
+  String get navMissions => '任务';
+
+  @override
+  String get missionPageTitle => '任务';
+
+  @override
+  String get missionTabMonthlyFallback => '本月任务';
+
+  @override
+  String get missionTabDaily => '每日';
+
+  @override
+  String get missionTabWeekly => '每周';
+
+  @override
+  String get missionTabChallenge => '挑战';
+
+  @override
+  String get missionCompletedLabel => '已完成任务';
+
+  @override
+  String get missionProgressLabel => '本月进度';
+
+  @override
+  String get missionPointsMonth => '本月获得积分';
+
+  @override
+  String get missionBadgePreview => '本月徽章';
+
+  @override
+  String missionBadgeLockedHint(int count) {
+    return '完成 $count 个任务即可获得';
+  }
+
+  @override
+  String get missionBadgeUnlocked => '已获得';
+
+  @override
+  String get missionDone => '完成';
+
+  @override
+  String get missionBadgeReward => '限定徽章';
+
+  @override
+  String get missionExpired => '已结束';
+
+  @override
+  String get missionUpcoming => '即将开始';
+
+  @override
+  String get missionDetailRequirement => '完成条件';
+
+  @override
+  String get missionDetailProgress => '进度';
+
+  @override
+  String get missionDetailReward => '奖励';
+
+  @override
+  String get missionDetailPeriod => '期间';
+
+  @override
+  String get missionResetsDaily => '每天 0 点（韩国时间）重新开始';
+
+  @override
+  String get missionResetsWeekly => '每周一 0 点（韩国时间）重新开始';
+
+  @override
+  String missionUntil(String date) {
+    return '截至 $date';
+  }
+
+  @override
+  String get missionAlwaysOn => '长期进行';
+
+  @override
+  String get missionActionRecommend => '获取推荐';
+
+  @override
+  String get missionActionMap => '去找餐厅';
+
+  @override
+  String get missionActionFavorites => '找实惠的餐厅';
+
+  @override
+  String get missionActionCategories => '浏览分类';
+
+  @override
+  String get missionActionReview => '写评价';
+
+  @override
+  String get missionActionPhoto => '上传菜单照片';
+
+  @override
+  String get missionActionCorrect => '提交信息修改';
+
+  @override
+  String get missionActionSoon => '该功能尚未开放，开放后会立即计入任务。';
+
+  @override
+  String get missionCelebrationTitle => '任务完成！';
+
+  @override
+  String missionCelebrationPoints(int points) {
+    return '获得 +${points}P';
+  }
+
+  @override
+  String get missionCelebrationBadge => '获得徽章';
+
+  @override
+  String get missionGuestTitle => '登录后参与任务';
+
+  @override
+  String get missionGuestBody => '收藏和浏览餐厅时进度会不断累积。积分和徽章保存在您的账号中。';
+
+  @override
+  String get missionEmptyTitle => '暂无进行中的任务';
+
+  @override
+  String get missionEmptyBody => '新任务开放后会显示在这里。';
+
+  @override
+  String get missionLoadFailed => '无法加载任务';
+
+  @override
+  String get missionMyBadges => '我的徽章';
+
+  @override
+  String get missionBadgesNone => '还没有徽章。完成任务来获得吧。';
+
+  @override
+  String get missionBadgesAll => '查看全部';
+
+  @override
+  String get missionBadgeCollectionTitle => '徽章收藏';
+
+  @override
+  String get missionTotalPoints => '累计积分';
+
+  @override
+  String missionBadgeCount(int count) {
+    return '$count';
+  }
 }

@@ -11,6 +11,7 @@ import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../restaurants/utils/directions.dart';
+import '../games/game_sheet.dart';
 import '../providers/home_providers.dart';
 import '../utils/home_text.dart';
 import 'home_card_parts.dart';
@@ -40,7 +41,11 @@ class AlternativesSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Flexible(
+            // Hugs the right edge; wide labels may take up to 60% of the row.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width * 0.6,
+              ),
               child: _PickButton(
                 label: l10n.homePickForMe,
                 onTap: () =>
@@ -49,6 +54,13 @@ class AlternativesSection extends ConsumerWidget {
             ),
           ],
         ),
+        if (recs.ranked.length >= 2) ...[
+          const SizedBox(height: 10),
+          _GameButton(
+            label: l10n.homeGameButton,
+            onTap: () => showGameSheet(context, recs: recs),
+          ),
+        ],
         const SizedBox(height: 12),
         if (recs.alternatives.isNotEmpty)
           HomeCard(
@@ -90,6 +102,49 @@ class AlternativesSection extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Full-width entry to the pick-by-game sheet, in the app's soft accent tone.
+class _GameButton extends StatelessWidget {
+  const _GameButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return Material(
+      color: p.accentSoft,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.casino_rounded, size: 21, color: p.rustText),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: p.rustText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

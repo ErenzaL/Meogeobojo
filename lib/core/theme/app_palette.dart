@@ -173,7 +173,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navBorder: Color(0x171C1A17),
     navIdle: Color(0xFF6F6962),
     navSelectedBg: Color(0x00000000),
-    navSelectedFg: Color(0xFF1C1A17),
+    navSelectedFg: Color(0xFFC2410C), // active tab in the brand orange
     navShadow: Color(0x00000000),
     pageWarm: Color(0xFFF6F5F3),
     hairline: Color(0x171C1A17),
@@ -219,7 +219,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     navBorder: Color(0x17EFEBE4),
     navIdle: Color(0xFF938D84),
     navSelectedBg: Color(0x00000000),
-    navSelectedFg: Color(0xFFEFEBE4),
+    navSelectedFg: Color(0xFFEE7A45), // active tab in the brand orange
     navShadow: Color(0x00000000),
     pageWarm: Color(0xFF151413),
     hairline: Color(0x17EFEBE4),

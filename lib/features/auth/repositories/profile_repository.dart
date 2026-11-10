@@ -14,6 +14,10 @@ abstract class ProfileRepository {
 
   /// Best-effort account sync of the interface language.
   Future<void> updateLanguage(String userId, String languageCode);
+
+  /// Saves the chosen profile picture (`profiles.avatar_path`) so it follows
+  /// the account to every device. Throws if the update did not happen.
+  Future<void> updateAvatar(String userId, String avatarKey);
 }
 
 const _maxNicknameLength = 30;
@@ -86,5 +90,19 @@ class SupabaseProfileRepository implements ProfileRepository {
         .from('profiles')
         .update({'preferred_language': languageCode})
         .eq('id', userId);
+  }
+
+  @override
+  Future<void> updateAvatar(String userId, String avatarKey) async {
+    // select() so a row hidden by RLS (0 rows) is an error, not a silent no-op.
+    final rows = await _db
+        .from('profiles')
+        .update({'avatar_path': avatarKey})
+        .eq('id', userId)
+        .select('id')
+        .timeout(const Duration(seconds: 20));
+    if (rows.isEmpty) {
+      throw const PostgrestException(message: 'avatar not saved');
+    }
   }
 }

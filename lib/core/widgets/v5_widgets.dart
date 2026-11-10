@@ -11,11 +11,15 @@ class V5Header extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
+    this.leading,
   });
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
+
+  /// Replaces the accent dot (e.g. a back button on a pushed page).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -25,12 +29,16 @@ class V5Header extends StatelessWidget {
       children: [
         Row(
           children: [
-            Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(color: p.rust, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 10),
+            leading ??
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: p.rust,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            SizedBox(width: leading == null ? 10 : 6),
             Expanded(
               child: Text(
                 title,
@@ -63,15 +71,23 @@ class V5Header extends StatelessWidget {
 /// Scrollable tab page: safe area, a readable column (max 720) on wide
 /// screens, 16px gutters on phones.
 class V5Page extends StatelessWidget {
-  const V5Page({super.key, required this.children, this.scrollKey});
+  const V5Page({
+    super.key,
+    required this.children,
+    this.scrollKey,
+    this.backgroundColor,
+  });
 
   final List<Widget> children;
   final Key? scrollKey;
 
+  /// Overrides the page colour (MY is pure white); defaults to the palette.
+  final Color? backgroundColor;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.palette.background,
+      backgroundColor: backgroundColor ?? context.palette.background,
       body: SafeArea(
         bottom: false,
         child: Align(
@@ -97,9 +113,12 @@ class V5Page extends StatelessWidget {
 
 /// White card with a hairline border and rows separated by hairlines.
 class V5RowGroup extends StatelessWidget {
-  const V5RowGroup({super.key, required this.rows});
+  const V5RowGroup({super.key, required this.rows, this.elevated = false});
 
   final List<Widget> rows;
+
+  /// Adds the soft card shadow (for cards sitting on a white page).
+  final bool elevated;
 
   @override
   Widget build(BuildContext context) {
@@ -110,6 +129,7 @@ class V5RowGroup extends StatelessWidget {
         color: p.card,
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(color: p.border),
+        boxShadow: elevated ? softCardShadow(p) : null,
       ),
       child: Column(
         children: [
@@ -217,11 +237,15 @@ class V5SectionTitle extends StatelessWidget {
     super.key,
     this.actionLabel,
     this.onAction,
+    this.actionColor,
   });
 
   final String title;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// Colour of the trailing action (defaults to the primary text colour).
+  final Color? actionColor;
 
   @override
   Widget build(BuildContext context) {
@@ -242,7 +266,7 @@ class V5SectionTitle extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: p.textPrimary,
+                    color: actionColor ?? p.textPrimary,
                   ),
                 ),
               ),
@@ -252,6 +276,24 @@ class V5SectionTitle extends StatelessWidget {
     );
   }
 }
+
+/// Pure white page in Light (cards float on it with soft shadows); Dark keeps
+/// its normal page colour. Used by Home and MY.
+Color whitePageColor(BuildContext context) {
+  final p = context.palette;
+  return Theme.of(context).brightness == Brightness.light
+      ? p.card
+      : p.background;
+}
+
+/// Soft, wide shadow for cards on a white page.
+List<BoxShadow> softCardShadow(AppPalette p) => [
+  BoxShadow(
+    color: p.shadow.withValues(alpha: p.shadow.a * 0.5),
+    blurRadius: 24,
+    offset: const Offset(0, 6),
+  ),
+];
 
 /// Centered empty state: line icon, title, message and optional actions.
 class V5EmptyState extends StatelessWidget {

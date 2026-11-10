@@ -7,6 +7,8 @@ import 'package:meogeobojo/features/campus_meals/utils/seoul_date.dart';
 import 'package:meogeobojo/features/auth/repositories/profile_repository.dart';
 import 'package:meogeobojo/features/auth/services/auth_gateway.dart';
 import 'package:meogeobojo/features/favorites/repositories/favorites_repository.dart';
+import 'package:meogeobojo/features/missions/models/mission_models.dart';
+import 'package:meogeobojo/features/missions/repositories/mission_repository.dart';
 import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
 import 'package:meogeobojo/features/preferences/repositories/preferences_repository.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
@@ -238,7 +240,15 @@ class FakeProfileRepository implements ProfileRepository {
   String _userId = 'user-1';
   final languageWrites = <String>[];
 
+  /// Stored avatar key (what `profiles.avatar_path` holds).
+  String? avatarPath;
+  final avatarWrites = <String>[];
+
+  /// Thrown by the next updateAvatar() calls, in order.
+  final avatarErrors = <Object>[];
+
   UserProfile _profile() => UserProfile(
+    avatarPath: avatarPath,
     id: _userId,
     nickname: nickname,
     nicknameIsCustom: nicknameIsCustom,
@@ -266,6 +276,13 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> updateLanguage(String userId, String languageCode) async {
     languageWrites.add(languageCode);
+  }
+
+  @override
+  Future<void> updateAvatar(String userId, String avatarKey) async {
+    if (avatarErrors.isNotEmpty) throw avatarErrors.removeAt(0);
+    avatarWrites.add(avatarKey);
+    avatarPath = avatarKey;
   }
 }
 
@@ -432,4 +449,39 @@ class FakeRestaurantOverrideRepository implements RestaurantOverrideRepository {
   @override
   Future<List<RestaurantMenuItem>> menus(String kakaoId) async =>
       menuItems[kakaoId] ?? const [];
+}
+
+/// The server's mission logic lives in SQL (see supabase/tests/missions_test.sql);
+/// the app only shows what comes back, so the fake returns whatever the test
+/// sets and records how it was called.
+class FakeMissionRepository implements MissionRepository {
+  FakeMissionRepository({MissionDashboard? dashboard})
+    : dashboard = dashboard ?? const MissionDashboard(missions: []);
+
+  MissionDashboard dashboard;
+  Object? error;
+  int syncs = 0;
+  final activity = <(String, String)>[];
+
+  /// Returned (once) by the next logActivity call, like a server completing a mission.
+  final completionsOnActivity = <CompletedMission>[];
+
+  @override
+  Future<MissionDashboard> sync() async {
+    syncs++;
+    if (error != null) throw error!;
+    return dashboard;
+  }
+
+  @override
+  Future<List<CompletedMission>> logActivity(
+    String event, {
+    String ref = '',
+  }) async {
+    activity.add((event, ref));
+    if (error != null) throw error!;
+    final out = [...completionsOnActivity];
+    completionsOnActivity.clear();
+    return out;
+  }
 }

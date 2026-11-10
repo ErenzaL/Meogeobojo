@@ -107,7 +107,7 @@ void main() {
           'navHome',
           'navCommunity',
           'navMap',
-          'navRecords',
+          'navMissions',
           'navProfile',
         ];
         final l10n = tester.element(find.byType(AppShell)).l10n;
@@ -115,7 +115,7 @@ void main() {
           l10n.navHome,
           l10n.navCommunity,
           l10n.navMap,
-          l10n.navRecords,
+          l10n.navMissions,
           l10n.navProfile,
         ];
         for (final t in texts) {
@@ -125,9 +125,9 @@ void main() {
         expect(labels.length, texts.length);
       }
       expect(seen.length, 3, reason: 'three distinct translations');
-      expect(seen, contains('홈|밥수다|지도|기록|MY'));
-      expect(seen, contains('Home|Food Talk|Map|Records|My'));
-      expect(seen, contains('首页|美食交流|地图|记录|我的'));
+      expect(seen, contains('홈|밥수다|지도|미션|MY'));
+      expect(seen, contains('Home|Food Talk|Map|Missions|My'));
+      expect(seen, contains('首页|美食交流|地图|任务|我的'));
     });
 
     for (final lang in ['en', 'zh-Hans']) {
@@ -165,7 +165,10 @@ void main() {
         ),
       );
       await pumpApp(tester, h, home: const AppShell());
-      expect(find.text('What should I eat today?'), findsOneWidget);
+      expect(
+        find.text('Search restaurants, menus, categories'),
+        findsOneWidget,
+      );
       expect(find.text('Filters'), findsOneWidget);
       expect(find.textContaining('from Main gate'), findsNothing);
       await tester.scrollUntilVisible(
@@ -175,13 +178,13 @@ void main() {
       );
       expect(find.text("Today's cafeteria"), findsOneWidget);
       // Kakao-sourced names are left exactly as received.
-      expect(find.text('국수집1'), findsOneWidget);
+      expect(find.text('국수집1'), findsWidgets);
     });
 
     testWidgets('Chinese Home', (tester) async {
       final h = await buildHarness(storage: {'app_language': 'zh-Hans'});
       await pumpApp(tester, h, home: const AppShell());
-      expect(find.text('今天吃什么？'), findsOneWidget);
+      expect(find.text('搜索餐厅、菜单、类别'), findsOneWidget);
       expect(find.text('条件'), findsOneWidget);
     });
 

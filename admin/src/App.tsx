@@ -6,6 +6,7 @@ import AuditPage from '@/features/AuditPage'
 import CafeteriaPage from '@/features/CafeteriaPage'
 import ContentPage from '@/features/ContentPage'
 import MenusPage from '@/features/MenusPage'
+import MissionsPage from '@/features/MissionsPage'
 import ModerationPage from '@/features/ModerationPage'
 import OverviewPage from '@/features/OverviewPage'
 import RecommendationsPage from '@/features/RecommendationsPage'
@@ -27,6 +28,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route element={<RequireRole min="moderator" />}>
           <Route path="moderation" element={<ModerationPage />} />
+          <Route path="missions" element={<MissionsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

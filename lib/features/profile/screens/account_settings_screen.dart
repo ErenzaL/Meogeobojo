@@ -10,6 +10,29 @@ import '../models/nickname.dart';
 import '../widgets/nickname_field.dart';
 import '../../../core/theme/app_palette.dart';
 
+/// The nickname dialog, shared by 계정 설정 and the MY header's pencil.
+Future<void> showNicknameEditor(
+  BuildContext context,
+  WidgetRef ref,
+  String? current,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final updatedMessage = context.l10n.nicknameUpdated;
+  final saved = await showDialog<bool>(
+    context: context,
+    builder: (_) => _NicknameDialog(
+      initial: current ?? '',
+      onSave: (value) =>
+          ref.read(authControllerProvider.notifier).saveNickname(value),
+    ),
+  );
+  if (saved == true) {
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(updatedMessage)));
+  }
+}
+
 class AccountSettingsScreen extends ConsumerStatefulWidget {
   const AccountSettingsScreen({super.key});
 
@@ -19,23 +42,8 @@ class AccountSettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
-  Future<void> _editNickname(String? current) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final updatedMessage = context.l10n.nicknameUpdated;
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (_) => _NicknameDialog(
-        initial: current ?? '',
-        onSave: (value) =>
-            ref.read(authControllerProvider.notifier).saveNickname(value),
-      ),
-    );
-    if (saved == true) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(updatedMessage)));
-    }
-  }
+  Future<void> _editNickname(String? current) =>
+      showNicknameEditor(context, ref, current);
 
   @override
   Widget build(BuildContext context) {

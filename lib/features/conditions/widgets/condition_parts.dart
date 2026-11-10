@@ -5,22 +5,32 @@ import '../../../core/theme/app_theme.dart';
 
 /// Sub-section title with its content underneath.
 class CondSection extends StatelessWidget {
-  const CondSection({super.key, required this.title, required this.child});
+  const CondSection({
+    super.key,
+    required this.title,
+    required this.child,
+    this.showTitle = true,
+  });
 
   final String title;
   final Widget child;
 
+  /// False when a sheet already shows [title] as its own heading.
+  final bool showTitle;
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 22),
+    padding: const EdgeInsets.only(top: 20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 12),
+        if (showTitle) ...[
+          Text(
+            title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 10),
+        ],
         child,
       ],
     ),
@@ -36,7 +46,7 @@ class CondGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 18),
+    padding: const EdgeInsets.only(top: 16),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.baseline,
       textBaseline: TextBaseline.alphabetic,
@@ -80,7 +90,7 @@ class CondSwitchRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Padding(
-      padding: const EdgeInsets.only(top: 22),
+      padding: const EdgeInsets.only(top: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -91,8 +101,8 @@ class CondSwitchRow extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),

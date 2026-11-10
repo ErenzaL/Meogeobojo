@@ -25,7 +25,7 @@ class RecordsScreen extends ConsumerWidget {
     if (ref.read(currentUserProvider) == null) {
       ref
           .read(pendingAuthActionProvider.notifier)
-          .set(const PendingOpenTab(ShellTabs.records));
+          .set(const PendingOpenTab(ShellTabs.profile));
       openLogin(context);
       return;
     }
@@ -47,6 +47,12 @@ class RecordsScreen extends ConsumerWidget {
     return V5Page(
       children: [
         V5Header(
+          // Records is opened from MY → 내 활동 → 나의 기록; back returns there.
+          leading: IconButton(
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            onPressed: () => Navigator.of(context).maybePop(),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          ),
           title: l10n.recordsPageTitle,
           subtitle: l10n.recordsSubtitle,
           trailing: FilledButton.icon(
@@ -81,7 +87,7 @@ class RecordsScreen extends ConsumerWidget {
                 } else {
                   ref
                       .read(pendingAuthActionProvider.notifier)
-                      .set(const PendingOpenTab(ShellTabs.records));
+                      .set(const PendingOpenTab(ShellTabs.profile));
                   openLogin(context);
                 }
               },

@@ -7,7 +7,7 @@ import '../../../core/widgets/pill_chip.dart';
 import '../../conditions/models/conditions.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../conditions/widgets/conditions_sheet.dart';
-import '../../home/widgets/home_title_block.dart';
+import '../../home/widgets/home_chip.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
 

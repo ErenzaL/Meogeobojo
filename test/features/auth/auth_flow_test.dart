@@ -168,6 +168,8 @@ void main() {
         );
         await pumpApp(tester, h);
         // The heart is on the detail page: open the top pick's 정보.
+        await tester.ensureVisible(find.text('정보'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('정보'));
         await tester.pumpAndSettle();
 
@@ -190,6 +192,8 @@ void main() {
     ) async {
       final h = await buildHarness();
       await pumpApp(tester, h);
+      await tester.ensureVisible(find.text('정보'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('정보'));
       await tester.pumpAndSettle();
       await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
@@ -201,23 +205,22 @@ void main() {
     });
 
     testWidgets(
-      'records tab: guests see the page, adding asks to sign in, login returns to it',
+      'mission tab: guests are asked to sign in, and login returns to it',
       (tester) async {
         final h = await buildHarness(
           profiles: FakeProfileRepository(onboardingCompleted: true),
         );
         await pumpApp(tester, h);
-        await tester.tap(find.text('기록'));
+        await tester.tap(find.text('미션'));
         await tester.pumpAndSettle();
-        // V5: the page is open to guests; writing a record needs an account.
-        expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
+        expect(find.text('로그인하고 미션에 참여해요'), findsOneWidget);
 
-        await tester.tap(find.text('기록하기'));
+        await tester.tap(find.text('로그인 / 회원가입'));
         await tester.pumpAndSettle();
         await emailSignIn(tester);
 
-        expect(h.container.read(shellTabProvider), ShellTabs.records);
-        expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
+        expect(h.container.read(shellTabProvider), ShellTabs.missions);
+        expect(find.text('로그인하고 미션에 참여해요'), findsNothing);
       },
     );
 
@@ -226,9 +229,9 @@ void main() {
       (tester) async {
         final h = await buildHarness(); // new account
         await pumpApp(tester, h);
-        await tester.tap(find.text('기록'));
+        await tester.tap(find.text('미션'));
         await tester.pumpAndSettle();
-        await tester.tap(find.text('기록하기'));
+        await tester.tap(find.text('로그인 / 회원가입'));
         await tester.pumpAndSettle();
         await emailSignIn(tester);
         expect(find.byType(PreferencesScreen), findsOneWidget);
@@ -240,7 +243,7 @@ void main() {
         await settle(tester);
 
         expect(find.byType(PreferencesScreen), findsNothing);
-        expect(h.container.read(shellTabProvider), ShellTabs.records);
+        expect(h.container.read(shellTabProvider), ShellTabs.missions);
         expect(find.byType(RecommendationScreen), findsNothing);
       },
     );

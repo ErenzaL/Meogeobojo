@@ -339,9 +339,20 @@ void main() {
       expect(colors, {expected.toARGB32()}, reason: '$label page background');
     }
 
-    for (final (mode, expected, homeExpected) in [
-      ('light', AppPalette.light.background, AppPalette.light.pageWarm),
-      ('dark', AppPalette.dark.background, AppPalette.dark.pageWarm),
+    for (final (mode, expected, homeExpected, myExpected) in [
+      // MY is pure white in Light (cards float on it with soft shadows).
+      (
+        'light',
+        AppPalette.light.background,
+        AppPalette.light.card,
+        AppPalette.light.card,
+      ),
+      (
+        'dark',
+        AppPalette.dark.background,
+        AppPalette.dark.pageWarm,
+        AppPalette.dark.background,
+      ),
     ]) {
       testWidgets('$mode: Home, MY, Login and Campus Meals backgrounds', (
         tester,
@@ -356,7 +367,7 @@ void main() {
             .read(shellTabProvider.notifier)
             .select(ShellTabs.profile);
         await tester.pumpAndSettle();
-        await expectBackground(tester, expected, 'MY');
+        await expectBackground(tester, myExpected, 'MY');
       });
 
       testWidgets('$mode: Login', (tester) async {
@@ -371,24 +382,24 @@ void main() {
     }
 
     testWidgets(
-      'light: Home page is the warm neutral, with no peach or orange tint',
+      'light: Home page is pure white, with no peach or orange tint',
       (tester) async {
         await pumpThemed(tester, await h('light'), home: const AppShell());
-        // Home cards sit inside a 20px gutter, so the page shows through at
-        // the far left and right edges all the way down.
-        for (final x in [3.0, 8.0, 386.0]) {
+        // Home content sits inside a 20px gutter, so the page shows through
+        // at the far left edge (the picks list scrolls to the right edge). Card shadows are faint, so allow
+        // a hair of grey but no warm tint.
+        for (final x in [2.0, 8.0]) {
           for (final y in [90.0, 250.0, 420.0, 560.0, 700.0]) {
             final c = await pixelAt(tester, Offset(x, y));
-            expect(
-              c.toARGB32(),
-              AppPalette.light.pageWarm.toARGB32(),
-              reason: 'pixel ($x,$y)',
-            );
+            expect(c.r, greaterThan(0.97), reason: 'pixel ($x,$y)');
+            expect(c.g, greaterThan(0.97), reason: 'pixel ($x,$y)');
+            expect(c.b, greaterThan(0.97), reason: 'pixel ($x,$y)');
+            expect((c.r - c.b).abs(), lessThan(0.02), reason: 'pixel ($x,$y)');
           }
         }
-        // Warm, not orange: red barely above blue.
-        final page = AppPalette.light.pageWarm;
-        expect(page.r - page.b, lessThan(0.05));
+        // The very top-left corner is untouched page: exactly white.
+        final corner = await pixelAt(tester, const Offset(2, 2));
+        expect(corner.toARGB32(), 0xFFFFFFFF);
       },
     );
 
@@ -520,14 +531,14 @@ void main() {
           tester,
           h,
           home: const AppShell(),
-          size: const Size(390, 1400),
+          size: const Size(390, 1900),
         );
         h.container.read(shellTabProvider.notifier).select(ShellTabs.profile);
         await tester.pumpAndSettle();
         final yAccount = tester.getTopLeft(find.text('내 활동').first).dy;
         final yApp = tester.getTopLeft(find.text('앱 설정')).dy;
         final yLogout = tester.getTopLeft(find.text('로그아웃')).dy;
-        expect(find.text('안녕하세요, 민수님'), findsOneWidget);
+        expect(find.text('민수'), findsOneWidget);
         expect(find.text('나의 취향 설정'), findsOneWidget);
         expect(find.text('계정 설정'), findsOneWidget);
         expect(yAccount, lessThan(yApp));

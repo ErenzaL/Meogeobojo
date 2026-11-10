@@ -5,7 +5,8 @@ import '../../community/screens/community_screen.dart';
 import '../../home/screens/home_screen.dart';
 import '../../map/screens/map_screen.dart';
 import '../../profile/screens/profile_screen.dart';
-import '../../records/screens/records_screen.dart';
+import '../../missions/screens/mission_screen.dart';
+import '../../missions/widgets/mission_celebration_host.dart';
 import '../../../core/widgets/responsive.dart';
 import '../providers/shell_tab_provider.dart';
 import '../widgets/web_header.dart';
@@ -26,20 +27,23 @@ class _AppShellState extends ConsumerState<AppShell> {
     _home,
     _map,
     _community,
-    _records,
+    _missions,
     _profile,
   ];
 
   static Widget _home(BuildContext _) => const HomeScreen();
   static Widget _community(BuildContext _) => const CommunityScreen();
   static Widget _map(BuildContext _) => const MapScreen();
-  static Widget _records(BuildContext _) => const RecordsScreen();
+  static Widget _missions(BuildContext _) => const MissionScreen();
   static Widget _profile(BuildContext _) => const ProfileScreen();
 
   final _visited = <int>{ShellTabs.home};
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      MissionCelebrationHost(child: _shell(context));
+
+  Widget _shell(BuildContext context) {
     final index = ref.watch(shellTabProvider);
     _visited.add(index);
 

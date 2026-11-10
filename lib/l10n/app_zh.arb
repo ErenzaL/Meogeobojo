@@ -364,6 +364,34 @@
   "homeInfo": "详情",
   "homeAltTitle": "不喜欢的话",
   "homePickForMe": "帮我选一个",
+  "homeRestart": "重新开始",
+  "homePromptTitle": "先选好条件再看推荐",
+  "homePromptMessage": "选好预算、距离等条件，或点“获取今日推荐”。",
+  "homeGameButton": "玩游戏来选",
+  "homeGameTitle": "吃什么？玩游戏决定！",
+  "homeGameSub": "从符合当前条件的餐厅里选。",
+  "homeGameRoulette": "转盘",
+  "homeGameRouletteHint": "转到哪家去哪家",
+  "homeGameLadder": "爬梯子",
+  "homeGameLadderHint": "选一条线往下走",
+  "homeGameCards": "翻牌",
+  "homeGameCardsHint": "翻开哪张去哪家",
+  "homeGameSpin": "开转！",
+  "homeGameSpinning": "转动中…",
+  "homeGameLadderPrompt": "选一条线出发",
+  "homeGameCardsPrompt": "选一张牌",
+  "homeGameResult": "今天就去这家！",
+  "homeGameAgain": "再来一次",
+  "homeGameConfirm": "就这家",
+  "homeGameBack": "换个游戏",
+  "homeGameChosen": "已选定{name}，请在最上面的推荐卡片查看。",
+  "@homeGameChosen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeCmpCloser": "近{minutes}分钟",
   "homeCmpCheaper": "便宜{amount}韩元",
   "homeCmpRating": "评分更高",
@@ -437,6 +465,7 @@
   "condSortRating": "评分",
   "condSoftNote": "目前按距离推荐。人数和需求会在有数据后影响顺序。",
   "condResetAll": "全部清除",
+  "condResetThis": "清除此项",
   "condShowCount": "查看{count}家",
   "condNoMatch": "没有符合条件的店",
   "condRestart": "回到初始画面重新设置",
@@ -490,5 +519,101 @@
   "mapOpenNowChip": "现在可点单",
   "mapMatchCount": "符合条件的{count}家",
   "mapSortHint": "以{origin}为准 · 步行时间按直线距离估算",
-  "mapRecenter": "回到出发位置"
+  "mapRecenter": "回到出发位置",
+  "profileAvatarEdit": "装扮",
+  "profileAvatarSheetTitle": "选择头像",
+  "profileAvatarSheetSubtitle": "从吉祥物中选择",
+  "profileAvatarConfirm": "选择完成",
+  "profileAvatarSaveFailed": "无法保存头像，请重试。",
+  "profileAvatarOption": "吉祥物 {n}",
+  "@profileAvatarOption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "profileAvatarChange": "更换头像",
+  "homeSearchFieldHint": "搜索餐厅、菜单、类别",
+  "homeRecommendButton": "获取今日推荐",
+  "homeTodayPicksTitle": "今日推荐",
+  "homeFilterBudget": "预算",
+  "homeFilterDistance": "距离",
+  "homeFilterParty": "人数",
+  "homeFilterPurpose": "用途",
+  "homeFilterSort": "排序",
+  "navMissions": "任务",
+  "missionPageTitle": "任务",
+  "missionTabMonthlyFallback": "本月任务",
+  "missionTabDaily": "每日",
+  "missionTabWeekly": "每周",
+  "missionTabChallenge": "挑战",
+  "missionCompletedLabel": "已完成任务",
+  "missionProgressLabel": "本月进度",
+  "missionPointsMonth": "本月获得积分",
+  "missionBadgePreview": "本月徽章",
+  "missionBadgeLockedHint": "完成 {count} 个任务即可获得",
+  "@missionBadgeLockedHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "missionBadgeUnlocked": "已获得",
+  "missionDone": "完成",
+  "missionBadgeReward": "限定徽章",
+  "missionExpired": "已结束",
+  "missionUpcoming": "即将开始",
+  "missionDetailRequirement": "完成条件",
+  "missionDetailProgress": "进度",
+  "missionDetailReward": "奖励",
+  "missionDetailPeriod": "期间",
+  "missionResetsDaily": "每天 0 点（韩国时间）重新开始",
+  "missionResetsWeekly": "每周一 0 点（韩国时间）重新开始",
+  "missionUntil": "截至 {date}",
+  "@missionUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "missionAlwaysOn": "长期进行",
+  "missionActionRecommend": "获取推荐",
+  "missionActionMap": "去找餐厅",
+  "missionActionFavorites": "找实惠的餐厅",
+  "missionActionCategories": "浏览分类",
+  "missionActionReview": "写评价",
+  "missionActionPhoto": "上传菜单照片",
+  "missionActionCorrect": "提交信息修改",
+  "missionActionSoon": "该功能尚未开放，开放后会立即计入任务。",
+  "missionCelebrationTitle": "任务完成！",
+  "missionCelebrationPoints": "获得 +{points}P",
+  "@missionCelebrationPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "missionCelebrationBadge": "获得徽章",
+  "missionGuestTitle": "登录后参与任务",
+  "missionGuestBody": "收藏和浏览餐厅时进度会不断累积。积分和徽章保存在您的账号中。",
+  "missionEmptyTitle": "暂无进行中的任务",
+  "missionEmptyBody": "新任务开放后会显示在这里。",
+  "missionLoadFailed": "无法加载任务",
+  "missionMyBadges": "我的徽章",
+  "missionBadgesNone": "还没有徽章。完成任务来获得吧。",
+  "missionBadgesAll": "查看全部",
+  "missionBadgeCollectionTitle": "徽章收藏",
+  "missionTotalPoints": "累计积分",
+  "missionBadgeCount": "{count}",
+  "@missionBadgeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

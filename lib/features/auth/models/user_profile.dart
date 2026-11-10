@@ -46,15 +46,18 @@ class UserProfile {
     preferredLanguage: json['preferred_language'] as String?,
   );
 
-  UserProfile copyWith({String? nickname, String? preferredLanguage}) =>
-      UserProfile(
-        id: id,
-        nickname: nickname ?? this.nickname,
-        nicknameIsCustom: nicknameIsCustom,
-        avatarPath: avatarPath,
-        selectedUniversityId: selectedUniversityId,
-        onboardingCompleted: onboardingCompleted,
-        onboardingCompletedAt: onboardingCompletedAt,
-        preferredLanguage: preferredLanguage ?? this.preferredLanguage,
-      );
+  UserProfile copyWith({
+    String? nickname,
+    String? preferredLanguage,
+    String? avatarPath,
+  }) => UserProfile(
+    id: id,
+    nickname: nickname ?? this.nickname,
+    nicknameIsCustom: nicknameIsCustom,
+    avatarPath: avatarPath ?? this.avatarPath,
+    selectedUniversityId: selectedUniversityId,
+    onboardingCompleted: onboardingCompleted,
+    onboardingCompletedAt: onboardingCompletedAt,
+    preferredLanguage: preferredLanguage ?? this.preferredLanguage,
+  );
 }

@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/theme/theme_controller.dart';
+import 'package:meogeobojo/core/widgets/pill_chip.dart';
 import 'package:meogeobojo/features/campus_meals/models/campus_meal_models.dart';
 import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
 import 'package:meogeobojo/features/campus_meals/screens/campus_meal_screen.dart';
@@ -18,6 +20,14 @@ import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 import 'package:meogeobojo/features/restaurants/repositories/restaurant_repository.dart';
 import 'package:meogeobojo/features/search/screens/search_screen.dart';
 import 'package:meogeobojo/features/home/screens/outside_compare_screen.dart';
+import 'package:meogeobojo/features/home/widgets/alternatives_section.dart';
+import 'package:meogeobojo/features/home/widgets/hero_card.dart';
+import 'package:meogeobojo/features/home/widgets/home_category_bar.dart';
+import 'package:meogeobojo/features/home/games/ladder_game.dart';
+import 'package:meogeobojo/features/home/games/game_sheet.dart';
+import 'package:meogeobojo/features/home/providers/home_providers.dart';
+import 'package:meogeobojo/features/home/widgets/home_filter_bar.dart';
+import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 
 import '../../support/fakes.dart';
 import '../../support/harness.dart';
@@ -54,8 +64,10 @@ Future<Harness> openHome(
   List<dynamic> overrides = const [],
   Map<String, Object> storage = const {'app_language': 'ko'},
   Size size = const Size(390, 844),
+  bool recsRequested = true,
 }) async {
   final h = await buildHarness(
+    recsRequested: recsRequested,
     storage: storage,
     restaurants: repo ?? FakeRestaurantRepository(items: _places),
     meals: meals,
@@ -100,38 +112,106 @@ Future<void> scrollDown(WidgetTester tester, [double dy = -700]) async {
   await tester.pumpAndSettle();
 }
 
+/// Finds [f] inside the top-pick card (the "오늘의 추천" carousel repeats the
+/// same places, so plain text finders would match twice).
+Finder inHero(Finder f) =>
+    find.descendant(of: find.byType(HeroCard), matching: f);
+
+Finder inAlternatives(Finder f) =>
+    find.descendant(of: find.byType(AlternativesSection), matching: f);
+
 void main() {
   group('header, title and chips', () {
-    testWidgets('shows wordmark, title, subtitle with meal/time/origin', (
+    testWidgets('header: university, search, categories, filters, button', (
       tester,
     ) async {
       await openHome(tester);
-      expect(find.text('먹어보조'), findsOneWidget);
-      expect(find.text('오늘 뭐 먹지?'), findsOneWidget);
-      // Fixed clock in the harness: 18:54 Seoul.
-      expect(find.text('저녁 · 18:54 · 정문 출발 기준'), findsOneWidget);
+      // The wordmark and the question title are gone; the university leads.
+      expect(find.text('먹어보조'), findsNothing);
+      expect(find.text('오늘 뭐 먹지?'), findsNothing);
+      expect(find.text('순천향대학교'), findsOneWidget);
+      expect(find.text('식당, 메뉴, 카테고리 검색'), findsOneWidget);
+      // category bar: 전체 and the food categories (학식 has its own card)
+      final bar = find.byType(HomeCategoryBar);
+      for (final t in ['전체', '한식', '일식', '중식', '양식']) {
+        expect(
+          find.descendant(of: bar, matching: find.text(t)),
+          findsOneWidget,
+          reason: t,
+        );
+      }
+      // filter bar: origin, 조건 and one chip per filter group
       expect(find.text('정문 기준'), findsOneWidget);
       expect(find.text('조건'), findsOneWidget);
-      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+      for (final t in ['예산', '거리']) {
+        expect(find.text(t), findsOneWidget, reason: t);
+      }
+      // the rest scroll in from the right
+      await tester.drag(find.byType(HomeFilterBar), const Offset(-700, 0));
+      await tester.pumpAndSettle();
+      for (final t in ['인원', '목적', '운영·편의', '정렬']) {
+        expect(find.text(t), findsOneWidget, reason: t);
+      }
+      expect(find.text('오늘의 추천 받기'), findsOneWidget);
     });
 
-    testWidgets('the clock moves the subtitle every minute', (tester) async {
-      final ticks = StreamController<DateTime>();
-      // Not awaited: close() only completes once the provider has unsubscribed.
-      addTearDown(() {
-        unawaited(ticks.close());
-      });
-      await openHome(tester, clock: ticks.stream);
-      ticks.add(DateTime.utc(2026, 11, 9, 9, 54));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('18:54'), findsOneWidget);
-      ticks.add(DateTime.utc(2026, 11, 9, 9, 55));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('18:55'), findsOneWidget);
-      expect(find.textContaining('18:54'), findsNothing);
+    testWidgets('categories can be chosen together; 전체 clears them', (
+      tester,
+    ) async {
+      final h = await openHome(tester);
+      final bar = find.byType(HomeCategoryBar);
+      Future<void> tap(String t) async {
+        await tester.tap(find.descendant(of: bar, matching: find.text(t)));
+        await tester.pumpAndSettle();
+      }
+
+      Set<FoodCategory> chosen() => h.container.read(homeCategoryProvider);
+      expect(chosen(), isEmpty);
+      await tap('한식');
+      await tap('일식');
+      expect(chosen(), {FoodCategory.korean, FoodCategory.japanese});
+      await tap('한식'); // tapping again un-chooses it
+      expect(chosen(), {FoodCategory.japanese});
+      await tap('중식');
+      expect(chosen(), {FoodCategory.japanese, FoodCategory.chinese});
+      await tap('전체');
+      expect(chosen(), isEmpty);
+      // un-choosing the last one falls back to 전체
+      await tap('일식');
+      await tap('일식');
+      expect(chosen(), isEmpty);
     });
 
-    testWidgets('search icon opens search; moon toggles dark mode', (
+    testWidgets('a filter chip opens only its own setting', (tester) async {
+      await openHome(tester);
+      await tester.tap(find.text('예산'));
+      await tester.pumpAndSettle();
+      // the budget choices are there, the other settings are not
+      expect(find.text('한 끼 예산'), findsOneWidget);
+      expect(find.widgetWithText(PillChip, '10,000원 이하'), findsOneWidget);
+      expect(find.text('어디까지 갈까요?'), findsNothing);
+      // compact: the sheet hugs its content instead of filling the screen
+      expect(tester.getTopLeft(find.text('한 끼 예산')).dy, greaterThan(844 * 0.4));
+      expect(find.text('정렬'), findsNothing);
+      expect(find.text('처음 화면으로 돌아가 다시 설정'), findsNothing);
+      await tester.tap(find.widgetWithText(PillChip, '10,000원 이하'));
+      await tester.pumpAndSettle();
+      // reset clears just this setting
+      await tester.tap(find.text('이 설정만 풀기'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byWidgetPredicate((w) => w is Text && w.data == '상관없어요'),
+        findsOneWidget,
+      );
+      await tester.tapAt(const Offset(195, 20)); // scrim
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('거리'));
+      await tester.pumpAndSettle();
+      expect(find.text('어디까지 갈까요?'), findsOneWidget);
+      expect(find.text('한 끼 예산'), findsNothing);
+    });
+
+    testWidgets('moon toggles dark mode; notifications say soon', (
       tester,
     ) async {
       final h = await openHome(tester);
@@ -139,10 +219,32 @@ void main() {
       await tester.pumpAndSettle();
       expect(h.container.read(themeModeProvider), ThemeMode.dark);
       expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+      await tester.pump();
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
 
-      await tester.tap(find.byIcon(Icons.search_rounded));
+    testWidgets('typing in the search field and submitting opens search', (
+      tester,
+    ) async {
+      await openHome(tester);
+      await tester.enterText(find.byType(TextField), '마라탕');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
       await tester.pumpAndSettle();
       expect(find.byType(SearchScreen), findsOneWidget);
+      expect(
+        tester.widget<SearchScreen>(find.byType(SearchScreen)).initialQuery,
+        '마라탕',
+      );
+    });
+
+    testWidgets('the university button opens the university sheet', (
+      tester,
+    ) async {
+      await openHome(tester);
+      await tester.tap(find.text('순천향대학교'));
+      await tester.pumpAndSettle();
+      expect(find.text('학교 선택'), findsOneWidget);
     });
 
     testWidgets('profile icon goes to MY', (tester) async {
@@ -158,7 +260,7 @@ void main() {
       tester,
     ) async {
       await openHome(tester);
-      expect(find.text('가까운집'), findsOneWidget);
+      expect(inHero(find.text('가까운집')), findsOneWidget);
       expect(find.text('3곳 중 1순위'), findsOneWidget);
       expect(find.text('가장 가까워요'), findsOneWidget);
       // 18:54 + 1 minute walk
@@ -173,7 +275,7 @@ void main() {
     ) async {
       await openHome(tester);
       expect(find.text('—'), findsOneWidget);
-      expect(find.text('정보 없음'), findsOneWidget);
+      expect(inHero(find.text('정보 없음')), findsOneWidget);
       expect(find.textContaining('★'), findsNothing);
       expect(find.textContaining('리뷰'), findsNothing);
       expect(find.textContaining('~'), findsNothing);
@@ -229,8 +331,8 @@ void main() {
       final h = await openHome(tester);
       await reveal(tester, find.text('조건에 맞는 3곳 지도에서 보기'));
       expect(find.text('마음에 안 들면'), findsOneWidget);
-      expect(find.text('중간집'), findsOneWidget);
-      expect(find.text('먼집'), findsOneWidget);
+      expect(inAlternatives(find.text('중간집')), findsOneWidget);
+      expect(inAlternatives(find.text('먼집')), findsOneWidget);
       await tester.tap(find.text('조건에 맞는 3곳 지도에서 보기'));
       await tester.pumpAndSettle();
       expect(h.container.read(shellTabProvider), ShellTabs.map);
@@ -283,7 +385,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('어디서 출발하나요?'), findsNothing);
       expect(find.text('후문 기준'), findsOneWidget);
-      expect(find.textContaining('후문 출발 기준'), findsOneWidget);
       expect(h.container.read(originSelectionProvider), 'gate_back');
       expect(
         h.sp.getString('origin_selected_id'),
@@ -326,7 +427,8 @@ void main() {
     Future<void> openSheet(WidgetTester tester) async {
       await tester.tap(find.text('조건'));
       await tester.pumpAndSettle();
-      expect(find.text('홈·지도·검색에 똑같이 적용돼요.'), findsOneWidget);
+      expect(find.text('꼭 지킬 조건'), findsOneWidget); // the sheet is open
+      expect(find.text('홈·지도·검색에 똑같이 적용돼요.'), findsNothing);
     }
 
     testWidgets('shows both groups and the live count', (tester) async {
@@ -419,19 +521,20 @@ void main() {
           .read(originSelectionProvider.notifier)
           .select('gate_back');
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await tester.tap(find.text('조건'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('처음 화면으로 돌아가 다시 설정'));
       await tester.pumpAndSettle();
       expect(find.text('처음부터 다시 설정할까요?'), findsOneWidget);
       await tester.tap(find.text('취소'));
       await tester.pumpAndSettle();
       expect(h.container.read(originSelectionProvider), 'gate_back');
 
-      await tester.tap(find.byIcon(Icons.refresh_rounded));
+      await tester.tap(find.text('처음 화면으로 돌아가 다시 설정'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('다시 설정'));
       await tester.pumpAndSettle();
       expect(h.container.read(originSelectionProvider), isNull);
-      expect(find.text('정문 기준'), findsOneWidget);
     });
   });
 
@@ -461,6 +564,8 @@ void main() {
 
     testWidgets('detail opens from 정보 without invented facts', (tester) async {
       await openHome(tester);
+      await tester.ensureVisible(find.text('정보'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('정보'));
       await tester.pumpAndSettle();
       expect(find.text('카카오맵에서 보기'), findsOneWidget);
@@ -669,6 +774,213 @@ void main() {
         await tester.pump();
       }
       expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('no preview before asking', () {
+    testWidgets('an untouched Home shows a prompt, not a pick', (tester) async {
+      await openHome(tester, recsRequested: false);
+      expect(find.byType(HeroCard), findsNothing);
+      expect(find.byType(AlternativesSection), findsNothing);
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
+      expect(find.text('오늘의 학식'), findsOneWidget); // 학식 stays
+    });
+
+    testWidgets('오늘의 추천 받기 reveals the pick', (tester) async {
+      await openHome(tester, recsRequested: false);
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HeroCard), findsOneWidget);
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsNothing);
+    });
+
+    testWidgets('choosing a category or a condition reveals it too', (
+      tester,
+    ) async {
+      final h = await openHome(tester, recsRequested: false);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(HomeCategoryBar),
+          matching: find.text('한식'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsNothing);
+      h.container.read(homeCategoryProvider.notifier).clear();
+      await tester.pumpAndSettle();
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
+      h.container
+          .read(conditionsProvider.notifier)
+          .update((c) => c.copyWith(budget: BudgetOption.max10000));
+      await tester.pumpAndSettle();
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsNothing);
+    });
+
+    testWidgets('the restart button clears everything back to the prompt', (
+      tester,
+    ) async {
+      final h = await openHome(tester, recsRequested: false);
+      expect(find.byTooltip('처음부터 다시'), findsNothing); // nothing to undo
+      await tester.tap(
+        find.descendant(
+          of: find.byType(HomeCategoryBar),
+          matching: find.text('한식'),
+        ),
+      );
+      h.container
+          .read(conditionsProvider.notifier)
+          .update((c) => c.copyWith(budget: BudgetOption.max10000));
+      await tester.pumpAndSettle();
+      expect(find.byType(HeroCard), findsOneWidget);
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, 600));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('처음부터 다시'));
+      await tester.pumpAndSettle();
+      expect(h.container.read(homeCategoryProvider), isEmpty);
+      expect(h.container.read(conditionsProvider).activeCount, 0);
+      expect(find.byType(HeroCard), findsNothing);
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
+      expect(find.byTooltip('처음부터 다시'), findsNothing);
+    });
+  });
+
+  group('게임으로 정하기', () {
+    Future<Harness> openGames(WidgetTester tester) async {
+      final h = await openHome(tester);
+      final button = find.text('게임으로 정하기');
+      await tester.scrollUntilVisible(
+        button,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      return h;
+    }
+
+    Future<void> confirmWinner(WidgetTester tester, Harness h) async {
+      expect(find.text('오늘은 여기!'), findsOneWidget);
+      expect(h.container.read(heroPickProvider), isNull);
+      await tester.tap(find.text('여기로 정하기'));
+      await tester.pumpAndSettle();
+      // the winner is now the top pick and the sheet is gone
+      expect(h.container.read(heroPickProvider), isNotNull);
+      expect(find.text('오늘 뭐 먹지? 게임으로!'), findsNothing);
+    }
+
+    testWidgets('the sheet offers roulette, ladder and card flip', (
+      tester,
+    ) async {
+      await openGames(tester);
+      for (final t in ['룰렛', '사다리타기', '카드 뽑기']) {
+        expect(find.text(t), findsOneWidget, reason: t);
+      }
+    });
+
+    testWidgets('roulette: spin, then the winner can be chosen', (
+      tester,
+    ) async {
+      final h = await openGames(tester);
+      await tester.tap(find.text('룰렛'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('돌리기!'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('돌아가는 중…'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5)); // the spin
+      await tester.pump(const Duration(seconds: 1)); // the short pause
+      await tester.pumpAndSettle();
+      await confirmWinner(tester, h);
+    });
+
+    testWidgets('ladder: pick a line, the walker ends on a place', (
+      tester,
+    ) async {
+      final h = await openGames(tester);
+      await tester.tap(find.text('사다리타기'));
+      await tester.pumpAndSettle();
+      expect(find.text('출발할 줄을 골라요'), findsOneWidget);
+      await tester.tap(find.text('2'));
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      await confirmWinner(tester, h);
+    });
+
+    testWidgets('cards: flip one, the rest turn over, then choose', (
+      tester,
+    ) async {
+      final h = await openGames(tester);
+      await tester.tap(find.text('카드 뽑기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('?').first);
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      await confirmWinner(tester, h);
+    });
+
+    testWidgets('play again replays; back returns to the games', (
+      tester,
+    ) async {
+      await openGames(tester);
+      await tester.tap(find.text('카드 뽑기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('다른 게임'));
+      await tester.pumpAndSettle();
+      expect(find.text('룰렛'), findsOneWidget);
+      await tester.tap(find.text('카드 뽑기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('?').first);
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      await tester.tap(find.text('다시 하기'));
+      await tester.pumpAndSettle();
+      expect(find.text('카드를 한 장 골라요'), findsOneWidget);
+    });
+
+    testWidgets('every game fits a small screen with large text', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await openHome(tester, size: const Size(320, 568));
+      final button = find.text('게임으로 정하기');
+      await tester.scrollUntilVisible(
+        button,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      for (final game in ['룰렛', '사다리타기', '카드 뽑기']) {
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        await tester.tap(button);
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text(game));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(game));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: game);
+        await tester.tapAt(const Offset(160, 20)); // scrim
+        await tester.pumpAndSettle();
+      }
+    });
+
+    test('a ladder never has touching rungs and is a one-to-one map', () {
+      for (var seed = 0; seed < 50; seed++) {
+        final rungs = buildLadder(5, 8, Random(seed));
+        for (final row in rungs) {
+          for (var g = 1; g < row.length; g++) {
+            expect(row[g] && row[g - 1], isFalse);
+          }
+        }
+        final ends = {for (var s = 0; s < 5; s++) ladderEnd(rungs, s)};
+        expect(ends.length, 5, reason: 'seed $seed');
+      }
+    });
+
+    test('games sample a few distinct places', () {
+      expect(gameSize(PickGame.roulette, 20), 6);
+      expect(gameSize(PickGame.ladder, 20), 4);
+      expect(gameSize(PickGame.cards, 3), 3);
     });
   });
 }

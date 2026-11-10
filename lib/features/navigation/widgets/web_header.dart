@@ -28,7 +28,7 @@ class WebHeader extends ConsumerWidget {
       (ShellTabs.home, l10n.navHome),
       (ShellTabs.map, l10n.navMap),
       (ShellTabs.community, l10n.navCommunity),
-      (ShellTabs.records, l10n.navRecords),
+      (ShellTabs.missions, l10n.navMissions),
       (ShellTabs.profile, l10n.navProfile),
     ];
 

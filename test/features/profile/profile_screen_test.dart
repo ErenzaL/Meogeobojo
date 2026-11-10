@@ -20,7 +20,7 @@ Future<void> openMy(
   Harness h, {
   // Tall by default so the whole (lazily built) page is in the tree; the
   // realistic phone height is used where scrolling is the point.
-  Size size = const Size(390, 1400),
+  Size size = const Size(390, 1900),
 }) async {
   await pumpApp(tester, h, home: const AppShell(), size: size);
   h.container.read(shellTabProvider.notifier).select(ShellTabs.profile);
@@ -72,7 +72,7 @@ void main() {
       await openMy(tester, h);
       await tester.tap(find.text('로그인 없이 계속 둘러보기 →'));
       await tester.pumpAndSettle();
-      expect(find.text('오늘 뭐 먹지?'), findsOneWidget);
+      expect(find.text('식당, 메뉴, 카테고리 검색'), findsOneWidget);
     });
   });
 
@@ -102,9 +102,9 @@ void main() {
       (tester) async {
         final h = await signedIn(favorites: {'a', 'b'});
         await openMy(tester, h);
-        expect(find.text('안녕하세요, 민수님'), findsOneWidget);
-        expect(find.text('오늘도 맛있는 한 끼 찾아볼까요?'), findsOneWidget);
-        expect(find.text('프로필 수정 →'), findsOneWidget);
+        expect(find.text('민수'), findsOneWidget);
+        expect(find.text('꾸미기'), findsNothing);
+        expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
         expect(find.text('tester@example.com'), findsOneWidget);
         // the saved-places row keeps its real count; the stat card repeats it
         expect(find.text('저장한 맛집'), findsNWidgets(2));
@@ -158,15 +158,25 @@ void main() {
       expect(find.text('0'), findsOneWidget);
     });
 
-    testWidgets('프로필 수정 → opens 계정 설정 where the nickname is edited', (
-      tester,
-    ) async {
+    testWidgets('the pencil edits the nickname right on MY', (tester) async {
       final h = await signedIn();
       await openMy(tester, h);
-      await tester.tap(find.text('프로필 수정 →'));
+      await tester.tap(find.byIcon(Icons.edit_outlined));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '새닉네임');
+      await tester.tap(find.text('저장'));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(h.profiles.nicknameWrites, ['새닉네임']);
+      expect(find.text('새닉네임'), findsOneWidget);
+    });
+
+    testWidgets('설정 gear still opens 계정 설정', (tester) async {
+      final h = await signedIn();
+      await openMy(tester, h);
+      await tester.tap(find.byIcon(Icons.settings_outlined));
       await tester.pumpAndSettle();
       expect(find.byType(AccountSettingsScreen), findsOneWidget);
-      expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
     });
 
     testWidgets(
@@ -222,7 +232,7 @@ void main() {
       );
       await openMy(tester, h);
       expect(find.textContaining('@'), findsNothing);
-      expect(find.text('안녕하세요, 민수님'), findsOneWidget);
+      expect(find.text('민수'), findsOneWidget);
     });
 
     testWidgets('no invented nickname: falls back to a generic label', (
@@ -232,7 +242,7 @@ void main() {
         profiles: FakeProfileRepository(onboardingCompleted: true),
       );
       await openMy(tester, h);
-      expect(find.text('안녕하세요, 먹어보조 사용자님'), findsOneWidget);
+      expect(find.text('먹어보조 사용자'), findsOneWidget);
     });
 
     testWidgets(
@@ -287,6 +297,9 @@ void main() {
         200,
         scrollable: find.byType(Scrollable).first,
       );
+      // clear the floating nav bar that overlaps the bottom edge
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('로그아웃'));
       await tester.pumpAndSettle();
       expect(h.auth.calls, contains('signOut'));

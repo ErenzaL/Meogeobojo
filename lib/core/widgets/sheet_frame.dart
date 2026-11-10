@@ -31,6 +31,31 @@ Future<T?> showAppSheet<T>(
   );
 }
 
+/// Opens a bottom sheet that is only as tall as its content (capped at 80% of
+/// the screen, then [builder]'s own scrollable takes over). For small pickers.
+Future<T?> showCompactSheet<T>(
+  BuildContext context, {
+  required WidgetBuilder builder,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: false,
+    backgroundColor: context.palette.card,
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+    ),
+    builder: (ctx) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _Grabber(),
+        Flexible(child: builder(ctx)),
+      ],
+    ),
+  );
+}
+
 class _Grabber extends StatelessWidget {
   const _Grabber();
 

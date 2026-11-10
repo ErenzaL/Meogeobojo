@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/mascot_message.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../home/widgets/home_search_bar.dart';
+import '../../missions/providers/mission_providers.dart';
 import '../../university/models/university_display.dart';
 import '../../university/providers/university_providers.dart';
 import '../../university/widgets/university_sheet.dart';
@@ -47,6 +48,10 @@ class _RestaurantCategoryScreenState
 
   void _select(FoodCategory c) {
     if (c == _category) return;
+    // Exploring a category counts toward 캠퍼스 맛집 탐험가.
+    if (c != FoodCategory.all) {
+      logMissionActivity(ref, 'category_explore', key: c.name);
+    }
     setState(() {
       _category = c;
       _cuisine = GlobalCuisine.all; // a fresh visit to 세계 음식 starts at 전체

@@ -8,7 +8,26 @@ import '../../../core/widgets/skeleton.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
+import '../providers/home_providers.dart';
 import 'home_card_parts.dart';
+
+/// Shown instead of a preview until conditions are set or a pick is asked for.
+class RecsPrompt extends StatelessWidget {
+  const RecsPrompt({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return HomeCard(
+      child: MascotMessage(
+        asset: AppAssets.mascotSearching,
+        imageHeight: 90,
+        title: l10n.homePromptTitle,
+        message: l10n.homePromptMessage,
+      ),
+    );
+  }
+}
 
 /// Placeholder shapes of the hero card and the alternatives while loading.
 class RecsSkeleton extends StatelessWidget {
@@ -85,7 +104,10 @@ class RecsEmpty extends ConsumerWidget {
         title: l10n.homeEmptyTitle,
         message: l10n.homeEmptyMessage,
         actionLabel: l10n.condResetAll,
-        onAction: ref.read(conditionsProvider.notifier).clear,
+        onAction: () {
+          ref.read(conditionsProvider.notifier).clear();
+          ref.read(homeCategoryProvider.notifier).clear();
+        },
       ),
     );
   }

@@ -2284,6 +2284,132 @@ abstract class AppLocalizations {
   /// **'하나 골라줘'**
   String get homePickForMe;
 
+  /// No description provided for @homeRestart.
+  ///
+  /// In ko, this message translates to:
+  /// **'처음부터 다시'**
+  String get homeRestart;
+
+  /// No description provided for @homePromptTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건을 고르고 추천받아 보세요'**
+  String get homePromptTitle;
+
+  /// No description provided for @homePromptMessage.
+  ///
+  /// In ko, this message translates to:
+  /// **'예산·거리 같은 조건을 정하거나 ‘오늘의 추천 받기’를 눌러 보세요.'**
+  String get homePromptMessage;
+
+  /// No description provided for @homeGameButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'게임으로 정하기'**
+  String get homeGameButton;
+
+  /// No description provided for @homeGameTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 뭐 먹지? 게임으로!'**
+  String get homeGameTitle;
+
+  /// No description provided for @homeGameSub.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 조건에 맞는 곳 중에서 골라요.'**
+  String get homeGameSub;
+
+  /// No description provided for @homeGameRoulette.
+  ///
+  /// In ko, this message translates to:
+  /// **'룰렛'**
+  String get homeGameRoulette;
+
+  /// No description provided for @homeGameRouletteHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'돌려서 멈춘 곳으로'**
+  String get homeGameRouletteHint;
+
+  /// No description provided for @homeGameLadder.
+  ///
+  /// In ko, this message translates to:
+  /// **'사다리타기'**
+  String get homeGameLadder;
+
+  /// No description provided for @homeGameLadderHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'한 줄을 골라 내려가요'**
+  String get homeGameLadderHint;
+
+  /// No description provided for @homeGameCards.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드 뽑기'**
+  String get homeGameCards;
+
+  /// No description provided for @homeGameCardsHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'뒤집어서 나온 곳으로'**
+  String get homeGameCardsHint;
+
+  /// No description provided for @homeGameSpin.
+  ///
+  /// In ko, this message translates to:
+  /// **'돌리기!'**
+  String get homeGameSpin;
+
+  /// No description provided for @homeGameSpinning.
+  ///
+  /// In ko, this message translates to:
+  /// **'돌아가는 중…'**
+  String get homeGameSpinning;
+
+  /// No description provided for @homeGameLadderPrompt.
+  ///
+  /// In ko, this message translates to:
+  /// **'출발할 줄을 골라요'**
+  String get homeGameLadderPrompt;
+
+  /// No description provided for @homeGameCardsPrompt.
+  ///
+  /// In ko, this message translates to:
+  /// **'카드를 한 장 골라요'**
+  String get homeGameCardsPrompt;
+
+  /// No description provided for @homeGameResult.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘은 여기!'**
+  String get homeGameResult;
+
+  /// No description provided for @homeGameAgain.
+  ///
+  /// In ko, this message translates to:
+  /// **'다시 하기'**
+  String get homeGameAgain;
+
+  /// No description provided for @homeGameConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'여기로 정하기'**
+  String get homeGameConfirm;
+
+  /// No description provided for @homeGameBack.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 게임'**
+  String get homeGameBack;
+
+  /// No description provided for @homeGameChosen.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}(으)로 정했어요. 맨 위 추천 카드에서 확인하세요.'**
+  String homeGameChosen(String name);
+
   /// No description provided for @homeCmpCloser.
   ///
   /// In ko, this message translates to:
@@ -2722,6 +2848,12 @@ abstract class AppLocalizations {
   /// **'모두 풀기'**
   String get condResetAll;
 
+  /// No description provided for @condResetThis.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 설정만 풀기'**
+  String get condResetThis;
+
   /// No description provided for @condShowCount.
   ///
   /// In ko, this message translates to:
@@ -3045,6 +3177,372 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'기준 위치로 이동'**
   String get mapRecenter;
+
+  /// No description provided for @profileAvatarEdit.
+  ///
+  /// In ko, this message translates to:
+  /// **'꾸미기'**
+  String get profileAvatarEdit;
+
+  /// No description provided for @profileAvatarSheetTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필 이미지 선택'**
+  String get profileAvatarSheetTitle;
+
+  /// No description provided for @profileAvatarSheetSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'마스코트에서 선택'**
+  String get profileAvatarSheetSubtitle;
+
+  /// No description provided for @profileAvatarConfirm.
+  ///
+  /// In ko, this message translates to:
+  /// **'선택 완료'**
+  String get profileAvatarConfirm;
+
+  /// No description provided for @profileAvatarSaveFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필 이미지를 저장하지 못했어요. 다시 시도해주세요.'**
+  String get profileAvatarSaveFailed;
+
+  /// No description provided for @profileAvatarOption.
+  ///
+  /// In ko, this message translates to:
+  /// **'마스코트 {n}'**
+  String profileAvatarOption(int n);
+
+  /// No description provided for @profileAvatarChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'프로필 이미지 바꾸기'**
+  String get profileAvatarChange;
+
+  /// No description provided for @homeSearchFieldHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'식당, 메뉴, 카테고리 검색'**
+  String get homeSearchFieldHint;
+
+  /// No description provided for @homeRecommendButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘의 추천 받기'**
+  String get homeRecommendButton;
+
+  /// No description provided for @homeTodayPicksTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘의 추천'**
+  String get homeTodayPicksTitle;
+
+  /// No description provided for @homeFilterBudget.
+  ///
+  /// In ko, this message translates to:
+  /// **'예산'**
+  String get homeFilterBudget;
+
+  /// No description provided for @homeFilterDistance.
+  ///
+  /// In ko, this message translates to:
+  /// **'거리'**
+  String get homeFilterDistance;
+
+  /// No description provided for @homeFilterParty.
+  ///
+  /// In ko, this message translates to:
+  /// **'인원'**
+  String get homeFilterParty;
+
+  /// No description provided for @homeFilterPurpose.
+  ///
+  /// In ko, this message translates to:
+  /// **'목적'**
+  String get homeFilterPurpose;
+
+  /// No description provided for @homeFilterSort.
+  ///
+  /// In ko, this message translates to:
+  /// **'정렬'**
+  String get homeFilterSort;
+
+  /// No description provided for @navMissions.
+  ///
+  /// In ko, this message translates to:
+  /// **'미션'**
+  String get navMissions;
+
+  /// No description provided for @missionPageTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'미션'**
+  String get missionPageTitle;
+
+  /// No description provided for @missionTabMonthlyFallback.
+  ///
+  /// In ko, this message translates to:
+  /// **'이달의 미션'**
+  String get missionTabMonthlyFallback;
+
+  /// No description provided for @missionTabDaily.
+  ///
+  /// In ko, this message translates to:
+  /// **'데일리'**
+  String get missionTabDaily;
+
+  /// No description provided for @missionTabWeekly.
+  ///
+  /// In ko, this message translates to:
+  /// **'주간'**
+  String get missionTabWeekly;
+
+  /// No description provided for @missionTabChallenge.
+  ///
+  /// In ko, this message translates to:
+  /// **'도전과제'**
+  String get missionTabChallenge;
+
+  /// No description provided for @missionCompletedLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료한 미션'**
+  String get missionCompletedLabel;
+
+  /// No description provided for @missionProgressLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 달 진행률'**
+  String get missionProgressLabel;
+
+  /// No description provided for @missionPointsMonth.
+  ///
+  /// In ko, this message translates to:
+  /// **'이번 달 획득 포인트'**
+  String get missionPointsMonth;
+
+  /// No description provided for @missionBadgePreview.
+  ///
+  /// In ko, this message translates to:
+  /// **'이달의 뱃지'**
+  String get missionBadgePreview;
+
+  /// No description provided for @missionBadgeLockedHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'미션 {count}개를 완료하면 받을 수 있어요'**
+  String missionBadgeLockedHint(int count);
+
+  /// No description provided for @missionBadgeUnlocked.
+  ///
+  /// In ko, this message translates to:
+  /// **'획득 완료'**
+  String get missionBadgeUnlocked;
+
+  /// No description provided for @missionDone.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료'**
+  String get missionDone;
+
+  /// No description provided for @missionBadgeReward.
+  ///
+  /// In ko, this message translates to:
+  /// **'한정 뱃지'**
+  String get missionBadgeReward;
+
+  /// No description provided for @missionExpired.
+  ///
+  /// In ko, this message translates to:
+  /// **'기간 종료'**
+  String get missionExpired;
+
+  /// No description provided for @missionUpcoming.
+  ///
+  /// In ko, this message translates to:
+  /// **'예정'**
+  String get missionUpcoming;
+
+  /// No description provided for @missionDetailRequirement.
+  ///
+  /// In ko, this message translates to:
+  /// **'완료 조건'**
+  String get missionDetailRequirement;
+
+  /// No description provided for @missionDetailProgress.
+  ///
+  /// In ko, this message translates to:
+  /// **'진행 상황'**
+  String get missionDetailProgress;
+
+  /// No description provided for @missionDetailReward.
+  ///
+  /// In ko, this message translates to:
+  /// **'보상'**
+  String get missionDetailReward;
+
+  /// No description provided for @missionDetailPeriod.
+  ///
+  /// In ko, this message translates to:
+  /// **'기간'**
+  String get missionDetailPeriod;
+
+  /// No description provided for @missionResetsDaily.
+  ///
+  /// In ko, this message translates to:
+  /// **'매일 0시(한국 시간)에 새로 시작돼요'**
+  String get missionResetsDaily;
+
+  /// No description provided for @missionResetsWeekly.
+  ///
+  /// In ko, this message translates to:
+  /// **'매주 월요일 0시(한국 시간)에 새로 시작돼요'**
+  String get missionResetsWeekly;
+
+  /// No description provided for @missionUntil.
+  ///
+  /// In ko, this message translates to:
+  /// **'{date}까지'**
+  String missionUntil(String date);
+
+  /// No description provided for @missionAlwaysOn.
+  ///
+  /// In ko, this message translates to:
+  /// **'상시 진행'**
+  String get missionAlwaysOn;
+
+  /// No description provided for @missionActionRecommend.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 받기'**
+  String get missionActionRecommend;
+
+  /// No description provided for @missionActionMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'맛집 찾으러 가기'**
+  String get missionActionMap;
+
+  /// No description provided for @missionActionFavorites.
+  ///
+  /// In ko, this message translates to:
+  /// **'저렴한 맛집 찾기'**
+  String get missionActionFavorites;
+
+  /// No description provided for @missionActionCategories.
+  ///
+  /// In ko, this message translates to:
+  /// **'카테고리 둘러보기'**
+  String get missionActionCategories;
+
+  /// No description provided for @missionActionReview.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 작성하기'**
+  String get missionActionReview;
+
+  /// No description provided for @missionActionPhoto.
+  ///
+  /// In ko, this message translates to:
+  /// **'메뉴 사진 올리기'**
+  String get missionActionPhoto;
+
+  /// No description provided for @missionActionCorrect.
+  ///
+  /// In ko, this message translates to:
+  /// **'정보 수정 제안하기'**
+  String get missionActionCorrect;
+
+  /// No description provided for @missionActionSoon.
+  ///
+  /// In ko, this message translates to:
+  /// **'이 기능은 아직 준비 중이에요. 열리면 미션에 바로 반영돼요.'**
+  String get missionActionSoon;
+
+  /// No description provided for @missionCelebrationTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'미션 완료!'**
+  String get missionCelebrationTitle;
+
+  /// No description provided for @missionCelebrationPoints.
+  ///
+  /// In ko, this message translates to:
+  /// **'+{points}P 획득'**
+  String missionCelebrationPoints(int points);
+
+  /// No description provided for @missionCelebrationBadge.
+  ///
+  /// In ko, this message translates to:
+  /// **'뱃지를 얻었어요'**
+  String get missionCelebrationBadge;
+
+  /// No description provided for @missionGuestTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인하고 미션에 참여해요'**
+  String get missionGuestTitle;
+
+  /// No description provided for @missionGuestBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'맛집을 찜하고 둘러볼 때마다 진행 상황이 쌓여요. 포인트와 뱃지는 계정에 저장돼요.'**
+  String get missionGuestBody;
+
+  /// No description provided for @missionEmptyTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'진행 중인 미션이 없어요'**
+  String get missionEmptyTitle;
+
+  /// No description provided for @missionEmptyBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 미션이 열리면 여기에 나타나요.'**
+  String get missionEmptyBody;
+
+  /// No description provided for @missionLoadFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'미션을 불러오지 못했어요'**
+  String get missionLoadFailed;
+
+  /// No description provided for @missionMyBadges.
+  ///
+  /// In ko, this message translates to:
+  /// **'내 뱃지'**
+  String get missionMyBadges;
+
+  /// No description provided for @missionBadgesNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 얻은 뱃지가 없어요. 미션을 완료해 보세요.'**
+  String get missionBadgesNone;
+
+  /// No description provided for @missionBadgesAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체 보기'**
+  String get missionBadgesAll;
+
+  /// No description provided for @missionBadgeCollectionTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'뱃지 컬렉션'**
+  String get missionBadgeCollectionTitle;
+
+  /// No description provided for @missionTotalPoints.
+  ///
+  /// In ko, this message translates to:
+  /// **'누적 포인트'**
+  String get missionTotalPoints;
+
+  /// No description provided for @missionBadgeCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}개'**
+  String missionBadgeCount(int count);
 }
 
 class _AppLocalizationsDelegate

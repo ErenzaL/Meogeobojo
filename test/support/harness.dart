@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -7,6 +8,7 @@ import 'package:meogeobojo/core/l10n/language_controller.dart';
 import 'package:meogeobojo/features/auth/providers/auth_providers.dart';
 import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
 import 'package:meogeobojo/features/favorites/providers/favorites_providers.dart';
+import 'package:meogeobojo/features/missions/providers/mission_providers.dart';
 import 'package:meogeobojo/features/preferences/providers/preferences_providers.dart';
 import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
@@ -24,6 +26,7 @@ class Harness {
     required this.prefs,
     required this.restaurants,
     required this.favorites,
+    required this.missions,
     required this.sp,
   });
 
@@ -33,6 +36,7 @@ class Harness {
   final FakePreferencesRepository prefs;
   final FakeRestaurantRepository restaurants;
   final FakeFavoritesRepository favorites;
+  final FakeMissionRepository missions;
   final SharedPreferences sp;
 }
 
@@ -45,11 +49,16 @@ Future<Harness> buildHarness({
   FakePreferencesRepository? prefs,
   FakeRestaurantRepository? restaurants,
   FakeFavoritesRepository? favorites,
+  FakeMissionRepository? missions,
   FakeCampusMealRepository? meals,
   FakeRestaurantOverrideRepository? overridesRepo,
   Stream<DateTime>? clock,
   List<Locale> deviceLocales = const [Locale('ko')],
   List<Override> extraOverrides = const [],
+
+  /// Home previews a pick right away (as before the "ask first" rule); set
+  /// false to test the untouched Home.
+  bool recsRequested = true,
 }) async {
   SharedPreferences.setMockInitialValues(storage);
   final sp = await SharedPreferences.getInstance();
@@ -66,8 +75,11 @@ Future<Harness> buildHarness({
         ],
       );
   final fav = favorites ?? FakeFavoritesRepository();
+  final mission = missions ?? FakeMissionRepository();
   final container = ProviderContainer(
     overrides: [
+      if (recsRequested)
+        homeRecsRequestedProvider.overrideWith(_AlreadyRequested.new),
       sharedPreferencesProvider.overrideWithValue(sp),
       deviceLocalesProvider.overrideWithValue(deviceLocales),
       universityRepositoryProvider.overrideWithValue(
@@ -78,6 +90,7 @@ Future<Harness> buildHarness({
       profileRepositoryProvider.overrideWithValue(p),
       preferencesRepositoryProvider.overrideWithValue(pr),
       favoritesRepositoryProvider.overrideWithValue(fav),
+      missionRepositoryProvider.overrideWithValue(mission),
       restaurantOverrideRepositoryProvider.overrideWithValue(
         overridesRepo ?? FakeRestaurantOverrideRepository(),
       ),
@@ -106,6 +119,7 @@ Future<Harness> buildHarness({
     prefs: pr,
     restaurants: r,
     favorites: fav,
+    missions: mission,
     sp: sp,
   );
 }
@@ -138,4 +152,9 @@ Future<void> pumpApp(
 Future<void> settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 20));
   await tester.pumpAndSettle();
+}
+
+class _AlreadyRequested extends HomeRecsRequestedNotifier {
+  @override
+  bool build() => true;
 }

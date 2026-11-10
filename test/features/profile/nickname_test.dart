@@ -369,7 +369,7 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('custom nickname is in the greeting, email stays underneath', (
+    testWidgets('custom nickname is the heading, email stays underneath', (
       tester,
     ) async {
       final h = await buildHarness(
@@ -385,7 +385,7 @@ void main() {
         ),
       );
       await openMy(tester, h);
-      expect(find.text('안녕하세요, 맛집왕님'), findsOneWidget);
+      expect(find.text('맛집왕'), findsOneWidget);
       expect(find.text('me@example.com'), findsOneWidget);
       expect(
         find.text('KakaoName'),
@@ -405,7 +405,7 @@ void main() {
           ),
         );
         await openMy(tester, h);
-        expect(find.text('안녕하세요, 먹어보조 사용자님'), findsOneWidget);
+        expect(find.text('먹어보조 사용자'), findsOneWidget);
       },
     );
   });
@@ -426,7 +426,11 @@ void main() {
       await tester.tap(find.text('MY'));
       await tester.pumpAndSettle();
       // The row sits below the fold on a phone: bring it into view first.
-      await tester.ensureVisible(find.text('계정 설정'));
+      await tester.scrollUntilVisible(
+        find.text('계정 설정'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('계정 설정'));
       await tester.pumpAndSettle();

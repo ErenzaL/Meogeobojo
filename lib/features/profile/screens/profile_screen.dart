@@ -24,6 +24,10 @@ import '../../navigation/providers/shell_tab_provider.dart';
 import '../../preferences/screens/preferences_screen.dart';
 import '../../university/providers/university_providers.dart';
 import '../../university/widgets/university_sheet.dart';
+import '../models/profile_avatar.dart';
+import '../widgets/profile_avatar_sheet.dart';
+import '../../records/screens/records_screen.dart';
+import '../../missions/widgets/my_badges_section.dart';
 import '../widgets/profile_dashboard.dart';
 import 'account_settings_screen.dart';
 import 'saved_restaurants_screen.dart';
@@ -39,6 +43,7 @@ class ProfileScreen extends ConsumerWidget {
     final snap = ref.watch(authControllerProvider);
     final user = ref.watch(currentUserProvider);
     return Scaffold(
+      backgroundColor: whitePageColor(context),
       body: SafeArea(
         child: user == null
             ? const _GuestView()
@@ -57,6 +62,7 @@ class _GuestView extends ConsumerWidget {
     final language = ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     return V5Page(
+      backgroundColor: whitePageColor(context),
       children: [
         V5Header(title: l10n.myTitle),
         const SizedBox(height: 8),
@@ -100,6 +106,7 @@ class _GuestView extends ConsumerWidget {
         ),
         V5SectionTitle(l10n.settingsAppTitle),
         V5RowGroup(
+          elevated: true,
           rows: [
             V5Row(
               icon: Icons.language_rounded,
@@ -135,6 +142,7 @@ class _SignedInView extends ConsumerWidget {
             .push<void>(MaterialPageRoute<void>(builder: (_) => screen));
 
     return V5Page(
+      backgroundColor: whitePageColor(context),
       children: [
         V5Header(
           title: l10n.myTitle,
@@ -144,15 +152,19 @@ class _SignedInView extends ConsumerWidget {
             icon: const Icon(Icons.settings_outlined),
           ),
         ),
-        const SizedBox(height: 18),
-        ProfileGreetingCard(
+        ProfileHero(
           nickname: (profile?.nickname ?? '').isNotEmpty
               ? profile!.nickname!
               : l10n.profileDefaultNickname,
           email: user.email,
-          avatar: Avatar(url: avatarUrlOf(user), size: 64),
-          // Nickname editing lives in 계정 설정.
-          onEditProfile: () => push(const AccountSettingsScreen()),
+          avatar: ProfileAvatar.resolve(profile?.avatarPath),
+          // Choosing a picture needs a loaded profile row to save into.
+          onChangeAvatar: profile == null
+              ? null
+              : () => showProfileAvatarSheet(context),
+          onEditNickname: profile == null
+              ? null
+              : () => showNicknameEditor(context, ref, profile.nickname),
         ),
         if (hasProfileError) ...[
           const SizedBox(height: 12),
@@ -195,12 +207,14 @@ class _SignedInView extends ConsumerWidget {
         const _MyConditions(),
         V5SectionTitle(l10n.myActivityTitle),
         V5RowGroup(
+          elevated: true,
           rows: [
             V5Row(
               icon: Icons.menu_book_outlined,
               title: l10n.profileRecords,
-              onTap: () =>
-                  ref.read(shellTabProvider.notifier).select(ShellTabs.records),
+              // The original Records page, now a page of its own (the bottom
+              // tab became 미션). Back returns here.
+              onTap: () => push(const RecordsScreen()),
             ),
             V5Row(
               icon: Icons.favorite_border_rounded,
@@ -229,8 +243,10 @@ class _SignedInView extends ConsumerWidget {
             ),
           ],
         ),
+        const MyBadgesSection(),
         V5SectionTitle(l10n.settingsAppTitle),
         V5RowGroup(
+          elevated: true,
           rows: [
             V5Row(
               icon: Icons.language_rounded,
@@ -244,6 +260,10 @@ class _SignedInView extends ConsumerWidget {
         const SizedBox(height: 20),
         OutlinedButton(
           onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: context.palette.accentStrong,
+            side: BorderSide(color: context.palette.accent, width: 1.5),
+          ),
           child: Text(l10n.profileLogout),
         ),
       ],
@@ -287,6 +307,7 @@ class _MyConditions extends ConsumerWidget {
           l10n.myConditionsTitle,
           actionLabel: l10n.myRestart,
           onAction: () => restartOnboarding(context, ref),
+          actionColor: context.palette.accentStrong,
         ),
         if (chips.isEmpty)
           Padding(
@@ -313,6 +334,7 @@ class _MyConditions extends ConsumerWidget {
           ),
         if (origin != null)
           V5RowGroup(
+            elevated: true,
             rows: [
               V5Row(
                 icon: Icons.place_outlined,
@@ -323,49 +345,6 @@ class _MyConditions extends ConsumerWidget {
             ],
           ),
       ],
-    );
-  }
-}
-
-/// Avatar URL supplied by the sign-in provider (Kakao profile image), only if
-/// it is https. Nothing is stored or fabricated.
-String? avatarUrlOf(User user) {
-  final meta = user.userMetadata;
-  for (final key in const ['avatar_url', 'picture']) {
-    final v = meta?[key];
-    if (v is String && v.startsWith('https://')) return v;
-  }
-  return null;
-}
-
-class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.url, required this.size});
-
-  final String? url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    final radius = BorderRadius.circular(size * 0.25);
-    final fallback = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: p.rust, borderRadius: radius),
-      child: Icon(Icons.restaurant_rounded, size: size * 0.45, color: p.onRust),
-    );
-    if (url == null) return fallback;
-    return ClipRRect(
-      borderRadius: radius,
-      child: Image.network(
-        url!,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => fallback,
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : fallback,
-      ),
     );
   }
 }

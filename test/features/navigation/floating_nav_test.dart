@@ -14,7 +14,7 @@ import 'package:meogeobojo/features/navigation/providers/shell_tab_provider.dart
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/navigation/widgets/floating_nav_bar.dart';
 import 'package:meogeobojo/features/profile/screens/profile_screen.dart';
-import 'package:meogeobojo/features/records/screens/records_screen.dart';
+import 'package:meogeobojo/features/missions/screens/mission_screen.dart';
 
 import '../../support/harness.dart';
 
@@ -149,8 +149,8 @@ void main() {
       expect(h.container.read(shellTabProvider), ShellTabs.community);
       await go('지도', MapScreen);
       expect(h.container.read(shellTabProvider), ShellTabs.map);
-      await go('기록', RecordsScreen);
-      expect(h.container.read(shellTabProvider), ShellTabs.records);
+      await go('미션', MissionScreen);
+      expect(h.container.read(shellTabProvider), ShellTabs.missions);
       await go('MY', ProfileScreen);
       expect(h.container.read(shellTabProvider), ShellTabs.profile);
       await go('홈', HomeScreen);
@@ -172,11 +172,11 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(FloatingNavBar),
-          matching: find.text('기록'),
+          matching: find.text('미션'),
         ),
       );
       await tester.pumpAndSettle();
-      expect(h.container.read(shellTabProvider), ShellTabs.records);
+      expect(h.container.read(shellTabProvider), ShellTabs.missions);
     });
 
     testWidgets('screens are not recreated on tap; state of each tab is kept', (
@@ -192,7 +192,7 @@ void main() {
           .pixels;
       expect(scrollBefore, greaterThan(0));
 
-      for (final label in ['밥수다', '기록', 'MY', '홈']) {
+      for (final label in ['밥수다', '미션', 'MY', '홈']) {
         await tester.tap(
           find.descendant(
             of: find.byType(FloatingNavBar),
@@ -235,7 +235,7 @@ void main() {
     testWidgets('five equally wide tabs', (tester) async {
       await openShell(tester);
       final widths = [
-        for (final l in ['홈', '밥수다', '지도', '기록', 'MY'])
+        for (final l in ['홈', '밥수다', '지도', '미션', 'MY'])
           tester
               .getRect(
                 find
@@ -354,9 +354,9 @@ void main() {
 
   group('labels in all languages', () {
     for (final (lang, labels) in [
-      ('ko', ['홈', '밥수다', '지도', '기록', 'MY']),
-      ('en', ['Home', 'Food Talk', 'Map', 'Records', 'My']),
-      ('zh-Hans', ['首页', '美食交流', '地图', '记录', '我的']),
+      ('ko', ['홈', '밥수다', '지도', '미션', 'MY']),
+      ('en', ['Home', 'Food Talk', 'Map', 'Missions', 'My']),
+      ('zh-Hans', ['首页', '美食交流', '地图', '任务', '我的']),
     ]) {
       testWidgets('$lang labels fit, one implementation', (tester) async {
         await openShell(

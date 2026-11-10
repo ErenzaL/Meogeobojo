@@ -18,10 +18,37 @@ import 'condition_parts.dart';
 
 /// 조건 sheet. Every tap applies immediately to Home, the map and search; the
 /// footer shows how many places the current conditions leave.
-Future<void> showConditionsSheet(BuildContext context) => showAppSheet<void>(
-  context,
-  builder: (ctx, controller) => _ConditionsSheet(controller: controller),
-);
+///
+/// With [focus] only that one setting is shown (a Home filter chip opens just
+/// the setting it stands for, with its own reset); null shows every setting.
+Future<void> showConditionsSheet(
+  BuildContext context, {
+  ConditionFocus? focus,
+}) => focus == null
+    ? showAppSheet<void>(
+        context,
+        builder: (ctx, controller) => _ConditionsSheet(controller: controller),
+      )
+    : showCompactSheet<void>(
+        context,
+        builder: (ctx) => _ConditionsSheet(focus: focus),
+      );
+
+/// Settings of the 조건 sheet that can be opened on their own.
+enum ConditionFocus { budget, distance, ops, party, needs, sort }
+
+/// [c] with only the setting [f] back to its default.
+Conditions _resetSetting(Conditions c, ConditionFocus f) => switch (f) {
+  ConditionFocus.budget => c.copyWith(budget: BudgetOption.any),
+  ConditionFocus.distance => c.copyWith(distance: DistanceOption.any),
+  ConditionFocus.party => c.copyWith(party: () => null),
+  ConditionFocus.needs => c.copyWith(needs: const {}),
+  ConditionFocus.ops => c.copyWith(
+    openNowOnly: Conditions.defaults.openNowOnly,
+    amenities: const {},
+  ),
+  ConditionFocus.sort => c.copyWith(sort: SortMode.recommended),
+};
 
 const _cuisineChoices = [
   Cuisine.korean,
@@ -33,13 +60,21 @@ const _cuisineChoices = [
   Cuisine.salad,
 ];
 
-class _ConditionsSheet extends ConsumerWidget {
-  const _ConditionsSheet({required this.controller});
+class _ConditionsSheet extends ConsumerStatefulWidget {
+  const _ConditionsSheet({this.controller, this.focus});
 
-  final ScrollController controller;
+  /// The draggable sheet's scroll controller (full sheet only).
+  final ScrollController? controller;
+  final ConditionFocus? focus;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ConditionsSheet> createState() => _ConditionsSheetState();
+}
+
+class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final controller = widget.controller;
     final l10n = context.l10n;
     final c = ref.watch(conditionsProvider);
     final origin = ref.watch(originProvider);
@@ -82,6 +117,138 @@ class _ConditionsSheet extends ConsumerWidget {
       SortMode.rating => l10n.condSortRating,
     };
 
+    final budgetSection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.onbBudgetTitle,
+      child: ChipWrap(
+        children: [
+          for (final o in BudgetOption.values)
+            PillChip(
+              label: budgetLabel(l10n, o),
+              selected: c.budget == o,
+              onTap: () => set((x) => x.copyWith(budget: o)),
+            ),
+        ],
+      ),
+    );
+    final distanceSection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.onbDistanceTitle,
+      child: ChipWrap(
+        children: [
+          for (final o in DistanceOption.values)
+            PillChip(
+              label: distanceLabel(l10n, o),
+              selected: c.distance == o,
+              onTap: () => set((x) => x.copyWith(distance: o)),
+            ),
+        ],
+      ),
+    );
+    final opsSection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.condOps,
+      child: ChipWrap(
+        children: [
+          for (final a in Amenity.values)
+            PillChip(
+              label: amenityLabel(a),
+              icon: amenityIcon(a),
+              selected: c.amenities.contains(a),
+              onTap: () =>
+                  set((x) => x.copyWith(amenities: toggled(x.amenities, a))),
+            ),
+        ],
+      ),
+    );
+    final partySection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.condParty,
+      child: ChipWrap(
+        children: [
+          for (final t in kPartyOptions)
+            PillChip(
+              label: partyLabel(t),
+              selected: c.party == t,
+              onTap: () =>
+                  set((x) => x.copyWith(party: () => x.party == t ? null : t)),
+            ),
+        ],
+      ),
+    );
+    final needsSection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.condNeeds,
+      child: ChipWrap(
+        children: [
+          for (final n in Need.values)
+            PillChip(
+              label: needLabel(n),
+              selected: c.needs.contains(n),
+              onTap: () => set((x) => x.copyWith(needs: toggled(x.needs, n))),
+            ),
+        ],
+      ),
+    );
+    final sortSection = CondSection(
+      showTitle: widget.focus == null,
+      title: l10n.condSort,
+      child: ChipWrap(
+        children: [
+          for (final s in SortMode.values)
+            PillChip(
+              label: sortLabel(s),
+              selected: c.sort == s,
+              onTap: () => set((x) => x.copyWith(sort: s)),
+            ),
+        ],
+      ),
+    );
+    final openNowRow = CondSwitchRow(
+      title: l10n.condOpenNow,
+      hint: l10n.condOpenNowHint,
+      value: c.openNowOnly,
+      onChanged: (v) => set((x) => x.copyWith(openNowOnly: v)),
+    );
+
+    final focus = widget.focus;
+    if (focus != null) {
+      // One setting only: its title, its choices, and a reset for just it.
+      final (title, content) = switch (focus) {
+        ConditionFocus.budget => (l10n.onbBudgetTitle, [budgetSection]),
+        ConditionFocus.distance => (l10n.onbDistanceTitle, [distanceSection]),
+        ConditionFocus.party => (l10n.condParty, [partySection]),
+        ConditionFocus.needs => (l10n.condNeeds, [needsSection]),
+        ConditionFocus.ops => (l10n.condOps, [openNowRow, opsSection]),
+        ConditionFocus.sort => (l10n.condSort, [sortSection]),
+      };
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppText.sectionTitle.copyWith(fontSize: 24),
+                  ),
+                  const SizedBox(height: 2),
+                  ...content,
+                ],
+              ),
+            ),
+          ),
+          _Footer(
+            resetLabel: l10n.condResetThis,
+            onClear: () => set((x) => _resetSetting(x, focus)),
+          ),
+        ],
+      );
+    }
+
     final body = ListView(
       controller: controller,
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
@@ -90,54 +257,18 @@ class _ConditionsSheet extends ConsumerWidget {
           l10n.condTitle,
           style: AppText.sectionTitle.copyWith(fontSize: 24),
         ),
-        const SizedBox(height: 6),
-        Text(
-          l10n.condSubtitle,
-          style: AppText.body.copyWith(color: context.palette.textSecondary),
-        ),
-        const SizedBox(height: 14),
-        Divider(color: context.palette.hairline),
         CondGroupHeader(title: l10n.condMust, hint: l10n.condMustHint),
         const SizedBox(height: 4),
         Text(l10n.condMissingNote, style: AppText.caption(context)),
-        CondSection(
-          title: l10n.onbBudgetTitle,
-          child: ChipWrap(
-            children: [
-              for (final o in BudgetOption.values)
-                PillChip(
-                  label: budgetLabel(l10n, o),
-                  selected: c.budget == o,
-                  onTap: () => set((x) => x.copyWith(budget: o)),
-                ),
-            ],
-          ),
-        ),
-        CondSection(
-          title: l10n.onbDistanceTitle,
-          child: ChipWrap(
-            children: [
-              for (final o in DistanceOption.values)
-                PillChip(
-                  label: distanceLabel(l10n, o),
-                  selected: c.distance == o,
-                  onTap: () => set((x) => x.copyWith(distance: o)),
-                ),
-            ],
-          ),
-        ),
+        budgetSection,
+        distanceSection,
         if (origin != null)
           CondOriginCard(
             label: l10n.homeOriginChip(origin.label(l10n)),
             action: l10n.condChange,
             onTap: () => showOriginSheet(context),
           ),
-        CondSwitchRow(
-          title: l10n.condOpenNow,
-          hint: l10n.condOpenNowHint,
-          value: c.openNowOnly,
-          onChanged: (v) => set((x) => x.copyWith(openNowOnly: v)),
-        ),
+        openNowRow,
         CondSection(
           title: l10n.condCuisine,
           child: ChipWrap(
@@ -157,75 +288,21 @@ class _ConditionsSheet extends ConsumerWidget {
             ],
           ),
         ),
-        CondSection(
-          title: l10n.condOps,
-          child: ChipWrap(
-            children: [
-              for (final a in Amenity.values)
-                PillChip(
-                  label: amenityLabel(a),
-                  icon: amenityIcon(a),
-                  selected: c.amenities.contains(a),
-                  onTap: () => set(
-                    (x) => x.copyWith(amenities: toggled(x.amenities, a)),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 22),
+        opsSection,
+        const SizedBox(height: 12),
         Divider(color: context.palette.hairline),
         CondGroupHeader(title: l10n.condSoft),
         const SizedBox(height: 4),
         Text(l10n.condSoftNote, style: AppText.caption(context)),
-        CondSection(
-          title: l10n.condParty,
-          child: ChipWrap(
-            children: [
-              for (final t in kPartyOptions)
-                PillChip(
-                  label: partyLabel(t),
-                  selected: c.party == t,
-                  onTap: () => set(
-                    (x) => x.copyWith(party: () => x.party == t ? null : t),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        CondSection(
-          title: l10n.condNeeds,
-          child: ChipWrap(
-            children: [
-              for (final n in Need.values)
-                PillChip(
-                  label: needLabel(n),
-                  selected: c.needs.contains(n),
-                  onTap: () =>
-                      set((x) => x.copyWith(needs: toggled(x.needs, n))),
-                ),
-            ],
-          ),
-        ),
+        partySection,
+        needsSection,
         CondSwitchRow(
           title: l10n.condUntried,
           hint: l10n.condUntriedHint(ref.watch(visitedRecordCountProvider)),
           value: c.untriedFirst,
           onChanged: (v) => set((x) => x.copyWith(untriedFirst: v)),
         ),
-        CondSection(
-          title: l10n.condSort,
-          child: ChipWrap(
-            children: [
-              for (final s in SortMode.values)
-                PillChip(
-                  label: sortLabel(s),
-                  selected: c.sort == s,
-                  onTap: () => set((x) => x.copyWith(sort: s)),
-                ),
-            ],
-          ),
-        ),
+        sortSection,
       ],
     );
 
@@ -243,10 +320,15 @@ class _ConditionsSheet extends ConsumerWidget {
 
 /// Sticky footer: clear / show-count buttons and the start-over link.
 class _Footer extends ConsumerWidget {
-  const _Footer({required this.onClear, required this.onRestart});
+  const _Footer({required this.onClear, this.onRestart, this.resetLabel});
 
   final VoidCallback onClear;
-  final VoidCallback onRestart;
+
+  /// Null in a single-setting sheet (no start-over link there).
+  final VoidCallback? onRestart;
+
+  /// Overrides 모두 풀기 when the sheet holds one setting.
+  final String? resetLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -282,7 +364,7 @@ class _Footer extends ConsumerWidget {
                       shape: shape,
                       side: BorderSide(color: p.hairline),
                     ),
-                    child: Text(l10n.condResetAll),
+                    child: Text(resetLabel ?? l10n.condResetAll),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -308,12 +390,13 @@ class _Footer extends ConsumerWidget {
                 ),
               ],
             ),
-            TextButton.icon(
-              onPressed: onRestart,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(l10n.condRestart),
-              style: TextButton.styleFrom(foregroundColor: p.rustText),
-            ),
+            if (onRestart != null)
+              TextButton.icon(
+                onPressed: onRestart,
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(l10n.condRestart),
+                style: TextButton.styleFrom(foregroundColor: p.rustText),
+              ),
           ],
         ),
       ),

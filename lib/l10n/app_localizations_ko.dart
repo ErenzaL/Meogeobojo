@@ -1255,6 +1255,71 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homePickForMe => '하나 골라줘';
 
   @override
+  String get homeRestart => '처음부터 다시';
+
+  @override
+  String get homePromptTitle => '조건을 고르고 추천받아 보세요';
+
+  @override
+  String get homePromptMessage => '예산·거리 같은 조건을 정하거나 ‘오늘의 추천 받기’를 눌러 보세요.';
+
+  @override
+  String get homeGameButton => '게임으로 정하기';
+
+  @override
+  String get homeGameTitle => '오늘 뭐 먹지? 게임으로!';
+
+  @override
+  String get homeGameSub => '지금 조건에 맞는 곳 중에서 골라요.';
+
+  @override
+  String get homeGameRoulette => '룰렛';
+
+  @override
+  String get homeGameRouletteHint => '돌려서 멈춘 곳으로';
+
+  @override
+  String get homeGameLadder => '사다리타기';
+
+  @override
+  String get homeGameLadderHint => '한 줄을 골라 내려가요';
+
+  @override
+  String get homeGameCards => '카드 뽑기';
+
+  @override
+  String get homeGameCardsHint => '뒤집어서 나온 곳으로';
+
+  @override
+  String get homeGameSpin => '돌리기!';
+
+  @override
+  String get homeGameSpinning => '돌아가는 중…';
+
+  @override
+  String get homeGameLadderPrompt => '출발할 줄을 골라요';
+
+  @override
+  String get homeGameCardsPrompt => '카드를 한 장 골라요';
+
+  @override
+  String get homeGameResult => '오늘은 여기!';
+
+  @override
+  String get homeGameAgain => '다시 하기';
+
+  @override
+  String get homeGameConfirm => '여기로 정하기';
+
+  @override
+  String get homeGameBack => '다른 게임';
+
+  @override
+  String homeGameChosen(String name) {
+    return '$name(으)로 정했어요. 맨 위 추천 카드에서 확인하세요.';
+  }
+
+  @override
   String homeCmpCloser(int minutes) {
     return '$minutes분 더 가까워요';
   }
@@ -1504,6 +1569,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condResetAll => '모두 풀기';
 
   @override
+  String get condResetThis => '이 설정만 풀기';
+
+  @override
   String condShowCount(int count) {
     return '$count곳 보기';
   }
@@ -1688,4 +1756,198 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mapRecenter => '기준 위치로 이동';
+
+  @override
+  String get profileAvatarEdit => '꾸미기';
+
+  @override
+  String get profileAvatarSheetTitle => '프로필 이미지 선택';
+
+  @override
+  String get profileAvatarSheetSubtitle => '마스코트에서 선택';
+
+  @override
+  String get profileAvatarConfirm => '선택 완료';
+
+  @override
+  String get profileAvatarSaveFailed => '프로필 이미지를 저장하지 못했어요. 다시 시도해주세요.';
+
+  @override
+  String profileAvatarOption(int n) {
+    return '마스코트 $n';
+  }
+
+  @override
+  String get profileAvatarChange => '프로필 이미지 바꾸기';
+
+  @override
+  String get homeSearchFieldHint => '식당, 메뉴, 카테고리 검색';
+
+  @override
+  String get homeRecommendButton => '오늘의 추천 받기';
+
+  @override
+  String get homeTodayPicksTitle => '오늘의 추천';
+
+  @override
+  String get homeFilterBudget => '예산';
+
+  @override
+  String get homeFilterDistance => '거리';
+
+  @override
+  String get homeFilterParty => '인원';
+
+  @override
+  String get homeFilterPurpose => '목적';
+
+  @override
+  String get homeFilterSort => '정렬';
+
+  @override
+  String get navMissions => '미션';
+
+  @override
+  String get missionPageTitle => '미션';
+
+  @override
+  String get missionTabMonthlyFallback => '이달의 미션';
+
+  @override
+  String get missionTabDaily => '데일리';
+
+  @override
+  String get missionTabWeekly => '주간';
+
+  @override
+  String get missionTabChallenge => '도전과제';
+
+  @override
+  String get missionCompletedLabel => '완료한 미션';
+
+  @override
+  String get missionProgressLabel => '이번 달 진행률';
+
+  @override
+  String get missionPointsMonth => '이번 달 획득 포인트';
+
+  @override
+  String get missionBadgePreview => '이달의 뱃지';
+
+  @override
+  String missionBadgeLockedHint(int count) {
+    return '미션 $count개를 완료하면 받을 수 있어요';
+  }
+
+  @override
+  String get missionBadgeUnlocked => '획득 완료';
+
+  @override
+  String get missionDone => '완료';
+
+  @override
+  String get missionBadgeReward => '한정 뱃지';
+
+  @override
+  String get missionExpired => '기간 종료';
+
+  @override
+  String get missionUpcoming => '예정';
+
+  @override
+  String get missionDetailRequirement => '완료 조건';
+
+  @override
+  String get missionDetailProgress => '진행 상황';
+
+  @override
+  String get missionDetailReward => '보상';
+
+  @override
+  String get missionDetailPeriod => '기간';
+
+  @override
+  String get missionResetsDaily => '매일 0시(한국 시간)에 새로 시작돼요';
+
+  @override
+  String get missionResetsWeekly => '매주 월요일 0시(한국 시간)에 새로 시작돼요';
+
+  @override
+  String missionUntil(String date) {
+    return '$date까지';
+  }
+
+  @override
+  String get missionAlwaysOn => '상시 진행';
+
+  @override
+  String get missionActionRecommend => '추천 받기';
+
+  @override
+  String get missionActionMap => '맛집 찾으러 가기';
+
+  @override
+  String get missionActionFavorites => '저렴한 맛집 찾기';
+
+  @override
+  String get missionActionCategories => '카테고리 둘러보기';
+
+  @override
+  String get missionActionReview => '리뷰 작성하기';
+
+  @override
+  String get missionActionPhoto => '메뉴 사진 올리기';
+
+  @override
+  String get missionActionCorrect => '정보 수정 제안하기';
+
+  @override
+  String get missionActionSoon => '이 기능은 아직 준비 중이에요. 열리면 미션에 바로 반영돼요.';
+
+  @override
+  String get missionCelebrationTitle => '미션 완료!';
+
+  @override
+  String missionCelebrationPoints(int points) {
+    return '+${points}P 획득';
+  }
+
+  @override
+  String get missionCelebrationBadge => '뱃지를 얻었어요';
+
+  @override
+  String get missionGuestTitle => '로그인하고 미션에 참여해요';
+
+  @override
+  String get missionGuestBody =>
+      '맛집을 찜하고 둘러볼 때마다 진행 상황이 쌓여요. 포인트와 뱃지는 계정에 저장돼요.';
+
+  @override
+  String get missionEmptyTitle => '진행 중인 미션이 없어요';
+
+  @override
+  String get missionEmptyBody => '새 미션이 열리면 여기에 나타나요.';
+
+  @override
+  String get missionLoadFailed => '미션을 불러오지 못했어요';
+
+  @override
+  String get missionMyBadges => '내 뱃지';
+
+  @override
+  String get missionBadgesNone => '아직 얻은 뱃지가 없어요. 미션을 완료해 보세요.';
+
+  @override
+  String get missionBadgesAll => '전체 보기';
+
+  @override
+  String get missionBadgeCollectionTitle => '뱃지 컬렉션';
+
+  @override
+  String get missionTotalPoints => '누적 포인트';
+
+  @override
+  String missionBadgeCount(int count) {
+    return '$count개';
+  }
 }

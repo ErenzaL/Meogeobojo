@@ -364,6 +364,34 @@
   "homeInfo": "Info",
   "homeAltTitle": "Not feeling it?",
   "homePickForMe": "Pick one for me",
+  "homeRestart": "Start over",
+  "homePromptTitle": "Set your conditions to get a pick",
+  "homePromptMessage": "Choose a budget or distance, or tap “Get today’s pick”.",
+  "homeGameButton": "Choose with a game",
+  "homeGameTitle": "What to eat? Play for it!",
+  "homeGameSub": "Picks from places that match your conditions.",
+  "homeGameRoulette": "Roulette",
+  "homeGameRouletteHint": "Spin and go where it stops",
+  "homeGameLadder": "Ladder",
+  "homeGameLadderHint": "Pick a line and follow it down",
+  "homeGameCards": "Pick a card",
+  "homeGameCardsHint": "Flip one and see",
+  "homeGameSpin": "Spin!",
+  "homeGameSpinning": "Spinning…",
+  "homeGameLadderPrompt": "Pick a line to start",
+  "homeGameCardsPrompt": "Pick one card",
+  "homeGameResult": "Today it's…",
+  "homeGameAgain": "Play again",
+  "homeGameConfirm": "Go here",
+  "homeGameBack": "Other games",
+  "homeGameChosen": "Picked {name}. See it in the top card.",
+  "@homeGameChosen": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "homeCmpCloser": "{minutes} min closer",
   "homeCmpCheaper": "₩{amount} cheaper",
   "homeCmpRating": "Rated higher",
@@ -437,6 +465,7 @@
   "condSortRating": "Rating",
   "condSoftNote": "For now the order is nearest first. Party size and needs will shape it once data exists.",
   "condResetAll": "Clear all",
+  "condResetThis": "Reset this",
   "condShowCount": "Show {count} places",
   "condNoMatch": "No place matches",
   "condRestart": "Go back to the start and set up again",
@@ -490,5 +519,101 @@
   "mapOpenNowChip": "Open now",
   "mapMatchCount": "{count} matching places",
   "mapSortHint": "From {origin} · walking times are estimated from straight-line distance",
-  "mapRecenter": "Go to starting point"
+  "mapRecenter": "Go to starting point",
+  "profileAvatarEdit": "Customize",
+  "profileAvatarSheetTitle": "Choose a profile picture",
+  "profileAvatarSheetSubtitle": "Pick a mascot",
+  "profileAvatarConfirm": "Done",
+  "profileAvatarSaveFailed": "Couldn't save your profile picture. Please try again.",
+  "profileAvatarOption": "Mascot {n}",
+  "@profileAvatarOption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "profileAvatarChange": "Change profile picture",
+  "homeSearchFieldHint": "Search restaurants, menus, categories",
+  "homeRecommendButton": "Get today's pick",
+  "homeTodayPicksTitle": "Today's picks",
+  "homeFilterBudget": "Budget",
+  "homeFilterDistance": "Distance",
+  "homeFilterParty": "Party",
+  "homeFilterPurpose": "Purpose",
+  "homeFilterSort": "Sort",
+  "navMissions": "Missions",
+  "missionPageTitle": "Missions",
+  "missionTabMonthlyFallback": "This month",
+  "missionTabDaily": "Daily",
+  "missionTabWeekly": "Weekly",
+  "missionTabChallenge": "Challenges",
+  "missionCompletedLabel": "Missions completed",
+  "missionProgressLabel": "This month's progress",
+  "missionPointsMonth": "Points earned this month",
+  "missionBadgePreview": "Monthly badge",
+  "missionBadgeLockedHint": "Complete {count} missions to unlock it",
+  "@missionBadgeLockedHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "missionBadgeUnlocked": "Unlocked",
+  "missionDone": "Done",
+  "missionBadgeReward": "Limited badge",
+  "missionExpired": "Ended",
+  "missionUpcoming": "Upcoming",
+  "missionDetailRequirement": "How to complete",
+  "missionDetailProgress": "Progress",
+  "missionDetailReward": "Reward",
+  "missionDetailPeriod": "Period",
+  "missionResetsDaily": "Resets every day at 00:00 (Korea time)",
+  "missionResetsWeekly": "Resets every Monday at 00:00 (Korea time)",
+  "missionUntil": "Until {date}",
+  "@missionUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "missionAlwaysOn": "Always on",
+  "missionActionRecommend": "Get a pick",
+  "missionActionMap": "Find places",
+  "missionActionFavorites": "Find cheap places",
+  "missionActionCategories": "Browse categories",
+  "missionActionReview": "Write a review",
+  "missionActionPhoto": "Upload a menu photo",
+  "missionActionCorrect": "Suggest a correction",
+  "missionActionSoon": "This isn't available yet. Once it opens, it counts toward the mission right away.",
+  "missionCelebrationTitle": "Mission complete!",
+  "missionCelebrationPoints": "+{points}P earned",
+  "@missionCelebrationPoints": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "missionCelebrationBadge": "Badge unlocked",
+  "missionGuestTitle": "Sign in to join the missions",
+  "missionGuestBody": "Progress builds as you save and explore places. Points and badges are kept on your account.",
+  "missionEmptyTitle": "No missions right now",
+  "missionEmptyBody": "New missions will appear here when they open.",
+  "missionLoadFailed": "Couldn't load missions",
+  "missionMyBadges": "My badges",
+  "missionBadgesNone": "No badges yet. Complete a mission to earn one.",
+  "missionBadgesAll": "See all",
+  "missionBadgeCollectionTitle": "Badge collection",
+  "missionTotalPoints": "Total points",
+  "missionBadgeCount": "{count}",
+  "@missionBadgeCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

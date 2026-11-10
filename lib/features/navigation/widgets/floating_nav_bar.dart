@@ -96,14 +96,14 @@ class _NavItem {
 }
 
 final _items = [
-  // V5 order and icons: 홈 · 지도 · 밥수다 · 기록 · MY (filled when active).
+  // Order and icons: 홈 · 지도 · 밥수다 · 미션 · MY (filled when active).
   _NavItem((l) => l.navHome, Icons.home_outlined, Icons.home_rounded),
   _NavItem((l) => l.navMap, Icons.map_outlined, Icons.map_rounded),
   _NavItem((l) => l.navCommunity, Icons.forum_outlined, Icons.forum_rounded),
   _NavItem(
-    (l) => l.navRecords,
-    Icons.menu_book_outlined,
-    Icons.menu_book_rounded,
+    (l) => l.navMissions,
+    Icons.emoji_events_outlined,
+    Icons.emoji_events_rounded,
   ),
   _NavItem(
     (l) => l.navProfile,

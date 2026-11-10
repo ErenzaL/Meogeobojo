@@ -1333,6 +1333,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePickForMe => 'Pick one for me';
 
   @override
+  String get homeRestart => 'Start over';
+
+  @override
+  String get homePromptTitle => 'Set your conditions to get a pick';
+
+  @override
+  String get homePromptMessage =>
+      'Choose a budget or distance, or tap “Get today’s pick”.';
+
+  @override
+  String get homeGameButton => 'Choose with a game';
+
+  @override
+  String get homeGameTitle => 'What to eat? Play for it!';
+
+  @override
+  String get homeGameSub => 'Picks from places that match your conditions.';
+
+  @override
+  String get homeGameRoulette => 'Roulette';
+
+  @override
+  String get homeGameRouletteHint => 'Spin and go where it stops';
+
+  @override
+  String get homeGameLadder => 'Ladder';
+
+  @override
+  String get homeGameLadderHint => 'Pick a line and follow it down';
+
+  @override
+  String get homeGameCards => 'Pick a card';
+
+  @override
+  String get homeGameCardsHint => 'Flip one and see';
+
+  @override
+  String get homeGameSpin => 'Spin!';
+
+  @override
+  String get homeGameSpinning => 'Spinning…';
+
+  @override
+  String get homeGameLadderPrompt => 'Pick a line to start';
+
+  @override
+  String get homeGameCardsPrompt => 'Pick one card';
+
+  @override
+  String get homeGameResult => 'Today it\'s…';
+
+  @override
+  String get homeGameAgain => 'Play again';
+
+  @override
+  String get homeGameConfirm => 'Go here';
+
+  @override
+  String get homeGameBack => 'Other games';
+
+  @override
+  String homeGameChosen(String name) {
+    return 'Picked $name. See it in the top card.';
+  }
+
+  @override
   String homeCmpCloser(int minutes) {
     return '$minutes min closer';
   }
@@ -1585,6 +1651,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get condResetAll => 'Clear all';
 
   @override
+  String get condResetThis => 'Reset this';
+
+  @override
   String condShowCount(int count) {
     return 'Show $count places';
   }
@@ -1775,4 +1844,202 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mapRecenter => 'Go to starting point';
+
+  @override
+  String get profileAvatarEdit => 'Customize';
+
+  @override
+  String get profileAvatarSheetTitle => 'Choose a profile picture';
+
+  @override
+  String get profileAvatarSheetSubtitle => 'Pick a mascot';
+
+  @override
+  String get profileAvatarConfirm => 'Done';
+
+  @override
+  String get profileAvatarSaveFailed =>
+      'Couldn\'t save your profile picture. Please try again.';
+
+  @override
+  String profileAvatarOption(int n) {
+    return 'Mascot $n';
+  }
+
+  @override
+  String get profileAvatarChange => 'Change profile picture';
+
+  @override
+  String get homeSearchFieldHint => 'Search restaurants, menus, categories';
+
+  @override
+  String get homeRecommendButton => 'Get today\'s pick';
+
+  @override
+  String get homeTodayPicksTitle => 'Today\'s picks';
+
+  @override
+  String get homeFilterBudget => 'Budget';
+
+  @override
+  String get homeFilterDistance => 'Distance';
+
+  @override
+  String get homeFilterParty => 'Party';
+
+  @override
+  String get homeFilterPurpose => 'Purpose';
+
+  @override
+  String get homeFilterSort => 'Sort';
+
+  @override
+  String get navMissions => 'Missions';
+
+  @override
+  String get missionPageTitle => 'Missions';
+
+  @override
+  String get missionTabMonthlyFallback => 'This month';
+
+  @override
+  String get missionTabDaily => 'Daily';
+
+  @override
+  String get missionTabWeekly => 'Weekly';
+
+  @override
+  String get missionTabChallenge => 'Challenges';
+
+  @override
+  String get missionCompletedLabel => 'Missions completed';
+
+  @override
+  String get missionProgressLabel => 'This month\'s progress';
+
+  @override
+  String get missionPointsMonth => 'Points earned this month';
+
+  @override
+  String get missionBadgePreview => 'Monthly badge';
+
+  @override
+  String missionBadgeLockedHint(int count) {
+    return 'Complete $count missions to unlock it';
+  }
+
+  @override
+  String get missionBadgeUnlocked => 'Unlocked';
+
+  @override
+  String get missionDone => 'Done';
+
+  @override
+  String get missionBadgeReward => 'Limited badge';
+
+  @override
+  String get missionExpired => 'Ended';
+
+  @override
+  String get missionUpcoming => 'Upcoming';
+
+  @override
+  String get missionDetailRequirement => 'How to complete';
+
+  @override
+  String get missionDetailProgress => 'Progress';
+
+  @override
+  String get missionDetailReward => 'Reward';
+
+  @override
+  String get missionDetailPeriod => 'Period';
+
+  @override
+  String get missionResetsDaily => 'Resets every day at 00:00 (Korea time)';
+
+  @override
+  String get missionResetsWeekly => 'Resets every Monday at 00:00 (Korea time)';
+
+  @override
+  String missionUntil(String date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get missionAlwaysOn => 'Always on';
+
+  @override
+  String get missionActionRecommend => 'Get a pick';
+
+  @override
+  String get missionActionMap => 'Find places';
+
+  @override
+  String get missionActionFavorites => 'Find cheap places';
+
+  @override
+  String get missionActionCategories => 'Browse categories';
+
+  @override
+  String get missionActionReview => 'Write a review';
+
+  @override
+  String get missionActionPhoto => 'Upload a menu photo';
+
+  @override
+  String get missionActionCorrect => 'Suggest a correction';
+
+  @override
+  String get missionActionSoon =>
+      'This isn\'t available yet. Once it opens, it counts toward the mission right away.';
+
+  @override
+  String get missionCelebrationTitle => 'Mission complete!';
+
+  @override
+  String missionCelebrationPoints(int points) {
+    return '+${points}P earned';
+  }
+
+  @override
+  String get missionCelebrationBadge => 'Badge unlocked';
+
+  @override
+  String get missionGuestTitle => 'Sign in to join the missions';
+
+  @override
+  String get missionGuestBody =>
+      'Progress builds as you save and explore places. Points and badges are kept on your account.';
+
+  @override
+  String get missionEmptyTitle => 'No missions right now';
+
+  @override
+  String get missionEmptyBody =>
+      'New missions will appear here when they open.';
+
+  @override
+  String get missionLoadFailed => 'Couldn\'t load missions';
+
+  @override
+  String get missionMyBadges => 'My badges';
+
+  @override
+  String get missionBadgesNone =>
+      'No badges yet. Complete a mission to earn one.';
+
+  @override
+  String get missionBadgesAll => 'See all';
+
+  @override
+  String get missionBadgeCollectionTitle => 'Badge collection';
+
+  @override
+  String get missionTotalPoints => 'Total points';
+
+  @override
+  String missionBadgeCount(int count) {
+    return '$count';
+  }
 }

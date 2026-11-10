@@ -6,9 +6,11 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../university/models/university.dart';
 import '../../university/models/university_display.dart';
+import '../models/profile_avatar.dart';
+import 'profile_avatar_view.dart';
 
-/// Hairline-bordered card surface shared by the MY dashboard cards, matching
-/// the existing menu groups (card colour, subtle border, card radius).
+/// Card surface shared by the MY dashboard cards: card colour, hairline border,
+/// card radius and a soft shadow (the page behind is white).
 class _DashboardCard extends StatelessWidget {
   const _DashboardCard({required this.child, this.onTap});
 
@@ -19,115 +21,185 @@ class _DashboardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final r = BorderRadius.circular(AppRadius.card);
-    return Material(
-      color: p.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: r,
-        side: BorderSide(color: p.border),
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: r, boxShadow: softCardShadow(p)),
+      child: Material(
+        color: p.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: r,
+          side: BorderSide(color: p.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(onTap: onTap, child: child),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, child: child),
     );
   }
 }
 
-/// "안녕하세요, {닉네임}님" with the saved nickname. Mostly white: only the
-/// outline is a soft orange.
-class ProfileGreetingCard extends StatelessWidget {
-  const ProfileGreetingCard({
+/// Top of MY: a large round mascot avatar, the nickname with a pencil, the
+/// email and a "꾸미기" button. Tapping the avatar or the button opens the
+/// avatar picker; the pencil edits the nickname.
+class ProfileHero extends StatelessWidget {
+  const ProfileHero({
     super.key,
     required this.nickname,
     required this.email,
     required this.avatar,
-    required this.onEditProfile,
+    required this.onChangeAvatar,
+    required this.onEditNickname,
   });
 
   final String nickname;
   final String? email;
-  final Widget avatar;
-  final VoidCallback onEditProfile;
+  final ProfileAvatar avatar;
+
+  /// Null while the profile is not loaded (nowhere to save a picture yet).
+  final VoidCallback? onChangeAvatar;
+
+  /// Null while the profile is not loaded (nothing to edit yet).
+  final VoidCallback? onEditNickname;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final p = context.palette;
     final hasEmail = email != null && email!.isNotEmpty;
-    return _DashboardCard(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 8, 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                avatar,
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.profileGreeting(nickname),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        l10n.profileGreetingSub,
-                        style: TextStyle(fontSize: 15, color: p.textSecondary),
-                      ),
-                    ],
+    return Stack(
+      alignment: Alignment.topCenter,
+      children: [
+        // Soft peach shapes behind the avatar (decoration only).
+        Positioned.fill(
+          child: ExcludeSemantics(
+            child: ClipRect(
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -34,
+                    left: -46,
+                    child: _Blob(size: 150, color: p.accentSoft),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: -30,
+                    child: _Blob(size: 96, color: p.accentSoft),
+                  ),
+                  Positioned(
+                    top: 120,
+                    left: 18,
+                    child: _Blob(size: 26, color: p.accentSoft),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 18, bottom: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                button: true,
+                label: l10n.profileAvatarChange,
+                excludeSemantics: true,
+                child: GestureDetector(
+                  onTap: onChangeAvatar,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: p.card,
+                      shape: BoxShape.circle,
+                      boxShadow: softCardShadow(p),
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ProfileAvatarView(avatar: avatar, size: 112),
+                        // A hint that the picture can be tapped to change it.
+                        if (onChangeAvatar != null)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: p.rust,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: p.card, width: 2.5),
+                              ),
+                              child: Icon(
+                                Icons.photo_camera_rounded,
+                                size: 16,
+                                color: p.onRust,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-            ),
-            Row(
-              children: [
-                // Only shown when the account really has an email (Kakao
-                // users may not share one).
-                if (hasEmail)
-                  Expanded(
-                    flex: 2,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
                     child: Text(
-                      email!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption(context).copyWith(fontSize: 12.5),
-                    ),
-                  )
-                else
-                  const Spacer(),
-                Flexible(
-                  child: TextButton(
-                    onPressed: onEditProfile,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(0, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      foregroundColor: p.textPrimary,
-                    ),
-                    child: Text(
-                      l10n.profileEditProfile,
+                      nickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.4,
                       ),
                     ),
                   ),
+                  if (onEditNickname != null)
+                    IconButton(
+                      tooltip: l10n.accountNicknameEdit,
+                      onPressed: onEditNickname,
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.edit_outlined,
+                        size: 20,
+                        color: p.textSecondary,
+                      ),
+                    ),
+                ],
+              ),
+              // Only shown when the account really has an email (Kakao users
+              // may not share one).
+              if (hasEmail) ...[
+                const SizedBox(height: 2),
+                Text(
+                  email!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, color: p.textMuted),
                 ),
               ],
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
+}
+
+class _Blob extends StatelessWidget {
+  const _Blob({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
 }
 
 /// The selected university (the same state Home and the map use). Tapping it

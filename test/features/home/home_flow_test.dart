@@ -74,10 +74,10 @@ void main() {
     await tester.tap(find.text('밥수다'));
     await tester.pumpAndSettle();
     expect(find.text('아직 올라온 이야기가 없어요'), findsOneWidget);
-    await tester.tap(find.text('기록'));
+    await tester.tap(find.text('미션'));
     await tester.pumpAndSettle();
-    // V5: the page is open to guests (no fake list); only adding needs an account.
-    expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
+    // Missions belong to an account: guests are asked to sign in.
+    expect(find.text('로그인하고 미션에 참여해요'), findsOneWidget);
     await tester.tap(find.text('MY'));
     await tester.pumpAndSettle();
     expect(find.text('로그인 / 회원가입'), findsOneWidget);
@@ -97,7 +97,7 @@ void main() {
     tester,
   ) async {
     final (c, fake) = await pumpApp(tester);
-    expect(find.textContaining('정문 출발 기준'), findsOneWidget);
+    expect(find.text('정문 기준'), findsOneWidget);
 
     final hoseo = (await c.read(universityListProvider.future))
         .firstWhere((u) => u.nameKo == '호서대학교');
@@ -107,7 +107,7 @@ void main() {
     expect(c.read(selectedUniversityProvider).value!.nameKo, '호서대학교');
     expect(fake.nearbyCalls.last.$1, '호서대학교');
     // No campus points for this campus: the walk starts at its center.
-    expect(find.textContaining('캠퍼스 중심 출발 기준'), findsOneWidget);
+    expect(find.text('캠퍼스 중심 기준'), findsOneWidget);
     expect(
       c.read(sharedPreferencesProvider).getString('selected_university_id'),
       '5c0a8f3e-0002-4a6e-9b1d-000000000002',

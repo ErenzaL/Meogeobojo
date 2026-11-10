@@ -452,6 +452,23 @@ class AuthController extends Notifier<AuthSnapshot> {
     }
   }
 
+  /// Saves the profile picture to the account and updates the in-memory
+  /// profile. False on failure (the previous picture stays).
+  Future<bool> saveAvatar(String avatarKey) async {
+    final user = state.user;
+    final profile = state.profile;
+    if (user == null || profile == null) return false;
+    try {
+      await ref
+          .read(profileRepositoryProvider)
+          .updateAvatar(user.id, avatarKey);
+      applyProfile(profile.copyWith(avatarPath: avatarKey));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   void clearFailure() {
     if (state.failure != null) state = state.copyWith(failure: () => null);
   }

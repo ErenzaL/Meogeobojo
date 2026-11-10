@@ -183,7 +183,7 @@ void main() {
       await pumpApp(tester, h, home: const AppShell());
       // 숨긴집 is the nearest but hidden by an admin: 중간집 is first, of 2 places.
       expect(find.text('숨긴집'), findsNothing);
-      expect(find.text('중간집'), findsOneWidget);
+      expect(find.text('중간집'), findsWidgets); // top pick + picks list
       expect(find.text('2곳 중 1순위'), findsOneWidget);
       expect(find.text('9,000~'), findsOneWidget);
       expect(find.text('21:30'), findsOneWidget);

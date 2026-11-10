@@ -70,8 +70,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const gutter = AppSpacing.screenH;
-    const pad = EdgeInsets.symmetric(horizontal: gutter);
+    // 20 on phones; on the website the page gutter (24 / 28 / 40) so Home lines up with the header and the footer
+    final gutter = WebLayout.gutterOf(context, phone: AppSpacing.screenH);
+    final pad = EdgeInsets.symmetric(horizontal: gutter);
     final recs = ref.watch(homeRecsProvider);
     final categories = ref.watch(homeCategoryProvider);
     final showRecs = ref.watch(homeShowRecsProvider);
@@ -101,19 +102,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               // Desktop has the shared header; this row is phone-only. Desktop gets the welcome section instead
               // (the selected university and its selector, which the header does not carry).
               if (MediaQuery.sizeOf(context).width < Breakpoints.desktop) ...[
-                const Padding(padding: pad, child: HomeTopBar()),
+                Padding(padding: pad, child: HomeTopBar()),
                 const SizedBox(height: 8),
               ] else
-                const Padding(padding: pad, child: HomeWelcome()),
-              const Padding(padding: pad, child: HomeNotices()),
-              const Padding(padding: pad, child: HomeSearchField()),
+                Padding(padding: pad, child: HomeWelcome()),
+              Padding(padding: pad, child: HomeNotices()),
+              Padding(padding: pad, child: HomeSearchField()),
               const SizedBox(height: 14),
-              const HomeCategoryBar(padding: pad),
+              HomeCategoryBar(padding: pad),
               const SizedBox(height: 8),
-              const HomeFilterBar(padding: pad),
+              HomeFilterBar(padding: pad),
               // Desktop: the expandable advanced panel and the removable applied-filter chips.
               if (MediaQuery.sizeOf(context).width >= Breakpoints.desktop)
-                const Padding(
+                Padding(
                   padding: pad,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,20 +189,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                         ),
                                         categories: categories,
                                         bleed: twoColumn ? 0 : gutter,
+                                        // website: a responsive grid of cards
+                                        grid:
+                                            twoColumn &&
+                                            WebLayout.fullWidthOf(context),
                                       ),
                                     ],
                                   ),
                           );
                     // Tablet / desktop: recommendations left, cafeteria right.
                     if (twoColumn) {
+                      // The cafeteria column keeps a card-like width (about a third of the page, 380-520 px) so a
+                      // very wide window gives the room to the restaurants, not to a stretched cafeteria card.
+                      final side = (box.maxWidth * 0.34).clamp(380.0, 520.0);
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(flex: 3, child: recsColumn),
-                          const SizedBox(width: 24),
-                          const Expanded(
-                            flex: 2,
-                            child: CafeteriaCard(stackButtons: true),
+                          Expanded(child: recsColumn),
+                          SizedBox(width: gutter > 20 ? 32 : 24),
+                          SizedBox(
+                            width: side,
+                            child: const CafeteriaCard(stackButtons: true),
                           ),
                         ],
                       );

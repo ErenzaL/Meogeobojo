@@ -33,7 +33,8 @@ class WebFooterSlot extends ConsumerWidget {
 class WebFooter extends ConsumerWidget {
   const WebFooter({super.key});
 
-  static const maxContentWidth = 1200.0;
+  /// Content width where the layout is not full width (never on the website).
+  static const fallbackContentWidth = 1200.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -96,17 +97,27 @@ class WebFooter extends ConsumerWidget {
       ),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: maxContentWidth),
+          // Edge to edge on the website (the content is inset by the page gutter); a bounded column only where the
+          // layout is not full width.
+          constraints: BoxConstraints(
+            maxWidth: WebLayout.fullWidthOf(context)
+                ? double.infinity
+                : fallbackContentWidth,
+          ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: EdgeInsets.symmetric(
+              horizontal: WebLayout.gutterOf(context, phone: 24),
+              vertical: 32,
+            ),
             // The column layout depends only on the screen width (not on a LayoutBuilder), so the footer can sit in a
             // SliverFillRemaining, which measures its child's intrinsic size.
             child: Builder(
               builder: (context) {
+                final full = WebLayout.fullWidthOf(context);
+                final screen = MediaQuery.sizeOf(context).width;
                 final width =
-                    (MediaQuery.sizeOf(context).width
-                        .clamp(0.0, maxContentWidth)) -
-                    48; // minus the horizontal padding
+                    (full ? screen : screen.clamp(0.0, fallbackContentWidth)) -
+                    2 * WebLayout.gutterOf(context, phone: 24);
                 final box = (maxWidth: width);
                 final columns = [about, announcements, contact, service];
                 final Widget top;

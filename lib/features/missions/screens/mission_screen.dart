@@ -112,7 +112,9 @@ class _Content extends ConsumerWidget {
       builder: (context, box) {
         // Desktop: the banner and the progress card side by side, the missions in two columns.
         final wide = box.maxWidth >= 900;
-        final cardWidth = (box.maxWidth - 16) / 2;
+        // as many mission columns as fit (about 380 px each): 2 on a tablet / small desktop, up to 4 on a wide window
+        final columns = ((box.maxWidth + 16) / 396).floor().clamp(2, 4);
+        final cardWidth = (box.maxWidth - 16 * (columns - 1)) / columns;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

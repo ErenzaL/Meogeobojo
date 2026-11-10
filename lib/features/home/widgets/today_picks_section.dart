@@ -58,6 +58,7 @@ class TodayPicksSection extends StatelessWidget {
     required this.ranked,
     required this.categories,
     this.bleed = 0,
+    this.grid = false,
   });
 
   final List<RankedRestaurant> ranked;
@@ -68,6 +69,9 @@ class TodayPicksSection extends StatelessWidget {
   /// How far the list scrolls past each side of its parent (the page gutter
   /// on phones), so cards slide to the screen edge.
   final double bleed;
+
+  /// Website: the cards wrap into a responsive grid (as many columns as fit) instead of one sideways-scrolling row.
+  final bool grid;
 
   static const maxCards = 10;
   static const _cardWidth = 196.0;
@@ -95,39 +99,64 @@ class TodayPicksSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, box) => SizedBox(
-            height: height,
-            child: OverflowBox(
-              minWidth: box.maxWidth + 2 * bleed,
-              maxWidth: box.maxWidth + 2 * bleed,
-              minHeight: height,
-              maxHeight: height,
-              child: SizedBox(
-                height: height,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: EdgeInsets.symmetric(horizontal: bleed),
-                  clipBehavior: Clip.none,
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) =>
-                      _PickCard(item: items[i], height: height),
+        if (grid)
+          LayoutBuilder(
+            key: const ValueKey('picks-grid'),
+            builder: (context, box) {
+              const gap = 16.0;
+              final columns = ((box.maxWidth + gap) / (_cardWidth + gap))
+                  .floor()
+                  .clamp(1, 8);
+              final w = (box.maxWidth - gap * (columns - 1)) / columns;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final item in items)
+                    _PickCard(item: item, height: height, width: w),
+                ],
+              );
+            },
+          )
+        else
+          LayoutBuilder(
+            builder: (context, box) => SizedBox(
+              height: height,
+              child: OverflowBox(
+                minWidth: box.maxWidth + 2 * bleed,
+                maxWidth: box.maxWidth + 2 * bleed,
+                minHeight: height,
+                maxHeight: height,
+                child: SizedBox(
+                  height: height,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: bleed),
+                    clipBehavior: Clip.none,
+                    itemCount: items.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
+                    itemBuilder: (_, i) =>
+                        _PickCard(item: items[i], height: height),
+                  ),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
 }
 
 class _PickCard extends StatelessWidget {
-  const _PickCard({required this.item, required this.height});
+  const _PickCard({
+    required this.item,
+    required this.height,
+    this.width = TodayPicksSection._cardWidth,
+  });
 
   final RankedRestaurant item;
   final double height;
+  final double width;
 
   /// Up to two tags from Kakao's own category path: the cuisine and the most
   /// specific part ("한식", "불백").
@@ -150,7 +179,7 @@ class _PickCard extends StatelessWidget {
     final i = item.insight;
     final km = (item.meters / 1000).toStringAsFixed(1);
     return SizedBox(
-      width: TodayPicksSection._cardWidth,
+      width: width,
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(

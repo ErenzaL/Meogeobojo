@@ -66,57 +66,75 @@ class _GuestView extends ConsumerWidget {
       backgroundColor: whitePageColor(context),
       children: [
         V5Header(title: l10n.myTitle),
-        const SizedBox(height: 8),
+        // The sign-in prompt and the settings rows keep a card-like width (not stretched across a wide window).
         Center(
-          child: Image.asset(
-            AppAssets.mascotStanding,
-            height: 120,
-            semanticLabel: l10n.mascotSemantics,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          l10n.profileGuestTitle,
-          textAlign: TextAlign.center,
-          style: AppText.sectionTitle,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.profileGuestSubtitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: context.palette.textSecondary),
-        ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: () => openLogin(context),
-          child: Text(l10n.profileLoginButton),
-        ),
-        const SizedBox(height: 4),
-        TextButton(
-          onPressed: () =>
-              ref.read(shellTabProvider.notifier).select(ShellTabs.home),
-          style: TextButton.styleFrom(
-            minimumSize: const Size(0, 48),
-            foregroundColor: context.palette.accentStrong,
-          ),
-          child: Text(
-            l10n.authBrowseAsGuest,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-          ),
-        ),
-        V5SectionTitle(l10n.settingsAppTitle),
-        V5RowGroup(
-          elevated: true,
-          rows: [
-            V5Row(
-              icon: Icons.language_rounded,
-              title: l10n.profileLanguage,
-              trailing: language.nativeName,
-              onTap: () => showLanguageSheet(context),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                Center(
+                  child: Image.asset(
+                    AppAssets.mascotStanding,
+                    height: 120,
+                    semanticLabel: l10n.mascotSemantics,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.profileGuestTitle,
+                  textAlign: TextAlign.center,
+                  style: AppText.sectionTitle,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.profileGuestSubtitle,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: context.palette.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: () => openLogin(context),
+                  child: Text(l10n.profileLoginButton),
+                ),
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: () => ref
+                      .read(shellTabProvider.notifier)
+                      .select(ShellTabs.home),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    foregroundColor: context.palette.accentStrong,
+                  ),
+                  child: Text(
+                    l10n.authBrowseAsGuest,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                V5SectionTitle(l10n.settingsAppTitle),
+                V5RowGroup(
+                  elevated: true,
+                  rows: [
+                    V5Row(
+                      icon: Icons.language_rounded,
+                      title: l10n.profileLanguage,
+                      trailing: language.nativeName,
+                      onTap: () => showLanguageSheet(context),
+                    ),
+                    _themeRow(context, themeMode),
+                  ],
+                ),
+              ],
             ),
-            _themeRow(context, themeMode),
-          ],
+          ),
         ),
       ],
     );
@@ -297,8 +315,10 @@ class _SignedInView extends ConsumerWidget {
           key: const ValueKey('my-desktop'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              flex: 2,
+            // The account column keeps a card width (so settings rows are not stretched); the activity area takes
+            // the rest, in two columns on a large window.
+            SizedBox(
+              width: MediaQuery.sizeOf(context).width >= 1440 ? 420 : 380,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -312,17 +332,38 @@ class _SignedInView extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 24),
+            const SizedBox(width: 32),
             Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  statsW,
-                  const _MyConditions(),
-                  ...activity,
-                  const MyBadgesSection(),
-                ],
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final first = <Widget>[statsW, const _MyConditions()];
+                  final second = <Widget>[...activity, const MyBadgesSection()];
+                  if (box.maxWidth < 900) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [...first, ...second],
+                    );
+                  }
+                  return Row(
+                    key: const ValueKey('my-two-columns'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: first,
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: second,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

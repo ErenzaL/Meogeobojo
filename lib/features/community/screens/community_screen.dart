@@ -156,16 +156,18 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // The feed takes all the room that is left, from the left gutter to the side panel. (Individual posts, when
+            // they exist, are cards of a comfortable reading width inside it; the page itself is never narrowed.)
             Expanded(
-              flex: 5,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [chips, const SizedBox(height: 4), ...feed],
               ),
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              flex: 3,
+            const SizedBox(width: 32),
+            SizedBox(
+              // the composer and the campus card are a side panel of card width
+              width: MediaQuery.sizeOf(context).width >= 1440 ? 420 : 360,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [

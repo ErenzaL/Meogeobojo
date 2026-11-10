@@ -126,9 +126,20 @@ class V5Page extends StatelessWidget {
                       content: Align(
                         alignment: Alignment.topCenter,
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: maxWidth),
+                          // The website uses the whole window (the page's own columns decide their widths); phones and
+                          // the native apps keep the bounded reading column.
+                          constraints: BoxConstraints(
+                            maxWidth: WebLayout.fullWidthOf(context)
+                                ? double.infinity
+                                : maxWidth,
+                          ),
                           child: Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            padding: EdgeInsets.fromLTRB(
+                              WebLayout.gutterOf(context),
+                              0,
+                              WebLayout.gutterOf(context),
+                              24,
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: children,

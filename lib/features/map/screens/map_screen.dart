@@ -321,6 +321,8 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
     // Same breakpoint as the shell's desktop header: a list panel beside the map instead of a bottom sheet.
     final wide = MediaQuery.sizeOf(context).width >= Breakpoints.desktop;
+    // the same side gutter as the header and the other pages (16 on phones)
+    final gutter = WebLayout.gutterOf(context);
     if (_wasWide != null && _wasWide != wide) _scheduleRelayout();
     _wasWide = wide;
 
@@ -332,7 +334,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              padding: EdgeInsets.fromLTRB(gutter, 12, gutter, 0),
               child: V5Header(
                 title: l10n.mapPageTitle,
                 trailing: IconButton(
@@ -347,7 +349,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+              padding: EdgeInsets.fromLTRB(gutter, 4, gutter, 10),
               child: InkWell(
                 onTap: () => showUniversitySheet(context),
                 borderRadius: BorderRadius.circular(8),
@@ -373,18 +375,35 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: MapFilterBar(),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: gutter),
+              child: const MapFilterBar(),
             ),
             const SizedBox(height: 12),
             Expanded(
               child: Row(
                 children: [
-                  Expanded(child: _mapStack(context, wide)),
+                  // Whenever the map's own box changes size (window resized, panel shown, filter rows wrapping) the
+                  // web map is told to re-measure itself (same centre and zoom).
+                  Expanded(
+                    child: NotificationListener<SizeChangedLayoutNotification>(
+                      onNotification: (_) {
+                        _scheduleRelayout();
+                        return false;
+                      },
+                      child: SizeChangedLayoutNotifier(
+                        child: _mapStack(context, wide),
+                      ),
+                    ),
+                  ),
                   if (wide)
                     SizedBox(
-                      width: 400,
+                      // the map keeps the majority of the width; the list is a side panel (400 / 440 / 480 px)
+                      width: MediaQuery.sizeOf(context).width >= 1920
+                          ? 480
+                          : MediaQuery.sizeOf(context).width >= 1440
+                          ? 440
+                          : 400,
                       child: MapPlacesPanel(
                         onFocus: _focus,
                         focusedId: _selected?.kakaoId,

@@ -59,3 +59,27 @@ branched from it), so merging the redesign also delivers them; there is nothing 
 * 밥수다 has no posts or posting backend (it never did); no community backend was added.
 * Missions / MY desktop layouts rearrange the existing sections; no new data was added.
 * Mobile-width browser screenshots were taken with Chrome's device emulation, not on a physical phone.
+
+## Full-width layout (branch `feature/web-fullwidth`)
+The website now uses the **whole browser width**; the 1280 px centred column (and the grey side margins) is gone on the web. Native apps and
+phones keep their layout: the bounded column only exists where `webFullWidthProvider` is off (every platform except the website).
+
+| Piece | Change |
+|---|---|
+| `AppFrame` / `WebLayout` (`responsive.dart`) | On the web the frame no longer caps the width or rewrites the window size; it provides `WebLayout`, from which pages read the **gutter**: 24 px tablet (600-1023), 28 px desktop (1024-1439), 40 px large desktop (1440+); phones keep their own (16 / 20). |
+| Header | Edge to edge, same gutter as the pages; logo left, tab strip fills the middle, search pill (360 / 420 px) + language + theme + profile end exactly at the right gutter. Active tab and URL sync unchanged. |
+| Footer | Edge to edge (background, top rule, content inset by the gutter); four columns / two / one by width; still pinned to the bottom of short pages. |
+| Shared page shell (`V5Page`) | No maximum width on the web; content inset by the gutter. Pages decide their own columns; text, forms and cards keep local limits. |
+| Home | Gutter-aligned welcome, search, categories, filters, advanced panel; recommendations column + a cafeteria column of card width (34 %, 380-520 px); "오늘의 추천" cards become a **responsive grid** (as many ~196 px columns as fit) instead of a sideways scroller. |
+| Map | Map takes the majority of the width; results panel 400 / 440 / 480 px at 1024 / 1440 / 1920; the map is re-measured whenever **its own box really changes size** (`SizeChangedLayoutNotifier`, plus window resize and tab show), keeping centre and zoom. |
+| 밥수다 | Feed from the left gutter to a 360 / 420 px side panel (composer + campus). |
+| Missions | Overview banner + progress card; mission cards in 2-4 columns depending on width (about 380 px each). |
+| MY | Account column of card width (380 / 420 px); the activity area takes the rest and splits into two columns from about 900 px; the signed-out sign-in prompt and settings keep a 560 px width instead of stretching. |
+
+### Verification (final code)
+* `dart analyze lib test` clean; `flutter test` **904 pass** (new `web_fullwidth_test.dart`: 63 checks - every page x 390/768/1024/1440/1920 px x ko/en with no
+  overflow, header and footer edge to edge at 1440 and 1920, content inset by the gutter, Home grid grows with the window, map keeps the majority width with the
+  400/440/480 panel, MY columns, phones and the native bounded layout unchanged); Node relayout tests 3 pass; `flutter build web --release` succeeds.
+* Real Chrome on the release build: **no horizontal overflow** on all five pages at 768, 1024, 1440 and 1920 px (`scrollWidth == innerWidth`); screenshots at 1440 and 1920
+  show header, page background and footer spanning the viewport; tab clicks, Back / Forward and direct links behave as before (no page errors).
+* Not verifiable here: the Kakao map itself (the JavaScript key exists only in Render); screenshots show its error state locally.

@@ -26,6 +26,7 @@ class MeogeobojoApp extends ConsumerWidget {
     final language = ref.watch(appLanguageProvider);
     final themeMode = ref.watch(themeModeProvider);
     final urlSync = ref.watch(urlSyncEnabledProvider);
+    final fullWidth = ref.watch(webFullWidthProvider);
     return MaterialApp(
       // The brand name is never translated.
       title: '먹어보조',
@@ -46,7 +47,10 @@ class MeogeobojoApp extends ConsumerWidget {
         value: Theme.of(context).brightness == Brightness.dark
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
-        child: AppFrame(child: child ?? const SizedBox.shrink()),
+        child: AppFrame(
+          fullWidth: fullWidth,
+          child: child ?? const SizedBox.shrink(),
+        ),
       ),
       locale: language.locale,
       supportedLocales: AppLocalizations.supportedLocales,

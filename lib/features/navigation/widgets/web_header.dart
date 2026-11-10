@@ -7,6 +7,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../search/screens/search_screen.dart';
+import '../../../core/widgets/responsive.dart';
 import '../providers/shell_tab_provider.dart';
 
 /// Desktop header (V5 `.whead`): brand, tabs with an underline on the active
@@ -37,7 +38,10 @@ class WebHeader extends ConsumerWidget {
       maxScaleFactor: 1.15,
       child: Container(
         height: height,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        // aligned with the page content below: the same gutter as the pages (24 / 28 / 40)
+        padding: EdgeInsets.symmetric(
+          horizontal: WebLayout.gutterOf(context, phone: 24),
+        ),
         decoration: BoxDecoration(
           color: p.card,
           border: Border(bottom: BorderSide(color: p.border)),
@@ -121,13 +125,13 @@ class WebHeader extends ConsumerWidget {
               icon: const Icon(Icons.search_rounded),
             )
           else
-            Flexible(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 360),
-                child: _SearchPill(
-                  hint: l10n.searchHint,
-                  onTap: () => _openSearch(context),
-                ),
+            // A fixed-width pill (not a Flexible one): the tab strip takes ALL the free space, so the controls on the right
+            // end exactly at the right gutter however wide the window is.
+            SizedBox(
+              width: width >= 1600 ? 420 : 360,
+              child: _SearchPill(
+                hint: l10n.searchHint,
+                onTap: () => _openSearch(context),
               ),
             ),
           const SizedBox(width: 8),

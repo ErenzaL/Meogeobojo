@@ -3,15 +3,17 @@
  * scan. NOT the app's `search_restaurants` function (that one is deployed separately, is not in this repo and is
  * left untouched).
  *
- * One request = ONE search area (a circle) for ONE food group (+ optionally one keyword), all of its accessible
- * pages. The Admin app decides which areas to ask for (an adaptive grid over the university's radius); this function
+ * One request = ONE PAGE (<= 15 places, one Kakao call) of ONE search area (a circle) for ONE food group (+ optionally
+ * one keyword). The Admin app decides which areas and pages to ask for (an adaptive grid over the university's radius,
+ * the page number being the resume cursor), so every request is small, fast and independently retryable; this function
  * only
  *   - keeps the Kakao REST key server-side (secret `KAKAO_REST_API_KEY`),
  *   - requires a signed-in ADMIN (checked in the database with the caller's own token, `has_role('admin')`),
  *   - reads the university (centre + `search_radius_m`) from the database itself, and refuses areas outside it, so it
  *     cannot be used as a general Kakao proxy,
- *   - pages through the results (size 15, as many pages as Kakao says are accessible) and tells the caller whether
- *     the area was TRUNCATED (more places exist than Kakao will hand out), so the caller can split it,
+ *   - reads the requested page (size 15) and tells the caller which page comes next (`next_page`, null at the end of
+ *     what Kakao makes accessible) and whether the area is TRUNCATED (more places exist than Kakao will hand out),
+ *     so the caller can split it,
  *   - maps Kakao rate-limit / outage answers to distinct statuses so the caller can back off.
  *
  * Kakao's terms: results are for real-time use. Nothing here is stored, cached or logged (only counts are logged).
@@ -70,6 +72,8 @@ export interface CellRequest {
   radiusM: number
   group: Group
   query: string | null
+  /** 1..MAX_PAGES: the cursor. */
+  page: number
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
@@ -90,6 +94,11 @@ export function parseRequest(raw: unknown): CellRequest | string {
     if (q.length === 0 || q.length > 30) return 'query must be 1..30 characters'
     query = q
   }
+  let page = 1
+  if (b.page !== undefined && b.page !== null) {
+    if (typeof b.page !== 'number' || !Number.isInteger(b.page) || b.page < 1 || b.page > MAX_PAGES) return `page must be an integer 1..${MAX_PAGES}`
+    page = b.page
+  }
   return {
     universityId: b.university_id,
     lat: cell.lat,
@@ -97,6 +106,7 @@ export function parseRequest(raw: unknown): CellRequest | string {
     radiusM: Math.round(cell.radius_m),
     group: b.category_group_code as Group,
     query,
+    page,
   }
 }
 
@@ -180,32 +190,27 @@ async function kakaoPage(req: CellRequest, page: number, deps: Deps): Promise<{ 
   return { docs: b.documents as KakaoDoc[], meta }
 }
 
-/** Pages 1..N of one area. `truncated` = Kakao has more places here than it will let anyone read. */
-export async function searchCell(req: CellRequest, deps: Deps) {
-  const docs: KakaoDoc[] = []
-  let calls = 0
-  const first = await kakaoPage(req, 1, deps)
-  calls++
-  docs.push(...first.docs)
-  const accessible = Math.min(first.meta.pageable_count, MAX_ACCESSIBLE)
+/**
+ * ONE page of one area. `next_page` is the cursor for the caller (null once everything Kakao makes accessible has
+ * been read); `truncated` = Kakao has more places here than it will let anyone read.
+ */
+export async function searchPage(req: CellRequest, deps: Deps) {
+  const { docs, meta } = await kakaoPage(req, req.page, deps)
+  const accessible = Math.min(meta.pageable_count, MAX_ACCESSIBLE)
   const pages = Math.min(MAX_PAGES, Math.ceil(accessible / PAGE_SIZE))
-  let isEnd = first.meta.is_end
-  for (let p = 2; p <= pages && !isEnd; p++) {
-    const next = await kakaoPage(req, p, deps)
-    calls++
-    docs.push(...next.docs)
-    isEnd = next.meta.is_end
-  }
+  const nextPage = !meta.is_end && req.page < pages ? req.page + 1 : null
   // pageable_count tops out at 45: reaching it means we cannot tell whether more exist.
-  const truncated = first.meta.total_count > first.meta.pageable_count || first.meta.pageable_count >= MAX_ACCESSIBLE
+  const truncated = meta.total_count > meta.pageable_count || meta.pageable_count >= MAX_ACCESSIBLE
   return {
     documents: docs.map(slim),
     meta: {
-      total_count: first.meta.total_count,
-      pageable_count: first.meta.pageable_count,
+      page: req.page,
+      next_page: nextPage,
+      total_count: meta.total_count,
+      pageable_count: meta.pageable_count,
       returned: docs.length,
       truncated,
-      kakao_calls: calls,
+      kakao_calls: 1,
     },
   }
 }
@@ -274,7 +279,7 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   if (!cellWithinCampus(parsed, campus)) return json(400, { success: false, error: 'cell_outside_university_area' })
 
   try {
-    const out = await searchCell(parsed, deps)
+    const out = await searchPage(parsed, deps)
     console.log(JSON.stringify({ fn: 'admin_kakao_search', group: parsed.group, kw: !!parsed.query, ...out.meta }))
     return json(200, {
       success: true,

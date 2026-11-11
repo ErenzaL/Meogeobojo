@@ -33,28 +33,47 @@ admin-only function that the Admin app drives with an adaptive grid over the uni
 | URL | `POST {SUPABASE_URL}/functions/v1/admin_kakao_search` |
 | Auth | the signed-in admin's JWT (`Authorization: Bearer`). The function asks the database `has_role('admin')` with that same token (no service key), so a non-admin gets `403` before Kakao is called |
 | Secrets | `KAKAO_REST_API_KEY` (the one `search_restaurants` already uses). `SUPABASE_URL` and `SUPABASE_ANON_KEY` are provided by the platform. Keep the default JWT verification on |
-| Request | `{"university_id": uuid, "category_group_code": "FD6"\|"CE7", "query"?: "치킨집", "cell": {"lat", "lng", "radius_m"}}` |
+| Request | `{"university_id": uuid, "category_group_code": "FD6"\|"CE7", "query"?: "치킨집", "page"?: 1..3, "cell": {"lat", "lng", "radius_m"}}` |
 | What it checks | the university exists and has coordinates (read from `universities` with the caller's token) and the cell lies inside the circle around that university's `search_radius_m` (so it cannot be used as a general Kakao proxy) |
-| What it does | Kakao category search (FD6 / CE7), or keyword search with `category_group_code` when `query` is given, `x`/`y`/`radius`, `size=15`, pages until `is_end` or the accessible limit |
-| Success | `{"success": true, "documents": [...], "meta": {"total_count", "pageable_count", "returned", "truncated", "kakao_calls"}, "university": {"id","latitude","longitude","search_radius_m"}}` |
-| Failures | `401` no token · `403` not an admin · `400` bad input / cell outside the university · `404` unknown university · `429` Kakao rate limit or quota (HTTP 429, or Kakao code −10) · `502` Kakao down / timeout · `500` misconfigured |
+| What it does | **ONE Kakao call per request**: category search (FD6 / CE7), or keyword search with `category_group_code` when `query` is given, `x`/`y`/`radius`, `size=15`, the requested `page`. The page number is the resume cursor: the caller walks `next_page` |
+| Success | `{"success": true, "documents": [...], "meta": {"page", "next_page", "total_count", "pageable_count", "returned", "truncated", "kakao_calls": 1}, "university": {"id","latitude","longitude","search_radius_m"}}` |
+| Failures | `401` no token · `403` not an admin · `400` bad input (incl. `page`) / cell outside the university · `404` unknown university · `429` Kakao rate limit or quota (HTTP 429, or Kakao code −10) · `502` Kakao down / timeout · `500` misconfigured |
 
 `truncated` is how the Admin knows to split a search area: Kakao documents `pageable_count` as "at most 45", so a search whose
 `total_count` exceeds it (or that reaches 45) cannot be read in full.
 
-**Scan (Admin, `admin/src/features/restaurants/kakaoScan.ts`).** The centre, `search_radius_m` and id of the chosen university are read from
-Supabase when the search starts. The bounding square of the circle is searched for FD6 and CE7 as the circle through its corners; a
-truncated square is split into four, down to `maxDepth` 6 (≈94 m squares for 3000 m). Squares that cannot touch the radius are skipped.
+**Scan (Admin, `admin/src/features/restaurants/kakaoScan.ts`) = a resumable JOB.** The centre, `search_radius_m` and id of the chosen university are read from
+Supabase when the search starts. The bounding square of the circle is searched for FD6 and CE7 as the circle through its corners, **one page per
+request**; a truncated square is split into four, down to `maxDepth` 6 (≈94 m squares for 3000 m). Squares that cannot touch the radius are skipped.
 Squares still truncated at the finest level are searched once per existing keyword (`KAKAO_QUERIES`, the app's category keywords).
 Circles (`x`,`y`,`radius`) are used, not `rect`, because their parameters are unambiguous in Kakao's documentation. Every place is measured
-from the **original university coordinates** (haversine) and dropped beyond the radius; places are deduplicated by Kakao place id. Bounds:
-4 searches in flight, 1500 function requests and 3000 Kakao calls per scan, 3 retries with exponential backoff and jitter, a stop after 5
-cells in a row that stay rate-limited, and a cancel button. The screen reports radius, cells searched, Kakao calls, unique places, how many
-were beyond the radius, existing vs new, failed searches and any squares still over Kakao's cap, and says "partial" whenever that is the case.
+from the **original university coordinates** (haversine) and dropped beyond the radius; places are deduplicated by Kakao place id.
+
+*Job state* (`JobState`): a job id, and for every square its status (`pending` / `done` / `failed`), its **page cursor** and pages read, plus counters.
+It is saved in this browser (`kakaoJobStore.ts`, localStorage) every 8 squares and at the end, so an interrupted scan (closed tab, rate limit, budget,
+cancel) is offered with "이어서 하기": finished squares are not searched again, failed ones are retried from their cursor (a failure on page 2 does not
+re-read page 1). It is dropped if the university's centre or radius changed (the grid would differ) and when the scan completes.
+**The saved job holds no Kakao data** (no names, addresses, coordinates or place ids): Kakao's terms allow results in real time only. So the places found
+are in the page's memory; within the same page session "이어서 하기" keeps them (and adds the retried squares), but after a reload a continued scan lists only the
+places of the squares it still had to search (already registered places stay registered).
+
+*Bounds and failure handling:* default 3 searches in flight (one fewer for every 429 answer, never below 1); a 20 s timeout per request (the request is
+aborted and retried); 3 retries with exponential backoff and jitter (a 429 waits twice as long); 1500 function requests and 3000 Kakao calls **per run** (a
+resumed run gets a fresh allowance); a stop after 5 squares in a row that stay rate-limited, after 3 in a row that are refused (HTTP 4xx), or at once for
+401/403 or a missing function; cancel works immediately even if a request ignores its signal. One failing square marks only that square `failed`: everything
+else carries on and the result is shown as **partial**, with "이어서 하기" for the failed and remaining squares. The screen reports job id, radius, cells, Kakao
+calls, retries, unique places, how many were beyond the radius, existing vs new, failures (stage, HTTP status, code; messages are redacted, so no key or token
+can appear) and any squares still over Kakao's cap.
 Simulated cost on a 3000 m radius: ~300 places ≈ 55 Kakao calls, ~1500 ≈ 300, 3000 clustered ≈ 800 (simulation, not a Kakao measurement).
 
-**Until the function is deployed** the Admin falls back to the old keyword search (still filtered to the radius) and says in red that the
-result is partial.
+*Diagnosis.* Before scanning, the Admin asks the platform whether the function exists with a plain `GET {SUPABASE_URL}/functions/v1/admin_kakao_search?apikey=…`
+(a "simple" cross-origin request: no preflight, so the browser can read the real status): `404` = not deployed, anything else = deployed. This matters
+because for a function that does not exist the CORS preflight is a 404, the browser then refuses the real call, and supabase-js reports only a status-less
+"Failed to send a request to the Edge Function". The first import failure was exactly that: it was retried as a "network" problem and never recognised as a
+missing function (confirmed 2026-11-11: the live project answers `404 NOT_FOUND` for `admin_kakao_search`, while `search_restaurants` answers 200).
+
+**Until the function is deployed** the Admin says so (with the HTTP status) and uses the old keyword search (still filtered to the radius), and states
+that the result is partial.
 
 **Deploy (you, deliberately; nothing here deploys anything):** `supabase functions deploy admin_kakao_search --project-ref <ref>`. First run after
 deploying: scan a small radius and check the report (a scan that finds 0 places, or only squares that are all "full", means something is off).
@@ -75,9 +94,9 @@ documents (counts only, `Cache-Control: no-store`), and registration stores only
 (the name label is the one thing worth asking Kakao about). Not every place is exposed by the API, and a stored id can stop resolving, so
 "found N" is what Kakao returns, never a census.
 
-**Tests.** `deno test supabase/functions/admin_kakao_search/core_test.ts` (14; Deno is not in this repo's toolchain: `npm i deno` in a scratch
+**Tests.** `deno test supabase/functions/admin_kakao_search/core_test.ts` (15; Deno is not in this repo's toolchain: `npm i deno` in a scratch
 folder works), `cd admin && npm test` (scanner: radius propagation, pagination caps, spatial coverage, distance filter, dedupe, repeat scans,
-depth/request/concurrency bounds, backoff, partial failure, cancellation; plus the page), and `zsh supabase/tests/run_local.sh <scratch-dir>`
+depth/request/concurrency bounds, backoff, timeout, cancellation, rate limits, partial success, page cursor, resume, diagnosis of a missing function, redaction; plus the page), and `zsh supabase/tests/run_local.sh <scratch-dir>`
 (includes: registering existing places writes nothing, and 600 places in chunks, repeated, are a no-op).
 
 ## Migrations (NOT applied — no DB credentials were available)

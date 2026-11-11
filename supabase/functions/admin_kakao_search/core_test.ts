@@ -135,51 +135,58 @@ Deno.test('keyword search keeps the group filter', async () => {
   assertEquals(u.searchParams.get('category_group_code'), 'FD6')
 })
 
-Deno.test('pagination: follows pages up to what Kakao says is accessible and flags truncation', async () => {
+const pagesOf = (total: number, pageable: number) => (u: URL) => {
+  const p = Number(u.searchParams.get('page'))
+  const here = Math.max(0, Math.min(15, pageable - (p - 1) * 15))
+  return { body: { documents: docs((p - 1) * 15, here), meta: { total_count: total, pageable_count: pageable, is_end: p * 15 >= pageable } } }
+}
+const postPage = (page: number | undefined, extra: Record<string, unknown> = {}) => post({ ...good, ...(page === undefined ? {} : { page }), ...extra })
+
+Deno.test('one request = one Kakao page; the cursor walks 1 -> 2 -> 3 -> null and truncation is flagged', async () => {
   // 100 places exist, Kakao will only hand out 45 (3 pages of 15)
-  const w = world({
-    kakao: (u) => {
-      const p = Number(u.searchParams.get('page'))
-      return { body: { documents: docs((p - 1) * 15, 15), meta: { total_count: 100, pageable_count: 45, is_end: p >= 3 } } }
-    },
-  })
-  const res = await handle(post(good), w.deps)
-  const body = await res.json()
-  assertEquals(w.calls.map((c) => c.url.searchParams.get('page')), ['1', '2', '3'])
-  assertEquals(body.documents.length, 45)
-  assertEquals(body.meta, { total_count: 100, pageable_count: 45, returned: 45, truncated: true, kakao_calls: 3 })
-  assertEquals(body.university.search_radius_m, 3000, 'echoes the radius it validated against')
+  const w = world({ kakao: pagesOf(100, 45) })
+  const seen: unknown[] = []
+  let page: number | null = 1
+  while (page !== null) {
+    const body = await (await handle(postPage(page), w.deps)).json()
+    assertEquals(body.documents.length, 15)
+    assertEquals(body.meta.page, page)
+    assertEquals(body.meta.kakao_calls, 1)
+    assertEquals(body.meta.truncated, true)
+    seen.push(body.meta.next_page)
+    page = body.meta.next_page
+  }
+  assertEquals(seen, [2, 3, null])
+  assertEquals(w.calls.map((c) => c.url.searchParams.get('page')), ['1', '2', '3'], 'exactly one Kakao call per request')
+  assertEquals(w.calls.every((c) => c.url.searchParams.get('size') === '15'), true)
 })
 
-Deno.test('pagination: a small area is read in full and is not truncated', async () => {
-  const w = world({
-    kakao: (u) => {
-      const p = Number(u.searchParams.get('page'))
-      return { body: { documents: docs((p - 1) * 15, p === 1 ? 15 : 5), meta: { total_count: 20, pageable_count: 20, is_end: p >= 2 } } }
-    },
-  })
-  const body = await (await handle(post(good), w.deps)).json()
-  assertEquals(w.calls.length, 2)
-  assertEquals(body.documents.length, 20)
-  assertEquals(body.meta.truncated, false)
+Deno.test('page defaults to 1 and is validated (1..3)', async () => {
+  const w = world({ kakao: pagesOf(20, 20) })
+  assertEquals((await (await handle(postPage(undefined), w.deps)).json()).meta.page, 1)
+  for (const bad of [0, 4, 1.5, '2', -1]) assertEquals((await handle(postPage(bad as number), w.deps)).status, 400, String(bad))
+  assertEquals(w.calls.length, 1, 'a bad page never reaches Kakao')
 })
 
-Deno.test('pagination: stops at is_end, never asks for more than the meta allows', async () => {
+Deno.test('a small area ends on its last page with no next page and is not truncated', async () => {
+  const w = world({ kakao: pagesOf(20, 20) })
+  const p1 = await (await handle(postPage(1), w.deps)).json()
+  assertEquals([p1.meta.next_page, p1.meta.truncated, p1.documents.length], [2, false, 15])
+  const p2 = await (await handle(postPage(2), w.deps)).json()
+  assertEquals([p2.meta.next_page, p2.meta.truncated, p2.documents.length], [null, false, 5])
+})
+
+Deno.test('a single page area: next_page is null at once', async () => {
   const w = world({ kakao: () => ({ body: { documents: docs(0, 7), meta: { total_count: 7, pageable_count: 7, is_end: true } } }) })
-  const body = await (await handle(post(good), w.deps)).json()
-  assertEquals(w.calls.length, 1)
+  const body = await (await handle(postPage(1), w.deps)).json()
+  assertEquals(body.meta.next_page, null)
   assertEquals(body.meta.truncated, false)
+  assertEquals(w.calls.length, 1)
 })
 
 Deno.test('exactly 45 accessible cannot be told apart from "more": reported truncated', async () => {
-  const w = world({
-    kakao: (u) => {
-      const p = Number(u.searchParams.get('page'))
-      return { body: { documents: docs((p - 1) * 15, 15), meta: { total_count: 45, pageable_count: 45, is_end: p >= 3 } } }
-    },
-  })
-  const body = await (await handle(post(good), w.deps)).json()
-  assertEquals(body.meta.truncated, true)
+  const w = world({ kakao: pagesOf(45, 45) })
+  assertEquals((await (await handle(postPage(1), w.deps)).json()).meta.truncated, true)
 })
 
 Deno.test('documents are slimmed to what the admin needs', async () => {
@@ -202,13 +209,9 @@ Deno.test('failures: rate limit, quota code, outage, timeout, rejection map to d
   assertEquals(classifyKakaoFailure(500, null).kind, 'unavailable')
 })
 
-Deno.test('a failure on a later page fails the whole cell (no silent partial cell)', async () => {
-  const w = world({
-    kakao: (u) => {
-      const p = Number(u.searchParams.get('page'))
-      if (p === 2) return { status: 429, body: {} }
-      return { body: { documents: docs(0, 15), meta: { total_count: 40, pageable_count: 40, is_end: false } } }
-    },
-  })
-  assertEquals((await handle(post(good), w.deps)).status, 429)
+Deno.test('a failure on page 2 does not touch page 1: each page is its own retryable request', async () => {
+  const w = world({ kakao: (u) => (u.searchParams.get('page') === '2' ? { status: 429, body: {} } : pagesOf(40, 40)(u)) })
+  assertEquals((await handle(postPage(1), w.deps)).status, 200)
+  assertEquals((await handle(postPage(2), w.deps)).status, 429)
+  assertEquals((await handle(postPage(2), w.deps)).status, 429, 'asking for the same page again is a clean retry')
 })

@@ -1,3 +1,4 @@
+import { redact, statusOf } from './kakaoDiag'
 import { placeDistanceM } from './kakaoGeo'
 
 /** Kakao Local keyword searches that reproduce what the Flutter app collects. */
@@ -27,9 +28,10 @@ export const isFoodPlace = (d: KakaoDoc) => d.category_group_code === 'FD6' || d
 export async function collectKakaoPlaces(
   campus: Campus, invoke: Invoke, onProgress?: (done: number, total: number) => void,
   queries: readonly string[] = KAKAO_QUERIES, concurrency = 4,
-): Promise<{ places: KakaoDoc[]; failed: string[] }> {
+): Promise<{ places: KakaoDoc[]; failed: string[]; lastError?: { status?: number; message: string } }> {
   const byId = new Map<string, KakaoDoc>()
   const failed: string[] = []
+  let lastError: { status?: number; message: string } | undefined
   let next = 0; let done = 0
   const worker = async () => {
     while (next < queries.length) {
@@ -39,13 +41,13 @@ export async function collectKakaoPlaces(
         const body = data as { success?: boolean; restaurants?: unknown } | null
         if (error || !body || body.success === false || !Array.isArray(body.restaurants)) throw error ?? new Error('bad response')
         for (const d of body.restaurants as KakaoDoc[]) if (d && d.id && isFoodPlace(d) && !byId.has(String(d.id))) byId.set(String(d.id), { ...d, id: String(d.id) })
-      } catch { failed.push(q) }
+      } catch (e) { failed.push(q); lastError = { status: statusOf(e), message: redact(e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'bad response') } }
       onProgress?.(++done, queries.length)
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, queries.length) }, worker))
   const places = [...byId.values()].sort((a, b) => Number(a.distance ?? 1e9) - Number(b.distance ?? 1e9))
-  return { places, failed }
+  return { places, failed, lastError }
 }
 
 /**

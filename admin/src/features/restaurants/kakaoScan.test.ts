@@ -99,7 +99,7 @@ describe('spatial coverage and pagination', () => {
 
   it('a naive single query would have missed most of them (what the old import did)', async () => {
     const ps = city(800, 3000, 3)
-    const one = await simulate(ps).search({ campusId: 'u1', lat: CAMPUS.latitude, lng: CAMPUS.longitude, radiusM: 4243, group: 'FD6' }, new AbortController().signal)
+    const one = await simulate(ps).search({ campusId: 'u1', lat: CAMPUS.latitude, lng: CAMPUS.longitude, radiusM: 4243, group: 'FD6', page: 1 }, new AbortController().signal)
     expect(one.ok && one.docs.length).toBe(45)
   })
 
@@ -286,14 +286,24 @@ describe('bounds: depth, requests, concurrency', () => {
 })
 
 describe('failures, backoff, cancellation', () => {
-  it('retries a transient rate limit with exponential backoff, then succeeds', async () => {
+  it('retries a transient outage with exponential backoff, then succeeds', async () => {
     const sleeps: number[] = []
     let failures = 0
-    const sim = simulate(city(20, 1000, 1), { fail: () => (failures++ < 2 ? { ok: false, kind: 'rate_limited', status: 429, message: 'slow' } : null) })
+    const sim = simulate(city(20, 1000, 1), { fail: () => (failures++ < 2 ? { ok: false, kind: 'unavailable', status: 502, message: 'down' } : null) })
     const res = await scanCampus(CAMPUS, sim.search, { baseDelayMs: 500, random: () => 0.5, sleep: async (ms) => { sleeps.push(ms) }, concurrency: 1 })
     expect(sleeps.slice(0, 2)).toEqual([500, 1000])
     expect(res.progress.retries).toBe(2)
     expect(res.failedCells).toEqual([])
+    expect(res.complete).toBe(true)
+  })
+
+  it('a rate limit backs off twice as long as an outage and then succeeds', async () => {
+    const sleeps: number[] = []
+    let failures = 0
+    const sim = simulate(city(20, 1000, 1), { fail: () => (failures++ < 2 ? { ok: false, kind: 'rate_limited', status: 429, message: 'slow' } : null) })
+    const res = await scanCampus(CAMPUS, sim.search, { baseDelayMs: 500, random: () => 0.5, sleep: async (ms) => { sleeps.push(ms) }, concurrency: 1 })
+    expect(sleeps.slice(0, 2)).toEqual([1000, 2000])
+    expect(res.progress.retries).toBe(2)
     expect(res.complete).toBe(true)
   })
 
@@ -357,17 +367,17 @@ describe('failures, backoff, cancellation', () => {
 })
 
 describe('makeSupabaseSearch: what the Edge Function answered', () => {
-  const run = (invoke: (...a: never[]) => unknown) => makeSupabaseSearch(invoke as never)({ campusId: 'u1', lat: 36.77, lng: 126.93, radiusM: 4300, group: 'FD6' }, new AbortController().signal)
+  const run = (invoke: (...a: never[]) => unknown) => makeSupabaseSearch(invoke as never)({ campusId: 'u1', lat: 36.77, lng: 126.93, radiusM: 4300, group: 'FD6', page: 1 }, new AbortController().signal)
   const httpError = (status: number, body: unknown, name = 'FunctionsHttpError') => ({ name, message: 'x', context: { status, json: async () => body } })
 
   it('sends only the university id, the group and the cell (the radius is validated server-side)', async () => {
     const invoke = vi.fn(async () => ({ data: { success: true, documents: [], meta: { truncated: false, kakao_calls: 1, total_count: 0 } }, error: null }))
-    await makeSupabaseSearch(invoke as never)({ campusId: 'u1', lat: 36.77, lng: 126.93, radiusM: 4300, group: 'CE7', query: '카페' }, new AbortController().signal)
-    expect(invoke).toHaveBeenCalledWith('admin_kakao_search', expect.objectContaining({ body: { university_id: 'u1', category_group_code: 'CE7', query: '카페', cell: { lat: 36.77, lng: 126.93, radius_m: 4300 } } }))
+    await makeSupabaseSearch(invoke as never)({ campusId: 'u1', lat: 36.77, lng: 126.93, radiusM: 4300, group: 'CE7', query: '카페', page: 1 }, new AbortController().signal)
+    expect(invoke).toHaveBeenCalledWith('admin_kakao_search', expect.objectContaining({ body: { university_id: 'u1', category_group_code: 'CE7', page: 1, query: '카페', cell: { lat: 36.77, lng: 126.93, radius_m: 4300 } } }))
   })
   it('maps a good answer', async () => {
     const out = await run(async () => ({ data: { success: true, documents: [{ id: '1' }], meta: { truncated: true, kakao_calls: 3, total_count: 90 }, university: { search_radius_m: 3000 } }, error: null }))
-    expect(out).toEqual({ ok: true, docs: [{ id: '1' }], truncated: true, kakaoCalls: 3, total: 90, universityRadiusM: 3000 })
+    expect(out).toEqual({ ok: true, docs: [{ id: '1' }], truncated: true, nextPage: null, kakaoCalls: 3, total: 90, universityRadiusM: 3000 })
   })
   it('classifies failures', async () => {
     expect(await run(async () => ({ data: null, error: httpError(404, { code: 'NOT_FOUND' }, 'FunctionsRelayError') }))).toMatchObject({ ok: false, kind: 'not_deployed' })

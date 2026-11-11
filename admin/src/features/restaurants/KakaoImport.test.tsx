@@ -1,11 +1,16 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { makeQueryClient } from '@/App'
 import { fake } from '@/test/fakeSupabase'
 import { KAKAO_QUERIES } from './kakao'
+import { type FnProbe, probeFunction } from './kakaoDiag'
+import { loadJob, saveJob } from './kakaoJobStore'
+import { newJob } from './kakaoScan'
 
+// the real probe would GET the live project: it is replaced, so no test can reach the network
+vi.mock('./kakaoDiag', async (orig) => ({ ...(await orig<typeof import('./kakaoDiag')>()), probeFunction: vi.fn() }))
 vi.mock('@/lib/supabase', async () => {
   const m = await import('@/test/fakeSupabase')
   return { supabase: m.fake.client, supabaseConfigured: true }
@@ -15,7 +20,8 @@ const doc = (id: string, name: string, distance = '100') => ({ id, place_name: n
 const UNI = { id: 'u1', name_ko: '순천향대학교', is_active: true, latitude: 36.76999, longitude: 126.9315, search_radius_m: 3000 }
 const row = (over: Record<string, unknown> = {}) => ({ id: 'r1', kakao_place_id: '1776574318', name_ko: '어굿플레이스', category: '한식', address: '관리자가 입력한 주소', visibility: 'draft', updated_at: '2026-11-10T00:00:00Z', description: null, restaurant_university_links: [{ universities: { name_ko: '순천향대학교' } }], ...over })
 
-function open() {
+function open(probe?: () => Promise<FnProbe>) {
+  vi.mocked(probeFunction).mockReset().mockImplementation(probe ?? (async () => ({ state: 'deployed' as const, status: 405 })))
   return render(<MemoryRouter initialEntries={['/restaurants']}><App client={makeQueryClient()} /></MemoryRouter>)
 }
 async function pickUniversity() {
@@ -24,7 +30,11 @@ async function pickUniversity() {
   await userEvent.selectOptions(select, 'u1')
 }
 
+afterEach(() => { vi.unstubAllEnvs(); localStorage.clear() })
 beforeEach(() => {
+  // admin/.env points at the real project: use a dummy one (and a mocked probe), nothing here may reach the network
+  vi.stubEnv('VITE_SUPABASE_URL', 'https://test.invalid'); vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'test-key')
+  localStorage.clear()
   fake.reset(); fake.signInAs('admin')
   fake.respond('universities:select', { data: [UNI] })
   HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) { this.setAttribute('open', '') }
@@ -183,13 +193,26 @@ describe('카카오 식당 불러오기', () => {
     expect(fake.invokes).toHaveLength(0)
   })
 
-  it('says so when the search is not allowed or fails, and stores nothing', async () => {
+  it('says what failed: stage, HTTP status, code and job id; no secrets; nothing is stored', async () => {
     universities({ search_radius_m: 3000 })
     fake.respond('fn:admin_kakao_search', { error: httpError(403, { success: false, error: 'admin_only' }) })
     open(); await pickUniversity(); await search()
-    expect(await screen.findByText(/카카오 검색에 실패했거나 중단됐어요/)).toBeTruthy()
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('단계: 구역 검색')
+    expect(alert.textContent).toContain('HTTP 403')
+    expect(alert.textContent).toContain('admin_only')
+    expect(alert.textContent).toMatch(/작업 ID [0-9a-f]{8}/)
     expect(fake.invokes.length).toBeLessThanOrEqual(2) // only the two first searches (FD6, CE7) were in flight: a refusal is not retried
     expect(fake.rpcs.filter((r) => r.name !== 'cms_overview')).toHaveLength(0)
+  })
+
+  it('never shows a key or token, even if the server echoes one', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('fn:admin_kakao_search', { error: httpError(400, { success: false, error: 'bad request Authorization: KakaoAK 0123456789abcdef0123456789abcdef Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcdefghijklmnop' }) })
+    open(); await pickUniversity(); await search()
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).not.toContain('0123456789abcdef')
+    expect(alert.textContent).not.toContain('eyJhbGci')
   })
 
   it('falls back to the old keyword search when the new function is not deployed, and says the result is partial', async () => {
@@ -200,13 +223,117 @@ describe('카카오 식당 불러오기', () => {
     open(); await pickUniversity(); await search()
     const list = await screen.findByRole('group', { name: '찾은 식당' })
     expect(within(list).getAllByRole('status')[0].textContent).toContain('1곳을 찾았어요')
-    expect(list.textContent).toContain('구역 검색 함수(admin_kakao_search)가 이 프로젝트에 아직 배포되지 않아')
+    expect(list.textContent).toContain('구역 검색 함수(admin_kakao_search)를 쓰지 못해')
+    expect(list.textContent).toContain('이유: HTTP 404 NOT_FOUND')
     expect(list.textContent).toContain('일부만 찾은 결과예요')
     expect(list.textContent).toContain('반경 3000m 밖 1곳은 제외')
     expect(fake.invokes[0].name).toBe('admin_kakao_search')
     expect(fake.invokes.filter((i) => i.name === 'search_restaurants')).toHaveLength(KAKAO_QUERIES.length)
     expect(fake.invokes.filter((i) => i.name === 'admin_kakao_search').length).toBeLessThanOrEqual(2) // not retried
     expect(within(list).queryByText(/모든 구역을 카카오 노출 한도 안에서/)).toBeNull() // never claims full coverage
+  })
+
+  it('checks the function FIRST: not deployed (HTTP 404) goes straight to the old search without a single admin_kakao_search call', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('restaurant_overrides:select', { data: [], count: 0 })
+    fake.respond('fn:search_restaurants', { data: { success: true, restaurants: [doc('1', '가'), doc('2', '나')] } })
+    const probe = vi.fn(async () => ({ state: 'not_deployed' as const, status: 404 }))
+    open(probe); await pickUniversity(); await search()
+    const list = await screen.findByRole('group', { name: '찾은 식당' })
+    expect(fake.invokes.filter((i) => i.name === 'admin_kakao_search')).toHaveLength(0)
+    expect(fake.invokes.filter((i) => i.name === 'search_restaurants')).toHaveLength(KAKAO_QUERIES.length)
+    expect(list.textContent).toContain('이유: HTTP 404 NOT_FOUND')
+    expect(list.textContent).toContain('일부만 찾은 결과예요')
+    expect(probe).toHaveBeenCalledTimes(1)
+  })
+
+  it('a browser reports a missing function as a status-less network error: the page still recognises it and falls back (the reported failure)', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('restaurant_overrides:select', { data: [], count: 0 })
+    fake.respond('fn:admin_kakao_search', { error: { name: 'FunctionsFetchError', message: 'Failed to send a request to the Edge Function', context: new TypeError('Failed to fetch') } })
+    fake.respond('fn:search_restaurants', { data: { success: true, restaurants: [doc('1', '가')] } })
+    // the up-front GET could not be read (unreachable), the second look finds the 404
+    const probe = vi.fn().mockResolvedValueOnce({ state: 'unreachable' }).mockResolvedValue({ state: 'not_deployed', status: 404 })
+    open(probe); await pickUniversity(); await search()
+    const list = await screen.findByRole('group', { name: '찾은 식당' })
+    expect(list.textContent).toContain('이유: HTTP 404 NOT_FOUND')
+    expect(fake.invokes.filter((i) => i.name === 'admin_kakao_search').length).toBeLessThanOrEqual(2) // not retried with backoff
+    expect(screen.queryByText(/실패했거나 중단됐어요/)).toBeNull()
+  })
+
+  it('a failed square costs only that square: results are kept, marked partial, and "이어서 하기" retries just it', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('restaurant_overrides:select', { data: [], count: 0 })
+    let cafesBroken = true
+    fake.respond('fn:admin_kakao_search', (body: unknown) => {
+      const b = body as { category_group_code: string }
+      return b.category_group_code === 'CE7' && cafesBroken ? { error: httpError(400, { success: false, error: 'cell_outside_university_area' }) } : cellAnswer(body, { docs: [{ ...doc(b.category_group_code === 'CE7' ? '9' : '1', b.category_group_code === 'CE7' ? '카페' : '식당'), category_group_code: b.category_group_code }] })
+    })
+    open(); await pickUniversity(); await search()
+    const list = await screen.findByRole('group', { name: '찾은 식당' })
+    expect(within(list).getAllByRole('status')[0].textContent).toContain('1곳을 찾았어요') // the FD6 place survived
+    expect(within(list).getByLabelText('검색 범위 보고').textContent).toContain('일부만 찾은 결과예요')
+    expect(within(list).getByLabelText('실패 내용').textContent).toContain('HTTP 400')
+    expect(within(list).getByLabelText('실패 내용').textContent).toContain('cell_outside_university_area')
+    const before = fake.invokes.length
+    cafesBroken = false
+    await userEvent.click(within(list).getByRole('button', { name: /이어서 하기 \(1\)/ }))
+    await waitFor(() => expect(within(screen.getByRole('group', { name: '찾은 식당' })).getAllByRole('status')[0].textContent).toContain('2곳을 찾았어요'))
+    const again = fake.invokes.slice(before).map((i) => (i.body as { category_group_code: string }).category_group_code)
+    expect(again).toEqual(['CE7']) // only the failed square, not the whole scan
+    expect(screen.getByLabelText('검색 범위 보고').textContent).toContain('모든 구역을 카카오 노출 한도 안에서 끝까지 읽었어요')
+  })
+
+  it('offers an unfinished job from an earlier visit and continues only what is left', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('restaurant_overrides:select', { data: [], count: 0 })
+    fake.respond('fn:admin_kakao_search', cellAnswer)
+    const job = newJob({ id: 'u1', name: '순천향대학교', latitude: 36.76999, longitude: 126.9315, radiusM: 3000 })
+    job.tasks[0].status = 'done' // FD6 root finished before the page was closed; CE7 root still to do
+    saveJob(job)
+    open(); await pickUniversity()
+    const banner = await screen.findByLabelText('이어서 할 작업')
+    expect(banner.textContent).toContain(job.id.slice(0, 8))
+    expect(banner.textContent).toContain('1/2 완료')
+    expect(banner.textContent).toContain('남은 구역의 결과만')
+    await userEvent.click(within(banner).getByRole('button', { name: '이어서 하기' }))
+    await screen.findByRole('group', { name: '찾은 식당' })
+    expect(fake.invokes.map((i) => (i.body as { category_group_code: string }).category_group_code)).toEqual(['CE7'])
+    expect(loadJob('u1')).toBeNull() // finished: nothing is kept
+  })
+
+  it('discarding a saved job removes it', async () => {
+    universities({ search_radius_m: 3000 })
+    saveJob(newJob({ id: 'u1', name: 'x', latitude: 36.76999, longitude: 126.9315, radiusM: 3000 }))
+    open(); await pickUniversity()
+    await userEvent.click(await screen.findByRole('button', { name: '작업 버리기' }))
+    expect(loadJob('u1')).toBeNull()
+    expect(screen.queryByLabelText('이어서 할 작업')).toBeNull()
+  })
+
+  it('a saved job is not continued if the university\'s radius changed meanwhile (the grid would differ)', async () => {
+    universities({ search_radius_m: 3000 })
+    saveJob(newJob({ id: 'u1', name: 'x', latitude: 36.76999, longitude: 126.9315, radiusM: 1500 }))
+    open(); await pickUniversity()
+    await userEvent.click(await screen.findByRole('button', { name: '이어서 하기' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('1500m → 3000m')
+    expect(fake.invokes).toHaveLength(0)
+    expect(loadJob('u1')).toBeNull()
+  })
+
+  it('the saved job holds no Kakao place data', async () => {
+    universities({ search_radius_m: 3000 })
+    fake.respond('restaurant_overrides:select', { data: [], count: 0 })
+    fake.respond('fn:admin_kakao_search', (body: unknown) => ((body as { category_group_code: string }).category_group_code === 'FD6'
+      ? cellAnswer(body, { docs: [doc('1', '비밀식당이름')] })
+      : { error: httpError(400, { success: false, error: 'x' }) }))
+    open(); await pickUniversity(); await search()
+    await screen.findByRole('group', { name: '찾은 식당' })
+    const raw = localStorage.getItem('kakao-import-job:u1')
+    expect(raw).toBeTruthy() // partial: kept for "continue"
+    expect(raw).not.toContain('비밀식당이름')
+    expect(raw).not.toContain('도로 1')
   })
 
   it('moderators cannot reach the restaurants page', async () => {

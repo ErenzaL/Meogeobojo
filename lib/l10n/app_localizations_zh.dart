@@ -72,7 +72,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeSearchLabel => '搜索';
 
   @override
-  String get searchHint => '搜索菜品、餐厅、关键词';
+  String get searchHint => '搜索菜品或餐厅';
 
   @override
   String get homeNotificationsLabel => '通知';
@@ -440,11 +440,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedEmptyMessage => '点击喜欢的餐厅上的爱心即可收藏。';
 
   @override
-  String savedCount(int count) {
-    return '收藏的餐厅 $count 家';
-  }
-
-  @override
   String savedHiddenNote(int count) {
     return '有 $count 家不在当前所选学校的周边结果中，无法显示详情。选择对应学校后即可查看。';
   }
@@ -466,12 +461,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountProviderEmail => '邮箱';
-
-  @override
-  String get authWelcomeTitle => '欢迎来到 먹어보조！';
-
-  @override
-  String get authWelcomeSubtitle => '登录后，找到属于你的美食。';
 
   @override
   String get authContinueKakao => '使用 Kakao 继续';
@@ -2229,4 +2218,139 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeFiltersHide => '收起';
+
+  @override
+  String get detailTitle => '餐厅信息';
+
+  @override
+  String detailPhotoCount(int count) {
+    return '$count 张照片';
+  }
+
+  @override
+  String detailRatingLine(String avg, int count) {
+    return '$avg · $count 条评价';
+  }
+
+  @override
+  String get detailNoReviews => '暂无评价';
+
+  @override
+  String detailOrderOpen(String time) {
+    return '可点餐 · $time 截止点餐';
+  }
+
+  @override
+  String detailOrderSoon(String time) {
+    return '即将截止点餐 · $time';
+  }
+
+  @override
+  String detailOrderTooLate(String time) {
+    return '到达前截止点餐 · $time';
+  }
+
+  @override
+  String detailPriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '人均 $priceString 韩元起';
+  }
+
+  @override
+  String get detailInfoLocation => '位置';
+
+  @override
+  String get detailInfoRoute => '怎么去';
+
+  @override
+  String get detailInfoPhone => '电话';
+
+  @override
+  String get detailInfoAmenities => '营业与设施';
+
+  @override
+  String detailRoute(String origin, int minutes, String distance) {
+    return '从$origin步行约 $minutes 分钟 · 约 $distance';
+  }
+
+  @override
+  String get detailRouteChange => '更改起点';
+
+  @override
+  String get detailRouteNote => '按直线距离估算，实际路线请在导航中确认。';
+
+  @override
+  String get detailAmenitiesNone => '暂无已确认的信息';
+
+  @override
+  String get detailMap => '地图';
+
+  @override
+  String detailDirectionsWalk(int minutes) {
+    return '导航 · 步行 $minutes 分钟';
+  }
+
+  @override
+  String get detailShowOnMap => '在地图上查看';
+
+  @override
+  String get detailPhotoUploadSub => '审核通过后会在此页面公开';
+
+  @override
+  String reviewsCount(int count) {
+    return '$count 条评价';
+  }
+
+  @override
+  String reviewsStarLabel(int n) {
+    return '$n星';
+  }
+
+  @override
+  String get searchRecentTitle => '最近搜索';
+
+  @override
+  String get searchRecentEmpty => '暂无最近搜索';
+
+  @override
+  String get searchRecentClear => '清除';
+
+  @override
+  String get searchSuggestTitle => '试试这些？';
+
+  @override
+  String searchResultsLine(String query, int total, int inside) {
+    return '“$query” 共 $total 家 · 符合条件的 $inside 家';
+  }
+
+  @override
+  String get searchOutsideTitle => '不符合条件的餐厅 · 点按即可查看';
+
+  @override
+  String savedCountLine(int count) {
+    return '已保存 $count 家';
+  }
+
+  @override
+  String get savedGoRecommend => '去看推荐';
+
+  @override
+  String authHeroTitle(String campus) {
+    return '按你的口味\n找$campus附近的美食';
+  }
+
+  @override
+  String get authHeroSubtitle => '无需登录即可查看推荐。\n发表评价或帖子时再登录即可。';
+
+  @override
+  String get authWebStartTitle => '开始使用';
+
+  @override
+  String get authWebStartSubtitle => '无需登录即可查看推荐，只有发帖时才需要登录。';
+
+  @override
+  String get authWebPanelBody => '登录后可以发表评价和帖子，在其他设备上也能继续看到你的口味设置和收藏的餐厅。';
 }

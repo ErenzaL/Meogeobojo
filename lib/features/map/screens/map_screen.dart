@@ -172,6 +172,21 @@ class _MapScreenState extends ConsumerState<MapScreen>
     } catch (e) {
       debugPrint('Map marker setup failed: $e');
     }
+    _applyFocusRequest();
+  }
+
+  /// Another screen asked to show a place (detail page → 지도). Before the map exists only the card is selected; the
+  /// pan happens once the controller is ready. The request also cancels the one-time fit so it does not move away.
+  void _applyFocusRequest() {
+    final r = ref.read(mapFocusProvider);
+    if (r == null || !mounted) return;
+    if (_controller == null) {
+      setState(() => _selected = r);
+      return;
+    }
+    ref.read(mapFocusProvider.notifier).clear();
+    _fitPending = false;
+    unawaited(_focus(r));
   }
 
   void _onMarkerTapped(LabelClickEvent e) {
@@ -304,6 +319,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     });
     // Markers follow the shared conditions, not the raw nearby list.
     ref.listen(filteredRestaurantsProvider, (_, _) => _syncMarkers());
+    ref.listen(mapFocusProvider, (_, next) {
+      if (next != null) _applyFocusRequest();
+    });
 
     _bottomInset = MediaQuery.paddingOf(context).bottom;
     if (_controller != null && _appliedInset != _bottomInset) {

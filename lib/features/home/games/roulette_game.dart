@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../../../core/theme/app_theme.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
@@ -97,6 +99,7 @@ class _RouletteGameState extends State<RouletteGame>
                             ],
                             palette: p,
                             textStyle: TextStyle(
+                              fontFamily: AppText.fontFamily,
                               fontSize: size < 260 ? 12 : 13.5,
                               fontWeight: FontWeight.w700,
                             ),

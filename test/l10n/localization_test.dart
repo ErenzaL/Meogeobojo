@@ -79,8 +79,8 @@ void main() {
           expect(v.contains('Meogeobojo'), isFalse, reason: k);
         }
       }
-      expect(en['authWelcomeTitle'], 'Welcome to 먹어보조!');
-      expect(zh['authWelcomeTitle'], '欢迎来到 먹어보조！');
+      expect(en['footerAboutTitle'], 'About 먹어보조');
+      expect(zh['footerAboutTitle'], '关于 먹어보조');
     });
 
     test('Kakao / currency wording matches the product requirements', () {

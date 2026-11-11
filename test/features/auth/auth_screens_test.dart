@@ -22,8 +22,13 @@ void main() {
       final h = await buildHarness();
       await pumpApp(tester, h, home: const LoginScreen());
 
-      expect(find.text('먹어보조에 오신 걸 환영해요!'), findsOneWidget);
-      expect(find.text('로그인하고 나만의 맛집을 찾아보세요.'), findsOneWidget);
+      // V5 landing: brand, the campus line and the guest note
+      expect(find.text('먹어보조'), findsOneWidget);
+      expect(find.textContaining('앞 맛집을\n취향대로 찾아봐요'), findsOneWidget);
+      expect(
+        find.text('추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.'),
+        findsOneWidget,
+      );
       expect(find.text('카카오로 계속하기'), findsOneWidget);
       expect(find.text('이메일로 로그인'), findsOneWidget);
       expect(find.text('이메일로 회원가입'), findsOneWidget);
@@ -61,18 +66,18 @@ void main() {
 
         await tester.tap(find.text('English'));
         await tester.pumpAndSettle();
-        expect(find.text('Welcome to 먹어보조!'), findsOneWidget);
+        expect(find.textContaining('picked for your taste'), findsOneWidget);
         expect(find.text('Continue with Kakao'), findsOneWidget);
         expect(find.text('Sign in with email'), findsOneWidget);
         expect(find.text('Continue without signing in →'), findsOneWidget);
-        expect(find.text('먹어보조에 오신 걸 환영해요!'), findsNothing);
+        expect(find.textContaining('취향대로 찾아봐요'), findsNothing);
         expect(h.container.read(appLanguageProvider), AppLanguage.en);
 
         await tester.tap(find.byIcon(Icons.language_rounded));
         await tester.pumpAndSettle();
         await tester.tap(find.text('简体中文'));
         await tester.pumpAndSettle();
-        expect(find.text('欢迎来到 먹어보조！'), findsOneWidget);
+        expect(find.textContaining('按你的口味'), findsOneWidget);
         expect(find.text('使用 Kakao 继续'), findsOneWidget);
         expect(find.text('使用邮箱登录'), findsOneWidget);
         expect(find.text('无需登录，继续浏览 →'), findsOneWidget);
@@ -96,12 +101,13 @@ void main() {
       expect(find.text('카카오 로그인 진행 중…'), findsOneWidget);
       expect(h.container.read(authControllerProvider).isSignedIn, isFalse);
       // other sign-in paths are disabled while waiting
-      expect(
-        tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, '이메일로 로그인'))
-            .onPressed,
-        isNull,
-      );
+      for (final label in ['이메일로 로그인', '이메일로 회원가입']) {
+        final button = find.ancestor(
+          of: find.text(label),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        );
+        expect(tester.widget<ButtonStyleButton>(button).onPressed, isNull);
+      }
 
       await tester.tap(find.text('취소'));
       await tester.pump();

@@ -72,7 +72,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeSearchLabel => '검색';
 
   @override
-  String get searchHint => '메뉴, 식당, 키워드로 검색해보세요';
+  String get searchHint => '메뉴·식당 이름으로 찾기';
 
   @override
   String get homeNotificationsLabel => '알림';
@@ -441,11 +441,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedEmptyMessage => '마음에 드는 식당의 하트를 눌러 저장해보세요.';
 
   @override
-  String savedCount(int count) {
-    return '저장한 맛집 $count곳';
-  }
-
-  @override
   String savedHiddenNote(int count) {
     return '$count곳은 지금 선택한 학교 주변 목록에 없어 자세한 정보를 보여드릴 수 없어요. 해당 학교를 선택하면 볼 수 있어요.';
   }
@@ -467,12 +462,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get accountProviderEmail => '이메일';
-
-  @override
-  String get authWelcomeTitle => '먹어보조에 오신 걸 환영해요!';
-
-  @override
-  String get authWelcomeSubtitle => '로그인하고 나만의 맛집을 찾아보세요.';
 
   @override
   String get authContinueKakao => '카카오로 계속하기';
@@ -2242,4 +2231,141 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeFiltersHide => '접기';
+
+  @override
+  String get detailTitle => '맛집 정보';
+
+  @override
+  String detailPhotoCount(int count) {
+    return '사진 $count장';
+  }
+
+  @override
+  String detailRatingLine(String avg, int count) {
+    return '$avg · 리뷰 $count개';
+  }
+
+  @override
+  String get detailNoReviews => '아직 리뷰가 없어요';
+
+  @override
+  String detailOrderOpen(String time) {
+    return '주문 가능 · $time 주문 마감';
+  }
+
+  @override
+  String detailOrderSoon(String time) {
+    return '곧 주문 마감 · $time';
+  }
+
+  @override
+  String detailOrderTooLate(String time) {
+    return '도착 전에 주문 마감 · $time';
+  }
+
+  @override
+  String detailPriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return '1인 $priceString원부터';
+  }
+
+  @override
+  String get detailInfoLocation => '위치';
+
+  @override
+  String get detailInfoRoute => '가는 길';
+
+  @override
+  String get detailInfoPhone => '전화';
+
+  @override
+  String get detailInfoAmenities => '운영·편의';
+
+  @override
+  String detailRoute(String origin, int minutes, String distance) {
+    return '$origin에서 도보 약 $minutes분 · 약 $distance';
+  }
+
+  @override
+  String get detailRouteChange => '기준 바꾸기';
+
+  @override
+  String get detailRouteNote => '직선거리로 추정한 시간이에요. 실제 경로는 길찾기에서 확인하세요.';
+
+  @override
+  String get detailAmenitiesNone => '확인된 정보가 없어요';
+
+  @override
+  String get detailMap => '지도';
+
+  @override
+  String detailDirectionsWalk(int minutes) {
+    return '길찾기 · 도보 $minutes분';
+  }
+
+  @override
+  String get detailShowOnMap => '지도에서 위치 보기';
+
+  @override
+  String get detailPhotoUploadSub => '검토를 마치면 이 페이지에 공개돼요';
+
+  @override
+  String reviewsCount(int count) {
+    return '리뷰 $count개';
+  }
+
+  @override
+  String reviewsStarLabel(int n) {
+    return '$n점';
+  }
+
+  @override
+  String get searchRecentTitle => '최근 검색';
+
+  @override
+  String get searchRecentEmpty => '최근 검색어가 없어요';
+
+  @override
+  String get searchRecentClear => '지우기';
+
+  @override
+  String get searchSuggestTitle => '이런 건 어때요?';
+
+  @override
+  String searchResultsLine(String query, int total, int inside) {
+    return '‘$query’ 검색 결과 $total곳 · 지금 조건에 맞는 곳 $inside곳';
+  }
+
+  @override
+  String get searchOutsideTitle => '조건 밖 식당 · 눌러서 열어볼 수 있어요';
+
+  @override
+  String savedCountLine(int count) {
+    return '$count곳 저장됨';
+  }
+
+  @override
+  String get savedGoRecommend => '추천 보러 가기';
+
+  @override
+  String authHeroTitle(String campus) {
+    return '$campus 앞 맛집을\n취향대로 찾아봐요';
+  }
+
+  @override
+  String get authHeroSubtitle =>
+      '추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.';
+
+  @override
+  String get authWebStartTitle => '시작하기';
+
+  @override
+  String get authWebStartSubtitle => '추천은 로그인 없이도 볼 수 있어요. 글을 쓸 때만 필요해요.';
+
+  @override
+  String get authWebPanelBody =>
+      '로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요.';
 }

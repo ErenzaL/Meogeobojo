@@ -102,7 +102,11 @@ class RustButton extends StatelessWidget {
         foregroundColor: p.onRust,
         minimumSize: const Size.fromHeight(52),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontFamily: AppText.fontFamily,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +149,11 @@ class OutlineActionButton extends StatelessWidget {
         minimumSize: const Size.fromHeight(52),
         side: BorderSide(color: filled ? Colors.transparent : p.borderStrong),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontFamily: AppText.fontFamily,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,

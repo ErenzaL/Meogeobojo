@@ -12,6 +12,7 @@ class AuthScaffold extends StatelessWidget {
     this.showBack = true,
     this.showLanguage = true,
     this.bottom,
+    this.leading,
   });
 
   final List<Widget> children;
@@ -20,6 +21,10 @@ class AuthScaffold extends StatelessWidget {
 
   /// Pinned below the scroll area (e.g. legal links).
   final Widget? bottom;
+
+  /// Shown at the top left instead of the back button when there is nothing to go back to (the brand on the
+  /// login landing).
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +40,11 @@ class AuthScaffold extends StatelessWidget {
                 children: [
                   if (showBack && canPop)
                     BackButton(color: context.palette.textPrimary)
+                  else if (leading != null)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: leading,
+                    )
                   else
                     const SizedBox(width: 48),
                   const Spacer(),

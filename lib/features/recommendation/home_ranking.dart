@@ -222,10 +222,21 @@ class OrderStatus {
   final int? slackMinutes;
 }
 
-OrderStatus orderStatus(RankedRestaurant r, int nowMinutes) {
-  final last = r.insight.lastOrderMinutes;
+OrderStatus orderStatus(RankedRestaurant r, int nowMinutes) => orderStatusAt(
+  lastOrderMinutes: r.insight.lastOrderMinutes,
+  walkMinutes: r.walkMinutes,
+  nowMinutes: nowMinutes,
+);
+
+/// [orderStatus] for a place that is not part of a ranking (the detail page).
+OrderStatus orderStatusAt({
+  required int? lastOrderMinutes,
+  required int walkMinutes,
+  required int nowMinutes,
+}) {
+  final last = lastOrderMinutes;
   if (last == null) return const OrderStatus(OrderStatusKind.unknown);
-  final arrival = nowMinutes + r.walkMinutes;
+  final arrival = nowMinutes + walkMinutes;
   final slack = last - arrival;
   final kind = slack < 0
       ? OrderStatusKind.closedBeforeArrival

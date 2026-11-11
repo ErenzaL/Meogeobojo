@@ -27,7 +27,7 @@
   "homeHeroTitle": "오늘 뭐 먹을지\n찾아볼까요?",
   "homeHeroSubtitle": "맛있는 한 끼가 기다리고 있어요!",
   "homeSearchLabel": "검색",
-  "searchHint": "메뉴, 식당, 키워드로 검색해보세요",
+  "searchHint": "메뉴·식당 이름으로 찾기",
   "homeNotificationsLabel": "알림",
   "homeNotificationsSoon": "알림 기능은 준비 중이에요.",
   "notificationsTitle": "알림",
@@ -291,14 +291,6 @@
   "savedLoadFailed": "저장한 맛집을 불러오지 못했어요",
   "savedEmptyTitle": "아직 저장한 맛집이 없어요",
   "savedEmptyMessage": "마음에 드는 식당의 하트를 눌러 저장해보세요.",
-  "savedCount": "저장한 맛집 {count}곳",
-  "@savedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "savedHiddenNote": "{count}곳은 지금 선택한 학교 주변 목록에 없어 자세한 정보를 보여드릴 수 없어요. 해당 학교를 선택하면 볼 수 있어요.",
   "@savedHiddenNote": {
     "placeholders": {
@@ -313,8 +305,6 @@
   "accountLoginMethod": "로그인 방식",
   "accountProviderKakao": "카카오",
   "accountProviderEmail": "이메일",
-  "authWelcomeTitle": "먹어보조에 오신 걸 환영해요!",
-  "authWelcomeSubtitle": "로그인하고 나만의 맛집을 찾아보세요.",
   "authContinueKakao": "카카오로 계속하기",
   "authEmailLogin": "이메일로 로그인",
   "authEmailSignUp": "이메일로 회원가입",
@@ -1367,5 +1357,147 @@
   },
   "homeFilterOpenAny": "주문 마감 후에도 표시",
   "homeFiltersAdvancedTitle": "상세 조건",
-  "homeFiltersHide": "접기"
+  "homeFiltersHide": "접기",
+  "detailTitle": "맛집 정보",
+  "detailPhotoCount": "사진 {count}장",
+  "@detailPhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailRatingLine": "{avg} · 리뷰 {count}개",
+  "@detailRatingLine": {
+    "placeholders": {
+      "avg": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailNoReviews": "아직 리뷰가 없어요",
+  "detailOrderOpen": "주문 가능 · {time} 주문 마감",
+  "@detailOrderOpen": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "detailOrderSoon": "곧 주문 마감 · {time}",
+  "@detailOrderSoon": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "detailOrderTooLate": "도착 전에 주문 마감 · {time}",
+  "@detailOrderTooLate": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "detailPriceFrom": "1인 {price}원부터",
+  "@detailPriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "detailInfoLocation": "위치",
+  "detailInfoRoute": "가는 길",
+  "detailInfoPhone": "전화",
+  "detailInfoAmenities": "운영·편의",
+  "detailRoute": "{origin}에서 도보 약 {minutes}분 · 약 {distance}",
+  "@detailRoute": {
+    "placeholders": {
+      "origin": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      },
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+  "detailRouteChange": "기준 바꾸기",
+  "detailRouteNote": "직선거리로 추정한 시간이에요. 실제 경로는 길찾기에서 확인하세요.",
+  "detailAmenitiesNone": "확인된 정보가 없어요",
+  "detailMap": "지도",
+  "detailDirectionsWalk": "길찾기 · 도보 {minutes}분",
+  "@detailDirectionsWalk": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "detailShowOnMap": "지도에서 위치 보기",
+  "detailPhotoUploadSub": "검토를 마치면 이 페이지에 공개돼요",
+  "reviewsCount": "리뷰 {count}개",
+  "@reviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsStarLabel": "{n}점",
+  "@reviewsStarLabel": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "searchRecentTitle": "최근 검색",
+  "searchRecentEmpty": "최근 검색어가 없어요",
+  "searchRecentClear": "지우기",
+  "searchSuggestTitle": "이런 건 어때요?",
+  "searchResultsLine": "‘{query}’ 검색 결과 {total}곳 · 지금 조건에 맞는 곳 {inside}곳",
+  "@searchResultsLine": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      },
+      "inside": {
+        "type": "int"
+      }
+    }
+  },
+  "searchOutsideTitle": "조건 밖 식당 · 눌러서 열어볼 수 있어요",
+  "savedCountLine": "{count}곳 저장됨",
+  "@savedCountLine": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "savedGoRecommend": "추천 보러 가기",
+  "authHeroTitle": "{campus} 앞 맛집을\n취향대로 찾아봐요",
+  "@authHeroTitle": {
+    "placeholders": {
+      "campus": {
+        "type": "String"
+      }
+    }
+  },
+  "authHeroSubtitle": "추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.",
+  "authWebStartTitle": "시작하기",
+  "authWebStartSubtitle": "추천은 로그인 없이도 볼 수 있어요. 글을 쓸 때만 필요해요.",
+  "authWebPanelBody": "로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요."
 }

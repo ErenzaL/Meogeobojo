@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meogeobojo/features/home/widgets/restaurant_art.dart';
 import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/recommendation/restaurant_insight.dart';
@@ -166,7 +167,7 @@ void main() {
           home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
         );
         await tester.pumpAndSettle();
-        expect(find.text('사진'), findsOneWidget); // the gallery heading
+        expect(find.text('사진 2장'), findsOneWidget); // the gallery tag
         expect(find.bySemanticsLabel('내부'), findsOneWidget);
         expect(find.text('추천'), findsOneWidget);
         expect(find.text('잔치국수'), findsOneWidget);
@@ -190,11 +191,10 @@ void main() {
         home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
       );
       await tester.pumpAndSettle();
-      expect(find.text('사진'), findsNothing);
-      expect(
-        find.byType(RestaurantPhotoPlaceholder),
-        findsOneWidget,
-      ); // the neutral cover
+      expect(find.textContaining(RegExp(r'^사진 \d+장$')), findsNothing);
+      // the category illustration (as on Home), not a photo
+      expect(find.byType(RestaurantArt), findsOneWidget);
+      expect(find.byType(RestaurantPhotoPlaceholder), findsNothing);
     });
   });
 

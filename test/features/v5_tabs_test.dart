@@ -134,28 +134,26 @@ void main() {
   });
 
   group('밥수다', () {
-    testWidgets('filters, composer and an honest empty feed', (tester) async {
-      await open(tester, ShellTabs.community);
-      expect(find.text('밥수다'), findsWidgets);
-      expect(find.text('순천향대학교 학생 커뮤니티'), findsOneWidget);
-      for (final t in ['전체', '맛집 리뷰', '같이 먹어요', '질문']) {
-        expect(find.text(t), findsOneWidget, reason: t);
-      }
-      expect(find.text('오늘 먹은 메뉴를 나눠볼까요?'), findsOneWidget);
-      expect(find.text('아직 올라온 이야기가 없어요'), findsOneWidget);
-      // selecting a filter moves the check
-      await tester.tap(find.text('질문'));
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-    });
-
-    testWidgets('writing says it is coming, it never pretends to post', (
+    testWidgets('is an honest "coming soon" page: no feed, no composer', (
       tester,
     ) async {
       await open(tester, ShellTabs.community);
-      await tester.tap(find.text('리뷰 쓰기'));
-      await tester.pump();
-      expect(find.text('밥수다 글쓰기는 준비 중이에요.'), findsOneWidget);
+      expect(find.text('밥수다는 준비 중이에요'), findsOneWidget);
+      expect(find.textContaining('열심히 만들고 있어요'), findsOneWidget);
+      // nothing that pretends to be a working community
+      for (final t in ['전체', '맛집 리뷰', '리뷰 쓰기', '아직 올라온 이야기가 없어요']) {
+        expect(find.text(t), findsNothing, reason: t);
+      }
+      expect(find.byKey(const ValueKey('community-composer')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('fits a small phone with large text', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await open(tester, ShellTabs.community, size: const Size(320, 568));
+      expect(find.text('밥수다는 준비 중이에요'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 

@@ -22,9 +22,10 @@ void main() {
       final h = await buildHarness();
       await pumpApp(tester, h, home: const LoginScreen());
 
-      // V5 landing: brand, the campus line and the guest note
+      // Login stays school-neutral before the user chooses a campus.
       expect(find.text('먹어보조'), findsOneWidget);
-      expect(find.textContaining('앞 맛집을\n취향대로 찾아봐요'), findsOneWidget);
+      expect(find.text('학교 앞 맛집을\n취향대로 찾아봐요'), findsOneWidget);
+      expect(find.textContaining('순천향'), findsNothing); // no school name
       expect(
         find.text('추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.'),
         findsOneWidget,
@@ -37,6 +38,23 @@ void main() {
       expect(find.text('개인정보처리방침'), findsOneWidget);
       expect(find.byIcon(Icons.language_rounded), findsOneWidget);
       expect(find.byType(Image), findsOneWidget, reason: 'the existing mascot');
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('desktop intro has no school name or campus chip', (
+      tester,
+    ) async {
+      final h = await buildHarness();
+      await pumpApp(
+        tester,
+        h,
+        home: const LoginScreen(),
+        size: const Size(1440, 900),
+      );
+
+      expect(find.text('학교 앞 맛집을\n취향대로 찾아봐요'), findsOneWidget);
+      expect(find.textContaining('순천향'), findsNothing);
+      expect(find.byIcon(Icons.location_on_outlined), findsNothing);
       expect(tester.takeException(), isNull);
     });
 

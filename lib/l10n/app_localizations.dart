@@ -4261,8 +4261,8 @@ abstract class AppLocalizations {
   /// No description provided for @authHeroTitle.
   ///
   /// In ko, this message translates to:
-  /// **'{campus} 앞 맛집을\n취향대로 찾아봐요'**
-  String authHeroTitle(String campus);
+  /// **'학교 앞 맛집을\n취향대로 찾아봐요'**
+  String get authHeroTitle;
 
   /// No description provided for @authHeroSubtitle.
   ///

@@ -8,8 +8,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../language/widgets/language_button.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
-import '../../university/models/university_display.dart';
-import '../../university/providers/university_providers.dart';
 import '../models/auth_failure.dart';
 import '../models/auth_snapshot.dart';
 import '../providers/auth_providers.dart';
@@ -48,8 +46,8 @@ void continueAsGuest(BuildContext context, WidgetRef ref) {
   Navigator.of(context).popUntil((r) => r.isFirst);
 }
 
-/// 로그인 (V5): the campus line "OO 앞 맛집을 취향대로 찾아봐요", then the ways in. Phones get one centred column;
-/// a desktop window gets the two-panel layout (campus panel left, the buttons right).
+/// 로그인 (V5): "학교 앞 맛집을 취향대로 찾아봐요" (no school name), then the ways in. Phones get one centred column;
+/// a desktop window gets the two-panel layout (intro panel left, the buttons right).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -109,12 +107,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final f => f,
     };
     final failure = _failure ?? (_kakaoStarted ? streamFailure : null);
-    final campus =
-        ref
-            .watch(selectedUniversityProvider)
-            .value
-            ?.displayName(Localizations.localeOf(context)) ??
-        l10n.universityFallbackName;
     final canPop = Navigator.of(context).canPop();
 
     // The ways in (V5 order): Kakao, email sign-in (outlined), email sign-up (tonal), continue as a guest.
@@ -196,7 +188,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              // Brand pinned at the top like the header on the right; the campus story is centred in the rest, so
+              // Brand pinned at the top like the header on the right; the intro is centred in the rest, so
               // neither panel leaves an empty half.
               child: ColoredBox(
                 color: p.accentFaint,
@@ -214,12 +206,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _CampusChip(campus),
-                                const SizedBox(height: 32),
                                 thumb(240),
                                 const SizedBox(height: 32),
                                 Text(
-                                  l10n.authHeroTitle(campus),
+                                  l10n.authHeroTitle,
                                   style: const TextStyle(
                                     fontSize: 36,
                                     fontWeight: FontWeight.w600,
@@ -311,7 +301,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Center(child: thumb(160)),
         const SizedBox(height: 20),
         Text(
-          l10n.authHeroTitle(campus),
+          l10n.authHeroTitle,
           textAlign: TextAlign.center,
           style: AppText.heroTitle.copyWith(height: 1.3),
         ),
@@ -354,36 +344,6 @@ class _Brand extends StatelessWidget {
       ),
     ],
   );
-}
-
-class _CampusChip extends StatelessWidget {
-  const _CampusChip(this.campus);
-
-  final String campus;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.palette;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: p.card,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: p.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.location_on_outlined, size: 16, color: p.textSecondary),
-          const SizedBox(width: 4),
-          Text(
-            campus,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _KakaoWaiting extends StatelessWidget {

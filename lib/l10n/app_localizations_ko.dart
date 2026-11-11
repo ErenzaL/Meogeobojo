@@ -2351,9 +2351,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get savedGoRecommend => '추천 보러 가기';
 
   @override
-  String authHeroTitle(String campus) {
-    return '$campus 앞 맛집을\n취향대로 찾아봐요';
-  }
+  String get authHeroTitle => '학교 앞 맛집을\n취향대로 찾아봐요';
 
   @override
   String get authHeroSubtitle =>

@@ -2447,9 +2447,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get savedGoRecommend => 'See recommendations';
 
   @override
-  String authHeroTitle(String campus) {
-    return 'Places near $campus,\npicked for your taste';
-  }
+  String get authHeroTitle => 'Places near campus,\npicked for your taste';
 
   @override
   String get authHeroSubtitle =>

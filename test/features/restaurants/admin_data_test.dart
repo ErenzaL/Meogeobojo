@@ -166,7 +166,7 @@ void main() {
           home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
         );
         await tester.pumpAndSettle();
-        expect(find.text('사진'), findsOneWidget); // the gallery heading
+        expect(find.text('사진 2장'), findsOneWidget); // the gallery tag
         expect(find.bySemanticsLabel('내부'), findsOneWidget);
         expect(find.text('추천'), findsOneWidget);
         expect(find.text('잔치국수'), findsOneWidget);
@@ -190,7 +190,7 @@ void main() {
         home: RestaurantDetailScreen(restaurant: spot('a', '국수집', 0.0005)),
       );
       await tester.pumpAndSettle();
-      expect(find.text('사진'), findsNothing);
+      expect(find.textContaining(RegExp(r'^사진 \d+장$')), findsNothing);
       expect(
         find.byType(RestaurantPhotoPlaceholder),
         findsOneWidget,

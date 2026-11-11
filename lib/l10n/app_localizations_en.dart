@@ -471,17 +471,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tap the heart on a restaurant you like to save it.';
 
   @override
-  String savedCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count saved restaurants',
-      one: '1 saved restaurant',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String savedHiddenNote(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -509,12 +498,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountProviderEmail => 'Email';
-
-  @override
-  String get authWelcomeTitle => 'Welcome to 먹어보조!';
-
-  @override
-  String get authWelcomeSubtitle => 'Sign in to find your own favorite spots.';
 
   @override
   String get authContinueKakao => 'Continue with Kakao';
@@ -2343,4 +2326,155 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeFiltersHide => 'Collapse';
+
+  @override
+  String get detailTitle => 'Restaurant info';
+
+  @override
+  String detailPhotoCount(int count) {
+    return '$count photos';
+  }
+
+  @override
+  String detailRatingLine(String avg, int count) {
+    return '$avg · $count reviews';
+  }
+
+  @override
+  String get detailNoReviews => 'No reviews yet';
+
+  @override
+  String detailOrderOpen(String time) {
+    return 'Taking orders · last order $time';
+  }
+
+  @override
+  String detailOrderSoon(String time) {
+    return 'Last order soon · $time';
+  }
+
+  @override
+  String detailOrderTooLate(String time) {
+    return 'Last order $time, before you arrive';
+  }
+
+  @override
+  String detailPriceFrom(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return 'From ₩$priceString per person';
+  }
+
+  @override
+  String get detailInfoLocation => 'Location';
+
+  @override
+  String get detailInfoRoute => 'Getting there';
+
+  @override
+  String get detailInfoPhone => 'Phone';
+
+  @override
+  String get detailInfoAmenities => 'Amenities';
+
+  @override
+  String get detailInfoPrice => 'Per person';
+
+  @override
+  String detailRoute(String origin, int minutes, String distance) {
+    return 'About $minutes min on foot from $origin · about $distance';
+  }
+
+  @override
+  String get detailRouteChange => 'Change start';
+
+  @override
+  String get detailRouteNote =>
+      'Estimated from the straight-line distance. Check the real route in directions.';
+
+  @override
+  String get detailAmenitiesNone => 'Nothing confirmed yet';
+
+  @override
+  String detailPriceNote(int price) {
+    final intl.NumberFormat priceNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String priceString = priceNumberFormat.format(price);
+
+    return 'From ₩$priceString · the cheapest item';
+  }
+
+  @override
+  String get detailMap => 'Map';
+
+  @override
+  String detailDirectionsWalk(int minutes) {
+    return 'Directions · $minutes min walk';
+  }
+
+  @override
+  String get detailShowOnMap => 'Show on map';
+
+  @override
+  String get detailPhotoUploadSub => 'Shown on this page after review';
+
+  @override
+  String reviewsCount(int count) {
+    return '$count reviews';
+  }
+
+  @override
+  String reviewsStarLabel(int n) {
+    return '$n★';
+  }
+
+  @override
+  String get searchRecentTitle => 'Recent searches';
+
+  @override
+  String get searchRecentEmpty => 'No recent searches yet.';
+
+  @override
+  String get searchRecentClear => 'Clear';
+
+  @override
+  String get searchSuggestTitle => 'How about these?';
+
+  @override
+  String searchResultsLine(String query, int total, int inside) {
+    return '‘$query’: $total places · $inside match your conditions';
+  }
+
+  @override
+  String get searchOutsideTitle => 'Outside your conditions · tap to open';
+
+  @override
+  String savedCountLine(int count) {
+    return '$count saved';
+  }
+
+  @override
+  String get savedGoRecommend => 'See recommendations';
+
+  @override
+  String authHeroTitle(String campus) {
+    return 'Places near $campus,\npicked for your taste';
+  }
+
+  @override
+  String get authHeroSubtitle =>
+      'Recommendations work without an account.\nSign in when you want to write reviews or posts.';
+
+  @override
+  String get authWebStartTitle => 'Get started';
+
+  @override
+  String get authWebStartSubtitle =>
+      'Recommendations work without an account. You only need one to write.';
+
+  @override
+  String get authWebPanelBody =>
+      'Signed in, you can write reviews and posts, and your taste and saved places follow you to other devices.';
 }

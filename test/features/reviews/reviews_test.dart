@@ -111,7 +111,12 @@ void main() {
             review('3', rating: 1, body: '숨겨진 글', status: 'hidden'),
           ],
         );
-        expect(find.text('평균 4.0 · 2개'), findsOneWidget);
+        expect(
+          find.text('4.0 · 리뷰 2개 · 한식'),
+          findsOneWidget,
+        ); // the rating line
+        expect(find.text('4.0'), findsOneWidget); // the summary box
+        expect(find.text('리뷰 2개'), findsOneWidget);
         expect(find.text('최고'), findsOneWidget);
         expect(find.text('보통'), findsOneWidget);
         expect(find.text('숨겨진 글'), findsNothing);
@@ -148,9 +153,10 @@ void main() {
         expect(find.textContaining('관리자가 숨겼어요'), findsOneWidget);
         expect(find.text('내 리뷰 수정'), findsOneWidget);
         expect(
-          find.text('평균', skipOffstage: false),
+          find.textContaining('리뷰 1개', skipOffstage: false),
           findsNothing,
         ); // a hidden review is not counted
+        expect(find.text('리뷰 쓰기'), findsNothing); // edit, not a second review
       },
     );
 

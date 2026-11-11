@@ -874,12 +874,6 @@ abstract class AppLocalizations {
   /// **'마음에 드는 식당의 하트를 눌러 저장해보세요.'**
   String get savedEmptyMessage;
 
-  /// No description provided for @savedCount.
-  ///
-  /// In ko, this message translates to:
-  /// **'저장한 맛집 {count}곳'**
-  String savedCount(int count);
-
   /// No description provided for @savedHiddenNote.
   ///
   /// In ko, this message translates to:
@@ -921,18 +915,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'이메일'**
   String get accountProviderEmail;
-
-  /// No description provided for @authWelcomeTitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'먹어보조에 오신 걸 환영해요!'**
-  String get authWelcomeTitle;
-
-  /// No description provided for @authWelcomeSubtitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'로그인하고 나만의 맛집을 찾아보세요.'**
-  String get authWelcomeSubtitle;
 
   /// No description provided for @authContinueKakao.
   ///
@@ -4095,6 +4077,228 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'접기'**
   String get homeFiltersHide;
+
+  /// No description provided for @detailTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'맛집 정보'**
+  String get detailTitle;
+
+  /// No description provided for @detailPhotoCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'사진 {count}장'**
+  String detailPhotoCount(int count);
+
+  /// No description provided for @detailRatingLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'{avg} · 리뷰 {count}개'**
+  String detailRatingLine(String avg, int count);
+
+  /// No description provided for @detailNoReviews.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 리뷰가 없어요'**
+  String get detailNoReviews;
+
+  /// No description provided for @detailOrderOpen.
+  ///
+  /// In ko, this message translates to:
+  /// **'주문 가능 · {time} 주문 마감'**
+  String detailOrderOpen(String time);
+
+  /// No description provided for @detailOrderSoon.
+  ///
+  /// In ko, this message translates to:
+  /// **'곧 주문 마감 · {time}'**
+  String detailOrderSoon(String time);
+
+  /// No description provided for @detailOrderTooLate.
+  ///
+  /// In ko, this message translates to:
+  /// **'도착 전에 주문 마감 · {time}'**
+  String detailOrderTooLate(String time);
+
+  /// No description provided for @detailPriceFrom.
+  ///
+  /// In ko, this message translates to:
+  /// **'1인 {price}원부터'**
+  String detailPriceFrom(int price);
+
+  /// No description provided for @detailInfoLocation.
+  ///
+  /// In ko, this message translates to:
+  /// **'위치'**
+  String get detailInfoLocation;
+
+  /// No description provided for @detailInfoRoute.
+  ///
+  /// In ko, this message translates to:
+  /// **'가는 길'**
+  String get detailInfoRoute;
+
+  /// No description provided for @detailInfoPhone.
+  ///
+  /// In ko, this message translates to:
+  /// **'전화'**
+  String get detailInfoPhone;
+
+  /// No description provided for @detailInfoAmenities.
+  ///
+  /// In ko, this message translates to:
+  /// **'운영·편의'**
+  String get detailInfoAmenities;
+
+  /// No description provided for @detailInfoPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'1인 예상'**
+  String get detailInfoPrice;
+
+  /// No description provided for @detailRoute.
+  ///
+  /// In ko, this message translates to:
+  /// **'{origin}에서 도보 약 {minutes}분 · 약 {distance}'**
+  String detailRoute(String origin, int minutes, String distance);
+
+  /// No description provided for @detailRouteChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'기준 바꾸기'**
+  String get detailRouteChange;
+
+  /// No description provided for @detailRouteNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'직선거리로 추정한 시간이에요. 실제 경로는 길찾기에서 확인하세요.'**
+  String get detailRouteNote;
+
+  /// No description provided for @detailAmenitiesNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'확인된 정보가 없어요'**
+  String get detailAmenitiesNone;
+
+  /// No description provided for @detailPriceNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}원부터 · 가장 싼 메뉴 기준'**
+  String detailPriceNote(int price);
+
+  /// No description provided for @detailMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'지도'**
+  String get detailMap;
+
+  /// No description provided for @detailDirectionsWalk.
+  ///
+  /// In ko, this message translates to:
+  /// **'길찾기 · 도보 {minutes}분'**
+  String detailDirectionsWalk(int minutes);
+
+  /// No description provided for @detailShowOnMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'지도에서 위치 보기'**
+  String get detailShowOnMap;
+
+  /// No description provided for @detailPhotoUploadSub.
+  ///
+  /// In ko, this message translates to:
+  /// **'검토를 마치면 이 페이지에 공개돼요'**
+  String get detailPhotoUploadSub;
+
+  /// No description provided for @reviewsCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 {count}개'**
+  String reviewsCount(int count);
+
+  /// No description provided for @reviewsStarLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}점'**
+  String reviewsStarLabel(int n);
+
+  /// No description provided for @searchRecentTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'최근 검색'**
+  String get searchRecentTitle;
+
+  /// No description provided for @searchRecentEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'최근 검색어가 없어요.'**
+  String get searchRecentEmpty;
+
+  /// No description provided for @searchRecentClear.
+  ///
+  /// In ko, this message translates to:
+  /// **'지우기'**
+  String get searchRecentClear;
+
+  /// No description provided for @searchSuggestTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'이런 건 어때요?'**
+  String get searchSuggestTitle;
+
+  /// No description provided for @searchResultsLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'‘{query}’ 검색 결과 {total}곳 · 지금 조건에 맞는 곳 {inside}곳'**
+  String searchResultsLine(String query, int total, int inside);
+
+  /// No description provided for @searchOutsideTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건 밖 식당 · 눌러서 열어볼 수 있어요'**
+  String get searchOutsideTitle;
+
+  /// No description provided for @savedCountLine.
+  ///
+  /// In ko, this message translates to:
+  /// **'{count}곳 저장됨'**
+  String savedCountLine(int count);
+
+  /// No description provided for @savedGoRecommend.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 보러 가기'**
+  String get savedGoRecommend;
+
+  /// No description provided for @authHeroTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{campus} 앞 맛집을\n취향대로 찾아봐요'**
+  String authHeroTitle(String campus);
+
+  /// No description provided for @authHeroSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.'**
+  String get authHeroSubtitle;
+
+  /// No description provided for @authWebStartTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'시작하기'**
+  String get authWebStartTitle;
+
+  /// No description provided for @authWebStartSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천은 로그인 없이도 볼 수 있어요. 글을 쓸 때만 필요해요.'**
+  String get authWebStartSubtitle;
+
+  /// No description provided for @authWebPanelBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요.'**
+  String get authWebPanelBody;
 }
 
 class _AppLocalizationsDelegate

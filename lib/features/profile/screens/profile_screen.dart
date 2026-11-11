@@ -187,6 +187,8 @@ class _SignedInView extends ConsumerWidget {
           icon: Icons.bookmark_border_rounded,
           label: l10n.profileStatRecords,
           value: null,
+          // 기록 lives inside MY (the bottom tab is 미션).
+          onTap: () => push(const RecordsScreen()),
         ),
         ProfileStat(
           icon: Icons.event_outlined,

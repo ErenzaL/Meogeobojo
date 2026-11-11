@@ -846,8 +846,11 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('정보'));
       await tester.pumpAndSettle();
-      expect(find.text('카카오맵에서 보기'), findsOneWidget);
+      expect(find.text('맛집 정보'), findsOneWidget); // the V5 detail page
+      // no Kakao link without a place URL, and no invented facts
+      expect(find.text('카카오맵에서 보기'), findsNothing);
       expect(find.textContaining('아직 제공되지 않아요'), findsOneWidget);
+      expect(find.text('확인된 정보가 없어요'), findsOneWidget);
     });
   });
 

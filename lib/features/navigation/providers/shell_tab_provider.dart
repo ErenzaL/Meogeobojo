@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../restaurants/models/restaurant.dart';
+
 /// Tab indexes of the persistent shell.
 abstract final class ShellTabs {
   static const home = 0;
@@ -43,6 +45,20 @@ String? initialShellRoute() {
   }
   final fragment = Uri.base.fragment;
   return fragment.startsWith('/') ? fragment : Uri.base.path;
+}
+
+/// A place another screen asked the map to show (the detail page's 지도 button). The map selects and pans to it,
+/// then clears the request.
+final mapFocusProvider = NotifierProvider<MapFocusController, Restaurant?>(
+  MapFocusController.new,
+);
+
+class MapFocusController extends Notifier<Restaurant?> {
+  @override
+  Restaurant? build() => null;
+
+  void show(Restaurant r) => state = r;
+  void clear() => state = null;
 }
 
 class ShellTabController extends Notifier<int> {

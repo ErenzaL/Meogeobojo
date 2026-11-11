@@ -101,3 +101,33 @@ final searchProvider =
     NotifierProvider.autoDispose<SearchNotifier, SearchState>(
       SearchNotifier.new,
     );
+
+/// The last searches the student finished (submitted or picked), newest first. Stored on the device only.
+class RecentSearchesNotifier extends Notifier<List<String>> {
+  static const _key = 'search_recent';
+  static const max = 8;
+
+  @override
+  List<String> build() =>
+      ref.read(sharedPreferencesProvider).getStringList(_key) ?? const [];
+
+  void add(String query) => _save(
+    [
+      query,
+      for (final q in state)
+        if (q != query) q,
+    ].take(max).toList(),
+  );
+
+  void clear() => _save(const []);
+
+  void _save(List<String> next) {
+    state = next;
+    ref.read(sharedPreferencesProvider).setStringList(_key, next);
+  }
+}
+
+final recentSearchesProvider =
+    NotifierProvider<RecentSearchesNotifier, List<String>>(
+      RecentSearchesNotifier.new,
+    );

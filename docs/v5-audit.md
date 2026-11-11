@@ -14,7 +14,7 @@ HTML's opacity lines (`rgb(28 26 23 / .09)` and `.17`), not solid greys.
 ## Screen inventory (HTML `render()` map) and Flutter status
 | Prototype screen | Flutter | Status |
 |---|---|---|
-| login | `auth/screens/login_screen.dart` | **Done**: brand row, mascot tile, "{campus} 앞 맛집을 취향대로 찾아봐요", Kakao / email sign-in (outlined) / email sign-up (tonal) / guest; desktop two-panel layout. No Apple button (no Apple sign-in exists) |
+| login | `auth/screens/login_screen.dart` | **Done**: brand row, mascot tile, "학교 앞 맛집을 취향대로 찾아봐요" (no school name), Kakao / email sign-in (outlined) / email sign-up (tonal) / guest; desktop two-panel layout. No Apple button (no Apple sign-in exists) |
 | prefs (4 questions) | `preferences/screens/preferences_screen.dart` | Re-skinned by tokens only |
 | home | `home/screens/home_screen.dart` | **Done** (hero pick, alternatives, 학식 card, origin + conditions sheets); two columns on desktop |
 | search (hashtags, photo browse) | `search/screens/search_screen.dart` | **Done**: back + search field, 조건 / origin chips, 최근 검색 (on the device) and 이런 건 어때요? before a search, "‘q’ 검색 결과 N곳 · 지금 조건에 맞는 곳 M곳", places outside the conditions listed below, dimmed. Hashtags and the photo feed **not built** (no hashtag or visitor-photo data) |

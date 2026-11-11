@@ -2338,9 +2338,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get savedGoRecommend => '去看推荐';
 
   @override
-  String authHeroTitle(String campus) {
-    return '按你的口味\n找$campus附近的美食';
-  }
+  String get authHeroTitle => '按你的口味\n找学校附近的美食';
 
   @override
   String get authHeroSubtitle => '无需登录即可查看推荐。\n发表评价或帖子时再登录即可。';

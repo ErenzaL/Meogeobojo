@@ -61,6 +61,22 @@ the Admin 학식 page does not crash: on that exact error it re-reads the list w
 columns, treats every cafeteria as active, hides the status controls and shows a banner
 naming the missing migration. Applying the migration removes the banner without a redeploy.
 
+### Bulk publish / hide (Admin → 식당)
+Select restaurants (row checkboxes, the header checkbox = this page, or the buttons 전체 선택 / 현재 페이지 전체 선택 / 검색/필터 결과 전체 선택; the selection
+survives paging, sorting and filter changes and says how it was made) and press **선택한 식당 공개 / 비공개**. **There is no new database function:** every
+restaurant goes through the same `cms_set_visibility('restaurant', id, 'published'|'hidden', reason)` the single 공개 / 숨기기 buttons use, one call each, so the
+admin check, publication validation, per-restaurant lock, version and audit entry all happen per restaurant in the database; only `visibility` changes
+(menus, photos, descriptions, drafts and every other column are untouched; nothing is marked verified).
+* **Status is re-read from the database** before the run and again before each batch of 10 (3 calls at a time). `cms_set_visibility` does NOT deduplicate (a repeat
+  call writes another version), so restaurants already in the target state are skipped: repeating a request is safe, and a restaurant another admin changed
+  meanwhile is skipped. Publishing touches `draft` and `hidden` only (`archived` ones are skipped on purpose); hiding touches `published` only.
+* **Confirmation** shows the exact numbers (selected, already published, archived, to change) and, for publishing, how many of those lack a photo, a menu or a
+  description. Those are **not** required by the publication rules, so they are not made mandatory; the dialog just says they go live as they are.
+* **Failures** are per restaurant (name, id, reason) with "실패·남은 식당 다시 시도"; a permission error (42501) stops the run; a call that dropped without a database
+  error is re-checked before retrying (never published twice). Every audit reason is `일괄 공개 [tag]: reason`, so one bulk run can be found in the history.
+* Tests: `admin/src/features/restaurants/bulkVisibility.test.ts` (engine), `BulkPublish.test.tsx` (page), `supabase/tests/bulk_publish_test.sql` (database: only the
+  selected restaurants change, nothing else is written, public read, authorization, validation).
+
 ## 1. Audit: which Admin pages write public data directly (before this work)
 
 | Page | Writes to | Live immediately? | Existing draft/publish rule | Flutter reads |

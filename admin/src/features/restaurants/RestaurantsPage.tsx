@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/auth'
 import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage, formatDateTime } from '@/lib/utils'
+import BulkVisibilityDialog from './BulkVisibilityDialog'
 import KakaoImport from './KakaoImport'
 import { buildCsv, parseRestaurantCsv, toRow, type ParsedRow } from './csv'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
@@ -78,34 +79,81 @@ export default function RestaurantsPage() {
   const coverage = useCoverage()
   const menuIds = coverage.data?.menuIds
   const filters = { page, search, visibility, university, category, photo, menu, sort, menuIds: menu ? menuIds?.length : 0, pub, pubCount: overview.data?.length ?? 0 }
+  type QB = ReturnType<ReturnType<typeof supabase.from>['select']>
+  /** The page's search + filters, applied to a query. The list AND "select every matching result" use this one function, so they can never disagree. */
+  const applyFilters = (q: QB): QB => {
+    if (search.trim()) q = q.or(`name_ko.ilike.%${clean(search)}%,kakao_place_id.ilike.%${clean(search)}%`)
+    if (visibility) q = q.eq('visibility', visibility)
+    if (category.trim()) q = q.ilike('category', `%${clean(category)}%`)
+    if (university) q = q.eq('restaurant_university_links.university_id', university)
+    // publishing status: draft / scheduled / failed come from the publishing overview, published / archived from the live row
+    if (pub === 'published') q = q.eq('visibility', 'published')
+    if (pub === 'archived') q = q.in('visibility', ['archived', 'hidden'])
+    if (pub === 'draft') { const ids = pubIds((r) => r.has_draft); q = ids.length ? q.or(`visibility.eq.draft,id.in.(${ids.join(',')})`) : q.eq('visibility', 'draft') }
+    if (pub === 'scheduled' || pub === 'failed') {
+      const ids = pubIds((r) => (pub === 'scheduled' ? r.scheduled_at !== null : r.failed_jobs > 0))
+      q = q.in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
+    }
+    if (photo === 'none') q = q.is('image_url', null)
+    if (photo === 'has') q = q.not('image_url', 'is', null)
+    if (menu === 'has') q = q.in('id', menuIds?.length ? menuIds : ['00000000-0000-0000-0000-000000000000'])
+    if (menu === 'none' && menuIds?.length) q = q.not('id', 'in', `(${menuIds.join(',')})`)
+    return q
+  }
   const list = useQuery({
     queryKey: ['restaurants', filters],
     placeholderData: keepPreviousData,
     queryFn: async () => {
-      let q = supabase
+      const q = applyFilters(supabase
         .from('restaurant_overrides')
-        .select(university ? '*, restaurant_university_links!inner(university_id, universities(name_ko))' : '*, restaurant_university_links(universities(name_ko))', { count: 'exact' })
-      if (search.trim()) q = q.or(`name_ko.ilike.%${clean(search)}%,kakao_place_id.ilike.%${clean(search)}%`)
-      if (visibility) q = q.eq('visibility', visibility)
-      if (category.trim()) q = q.ilike('category', `%${clean(category)}%`)
-      if (university) q = q.eq('restaurant_university_links.university_id', university)
-      // publishing status: draft / scheduled / failed come from the publishing overview, published / archived from the live row
-      if (pub === 'published') q = q.eq('visibility', 'published')
-      if (pub === 'archived') q = q.in('visibility', ['archived', 'hidden'])
-      if (pub === 'draft') { const ids = pubIds((r) => r.has_draft); q = ids.length ? q.or(`visibility.eq.draft,id.in.(${ids.join(',')})`) : q.eq('visibility', 'draft') }
-      if (pub === 'scheduled' || pub === 'failed') {
-        const ids = pubIds((r) => (pub === 'scheduled' ? r.scheduled_at !== null : r.failed_jobs > 0))
-        q = q.in('id', ids.length ? ids : ['00000000-0000-0000-0000-000000000000'])
-      }
-      if (photo === 'none') q = q.is('image_url', null)
-      if (photo === 'has') q = q.not('image_url', 'is', null)
-      if (menu === 'has') q = q.in('id', menuIds?.length ? menuIds : ['00000000-0000-0000-0000-000000000000'])
-      if (menu === 'none' && menuIds?.length) q = q.not('id', 'in', `(${menuIds.join(',')})`)
+        .select(university ? '*, restaurant_university_links!inner(university_id, universities(name_ko))' : '*, restaurant_university_links(universities(name_ko))', { count: 'exact' }))
       const { data, error, count } = await q.order(sort.id, { ascending: !sort.desc }).range(page * PAGE, page * PAGE + PAGE - 1)
       if (error) throw error
       return { rows: data as unknown as Row[], total: count ?? 0 }
     },
   })
+
+  // ---- bulk selection (admins only). The selection is a set of restaurant ids that survives paging, sorting and filter changes.
+  const canBulk = can('admin')
+  type Sel = { ids: Set<string>; kind: 'custom' | 'page' | 'filtered' | 'all'; key: string; count: number }
+  const [sel, setSel] = useState<Sel>({ ids: new Set(), kind: 'custom', key: '', count: 0 })
+  const [selecting, setSelecting] = useState(false)
+  const [bulk, setBulk] = useState<'published' | 'hidden' | null>(null)
+  const filterKey = JSON.stringify([search, visibility, university, category, photo, menu, pub])
+  const viewKey = JSON.stringify([page, filterKey, sort])
+  const pageIds = (list.data?.rows ?? []).map((r) => r.id)
+  // How the selection was made only counts while it still describes what is on screen.
+  const kind: Sel['kind'] = sel.ids.size === 0 ? 'custom' : sel.kind === 'page' && sel.key !== viewKey ? 'custom' : sel.kind === 'filtered' && sel.key !== filterKey ? 'custom' : sel.kind
+  const onPageSelected = pageIds.filter((id) => sel.ids.has(id)).length
+  const toggleRow = (id: string) => setSel((p) => { const ids = new Set(p.ids); if (!ids.delete(id)) ids.add(id); return { ids, kind: 'custom', key: '', count: ids.size } })
+  const togglePage = () => setSel((p) => {
+    const ids = new Set(p.ids)
+    if (pageIds.length > 0 && pageIds.every((id) => ids.has(id))) pageIds.forEach((id) => ids.delete(id)); else pageIds.forEach((id) => ids.add(id))
+    return { ids, kind: ids.size === pageIds.length && pageIds.every((id) => ids.has(id)) ? 'page' : 'custom', key: viewKey, count: ids.size }
+  })
+  const selectPageOnly = () => setSel({ ids: new Set(pageIds), kind: 'page', key: viewKey, count: pageIds.length })
+  const clearSel = () => setSel({ ids: new Set(), kind: 'custom', key: '', count: 0 })
+  /** Every id (not just this page), 1000 at a time, with the same filters as the list. */
+  const collectIds = async (scope: 'filtered' | 'all') => {
+    const out: string[] = []
+    for (let from = 0; from < 5000; from += 1000) {
+      const base = supabase.from('restaurant_overrides').select(scope === 'filtered' && university ? 'id,restaurant_university_links!inner(university_id)' : 'id') as unknown as QB
+      const q = scope === 'filtered' ? applyFilters(base) : base
+      const { data, error } = await q.order('id').range(from, from + 999)
+      if (error) throw error
+      out.push(...(data as unknown as { id: string }[]).map((r) => r.id))
+      if (data.length < 1000) break
+    }
+    return out
+  }
+  const selectMatching = async (scope: 'filtered' | 'all') => {
+    setSelecting(true); setNotice(null)
+    try {
+      const ids = await collectIds(scope)
+      setSel({ ids: new Set(ids), kind: scope, key: scope === 'filtered' ? filterKey : '', count: ids.length })
+      if (ids.length >= 5000) setNotice('5,000곳까지만 선택해요. 필터로 범위를 줄여 주세요.')
+    } catch (e) { setNotice(errorMessage(e)) } finally { setSelecting(false) }
+  }
 
   // An immediate, versioned change (history + audit), not a silent edit of the live row.
   const setVis = useMutation({
@@ -115,6 +163,15 @@ export default function RestaurantsPage() {
   })
 
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => [
+    ...(canBulk ? [{
+      id: 'select', enableSorting: false,
+      header: () => (
+        <input type="checkbox" aria-label="이 페이지 모두 선택/해제 (표 머리글)" title="이 페이지의 식당을 선택에 더하거나 빼요"
+          checked={pageIds.length > 0 && pageIds.every((id) => sel.ids.has(id))}
+          ref={(el) => { if (el) el.indeterminate = pageIds.some((id) => sel.ids.has(id)) && !pageIds.every((id) => sel.ids.has(id)) }}
+          onChange={togglePage} />),
+      cell: ({ row: { original: r } }: { row: { original: Row } }) => <input type="checkbox" aria-label={`${r.name_ko} 선택`} checked={sel.ids.has(r.id)} onChange={() => toggleRow(r.id)} />,
+    } as ColumnDef<Row, unknown>] : []),
     { accessorKey: 'name_ko', header: '이름', cell: ({ row: { original: r } }) => (
       <div className="flex items-center gap-3">
         {r.image_url ? <img src={r.image_url} alt="" className="size-10 rounded-lg object-cover" loading="lazy" /> : <span className="grid size-10 place-items-center rounded-lg bg-page text-[10px] text-muted" title="대표 사진 없음">없음</span>}
@@ -144,7 +201,8 @@ export default function RestaurantsPage() {
           ? <Button size="sm" variant="soft" onClick={() => setConfirm({ row: r, to: 'published' })}>공개</Button>
           : <Button size="sm" variant="outline" onClick={() => setConfirm({ row: r, to: 'hidden' })}>숨기기</Button>}
       </div>) },
-  ], [ov])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [ov, canBulk, sel.ids, list.data?.rows, viewKey])
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
@@ -225,9 +283,36 @@ export default function RestaurantsPage() {
         </p>)}
       {coverage.isError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">사진·메뉴 현황을 불러오지 못했어요: {errorMessage(coverage.error)}</p>}
       {can('admin') && <KakaoImport universities={unis.data ?? []} />}
+      {canBulk && (
+        <div className="mb-3 space-y-2 rounded-2xl border border-line bg-white p-3" role="group" aria-label="일괄 선택과 공개">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" disabled={selecting} onClick={() => void selectMatching('all')}>전체 선택 ({coverage.data?.total ?? '…'}곳)</Button>
+            <Button size="sm" variant="outline" disabled={selecting || pageIds.length === 0} onClick={selectPageOnly}>현재 페이지 전체 선택 ({pageIds.length}곳)</Button>
+            <Button size="sm" variant="outline" disabled={selecting || !list.data?.total} onClick={() => void selectMatching('filtered')}>검색/필터 결과 전체 선택 ({list.data?.total ?? 0}곳)</Button>
+            <Button size="sm" variant="ghost" disabled={sel.ids.size === 0} onClick={clearSel}>선택 해제</Button>
+            <span className="mx-1 hidden h-5 w-px bg-line sm:block" />
+            <Button size="sm" variant="soft" disabled={sel.ids.size === 0 || selecting} onClick={() => setBulk('published')}>선택한 식당 공개</Button>
+            <Button size="sm" variant="outline" disabled={sel.ids.size === 0 || selecting} onClick={() => setBulk('hidden')}>선택한 식당 비공개</Button>
+          </div>
+          <p role="status" aria-label="선택 현황" className="text-sm">
+            {selecting ? '선택하는 중…' : <>선택한 식당 <b>{sel.ids.size}곳</b>
+              {sel.ids.size > 0 && <span className="text-xs text-muted"> · {kind === 'page' ? `선택 방식: 현재 페이지 ${sel.count}곳` : kind === 'filtered' ? `선택 방식: 검색/필터 결과 전체 ${sel.count}곳` : kind === 'all' ? `선택 방식: 전체 ${sel.count}곳` : `선택 방식: 직접 선택 (이 페이지 ${onPageSelected}곳 포함, 다른 페이지·필터에서 고른 식당도 포함돼요)`}</span>}
+            </>}
+          </p>
+        </div>)}
       <DataTable columns={columns} rows={list.data?.rows} total={list.data?.total} page={page} pageSize={PAGE} onPage={setPage}
         loading={list.isLoading} error={list.error} onRetry={() => void list.refetch()} sorting={sorting} onSorting={(s) => { setSorting(s); setPage(0) }}
         empty="조건에 맞는 식당이 없어요. 위의 '카카오 식당 불러오기'로 대학교 주변 식당을 불러올 수 있어요." />
+
+      {bulk && (
+        <BulkVisibilityDialog to={bulk} ids={[...sel.ids]} onClose={(changed) => {
+          setBulk(null)
+          if (changed) {
+            clearSel()
+            setNotice('일괄 처리가 끝났어요. 목록과 공개 수를 새로 불러왔어요.')
+            void qc.invalidateQueries({ queryKey: ['restaurants'] }); void qc.invalidateQueries({ queryKey: ['cms-overview'] }); void qc.invalidateQueries({ queryKey: ['restaurant-coverage'] })
+          }
+        }} />)}
 
       <ConfirmDialog open={!!confirm} busy={setVis.isPending} askReason
         title={confirm?.to === 'published' ? '이 식당을 공개할까요?' : '이 식당을 숨길까요?'}

@@ -119,7 +119,7 @@ void main() {
 
     await tester.tap(find.text('밥수다'));
     await tester.pumpAndSettle();
-    expect(find.text('아직 올라온 이야기가 없어요'), findsOneWidget);
+    expect(find.text('밥수다는 준비 중이에요'), findsOneWidget);
     await tester.tap(find.text('미션'));
     await tester.pumpAndSettle();
     // Missions belong to an account: guests are asked to sign in.

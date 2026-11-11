@@ -104,18 +104,12 @@ void main() {
       );
 
       testWidgets(
-        '${size.width.toInt()}px: page content is inset by the gutter, not centred in a column',
+        '${size.width.toInt()}px: the right-hand column ends at the right gutter',
         (tester) async {
-          await open(tester, ShellTabs.community, size);
+          await open(tester, ShellTabs.profile, size);
           final gutter = size.width >= 1440 ? 40.0 : 28.0;
-          // the page title sits at the left gutter (plus the title's own dot), not at a centred column edge
-          final title = tester.getTopLeft(find.text('밥수다').last);
-          expect(title.dx, lessThan(gutter + 40));
-          // and the right-hand side panel ends at the right gutter
-          final panel = tester.getRect(
-            find.byKey(const ValueKey('community-campus')),
-          );
-          expect(panel.right, closeTo(size.width - gutter, 1));
+          final page = tester.getRect(find.byKey(const ValueKey('my-desktop')));
+          expect(page.right, closeTo(size.width - gutter, 1));
         },
       );
     }
@@ -123,15 +117,11 @@ void main() {
     testWidgets('1440px vs 1920px: the extra width goes to the content', (
       tester,
     ) async {
-      await open(tester, ShellTabs.community, const Size(1440, 900));
-      final a = tester
-          .getRect(find.byKey(const ValueKey('community-campus')))
-          .right;
-      await open(tester, ShellTabs.community, const Size(1920, 1080));
-      final b = tester
-          .getRect(find.byKey(const ValueKey('community-campus')))
-          .right;
-      expect(b - a, 480); // the panel moved out with the window edge
+      await open(tester, ShellTabs.profile, const Size(1440, 900));
+      final a = tester.getRect(find.byKey(const ValueKey('my-desktop'))).right;
+      await open(tester, ShellTabs.profile, const Size(1920, 1080));
+      final b = tester.getRect(find.byKey(const ValueKey('my-desktop'))).right;
+      expect(b - a, 480); // the page moved out with the window edge
     });
 
     testWidgets(
@@ -193,8 +183,8 @@ void main() {
     testWidgets('390px: no desktop structure, the original 16 px gutter', (
       tester,
     ) async {
-      await open(tester, ShellTabs.community, const Size(390, 844));
-      expect(find.byKey(const ValueKey('community-campus')), findsNothing);
+      await open(tester, ShellTabs.profile, const Size(390, 844));
+      expect(find.byKey(const ValueKey('my-desktop')), findsNothing);
       expect(find.byType(WebHeader), findsNothing);
       expect(WebLayout.gutterOf(tester.element(find.byType(AppShell))), 16);
     });

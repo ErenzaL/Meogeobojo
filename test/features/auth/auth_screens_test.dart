@@ -41,6 +41,35 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the mascot has no tile, fill or border behind it', (
+      tester,
+    ) async {
+      for (final size in const [Size(390, 844), Size(1440, 900)]) {
+        final h = await buildHarness();
+        await pumpApp(tester, h, home: const LoginScreen(), size: size);
+        // Walk up from the mascot to the box that sizes it: nothing that paints
+        // (a decorated or coloured box, a clip) may sit in between.
+        final painted = <Type>[];
+        var sized = false;
+        tester.element(find.byType(Image)).visitAncestorElements((e) {
+          final w = e.widget;
+          if (w is SizedBox && w.width != null && w.width == w.height) {
+            sized = true;
+            return false;
+          }
+          if (w is DecoratedBox ||
+              w is ColoredBox ||
+              w is ClipRRect ||
+              w is Container) {
+            painted.add(w.runtimeType);
+          }
+          return true;
+        });
+        expect(sized, isTrue, reason: 'the mascot sits in its sizing box');
+        expect(painted, isEmpty, reason: '${size.width}px');
+      }
+    });
+
     testWidgets('desktop intro has no school name or campus chip', (
       tester,
     ) async {

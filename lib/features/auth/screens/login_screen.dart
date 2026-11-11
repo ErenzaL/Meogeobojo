@@ -165,18 +165,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ),
     ];
 
-    Widget thumb(double size) => Container(
+    // The mascot stands straight on the page: its artwork is already a transparent cut-out, so no tile, fill or border
+    // is drawn behind it.
+    Widget thumb(double size) => SizedBox(
       width: size,
       height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: p.accentFaint,
-        borderRadius: BorderRadius.circular(size * 0.16),
-        border: Border.all(color: p.border),
-      ),
       child: Image.asset(
         AppAssets.mascotStanding,
-        height: size * 0.78,
+        fit: BoxFit.contain,
         semanticLabel: l10n.mascotSemantics,
       ),
     );

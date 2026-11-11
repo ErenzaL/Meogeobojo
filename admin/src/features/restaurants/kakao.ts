@@ -1,3 +1,5 @@
+import { placeDistanceM } from './kakaoGeo'
+
 /** Kakao Local keyword searches that reproduce what the Flutter app collects. */
 
 /** Same Korean keywords the app sends (lib/features/restaurants/models/food_category.dart). */
@@ -17,7 +19,7 @@ export type Campus = { latitude: number; longitude: number }
 export const isFoodPlace = (d: KakaoDoc) => d.category_group_code === 'FD6' || d.category_group_code === 'CE7'
 
 /**
- * Runs every keyword around the campus (a few at a time) and merges the
+ * LEGACY path (used only when the `admin_kakao_search` function is not deployed): runs every keyword around the campus (a few at a time) and merges the
  * results by Kakao place id. A keyword that fails is reported, not fatal.
  * Each search returns at most ~15 places, so this is "the nearest matches",
  * not a complete catalogue of the area.
@@ -44,6 +46,25 @@ export async function collectKakaoPlaces(
   await Promise.all(Array.from({ length: Math.min(concurrency, queries.length) }, worker))
   const places = [...byId.values()].sort((a, b) => Number(a.distance ?? 1e9) - Number(b.distance ?? 1e9))
   return { places, failed }
+}
+
+/**
+ * Keeps only the places inside the campus circle, with their real distance from the campus centre (Kakao's own
+ * `distance` is measured from whatever point was searched, which is not the campus for a grid cell).
+ */
+export function withinRadius(
+  places: KakaoDoc[], campus: { latitude: number; longitude: number; radiusM: number },
+): { places: (KakaoDoc & { distanceM: number })[]; outside: number } {
+  const kept: (KakaoDoc & { distanceM: number })[] = []
+  let outside = 0
+  for (const d of places) {
+    const dist = placeDistanceM(d, { id: '', name: '', ...campus })
+    if (dist == null) continue
+    if (dist > campus.radiusM) { outside++; continue }
+    kept.push({ ...d, distance: String(Math.round(dist)), distanceM: dist })
+  }
+  kept.sort((a, b) => a.distanceM - b.distanceM)
+  return { places: kept, outside }
 }
 
 /** Splits [items] into chunks of at most [n]. */

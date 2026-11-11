@@ -80,7 +80,7 @@ function Editor({ uni, onClose, onChanged }: { uni: Uni; onClose: () => void; on
           <Field label="위도" htmlFor="u_lat" error={errors.latitude}><Input id="u_lat" value={form.latitude} onChange={(e) => set({ latitude: e.target.value })} /></Field>
           <Field label="경도" htmlFor="u_lng" error={errors.longitude}><Input id="u_lng" value={form.longitude} onChange={(e) => set({ longitude: e.target.value })} /></Field>
         </div>
-        <Field label="검색 반경 (m)" htmlFor="u_r" error={errors.radius} hint="참고용이에요. 지금 앱은 이 값을 쓰지 않아요 (식당 검색 범위는 앱의 필터와 검색 서비스가 정해요)."><Input id="u_r" value={form.radius} onChange={(e) => set({ radius: e.target.value })} /></Field>
+        <Field label="검색 반경 (m)" htmlFor="u_r" error={errors.radius} hint="관리자 '카카오 식당 불러오기'가 이 값만큼(게시된 값 기준) 구역을 나눠 훑어요. 앱은 아직 이 값을 쓰지 않아요 (앱의 식당 검색 범위는 필터와 검색 서비스가 정해요)."><Input id="u_r" value={form.radius} onChange={(e) => set({ radius: e.target.value })} /></Field>
         <p className="text-xs text-muted">저장은 초안이에요. 게시하면 앱의 대학교 목록(이름·위치·표시 여부)에 반영돼요.</p>
       </Card>
       <Modal open={previewing} title="미리보기" onClose={() => setPreviewing(false)}>

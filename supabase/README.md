@@ -19,6 +19,67 @@ Kakao document fields used: `id, place_name, category_name, category_group_code,
 
 The Kakao REST key lives only in Supabase Secrets (`KAKAO_REST_API_KEY`); it is never in the Flutter app or `.env`.
 
+## Admin Kakao import: `admin_kakao_search` (source in this repo, NOT deployed) and `20261119000100`
+
+**Why it exists.** Admin → 식당 → 카카오 식당 불러오기 used to run 22 fixed keywords through `search_restaurants`, which ignores `radius`,
+`page` and `size` and returns at most 15 places. 22 × 15 is at most 330, and after deduplication that was the ~124 places seen for
+순천향대학교, whatever the university's `search_radius_m` said (the page never even read that column). `search_restaurants` is
+deployed from outside this repo and is left untouched (the Flutter app depends on it). `admin_kakao_search` is a separate,
+admin-only function that the Admin app drives with an adaptive grid over the university's whole radius.
+
+| | |
+|---|---|
+| Source | `supabase/functions/admin_kakao_search/` (`core.ts` = all logic, `index.ts` = `Deno.serve`, `core_test.ts`) |
+| URL | `POST {SUPABASE_URL}/functions/v1/admin_kakao_search` |
+| Auth | the signed-in admin's JWT (`Authorization: Bearer`). The function asks the database `has_role('admin')` with that same token (no service key), so a non-admin gets `403` before Kakao is called |
+| Secrets | `KAKAO_REST_API_KEY` (the one `search_restaurants` already uses). `SUPABASE_URL` and `SUPABASE_ANON_KEY` are provided by the platform. Keep the default JWT verification on |
+| Request | `{"university_id": uuid, "category_group_code": "FD6"\|"CE7", "query"?: "치킨집", "cell": {"lat", "lng", "radius_m"}}` |
+| What it checks | the university exists and has coordinates (read from `universities` with the caller's token) and the cell lies inside the circle around that university's `search_radius_m` (so it cannot be used as a general Kakao proxy) |
+| What it does | Kakao category search (FD6 / CE7), or keyword search with `category_group_code` when `query` is given, `x`/`y`/`radius`, `size=15`, pages until `is_end` or the accessible limit |
+| Success | `{"success": true, "documents": [...], "meta": {"total_count", "pageable_count", "returned", "truncated", "kakao_calls"}, "university": {"id","latitude","longitude","search_radius_m"}}` |
+| Failures | `401` no token · `403` not an admin · `400` bad input / cell outside the university · `404` unknown university · `429` Kakao rate limit or quota (HTTP 429, or Kakao code −10) · `502` Kakao down / timeout · `500` misconfigured |
+
+`truncated` is how the Admin knows to split a search area: Kakao documents `pageable_count` as "at most 45", so a search whose
+`total_count` exceeds it (or that reaches 45) cannot be read in full.
+
+**Scan (Admin, `admin/src/features/restaurants/kakaoScan.ts`).** The centre, `search_radius_m` and id of the chosen university are read from
+Supabase when the search starts. The bounding square of the circle is searched for FD6 and CE7 as the circle through its corners; a
+truncated square is split into four, down to `maxDepth` 6 (≈94 m squares for 3000 m). Squares that cannot touch the radius are skipped.
+Squares still truncated at the finest level are searched once per existing keyword (`KAKAO_QUERIES`, the app's category keywords).
+Circles (`x`,`y`,`radius`) are used, not `rect`, because their parameters are unambiguous in Kakao's documentation. Every place is measured
+from the **original university coordinates** (haversine) and dropped beyond the radius; places are deduplicated by Kakao place id. Bounds:
+4 searches in flight, 1500 function requests and 3000 Kakao calls per scan, 3 retries with exponential backoff and jitter, a stop after 5
+cells in a row that stay rate-limited, and a cancel button. The screen reports radius, cells searched, Kakao calls, unique places, how many
+were beyond the radius, existing vs new, failed searches and any squares still over Kakao's cap, and says "partial" whenever that is the case.
+Simulated cost on a 3000 m radius: ~300 places ≈ 55 Kakao calls, ~1500 ≈ 300, 3000 clustered ≈ 800 (simulation, not a Kakao measurement).
+
+**Until the function is deployed** the Admin falls back to the old keyword search (still filtered to the radius) and says in red that the
+result is partial.
+
+**Deploy (you, deliberately; nothing here deploys anything):** `supabase functions deploy admin_kakao_search --project-ref <ref>`. First run after
+deploying: scan a small radius and check the report (a scan that finds 0 places, or only squares that are all "full", means something is off).
+
+**Migration `20261119000100_kakao_register_no_touch.sql` (NOT applied).** `admin_register_kakao_places` answered an already-managed place with
+`ON CONFLICT DO UPDATE`, which still wrote the row: it bumped `updated_at` (the Admin list shows it as "just edited") and fired the
+`content_sync_bump` live-update signal to every running app. Nothing a person typed was overwritten, but a repeat import should not touch
+managed restaurants at all. The function now only looks: a known place gets no write (not even a timestamp), a new one is inserted as a
+draft, the campus link is added only if missing. Same signature, return shape, limits (max 500 per call) and audit. One function replaced,
+no table or data changed, safe to apply twice. The Admin never sends places it already lists as managed, so this only hardens the server.
+
+**Kakao terms (verified 2026-11-11; not legal advice).** Limits from the official Local API guide: `size` 1–15, `page` 1–45,
+`pageable_count` "최대: 45", `radius` ≤ 20000 m; quotas are per app (daily/monthly), exhaustion answers HTTP 429 (Kakao's reference also lists
+code −10 "API limit has been exceeded", seen as 400 or 429); no per-second number is published. Kakao staff (developers forum, Aug 2026)
+say Local API results are for real-time calls and may not be stored, while storing only a place ID and showing details fetched live was
+called acceptable. This code stores nothing from a search: results live in the browser tab's memory, the function does not log or cache
+documents (counts only, `Cache-Control: no-store`), and registration stores only the place id and its name as a management label, as before
+(the name label is the one thing worth asking Kakao about). Not every place is exposed by the API, and a stored id can stop resolving, so
+"found N" is what Kakao returns, never a census.
+
+**Tests.** `deno test supabase/functions/admin_kakao_search/core_test.ts` (14; Deno is not in this repo's toolchain: `npm i deno` in a scratch
+folder works), `cd admin && npm test` (scanner: radius propagation, pagination caps, spatial coverage, distance filter, dedupe, repeat scans,
+depth/request/concurrency bounds, backoff, partial failure, cancellation; plus the page), and `zsh supabase/tests/run_local.sh <scratch-dir>`
+(includes: registering existing places writes nothing, and 600 places in chunks, repeated, are a no-op).
+
 ## Migrations (NOT applied — no DB credentials were available)
 
 Probed 2026-11-01: the remote project still returns `PGRST205` for `universities`, `favorites`, `profiles` and `user_preferences`. Until applied, the app falls back to a bundled university list, favorites cannot be saved, and **signed-in users see "couldn't load your profile" (retry) instead of onboarding**, because the profile table does not exist yet.

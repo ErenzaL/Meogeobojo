@@ -26,7 +26,7 @@ export function useUniversities() {
   return useQuery({
     queryKey: ['universities'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('universities').select('id,name_ko,is_active,latitude,longitude').order('name_ko')
+      const { data, error } = await supabase.from('universities').select('id,name_ko,is_active,latitude,longitude,search_radius_m').order('name_ko')
       if (error) throw error
       return data as { id: string; name_ko: string; is_active: boolean; latitude: number | null; longitude: number | null }[]
     },

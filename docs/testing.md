@@ -6,6 +6,7 @@
 | Flutter Web | `bash scripts/render_build.sh` (with env vars) | clean-clone release build |
 | Admin | `cd admin && npm run typecheck && npm run lint && npm test && npm run build` | role gating, forms, CSV, validation, edit flow (fake Supabase client) |
 | Database | `zsh supabase/tests/run_local.sh <scratch-dir>` | migrations apply twice cleanly; RLS and privileged functions, incl. negative cases, on a real local PostgreSQL |
+| Edge Function | `deno test supabase/functions/admin_kakao_search/core_test.ts` (and `deno check` on `index.ts` / `core.ts`) | admin-only Kakao search: auth, area check, pagination, truncation flag, rate-limit mapping, key never in responses (fake `fetch`; no network) |
 | Recommendation API | `cd recommendation-api && python -m pytest` | contract validation, mock labelling, 503 without the mock flag, CORS |
 
 `flutter analyze` crashes in a checkout whose path has non-ASCII characters (analysis

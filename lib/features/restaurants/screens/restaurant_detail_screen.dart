@@ -536,6 +536,8 @@ class _Head extends StatelessWidget {
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .skip(1)
+        // two levels like the Home card: a third level is often the franchise name, not a category
+        .take(2)
         .toList();
     final last = status.lastOrderMinutes;
     final statusText = last == null

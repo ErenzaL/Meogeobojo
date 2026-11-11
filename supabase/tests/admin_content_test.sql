@@ -180,6 +180,74 @@ do $$ declare r jsonb; o public.restaurant_overrides; places jsonb; n int; begin
 end $$;
 reset role;
 
+-- ===== Kakao registration: a repeat import writes NOTHING to places that already exist =====
+-- (an existing row is not even touched: no updated_at bump, no live-update signal, nothing in menus / photos / links)
+create table public._kk_snap (k text primary key, v jsonb);
+insert into public._kk_snap
+  select 'rows', jsonb_agg(to_jsonb(o) order by o.kakao_place_id) from public.restaurant_overrides o where o.kakao_place_id in ('kp-pub', 'kp-draft', '1001', '1003');
+insert into public._kk_snap select 'photos', coalesce(jsonb_agg(to_jsonb(p) order by p.id), '[]') from public.restaurant_photos p;
+insert into public._kk_snap select 'menus', coalesce(jsonb_agg(to_jsonb(m) order by m.id), '[]') from public.restaurant_menus m;
+insert into public._kk_snap select 'links', coalesce(jsonb_agg(to_jsonb(l) order by l.restaurant_id, l.university_id), '[]') from public.restaurant_university_links l;
+insert into public._kk_snap select 'signals', to_jsonb((select count(*) from public.content_sync));
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000a","role":"authenticated"}', false);
+do $$ declare r jsonb; begin
+  r := public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', '[
+    {"id":"kp-pub","place_name":"카카오가 말하는 이름","category_group_code":"FD6","x":"126.93","y":"36.77"},
+    {"id":"kp-draft","place_name":"카카오 이름 2","category_group_code":"CE7","x":"126.93","y":"36.77"},
+    {"id":"1001","place_name":"또 다른 이름","category_group_code":"FD6","x":"126.93","y":"36.77"},
+    {"id":"1003","place_name":"또 또 다른 이름","category_group_code":"FD6","x":"126.93","y":"36.77"}]'::jsonb);
+  assert (r ->> 'added')::int = 0 and (r ->> 'already_managed')::int = 4, 'all four were already managed: ' || r::text;
+end $$;
+reset role;
+do $$ declare now_rows jsonb; begin
+  select jsonb_agg(to_jsonb(o) order by o.kakao_place_id) into now_rows from public.restaurant_overrides o where o.kakao_place_id in ('kp-pub', 'kp-draft', '1001', '1003');
+  assert now_rows = (select v from public._kk_snap where k = 'rows'), 'existing restaurants are byte-for-byte unchanged (incl. updated_at and kakao_registered_at): ' || now_rows::text;
+  assert (select coalesce(jsonb_agg(to_jsonb(p) order by p.id), '[]') from public.restaurant_photos p) = (select v from public._kk_snap where k = 'photos'), 'photos untouched';
+  assert (select coalesce(jsonb_agg(to_jsonb(m) order by m.id), '[]') from public.restaurant_menus m) = (select v from public._kk_snap where k = 'menus'), 'menus and prices untouched';
+  assert (select coalesce(jsonb_agg(to_jsonb(l) order by l.restaurant_id, l.university_id), '[]') from public.restaurant_university_links l where l.restaurant_id in (select id from public.restaurant_overrides where kakao_place_id in ('kp-pub', 'kp-draft', '1001', '1003')))
+       is not null, 'links readable';
+  assert (select count(*) from public.content_sync) = (select (v #>> '{}')::bigint from public._kk_snap where k = 'signals'), 'no live-update signal for places that already exist';
+  raise notice 'OK registering existing places writes nothing (rows, photos, menus, signals unchanged)';
+end $$;
+
+-- ===== Kakao registration at scale: chunks of 200, repeated, idempotent =====
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000a","role":"authenticated"}', false);
+do $$ declare r jsonb; chunk jsonb; i int; added int := 0; known int := 0; n int; before_rows text; after_rows text; sig_before bigint; begin
+  for i in 0..2 loop
+    select jsonb_agg(jsonb_build_object('id', 'bulk-' || (i * 200 + g), 'place_name', '대량 식당 ' || (i * 200 + g), 'category_group_code', case when g % 5 = 0 then 'CE7' else 'FD6' end, 'x', '126.93', 'y', '36.77'))
+      into chunk from generate_series(0, 199) g;
+    r := public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', chunk);
+    added := added + (r ->> 'added')::int;
+  end loop;
+  assert added = 600, '600 new places registered in 3 chunks: ' || added;
+  select count(*) into n from public.restaurant_overrides where kakao_place_id like 'bulk-%' and visibility = 'draft'; assert n = 600, 'all drafts';
+  select count(*) into n from public.restaurant_university_links l join public.restaurant_overrides o on o.id = l.restaurant_id where o.kakao_place_id like 'bulk-%'; assert n = 600, 'one campus link each';
+  select md5(string_agg(to_jsonb(o)::text, '|' order by o.kakao_place_id)) into before_rows from public.restaurant_overrides o where o.kakao_place_id like 'bulk-%';
+  select count(*) into sig_before from public.content_sync;
+  -- the same import again, the way a repeated run would send it
+  for i in 0..2 loop
+    select jsonb_agg(jsonb_build_object('id', 'bulk-' || (i * 200 + g), 'place_name', '이름이 달라졌어요', 'category_group_code', 'FD6', 'x', '126.93', 'y', '36.77'))
+      into chunk from generate_series(0, 199) g;
+    r := public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', chunk);
+    assert (r ->> 'added')::int = 0 and (r ->> 'already_managed')::int = 200, 'repeat adds nothing: ' || r::text;
+    known := known + (r ->> 'already_managed')::int;
+  end loop;
+  select md5(string_agg(to_jsonb(o)::text, '|' order by o.kakao_place_id)) into after_rows from public.restaurant_overrides o where o.kakao_place_id like 'bulk-%';
+  assert before_rows = after_rows, 'a repeat import changes no row at all (names, timestamps)';
+  select count(*) into n from public.content_sync; assert n = sig_before, 'and sends no live-update signal: ' || (n - sig_before);
+  select count(*) into n from public.restaurant_overrides where kakao_place_id like 'bulk-%'; assert n = 600, 'still 600 rows';
+  select count(*) into n from public.restaurant_university_links l join public.restaurant_overrides o on o.id = l.restaurant_id where o.kakao_place_id like 'bulk-%'; assert n = 600, 'still one link each';
+  begin
+    perform public.admin_register_kakao_places('5c0a8f3e-0001-4a6e-9b1d-000000000001', (select jsonb_agg(jsonb_build_object('id', 'over-' || g, 'place_name', 'x', 'category_group_code', 'FD6', 'x', '126.93', 'y', '36.77')) from generate_series(1, 501) g));
+    raise exception 'accepted#over500';
+  exception when invalid_parameter_value then null; end;
+  raise notice 'OK kakao registration at scale: 600 places in chunks, repeat import is a no-op, more than 500 per call refused';
+end $$;
+reset role;
+drop table public._kk_snap;
+
 -- not for moderators, users or anon
 set role authenticated;
 select set_config('request.jwt.claims', '{"sub":"f2000000-0000-4000-8000-00000000000b","role":"authenticated"}', false);

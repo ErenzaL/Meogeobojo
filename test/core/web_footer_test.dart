@@ -76,7 +76,7 @@ void main() {
     testWidgets(
       'a short page: the footer sits at the very bottom of the window, not under the content',
       (tester) async {
-        // 1440 x 2400: 밥수다 (an empty feed) is much shorter than the window
+        // 1440 x 2400: 밥수다 (a coming-soon message) is much shorter than the window
         await open(
           tester,
           tab: ShellTabs.community,
@@ -84,7 +84,7 @@ void main() {
         );
         final box = tester.getRect(find.byKey(const ValueKey('web-footer')));
         expect(box.bottom, closeTo(2400, 1));
-        final feed = tester.getBottomLeft(find.text('학교 근처 이야기'));
+        final feed = tester.getBottomLeft(find.text('밥수다는 준비 중이에요'));
         expect(
           box.top,
           greaterThan(feed.dy + 200),

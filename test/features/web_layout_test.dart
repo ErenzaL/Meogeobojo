@@ -79,20 +79,19 @@ void main() {
 
   group('desktop structure appears on desktop only', () {
     testWidgets(
-      '밥수다: feed and a side column on desktop, one column on a phone',
+      '밥수다: the coming-soon message is centred on desktop and phone',
       (tester) async {
-        await open(tester, ShellTabs.community, const Size(1440, 900));
-        expect(find.byKey(const ValueKey('community-campus')), findsOneWidget);
-        final composer = tester.getTopLeft(
-          find.byKey(const ValueKey('community-composer')),
-        );
-        final feedTitle = tester.getTopLeft(find.text('학교 근처 이야기').first);
-        expect(
-          composer.dx,
-          greaterThan(feedTitle.dx),
-        ); // composer is the right-hand column
-        await open(tester, ShellTabs.community, const Size(390, 844));
-        expect(find.byKey(const ValueKey('community-campus')), findsNothing);
+        for (final size in const [Size(1440, 900), Size(390, 844)]) {
+          await open(tester, ShellTabs.community, size);
+          final title = find.text('밥수다는 준비 중이에요');
+          expect(title, findsOneWidget);
+          expect(
+            tester.getCenter(title).dx,
+            closeTo(size.width / 2, 2),
+            reason: '${size.width}px',
+          );
+          expect(tester.takeException(), isNull);
+        }
       },
     );
 

@@ -1,14 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import PublishingToolbar from '@/components/PublishingToolbar'
 import { Button, Card, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
+import { useAuth } from '@/lib/auth'
 import { cmsSaveDraft, cmsState, isConflict } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import KakaoSourceCard from './KakaoSourceCard'
 import RestaurantPreview from './RestaurantPreview'
 import { useUniversities } from './RestaurantsPage'
@@ -111,6 +113,9 @@ function NewRestaurant() {
 
 function EditRestaurant({ id }: { id: string }) {
   const qc = useQueryClient()
+  const nav = useNavigate()
+  const { can } = useAuth()
+  const [deleting, setDeleting] = useState(false)
   const unis = useUniversities()
   const [message, setMessage] = useState<Msg | null>(null)
   const [previewing, setPreviewing] = useState(false)
@@ -180,6 +185,17 @@ function EditRestaurant({ id }: { id: string }) {
         </div>)}
       <KakaoSourceCard id={id} />
       <FormFields register={register} control={control} errors={errors} unis={unis} existing />
+      {can('super_admin') && (
+        <Card className="space-y-2 border-red-200" aria-label="위험 구역">
+          <h2 className="font-bold text-red-700">식당 삭제</h2>
+          <p className="text-sm text-muted">이 식당과 메뉴·사진 정보·대학교 연결을 지워요. 되돌릴 수 없어요. 앱에서 감추기만 하려면 삭제 대신 공개 상태를 &lsquo;숨김&rsquo;으로 바꾸세요. 공개 중인 식당은 먼저 숨겨야 삭제할 수 있어요.</p>
+          <Button type="button" variant="danger" onClick={() => setDeleting(true)}><Trash2 className="size-4" />이 식당 삭제…</Button>
+        </Card>)}
+      {deleting && (
+        <DeleteRestaurantsDialog ids={[id]} onClose={(deletedIds) => {
+          setDeleting(false)
+          if (deletedIds.length > 0) { void qc.invalidateQueries({ queryKey: ['restaurants'] }); void qc.invalidateQueries({ queryKey: ['restaurant-coverage'] }); nav('/restaurants', { replace: true }) }
+        }} />)}
       {state && <RestaurantPreview open={previewing} live={state.live} draft={state.draft?.data ?? state.live} onClose={() => setPreviewing(false)} />}
     </form>
   )

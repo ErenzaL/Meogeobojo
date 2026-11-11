@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
-import { Download, Pencil, Plus, Search, Upload } from 'lucide-react'
+import { Download, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/DataTable'
@@ -10,6 +10,7 @@ import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/li
 import { supabase } from '@/lib/supabase'
 import { errorMessage, formatDateTime } from '@/lib/utils'
 import BulkVisibilityDialog from './BulkVisibilityDialog'
+import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import KakaoImport from './KakaoImport'
 import { buildCsv, parseRestaurantCsv, toRow, type ParsedRow } from './csv'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
@@ -119,6 +120,9 @@ export default function RestaurantsPage() {
   const [sel, setSel] = useState<Sel>({ ids: new Set(), kind: 'custom', key: '', count: 0 })
   const [selecting, setSelecting] = useState(false)
   const [bulk, setBulk] = useState<'published' | 'hidden' | null>(null)
+  // deleting restaurants is for super admins only (the database enforces it; the buttons are simply not shown to anyone else)
+  const canDelete = can('super_admin')
+  const [del, setDel] = useState<string[] | null>(null)
   const filterKey = JSON.stringify([search, visibility, university, category, photo, menu, pub])
   const viewKey = JSON.stringify([page, filterKey, sort])
   const pageIds = (list.data?.rows ?? []).map((r) => r.id)
@@ -197,12 +201,13 @@ export default function RestaurantsPage() {
     { id: 'actions', header: '', enableSorting: false, cell: ({ row: { original: r } }) => (
       <div className="flex justify-end gap-1.5">
         <Link to={`/restaurants/${r.id}`}><Button size="sm" variant="outline"><Pencil className="size-3.5" />편집</Button></Link>
+        {canDelete && <Button size="icon" variant="ghost" aria-label={`${r.name_ko} 삭제`} disabled={r.visibility === 'published'} title={r.visibility === 'published' ? '공개 중인 식당은 먼저 숨기기를 해 주세요' : '식당 삭제'} onClick={() => setDel([r.id])}><Trash2 className="size-4 text-red-600" /></Button>}
         {r.visibility !== 'published'
           ? <Button size="sm" variant="soft" onClick={() => setConfirm({ row: r, to: 'published' })}>공개</Button>
           : <Button size="sm" variant="outline" onClick={() => setConfirm({ row: r, to: 'hidden' })}>숨기기</Button>}
       </div>) },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [ov, canBulk, sel.ids, list.data?.rows, viewKey])
+  ], [ov, canBulk, canDelete, sel.ids, list.data?.rows, viewKey])
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
@@ -293,6 +298,7 @@ export default function RestaurantsPage() {
             <span className="mx-1 hidden h-5 w-px bg-line sm:block" />
             <Button size="sm" variant="soft" disabled={sel.ids.size === 0 || selecting} onClick={() => setBulk('published')}>선택한 식당 공개</Button>
             <Button size="sm" variant="outline" disabled={sel.ids.size === 0 || selecting} onClick={() => setBulk('hidden')}>선택한 식당 비공개</Button>
+            {canDelete && <Button size="sm" variant="danger" disabled={sel.ids.size === 0 || selecting} onClick={() => setDel([...sel.ids])}><Trash2 className="size-3.5" />선택한 식당 삭제</Button>}
           </div>
           <p role="status" aria-label="선택 현황" className="text-sm">
             {selecting ? '선택하는 중…' : <>선택한 식당 <b>{sel.ids.size}곳</b>
@@ -310,6 +316,17 @@ export default function RestaurantsPage() {
           if (changed) {
             clearSel()
             setNotice('일괄 처리가 끝났어요. 목록과 공개 수를 새로 불러왔어요.')
+            void qc.invalidateQueries({ queryKey: ['restaurants'] }); void qc.invalidateQueries({ queryKey: ['cms-overview'] }); void qc.invalidateQueries({ queryKey: ['restaurant-coverage'] })
+          }
+        }} />)}
+
+      {del && (
+        <DeleteRestaurantsDialog ids={del} onClose={(deletedIds) => {
+          setDel(null)
+          if (deletedIds.length > 0) {
+            const gone = new Set(deletedIds)
+            setSel((p) => { const ids = new Set([...p.ids].filter((id) => !gone.has(id))); return { ids, kind: 'custom', key: '', count: ids.size } })
+            setNotice(`${deletedIds.length}곳을 삭제했어요. 목록과 공개 수를 새로 불러왔어요.`)
             void qc.invalidateQueries({ queryKey: ['restaurants'] }); void qc.invalidateQueries({ queryKey: ['cms-overview'] }); void qc.invalidateQueries({ queryKey: ['restaurant-coverage'] })
           }
         }} />)}

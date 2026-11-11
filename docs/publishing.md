@@ -119,6 +119,19 @@ with a new kind `notification`.
   says which migration to apply.
 * Tests: `test/features/content/notifications_test.dart` (app + website), `admin/src/features/NotificationsPage.test.tsx`, `supabase/tests/notification_test.sql`.
 
+### Deleting a restaurant (Admin → 식당, super admins only)
+A trash button on each row, **선택한 식당 삭제** in the selection controls, and a "식당 삭제" section on the edit page. **No new database function and no migration:** it is a plain `DELETE` of
+the `restaurant_overrides` row, which the existing row-level policy allows for **super admins only**. The database removes the restaurant's campus links, menus and photo rows with it,
+audits it (`audit_log`: who, and the whole deleted row) and keeps the publishing history (`content_versions`); a saved draft row stays behind as an unreachable orphan.
+* **Rules the Admin enforces:** a **published** restaurant is never deleted (hide it first); one with a **scheduled publish** is never deleted (cancel the schedule first); the status is
+  re-read from the database before every batch of 10 (3 at a time), so a restaurant published or scheduled by someone else meanwhile is skipped. Row-level security does not raise an error
+  for a caller who may not delete, it silently deletes nothing, so the number of removed rows is checked: zero while the restaurant still exists stops the run and is never shown as success.
+* **Confirmation:** exact counts (including the menus and photo rows that go with it), an irreversibility warning, the word `삭제` typed, and an extra acknowledgement when hidden / archived
+  restaurants are included, because **the app drops places whose override is hidden or archived, so deleting such a record can make the place reappear from Kakao's data**. To only keep a place
+  out of the app, use 숨기기. A place imported from Kakao can show up again as a new restaurant in 카카오 식당 불러오기. Photo files stay in storage.
+* Failures are per restaurant (name, id, reason) and retryable; a permission error stops the run; a dropped connection is re-checked before retrying (never counted twice).
+* Tests: `admin/src/features/restaurants/deleteRestaurants.test.ts` (engine), `DeleteRestaurants.test.tsx` (page, edit page, roles), `supabase/tests/restaurant_delete_test.sql` (who can delete, what cascades, audit, public read).
+
 ## 1. Audit: which Admin pages write public data directly (before this work)
 
 | Page | Writes to | Live immediately? | Existing draft/publish rule | Flutter reads |

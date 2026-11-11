@@ -30,3 +30,29 @@ Use a DEVELOPMENT project, never production.
 
 Record what you ran and the result; the above has NOT been executed in this repository's
 development so far.
+
+## iOS: the 지도 tab and marker images
+
+Why markers are verified in Dart (`lib/features/map/utils/marker_image.dart`): the Kakao Maps iOS SDK
+re-encodes each marker `UIImage` with `UIImagePNGRepresentation` and parses the result with its own
+decoder. On a real iPhone (iPhone 13, iOS 26.1) Flutter's PNG encoder produced a **16-bit-per-channel**
+RGBA PNG even though `ui.Image.colorSpace` reported sRGB; the SDK threw a C++ exception in
+`kakao::image::ImageData::_setPixelSize` on its render thread (`createPoiStyle`), which aborts the app
+(SIGABRT) and cannot be caught from Dart or Swift. The simulator emits 8-bit PNGs and does not reproduce
+it, so this can only be checked on a device. Pins are therefore read back as straight 8-bit RGBA and
+written as a plain 8-bit PNG that is validated before it is handed to the SDK.
+
+Release test on a physical iPhone (unlock it; wireless debugging may drop, USB is steadier):
+
+    flutter build ios --release
+    xcrun devicectl device install app --device <device-id> build/ios/iphoneos/Runner.app
+    xcrun devicectl device process launch --device <device-id> com.example.meogeobojo
+
+then tap the 지도 tab. A crash leaves `Runner-<date>.ips` (list with
+`xcrun devicectl device info files --device <device-id> --domain-type systemCrashLogs`).
+
+To tell a native map problem from a marker problem, build with `--dart-define=MAP_DIAGNOSTIC_BASIC=true`:
+the tab shows a bare Kakao map with no marker layer, styles or markers. It is off by default.
+
+`flutter analyze` can crash in the analysis server when the project path contains Korean characters;
+`dart analyze` runs the same analysis.

@@ -1,0 +1,42 @@
+{
+ "universities": {
+  "rows": 7,
+  "content_hash": "59c65547fd03a676",
+  "id_hash": "2ee3ffd3359711e7"
+ },
+ "restaurant_overrides": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "restaurant_menus": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "restaurant_photos": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "campus_cafeterias": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "cafeteria_meals": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "app_content": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ },
+ "student_reviews": {
+  "rows": 0,
+  "content_hash": "4f53cda18c2baa0c",
+  "id_hash": "4f53cda18c2baa0c"
+ }
+}

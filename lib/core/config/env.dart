@@ -14,6 +14,13 @@ abstract final class Env {
   static const _defKakaoNative = String.fromEnvironment('KAKAO_NATIVE_APP_KEY');
   static const _defKakaoJs = String.fromEnvironment('KAKAO_JAVASCRIPT_KEY');
 
+  /// Diagnostic only (`--dart-define=MAP_DIAGNOSTIC_BASIC=true`): the 지도 tab shows a bare Kakao map with no custom
+  /// marker styles, layers or markers, to tell a native map problem from a marker problem. Off unless defined, so a
+  /// normal build is unaffected.
+  static const mapDiagnosticBasic = bool.fromEnvironment(
+    'MAP_DIAGNOSTIC_BASIC',
+  );
+
   static String get supabaseUrl => _require('SUPABASE_URL', _defSupabaseUrl);
   static String get supabasePublishableKey =>
       _require('SUPABASE_PUBLISHABLE_KEY', _defSupabaseKey);

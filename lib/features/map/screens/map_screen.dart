@@ -19,6 +19,7 @@ import '../../university/widgets/university_sheet.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../../core/widgets/responsive.dart';
 import '../utils/kakao_relayout.dart';
+import '../utils/marker_image.dart';
 import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
 import '../widgets/map_places_sheet.dart';
@@ -53,8 +54,12 @@ Future<Uint8List> _renderPin(Color fill, {int size = 56}) async {
   canvas.drawCircle(c, size / 2 - 1, Paint()..color = Colors.white);
   canvas.drawCircle(c, size / 2 - 7, Paint()..color = fill);
   final image = await recorder.endRecording().toImage(size, size);
-  final data = await image.toByteData(format: ui.ImageByteFormat.png);
-  return data!.buffer.asUint8List();
+  try {
+    // Verified 8-bit RGBA bytes, never whatever the engine's encoder emitted for this device's surface.
+    return await markerPngFromImage(image);
+  } finally {
+    image.dispose();
+  }
 }
 
 class MapScreen extends ConsumerStatefulWidget {
@@ -133,6 +138,12 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   Future<void> _onMapCreated(KakaoMapController c) async {
     _controller = c;
+    if (Env.mapDiagnosticBasic) {
+      // Diagnostic build (--dart-define=MAP_DIAGNOSTIC_BASIC=true): the bare map only. No padding call, marker layer,
+      // styles or markers ([_stylesReady] stays false, so [_syncMarkers] does nothing).
+      debugPrint('Map diagnostic: basic map, no markers or overlays.');
+      return;
+    }
     unawaited(_applyBottomPadding());
     try {
       // The plugin does not create the default label layer itself (native only: on the web the layer call is

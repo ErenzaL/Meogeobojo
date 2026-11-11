@@ -33,8 +33,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final _resultsKey = GlobalKey();
-
   /// Back to the untouched Home: no conditions, no category, no pick shown.
   void _restart() {
     ref.read(conditionsProvider.notifier).clear();
@@ -44,8 +42,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// "오늘의 추천 받기": runs the recommendation again for the current
-  /// filters (the top-ranked place, or a retry if the list failed to load)
-  /// and brings the result into view.
+  /// filters (the top-ranked place, or a retry if the list failed to load).
   void _recommend() {
     // Counts toward "오늘 뭐 먹지?" (one per day, decided by the server).
     logMissionActivity(ref, 'recommendation_view');
@@ -55,17 +52,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     ref.read(homeRecsRequestedProvider.notifier).request();
     ref.read(heroPickProvider.notifier).reset();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ctx = _resultsKey.currentContext;
-      if (ctx != null && ctx.mounted) {
-        Scrollable.ensureVisible(
-          ctx,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-          alignment: 0.04,
-        );
-      }
-    });
+    // The result appears in place. The page is deliberately NOT scrolled to it: it used to jump away from the button
+    // the user had just tapped.
   }
 
   @override
@@ -131,7 +119,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
               const SizedBox(height: 20),
               Padding(
-                key: _resultsKey,
                 padding: pad,
                 child: LayoutBuilder(
                   builder: (context, box) {

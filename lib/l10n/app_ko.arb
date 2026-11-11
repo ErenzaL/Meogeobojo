@@ -30,6 +30,44 @@
   "searchHint": "메뉴, 식당, 키워드로 검색해보세요",
   "homeNotificationsLabel": "알림",
   "homeNotificationsSoon": "알림 기능은 준비 중이에요.",
+  "notificationsTitle": "알림",
+  "notificationsEmpty": "새 알림이 없어요",
+  "notificationsEmptyHint": "새 소식이 올라오면 여기에서 알려드려요.",
+  "notificationsNew": "새 알림",
+  "notificationsOpenLink": "자세히 보기",
+  "notificationsBellUnread": "알림, 안 읽은 알림 {count}개",
+  "@notificationsBellUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsJustNow": "방금",
+  "notificationsMinutesAgo": "{n}분 전",
+  "@notificationsMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsHoursAgo": "{n}시간 전",
+  "@notificationsHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsDaysAgo": "{n}일 전",
+  "@notificationsDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "homeMore": "더보기 >",
   "homeNearbyTitle": "학교 주변 맛집",
   "homeMenuTitle": "메뉴별로 찾아보기",

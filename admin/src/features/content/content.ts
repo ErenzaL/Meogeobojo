@@ -1,6 +1,15 @@
 import { isoToKst, kstToIso } from '@/lib/cms'
 
-export const KIND = { announcement: '공지', banner: '배너', featured: '추천 식당' } as const
+export const KIND = { announcement: '공지', banner: '배너', featured: '추천 식당', notification: '알림' } as const
+/** Where each kind shows up in the app and on the website. */
+export const KIND_HINT: Record<keyof typeof KIND, string> = {
+  notification: '알림은 앱·웹의 종 아이콘(🔔) 목록에만 보여요.',
+  announcement: '공지는 홈 화면 카드와 종 아이콘(🔔) 목록에 함께 보여요.',
+  banner: '배너는 홈 화면 카드로만 보여요.',
+  featured: '추천 식당은 홈의 추천 목록에 보여요.',
+}
+/** The database rejects a kind it does not know with this constraint (migration 20261120000100 adds 'notification'). */
+export const KIND_CONSTRAINT = /app_content_kind_check|violates check constraint/i
 export type Kind = keyof typeof KIND
 export type Item = {
   id: string; kind: Kind; title: string; body: string | null; image_url: string | null; link_url: string | null; kakao_place_id: string | null

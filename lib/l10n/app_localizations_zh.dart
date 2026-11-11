@@ -81,6 +81,44 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeNotificationsSoon => '通知功能正在准备中。';
 
   @override
+  String get notificationsTitle => '通知';
+
+  @override
+  String get notificationsEmpty => '暂无新通知';
+
+  @override
+  String get notificationsEmptyHint => '有新消息时会显示在这里。';
+
+  @override
+  String get notificationsNew => '新';
+
+  @override
+  String get notificationsOpenLink => '查看详情';
+
+  @override
+  String notificationsBellUnread(int count) {
+    return '通知，$count 条未读';
+  }
+
+  @override
+  String get notificationsJustNow => '刚刚';
+
+  @override
+  String notificationsMinutesAgo(int n) {
+    return '$n 分钟前';
+  }
+
+  @override
+  String notificationsHoursAgo(int n) {
+    return '$n 小时前';
+  }
+
+  @override
+  String notificationsDaysAgo(int n) {
+    return '$n 天前';
+  }
+
+  @override
   String get homeMore => '查看更多 >';
 
   @override

@@ -238,6 +238,66 @@ abstract class AppLocalizations {
   /// **'알림 기능은 준비 중이에요.'**
   String get homeNotificationsSoon;
 
+  /// No description provided for @notificationsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'알림'**
+  String get notificationsTitle;
+
+  /// No description provided for @notificationsEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 알림이 없어요'**
+  String get notificationsEmpty;
+
+  /// No description provided for @notificationsEmptyHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 소식이 올라오면 여기에서 알려드려요.'**
+  String get notificationsEmptyHint;
+
+  /// No description provided for @notificationsNew.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 알림'**
+  String get notificationsNew;
+
+  /// No description provided for @notificationsOpenLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'자세히 보기'**
+  String get notificationsOpenLink;
+
+  /// No description provided for @notificationsBellUnread.
+  ///
+  /// In ko, this message translates to:
+  /// **'알림, 안 읽은 알림 {count}개'**
+  String notificationsBellUnread(int count);
+
+  /// No description provided for @notificationsJustNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'방금'**
+  String get notificationsJustNow;
+
+  /// No description provided for @notificationsMinutesAgo.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}분 전'**
+  String notificationsMinutesAgo(int n);
+
+  /// No description provided for @notificationsHoursAgo.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}시간 전'**
+  String notificationsHoursAgo(int n);
+
+  /// No description provided for @notificationsDaysAgo.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}일 전'**
+  String notificationsDaysAgo(int n);
+
   /// No description provided for @homeMore.
   ///
   /// In ko, this message translates to:

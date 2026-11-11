@@ -51,11 +51,16 @@ final campusContentProvider = Provider<List<AppContent>>((ref) {
   ];
 });
 
-/// Notices and banners for Home (at most [limit]).
+/// Notices and banners for Home. Bell-only notifications and featured
+/// restaurants are not Home cards.
 final homeNoticesProvider = Provider<List<AppContent>>((ref) {
   final items = ref
       .watch(campusContentProvider)
-      .where((c) => c.kind != AppContentKind.featured)
+      .where(
+        (c) =>
+            c.kind == AppContentKind.announcement ||
+            c.kind == AppContentKind.banner,
+      )
       .toList();
   return items;
 });

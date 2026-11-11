@@ -23,6 +23,44 @@
   "searchHint": "搜索菜品、餐厅、关键词",
   "homeNotificationsLabel": "通知",
   "homeNotificationsSoon": "通知功能正在准备中。",
+  "notificationsTitle": "通知",
+  "notificationsEmpty": "暂无新通知",
+  "notificationsEmptyHint": "有新消息时会显示在这里。",
+  "notificationsNew": "新",
+  "notificationsOpenLink": "查看详情",
+  "notificationsBellUnread": "通知，{count} 条未读",
+  "@notificationsBellUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsJustNow": "刚刚",
+  "notificationsMinutesAgo": "{n} 分钟前",
+  "@notificationsMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsHoursAgo": "{n} 小时前",
+  "@notificationsHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsDaysAgo": "{n} 天前",
+  "@notificationsDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "homeMore": "查看更多 >",
   "homeNearbyTitle": "校园周边美食",
   "homeMenuTitle": "按菜品浏览",

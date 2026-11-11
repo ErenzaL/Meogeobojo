@@ -5,6 +5,7 @@ import AnalyticsPage from '@/features/AnalyticsPage'
 import AuditPage from '@/features/AuditPage'
 import CafeteriaPage from '@/features/CafeteriaPage'
 import ContentPage from '@/features/ContentPage'
+import NotificationsPage from '@/features/NotificationsPage'
 import MenusPage from '@/features/MenusPage'
 import MissionsPage from '@/features/MissionsPage'
 import ModerationPage from '@/features/ModerationPage'
@@ -43,6 +44,7 @@ export function AppRoutes() {
           <Route path="cafeteria" element={<CafeteriaPage />} />
           <Route path="users" element={<UsersPage />} />
           <Route path="content" element={<ContentPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="audit" element={<AuditPage />} />
           <Route path="recommendations" element={<RecommendationsPage />} />
         </Route>

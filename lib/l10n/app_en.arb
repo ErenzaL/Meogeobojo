@@ -23,6 +23,44 @@
   "searchHint": "Search dishes, restaurants, keywords",
   "homeNotificationsLabel": "Notifications",
   "homeNotificationsSoon": "Notifications are coming soon.",
+  "notificationsTitle": "Notifications",
+  "notificationsEmpty": "No new notifications",
+  "notificationsEmptyHint": "News will show up here when it is posted.",
+  "notificationsNew": "New",
+  "notificationsOpenLink": "Learn more",
+  "notificationsBellUnread": "Notifications, {count} unread",
+  "@notificationsBellUnread": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsJustNow": "Just now",
+  "notificationsMinutesAgo": "{n} min ago",
+  "@notificationsMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsHoursAgo": "{n} h ago",
+  "@notificationsHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "notificationsDaysAgo": "{n} d ago",
+  "@notificationsDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "homeMore": "See all >",
   "homeNearbyTitle": "Restaurants near campus",
   "homeMenuTitle": "Browse by menu",

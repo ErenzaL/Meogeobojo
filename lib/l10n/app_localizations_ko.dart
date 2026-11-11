@@ -81,6 +81,44 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeNotificationsSoon => '알림 기능은 준비 중이에요.';
 
   @override
+  String get notificationsTitle => '알림';
+
+  @override
+  String get notificationsEmpty => '새 알림이 없어요';
+
+  @override
+  String get notificationsEmptyHint => '새 소식이 올라오면 여기에서 알려드려요.';
+
+  @override
+  String get notificationsNew => '새 알림';
+
+  @override
+  String get notificationsOpenLink => '자세히 보기';
+
+  @override
+  String notificationsBellUnread(int count) {
+    return '알림, 안 읽은 알림 $count개';
+  }
+
+  @override
+  String get notificationsJustNow => '방금';
+
+  @override
+  String notificationsMinutesAgo(int n) {
+    return '$n분 전';
+  }
+
+  @override
+  String notificationsHoursAgo(int n) {
+    return '$n시간 전';
+  }
+
+  @override
+  String notificationsDaysAgo(int n) {
+    return '$n일 전';
+  }
+
+  @override
   String get homeMore => '더보기 >';
 
   @override

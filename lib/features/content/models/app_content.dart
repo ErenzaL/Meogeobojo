@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
-enum AppContentKind { announcement, banner, featured }
+enum AppContentKind { announcement, banner, featured, notification }
 
-/// One live item an admin published (`app_content`): a notice, a banner or a
-/// featured restaurant. RLS only returns items that are switched on and inside
+/// One live item an admin published (`app_content`): a notice, a banner, a
+/// featured restaurant or a notification (bell only). RLS only returns items that are switched on and inside
 /// their date window, so everything here is meant to be shown.
 @immutable
 class AppContent {
@@ -17,6 +17,7 @@ class AppContent {
     this.kakaoPlaceId,
     this.universityId,
     this.sortOrder = 0,
+    this.time,
   });
 
   final String id;
@@ -30,6 +31,10 @@ class AppContent {
   /// Null = every campus.
   final String? universityId;
   final int sortOrder;
+
+  /// When it went live (its start time if it has one, else when it was last
+  /// published): what the bell shows and sorts by. Null if the server sent none.
+  final DateTime? time;
 
   static AppContent? fromJson(Map<String, dynamic> j) {
     final kind = AppContentKind.values
@@ -60,6 +65,13 @@ class AppContent {
       kakaoPlaceId: text(j['kakao_place_id']),
       universityId: text(j['university_id']),
       sortOrder: (j['sort_order'] as num?)?.toInt() ?? 0,
+      time:
+          _time(j['starts_at']) ??
+          _time(j['updated_at']) ??
+          _time(j['created_at']),
     );
   }
+
+  static DateTime? _time(Object? v) =>
+      v is String ? DateTime.tryParse(v) : null;
 }

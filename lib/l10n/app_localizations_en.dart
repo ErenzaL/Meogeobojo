@@ -82,6 +82,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeNotificationsSoon => 'Notifications are coming soon.';
 
   @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsEmpty => 'No new notifications';
+
+  @override
+  String get notificationsEmptyHint =>
+      'News will show up here when it is posted.';
+
+  @override
+  String get notificationsNew => 'New';
+
+  @override
+  String get notificationsOpenLink => 'Learn more';
+
+  @override
+  String notificationsBellUnread(int count) {
+    return 'Notifications, $count unread';
+  }
+
+  @override
+  String get notificationsJustNow => 'Just now';
+
+  @override
+  String notificationsMinutesAgo(int n) {
+    return '$n min ago';
+  }
+
+  @override
+  String notificationsHoursAgo(int n) {
+    return '$n h ago';
+  }
+
+  @override
+  String notificationsDaysAgo(int n) {
+    return '$n d ago';
+  }
+
+  @override
   String get homeMore => 'See all >';
 
   @override

@@ -6,21 +6,32 @@ import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/li
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 import ContentEditor from './content/ContentEditor'
-import { KIND, type Item, type Kind } from './content/content'
+import { KIND, KIND_CONSTRAINT, KIND_HINT, type Item, type Kind } from './content/content'
 
 const TYPE = 'app_content' as const
 
-/** Announcements, banners and featured restaurants. A new item is created switched OFF; editing
+type Props = {
+  /** Only these kinds are listed and offered when creating (the 알림 page uses it). Everything when omitted. */
+  kinds?: readonly Kind[]
+  defaultKind?: Kind
+  title?: string
+  description?: string
+}
+
+/** Announcements, banners, featured restaurants and notifications. A new item is created switched OFF; editing
  *  saves a draft; the publishing toolbar makes it live now or at a scheduled Seoul time. */
-export default function ContentPage() {
+export default function ContentPage({ kinds, defaultKind = 'announcement', title = '앱 콘텐츠', description = '공지, 배너, 추천 식당, 알림을 관리해요. 새 항목은 꺼진 상태로 만들어지고, 수정은 초안으로 저장돼요. 게시하거나 예약해야 앱에 보여요.' }: Props = {}) {
   const qc = useQueryClient()
-  const [draft, setDraft] = useState({ kind: 'announcement' as Kind, title: '', body: '', link_url: '', kakao_place_id: '' })
+  const [draft, setDraft] = useState({ kind: defaultKind as Kind, title: '', body: '', link_url: '', kakao_place_id: '' })
   const [notice, setNotice] = useState<string | null>(null)
   const [del, setDel] = useState<Item | null>(null)
   const [vis, setVis] = useState<{ c: Item; to: 'published' | 'hidden' } | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const list = useQuery({ queryKey: ['content'], queryFn: async () => {
-    const { data, error } = await supabase.from('app_content').select('*').order('kind').order('sort_order')
+  const list = useQuery({ queryKey: ['content', kinds?.join(',') ?? 'all'], queryFn: async () => {
+    let q = supabase.from('app_content').select('*')
+    if (kinds) q = q.in('kind', [...kinds])
+    // notifications read like a feed: newest change first; the mixed page groups by kind
+    const { data, error } = await (kinds ? q.order('updated_at', { ascending: false }) : q.order('kind').order('sort_order'))
     if (error) throw error
     return data as Item[]
   } })
@@ -38,7 +49,7 @@ export default function ContentPage() {
       return (data as { id: string }).id
     },
     onSuccess: async (id) => { setNotice('꺼진 상태로 만들었어요. 앱에는 보이지 않아요. 편집해서 게시해 주세요.'); setDraft({ ...draft, title: '', body: '', link_url: '', kakao_place_id: '' }); setEditingId(id); await refresh() },
-    onError: (e) => setNotice(errorMessage(e)),
+    onError: (e) => setNotice(draft.kind === 'notification' && KIND_CONSTRAINT.test(errorMessage(e)) ? "서버에 '알림' 종류가 아직 없어요. Supabase에 마이그레이션 20261120000100_notification_kind.sql을 적용해 주세요. (그 전에는 '공지'로 만들면 종 아이콘 목록과 홈에 보여요)" : errorMessage(e))
   })
   const setVisibility = useMutation({
     mutationFn: async ({ c, to, reason }: { c: Item; to: 'published' | 'hidden'; reason: string }) => { await cmsSetVisibility(TYPE, c.id, to, reason) },
@@ -54,13 +65,13 @@ export default function ContentPage() {
 
   return (
     <>
-      <PageHeader title="앱 콘텐츠" description="공지, 배너, 추천 식당을 관리해요. 새 항목은 꺼진 상태로 만들어지고, 수정은 초안으로 저장돼요. 게시하거나 예약해야 앱에 보여요." />
+      <PageHeader title={title} description={description} />
       {notice && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{notice}</p>}
       <div className="grid gap-5 lg:grid-cols-[1fr_26rem]">
         <div className="space-y-3">
           {list.isLoading && <Skeleton className="h-24 w-full" />}
           {list.error && <ErrorState error={list.error} onRetry={() => void list.refetch()} />}
-          {list.data?.length === 0 && <EmptyState>등록된 콘텐츠가 없어요.</EmptyState>}
+          {list.data?.length === 0 && <EmptyState>{kinds ? '등록된 알림이 없어요. 오른쪽에서 새 알림을 만들어 보세요.' : '등록된 콘텐츠가 없어요.'}</EmptyState>}
           {list.data?.map((c) => {
             const o = ov.get(c.id)
             return (
@@ -90,7 +101,8 @@ export default function ContentPage() {
         ) : (
           <Card className="space-y-3 self-start">
             <h2 className="font-bold">새 항목 (꺼진 상태로 추가)</h2>
-            <Field label="종류" htmlFor="ck"><Select id="ck" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Kind })}>{Object.entries(KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></Field>
+            <Field label="종류" htmlFor="ck"><Select id="ck" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as Kind })}>{(kinds ?? (Object.keys(KIND) as Kind[])).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</Select></Field>
+            <p className="-mt-1 text-xs text-muted">{KIND_HINT[draft.kind]}</p>
             <Field label="제목" htmlFor="ct"><Input id="ct" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></Field>
             <Field label="내용" htmlFor="cb"><Textarea id="cb" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} /></Field>
             <Field label="링크 (https)" htmlFor="cl"><Input id="cl" value={draft.link_url} onChange={(e) => setDraft({ ...draft, link_url: e.target.value })} /></Field>

@@ -6,6 +6,7 @@ import '../../../core/l10n/language_controller.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../content/widgets/notification_bell.dart';
 import '../../search/screens/search_screen.dart';
 import '../../../core/widgets/responsive.dart';
 import '../providers/shell_tab_provider.dart';
@@ -138,6 +139,7 @@ class WebHeader extends ConsumerWidget {
           const SizedBox(width: 12),
           const _LanguageSwitch(),
           const SizedBox(width: 8),
+          const NotificationBell(),
           IconButton(
             tooltip: dark ? l10n.themeLight : l10n.themeDark,
             onPressed: () => ref

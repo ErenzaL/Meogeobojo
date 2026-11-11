@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../content/widgets/notification_bell.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../university/models/university_display.dart';
 import '../../university/providers/university_providers.dart';
@@ -21,15 +22,8 @@ class HomeTopBar extends ConsumerWidget {
     return Row(
       children: [
         const Expanded(child: UniversityButton()),
-        // No unread-count badge: notifications are not implemented yet, and a
-        // fake count would be misleading.
-        _BarIcon(
-          icon: Icons.notifications_none_rounded,
-          tooltip: l10n.homeNotificationsLabel,
-          onTap: () => ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(l10n.homeNotificationsSoon))),
-        ),
+        // The count on the bell is real: unread notifications on this device.
+        const NotificationBell(),
         _BarIcon(
           icon: dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
           tooltip: dark ? l10n.themeLight : l10n.themeDark,

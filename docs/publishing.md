@@ -103,6 +103,22 @@ or archived by an import (menus not in the file stay exactly as they are).
 * Tests: `admin/src/features/menus/` (`menuCsv`, `menuImport`, `MenuCsvTools`), `supabase/tests/menu_import_test.sql` (drafts vs live, right restaurant + place id, NULL prices,
   refusals, authorization, public read), `test/features/restaurants/menu_import_compat_test.dart` (the app reads the published rows, an unknown price is "no price").
 
+### Notifications (the bell 🔔 in the app and on the website)
+The bell opens a list of what an admin published, with the time, the text and an optional link, and shows a real unread count on this device. **No new table or
+function:** it is the existing 앱 콘텐츠 pipeline (`app_content`: admin-only writes, draft → publish, scheduling in Seoul time, campus targeting, history, audit, live sync)
+with a new kind `notification`.
+* **What shows where:** `notification` = the bell list only; `announcement` (공지) = a Home card AND the bell list; `banner` / `featured` are not in the bell. Row-level
+  security already returns only items that are on and inside their dates, so a scheduled or expired notification is never visible.
+* **Admin → 알림** (sidebar): create (always switched OFF), edit as a draft, then publish / schedule / unpublish with a reason. 앱 콘텐츠 still lists every kind.
+* **App and website:** the same Flutter code. Phones: a bottom sheet from the bell in the Home header. Website: the bell is in the desktop header and opens a dialog. The
+  unread badge is the number of listed items newer than the last time the list was opened on this device (stored locally, `notifications_seen_ms`); opening the list clears it
+  and keeps "새 알림" markers while you read. A published or taken-down notification reaches running apps through the existing live-update signal.
+* **Not included:** OS push notifications (FCM / APNs). This is the in-app list.
+* **Database:** migration `20261120000100_notification_kind.sql` widens one CHECK constraint (`app_content_kind_check`) to allow `notification`; additive, idempotent, NOT applied by
+  the repository. Until it is applied the app and the Admin work with 공지 (which also show in the bell); creating a bell-only 알림 is refused with the constraint error, and the Admin
+  says which migration to apply.
+* Tests: `test/features/content/notifications_test.dart` (app + website), `admin/src/features/NotificationsPage.test.tsx`, `supabase/tests/notification_test.sql`.
+
 ## 1. Audit: which Admin pages write public data directly (before this work)
 
 | Page | Writes to | Live immediately? | Existing draft/publish rule | Flutter reads |

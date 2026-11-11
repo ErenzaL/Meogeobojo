@@ -487,18 +487,20 @@ void main() {
       expect(find.text('한 끼 예산'), findsNothing);
     });
 
-    testWidgets('moon toggles dark mode; notifications say soon', (
-      tester,
-    ) async {
-      final h = await openHome(tester);
-      await tester.tap(find.byIcon(Icons.dark_mode_outlined));
-      await tester.pumpAndSettle();
-      expect(h.container.read(themeModeProvider), ThemeMode.dark);
-      expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.notifications_none_rounded));
-      await tester.pump();
-      expect(find.byType(SnackBar), findsOneWidget);
-    });
+    testWidgets(
+      'moon toggles dark mode; the bell opens the notification list',
+      (tester) async {
+        final h = await openHome(tester);
+        await tester.tap(find.byIcon(Icons.dark_mode_outlined));
+        await tester.pumpAndSettle();
+        expect(h.container.read(themeModeProvider), ThemeMode.dark);
+        expect(find.byIcon(Icons.light_mode_outlined), findsOneWidget);
+        await tester.tap(find.byIcon(Icons.notifications_none_rounded));
+        await tester.pumpAndSettle();
+        expect(find.byType(SnackBar), findsNothing); // no more "coming soon"
+        expect(find.text('새 알림이 없어요'), findsOneWidget); // an honest empty list
+      },
+    );
 
     testWidgets('typing in the search field and submitting opens search', (
       tester,

@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../features/campus_meals/models/campus_meal_models.dart';
 import '../../features/campus_meals/providers/campus_meal_providers.dart';
 import '../../features/content/providers/app_content_providers.dart';
 import '../../features/missions/providers/mission_providers.dart';
 import '../../features/restaurants/providers/restaurant_providers.dart';
+import '../../features/university/models/university.dart';
 import '../../features/university/providers/university_providers.dart';
 
 /// Tables whose changes should reach a running app without a restart. The
@@ -325,15 +327,88 @@ void refreshAllContent(ProviderContainer ref) {
 
 /// The cheap part, for the periodic safety net: plain table reads, no restaurant
 /// search (that one calls an external API) and no mission sync.
+///
+/// It must be INVISIBLE. Invalidating a provider that others watch sends all of
+/// them back to loading (the university list feeds the selected campus, which
+/// feeds every restaurant list, the map and the meal card), so Home flashed
+/// its skeletons and re-ran the restaurant search once a minute. So:
+///  - announcements, admin overrides, menus and photos are leaves: they are
+///    re-read in place and keep showing what they have meanwhile;
+///  - the campus list and the cafeteria list are fetched in the background and
+///    only swapped in (a normal reload) when what the server says has changed;
+///  - meal weeks are left to their own cache expiry, Realtime, resume and
+///    pull-to-refresh, because re-reading them reloads the Home meal card.
 void refreshLiveContent(ProviderContainer ref) {
   ref.invalidate(appContentProvider);
-  ref.invalidate(universityListProvider);
-  ref.invalidate(campusCafeteriasProvider);
-  ref.invalidate(campusWeekMealsProvider);
   ref.invalidate(restaurantOverridesProvider);
   ref.invalidate(restaurantMenusProvider);
   ref.invalidate(restaurantPhotosProvider);
+  unawaited(_reloadUniversitiesIfChanged(ref));
+  unawaited(_reloadCafeteriasIfChanged(ref));
 }
+
+Future<void> _reloadUniversitiesIfChanged(ProviderContainer ref) async {
+  try {
+    final fresh = await ref.read(universityRepositoryProvider).fetchAll();
+    final shown = ref.read(universityListProvider).value;
+    if (shown == null || !_sameUniversities(shown, fresh)) {
+      ref.invalidate(universityListProvider);
+    }
+  } catch (e) {
+    // Best effort: a failed background read keeps what is on screen.
+    debugPrint('live refresh (universities) skipped: ${e.runtimeType}');
+  }
+}
+
+Future<void> _reloadCafeteriasIfChanged(ProviderContainer ref) async {
+  try {
+    final campus = ref.read(selectedUniversityProvider).value;
+    final shown = ref.read(campusCafeteriasProvider).value;
+    // Nothing on screen to keep fresh.
+    if (campus == null || shown == null) return;
+    final fresh = await ref
+        .read(campusMealRepositoryProvider)
+        .cafeterias(campus.id);
+    // The campus may have been switched while the read was in flight.
+    if (ref.read(selectedUniversityProvider).value?.id != campus.id) return;
+    if (!_sameCafeterias(shown, fresh)) {
+      ref.invalidate(campusCafeteriasProvider);
+    }
+  } catch (e) {
+    debugPrint('live refresh (cafeterias) skipped: ${e.runtimeType}');
+  }
+}
+
+// `==` on these models is by id (they are identities), so what changed has to
+// be compared field by field.
+bool _sameUniversities(List<University> a, List<University> b) =>
+    a.length == b.length &&
+    [
+      for (var i = 0; i < a.length; i++)
+        a[i].id == b[i].id &&
+            a[i].nameKo == b[i].nameKo &&
+            a[i].nameEn == b[i].nameEn &&
+            a[i].city == b[i].city &&
+            a[i].latitude == b[i].latitude &&
+            a[i].longitude == b[i].longitude,
+    ].every((same) => same);
+
+bool _sameCafeterias(List<CampusCafeteria> a, List<CampusCafeteria> b) =>
+    a.length == b.length &&
+    [
+      for (var i = 0; i < a.length; i++)
+        a[i].id == b[i].id &&
+            a[i].universityId == b[i].universityId &&
+            a[i].kind == b[i].kind &&
+            a[i].nameKo == b[i].nameKo &&
+            a[i].nameEn == b[i].nameEn &&
+            a[i].nameZh == b[i].nameZh &&
+            a[i].locationDescription == b[i].locationDescription &&
+            a[i].operatingNote == b[i].operatingNote &&
+            a[i].photoUrl == b[i].photoUrl &&
+            listEquals(a[i].mealTypes, b[i].mealTypes) &&
+            setEquals(a[i].operatingDays, b[i].operatingDays),
+    ].every((same) => same);
 
 /// Pull-to-refresh: everything, and wait until the announcements are re-read.
 Future<void> refreshAllContentAndWait(ProviderContainer ref) async {

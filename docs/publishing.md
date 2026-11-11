@@ -77,6 +77,32 @@ admin check, publication validation, per-restaurant lock, version and audit entr
 * Tests: `admin/src/features/restaurants/bulkVisibility.test.ts` (engine), `BulkPublish.test.tsx` (page), `supabase/tests/bulk_publish_test.sql` (database: only the
   selected restaurants change, nothing else is written, public read, authorization, validation).
 
+### Menu CSV: template, import, export (Admin → 메뉴·가격)
+Buttons **CSV 양식 다운로드 / CSV 가져오기 / CSV 내보내기**. **No new database function and no migration:** an import saves a restaurant's menus as a **draft** through the
+existing `cms_save_draft('restaurant_menus', restaurantId, {items}, revision)` (merged onto what the editor shows: its draft, else the live list), and the optional
+publish step is the existing `cms_publish`. Live menu rows still change only by publishing; restaurant records and visibility are never touched; nothing is deleted
+or archived by an import (menus not in the file stay exactly as they are).
+* **Template** = exactly `kakao_place_id,restaurant_name,menu_name,price_krw,menu_category,description,is_available` (header only: no invented menus or prices). **Export** adds
+  `menu_id` and `menu_status`, so a corrected export imported again in 갱신 mode updates the same lines. UTF-8 with or without BOM (a file that is not UTF-8 is refused),
+  quoted commas / quotes / line breaks and Korean text are handled, an unquoted comma that would shift columns is refused, and text starting with `= + - @` is guarded on
+  export and restored on import (spreadsheet formula injection).
+* **Matching:** restaurants by **Kakao place id only**; an unknown id is "찾지 못한 식당" and a restaurant name that disagrees with that id is held back until the admin ticks
+  an opt-in. A `menu_id` must belong to the same restaurant (another restaurant's id is refused, an unknown id is an error). Without an id a menu matches an existing one by
+  its exact normalised name; two existing menus with that name are flagged "ambiguous", never guessed. Scope can be "선택한 식당만" (rows without a place id belong to it, rows of
+  another restaurant are refused).
+* **Modes:** 추가 (new menus only; existing ones are skipped as duplicates and not changed) and 갱신 (matched menus take the values the file states, **blank cell = leave as is**,
+  unmatched menus are added). The preview shows every row (추가 / 갱신 with old → new / 변경 없음 / 중복 / 오류 / 식당 없음 / 이름 불일치), the counts, matched and unmatched restaurants, and
+  can download the problem rows (as typed, with the reason) to fix and upload again.
+* **Prices:** blank stays NULL (never 0); a supplied price must be a non-negative integer (`7,000` and `7,000원` are fine). An import never sets a "price verified" date, and
+  when it changes a price the old date is cleared, because it vouched for the old price.
+* **Saving** is one draft per restaurant, 2 at a time. Each restaurant is re-read and re-planned against what is there NOW (a colleague's draft is merged, not overwritten;
+  a conflict is retried; a repeat of the same file is a no-op). One restaurant failing does not affect the others; a retry saves only the failed ones; a permission error stops the run.
+* **Publishing (optional, after saving):** "가져온 N곳 메뉴 게시…" asks for a reason and calls `cms_publish` per restaurant at the revision the import saved; if the restaurant already had
+  a draft before the import, that whole draft is published with it (the dialog says so).
+* **Export** (selected / searched / all restaurants; editing view = draft if any else live, or published only; archived optional) keeps exact prices (blank = unknown), Korean text, menu ids and the Kakao place id.
+* Tests: `admin/src/features/menus/` (`menuCsv`, `menuImport`, `MenuCsvTools`), `supabase/tests/menu_import_test.sql` (drafts vs live, right restaurant + place id, NULL prices,
+  refusals, authorization, public read), `test/features/restaurants/menu_import_compat_test.dart` (the app reads the published rows, an unknown price is "no price").
+
 ## 1. Audit: which Admin pages write public data directly (before this work)
 
 | Page | Writes to | Live immediately? | Existing draft/publish rule | Flutter reads |

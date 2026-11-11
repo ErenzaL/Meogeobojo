@@ -7,6 +7,7 @@ import { cmsOverview, cmsSaveDraft, cmsState, diffSnapshots, isConflict, type Me
 import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import MenuCsvTools from './menus/MenuCsvTools'
 import MenuPreview from './menus/MenuPreview'
 import { draftFromItem, emptyMenuDraft, itemFromDraft, MENU_CATEGORIES, sortItems, validateMenu, type MenuDraft } from './menus/menu'
 
@@ -131,7 +132,8 @@ export default function MenusPage() {
 
   return (
     <>
-      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요." />
+      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요."
+        actions={<MenuCsvTools selected={restaurantId ? { id: restaurantId, name_ko: restaurants.data?.find((r) => r.id === restaurantId)?.name_ko ?? '' } : null} search={q} />} />
       {message && !restaurantId && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{message.text}</p>}
       <Card className="mb-5 grid gap-3 sm:grid-cols-2">
         <Field label="식당 검색" htmlFor="rq"><Input id="rq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름으로 검색" /></Field>

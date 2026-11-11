@@ -1851,20 +1851,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get myTitle => '我的主页';
 
   @override
-  String get myConditionsTitle => '我的条件';
-
-  @override
-  String get myConditionsEmpty => '还没有选择条件。先从预算和距离开始吧。';
-
-  @override
-  String get myRestart => '重新设置';
-
-  @override
-  String myOriginHint(int count) {
-    return '距离基准位置 · 已保存$count个标记';
-  }
-
-  @override
   String get myActivityTitle => '我的活动';
 
   @override

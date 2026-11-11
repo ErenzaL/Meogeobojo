@@ -1862,20 +1862,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get myTitle => '마이페이지';
 
   @override
-  String get myConditionsTitle => '내 조건';
-
-  @override
-  String get myConditionsEmpty => '아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.';
-
-  @override
-  String get myRestart => '처음부터 다시 설정';
-
-  @override
-  String myOriginHint(int count) {
-    return '거리 계산 기준 위치 · 저장한 핀 $count개';
-  }
-
-  @override
   String get myActivityTitle => '내 활동';
 
   @override

@@ -1954,21 +1954,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myTitle => 'My page';
 
   @override
-  String get myConditionsTitle => 'My conditions';
-
-  @override
-  String get myConditionsEmpty =>
-      'No conditions chosen yet. Start with budget and distance.';
-
-  @override
-  String get myRestart => 'Start over';
-
-  @override
-  String myOriginHint(int count) {
-    return 'Distance reference · $count saved pins';
-  }
-
-  @override
   String get myActivityTitle => 'My activity';
 
   @override

@@ -6,15 +6,8 @@ import '../../../core/config/app_assets.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/l10n/language_controller.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/pill_chip.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/v5_widgets.dart';
-import '../../conditions/providers/conditions_providers.dart';
-import '../../origin/providers/origin_providers.dart';
-import '../../origin/widgets/origin_sheet.dart';
-import '../../preferences/models/user_preferences.dart';
-import '../../preferences/restart_onboarding.dart';
-import '../../preferences/screens/preference_labels.dart';
 import '../../auth/models/auth_failure.dart';
 import '../../auth/models/auth_snapshot.dart';
 import '../../auth/providers/auth_providers.dart';
@@ -295,7 +288,6 @@ class _SignedInView extends ConsumerWidget {
           campusW,
           const SizedBox(height: 12),
           statsW,
-          const _MyConditions(),
           ...activity,
           const MyBadgesSection(),
           ...settings,
@@ -336,7 +328,7 @@ class _SignedInView extends ConsumerWidget {
             Expanded(
               child: LayoutBuilder(
                 builder: (context, box) {
-                  final first = <Widget>[statsW, const _MyConditions()];
+                  final first = <Widget>[statsW];
                   final second = <Widget>[...activity, const MyBadgesSection()];
                   if (box.maxWidth < 900) {
                     return Column(
@@ -384,71 +376,6 @@ Widget _themeRow(BuildContext context, ThemeMode mode) {
       MaterialPageRoute<void>(builder: (_) => const AppearanceScreen()),
     ),
   );
-}
-
-/// "내 조건": what is applied to Home / map / search right now, with a way to
-/// start over, and the walking origin (opens the 출발 위치 sheet).
-class _MyConditions extends ConsumerWidget {
-  const _MyConditions();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = context.l10n;
-    final c = ref.watch(conditionsProvider);
-    final origin = ref.watch(originProvider);
-    final pins = ref.watch(savedPinsProvider).length;
-    final chips = <String>[
-      if (c.budget != BudgetOption.any) budgetLabel(l10n, c.budget),
-      if (c.distance != DistanceOption.any) distanceLabel(l10n, c.distance),
-      for (final u in c.cuisines) cuisineLabel(l10n, u),
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        V5SectionTitle(
-          l10n.myConditionsTitle,
-          actionLabel: l10n.myRestart,
-          onAction: () => restartOnboarding(context, ref),
-          actionColor: context.palette.accentStrong,
-        ),
-        if (chips.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12, left: 2),
-            child: Text(
-              l10n.myConditionsEmpty,
-              style: TextStyle(
-                fontSize: 15,
-                color: context.palette.textSecondary,
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final label in chips)
-                  PillChip(label: label, selected: true, onTap: () {}),
-              ],
-            ),
-          ),
-        if (origin != null)
-          V5RowGroup(
-            elevated: true,
-            rows: [
-              V5Row(
-                icon: Icons.place_outlined,
-                title: l10n.homeOriginChip(origin.label(l10n)),
-                subtitle: l10n.myOriginHint(pins),
-                onTap: () => showOriginSheet(context),
-              ),
-            ],
-          ),
-      ],
-    );
-  }
 }
 
 class _ProfileError extends StatelessWidget {

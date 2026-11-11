@@ -216,42 +216,57 @@ void main() {
   });
 
   group('MY', () {
-    testWidgets('V5 sections: hero, campus, stats, 내 조건, 내 활동', (tester) async {
-      await open(
-        tester,
-        ShellTabs.profile,
-        signedIn: true,
-        favorites: {'a'},
-        size: const Size(390, 1400),
-      );
-      expect(find.text('마이페이지'), findsOneWidget);
-      expect(find.text('민수'), findsOneWidget);
-      expect(find.text('꾸미기'), findsNothing);
-      expect(find.text('내 조건'), findsOneWidget);
-      expect(find.text('처음부터 다시 설정 →'), findsOneWidget);
-      expect(find.text('아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.'), findsOneWidget);
-      expect(find.text('정문 기준'), findsOneWidget);
-      expect(find.text('거리 계산 기준 위치 · 저장한 핀 0개'), findsOneWidget);
-      expect(find.text('내 활동'), findsOneWidget);
-      expect(find.text('1'), findsWidgets); // real saved count
-    });
-
     testWidgets(
-      '내 조건 lists what is applied and the origin row opens its sheet',
+      'V5 sections: hero, campus, stats, 내 활동 (the 내 조건 block is gone)',
       (tester) async {
-        final h = await open(
+        await open(
           tester,
           ShellTabs.profile,
           signedIn: true,
+          favorites: {'a'},
           size: const Size(390, 1400),
         );
-        h.container
-            .read(conditionsProvider.notifier)
-            .update((c) => c.copyWith(cuisines: {Cuisine.korean}));
-        await tester.pumpAndSettle();
+        expect(find.text('마이페이지'), findsOneWidget);
+        expect(find.text('민수'), findsOneWidget);
+        expect(find.text('꾸미기'), findsNothing);
+        // removed: the heading, the restart link, the "no conditions" line and the origin row
+        expect(find.text('내 조건'), findsNothing);
+        expect(find.text('처음부터 다시 설정 →'), findsNothing);
         expect(find.text('아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.'), findsNothing);
-        expect(find.text('한식'), findsOneWidget);
-        await tester.tap(find.text('정문 기준'));
+        expect(find.text('거리 계산 기준 위치 · 저장한 핀 0개'), findsNothing);
+        // everything around it is still there
+        expect(find.text('내 활동'), findsOneWidget);
+        expect(find.text('1'), findsWidgets); // real saved count
+      },
+    );
+
+    testWidgets(
+      'the 내 조건 block is gone on the website layout too, and the page still lays out',
+      (tester) async {
+        await open(
+          tester,
+          ShellTabs.profile,
+          signedIn: true,
+          favorites: {'a'},
+          size: const Size(1280, 1000),
+        );
+        expect(find.text('내 조건'), findsNothing);
+        expect(find.text('처음부터 다시 설정 →'), findsNothing);
+        expect(find.text('내 활동'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'the walking origin and "start over" are still reachable from Home',
+      (tester) async {
+        await open(
+          tester,
+          ShellTabs.home,
+          signedIn: true,
+          size: const Size(390, 1400),
+        );
+        await tester.tap(find.text('정문 기준').first);
         await tester.pumpAndSettle();
         expect(find.text('어디서 출발하나요?'), findsOneWidget);
       },

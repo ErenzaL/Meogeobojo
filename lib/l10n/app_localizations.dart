@@ -3388,30 +3388,6 @@ abstract class AppLocalizations {
   /// **'마이페이지'**
   String get myTitle;
 
-  /// No description provided for @myConditionsTitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'내 조건'**
-  String get myConditionsTitle;
-
-  /// No description provided for @myConditionsEmpty.
-  ///
-  /// In ko, this message translates to:
-  /// **'아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.'**
-  String get myConditionsEmpty;
-
-  /// No description provided for @myRestart.
-  ///
-  /// In ko, this message translates to:
-  /// **'처음부터 다시 설정'**
-  String get myRestart;
-
-  /// No description provided for @myOriginHint.
-  ///
-  /// In ko, this message translates to:
-  /// **'거리 계산 기준 위치 · 저장한 핀 {count}개'**
-  String myOriginHint(int count);
-
   /// No description provided for @myActivityTitle.
   ///
   /// In ko, this message translates to:

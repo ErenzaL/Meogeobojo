@@ -1159,17 +1159,6 @@
   },
   "mealDayTomorrow": "내일",
   "myTitle": "마이페이지",
-  "myConditionsTitle": "내 조건",
-  "myConditionsEmpty": "아직 고른 조건이 없어요. 예산과 거리부터 골라 보세요.",
-  "myRestart": "처음부터 다시 설정",
-  "myOriginHint": "거리 계산 기준 위치 · 저장한 핀 {count}개",
-  "@myOriginHint": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "myActivityTitle": "내 활동",
   "recordsPageTitle": "내 기록",
   "recordsSubtitle": "나만 볼 수 있는 맛집 일기예요",

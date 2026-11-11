@@ -49,7 +49,7 @@ class SavedRestaurantsScreen extends ConsumerWidget {
     } else if (ids.isEmpty) {
       body = [
         V5EmptyState(
-          icon: Icons.favorite_border_rounded,
+          icon: Icons.favorite_border_outlined,
           title: l10n.savedEmptyTitle,
           message: l10n.savedEmptyMessage,
           actions: [

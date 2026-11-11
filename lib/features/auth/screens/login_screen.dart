@@ -140,7 +140,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   builder: (_) => const EmailLoginScreen(),
                 ),
               ),
-        icon: const Icon(Icons.mail_outline_rounded, size: 20),
+        icon: const Icon(Icons.mail_outlined, size: 18),
         label: Text(l10n.authEmailLogin),
       ),
       const SizedBox(height: 12),
@@ -154,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           backgroundColor: p.fillMuted,
           foregroundColor: p.textPrimary,
         ),
-        icon: const Icon(Icons.person_add_alt_1_outlined, size: 20),
+        icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
         label: Text(l10n.authEmailSignUp),
       ),
       const SizedBox(height: 4),
@@ -163,7 +163,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         style: TextButton.styleFrom(
           minimumSize: const Size(0, 48),
           foregroundColor: p.rustText,
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: AppText.fontFamily,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         child: Text(l10n.authBrowseAsGuest, textAlign: TextAlign.center),
       ),
@@ -192,32 +196,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
+              // Brand pinned at the top like the header on the right; the campus story is centred in the rest, so
+              // neither panel leaves an empty half.
               child: ColoredBox(
                 color: p.accentFaint,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(64, 56, 64, 56),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(64, 48, 64, 48),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const _Brand(size: 28),
-                      const SizedBox(height: 20),
-                      _CampusChip(campus),
-                      const SizedBox(height: 32),
-                      Center(child: thumb(240)),
-                      const SizedBox(height: 32),
-                      Text(
-                        l10n.authHeroTitle(campus),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          height: 1.3,
-                          letterSpacing: -0.6,
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _CampusChip(campus),
+                                const SizedBox(height: 32),
+                                thumb(240),
+                                const SizedBox(height: 32),
+                                Text(
+                                  l10n.authHeroTitle(campus),
+                                  style: const TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.3,
+                                    letterSpacing: -0.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  l10n.authWebPanelBody,
+                                  style: AppText.body.copyWith(
+                                    color: p.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.authWebPanelBody,
-                        style: AppText.body.copyWith(color: p.textSecondary),
                       ),
                     ],
                   ),
@@ -251,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   l10n.authWebStartTitle,
                                   style: const TextStyle(
                                     fontSize: 30,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -293,9 +313,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Text(
           l10n.authHeroTitle(campus),
           textAlign: TextAlign.center,
-          style: AppText.heroTitle.copyWith(fontSize: 26, height: 1.3),
+          style: AppText.heroTitle.copyWith(height: 1.3),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Text(
           l10n.authHeroSubtitle,
           textAlign: TextAlign.center,
@@ -320,17 +340,17 @@ class _Brand extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       Container(
-        width: size * 0.45,
-        height: size * 0.45,
+        width: 10,
+        height: 10,
         decoration: BoxDecoration(
           color: context.palette.rust,
           shape: BoxShape.circle,
         ),
       ),
-      SizedBox(width: size * 0.4),
+      const SizedBox(width: 8),
       Text(
         '먹어보조', // the brand name is never translated
-        style: TextStyle(fontSize: size, fontWeight: FontWeight.w700),
+        style: TextStyle(fontSize: size, fontWeight: FontWeight.w600),
       ),
     ],
   );
@@ -345,7 +365,7 @@ class _CampusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: p.card,
         borderRadius: BorderRadius.circular(999),
@@ -358,7 +378,7 @@ class _CampusChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             campus,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ],
       ),

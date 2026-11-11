@@ -15,6 +15,7 @@ import '../../contributions/screens/my_contributions_screen.dart';
 import '../../contributions/widgets/photo_contribution_sheet.dart';
 import '../../favorites/widgets/favorite_button.dart';
 import '../../home/widgets/home_card_parts.dart';
+import '../../home/widgets/restaurant_art.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
@@ -157,7 +158,6 @@ class _RestaurantDetailScreenState
     final info = _InfoBox(
       restaurant: r,
       insight: insight,
-      lastOrder: status.lastOrderMinutes,
       originLabel: origin?.label(l10n),
       meters: meters,
       walkMinutes: walk,
@@ -240,7 +240,12 @@ class _RestaurantDetailScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _Gallery(shots: shots, height: 340),
+                      _Gallery(
+                        shots: shots,
+                        height: 340,
+                        restaurant: r,
+                        insight: insight,
+                      ),
                       reviewsBlock,
                     ],
                   ),
@@ -290,10 +295,15 @@ class _RestaurantDetailScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Gallery(shots: shots, height: 200),
-            const SizedBox(height: 14),
+            _Gallery(
+              shots: shots,
+              height: 200,
+              restaurant: r,
+              insight: insight,
+            ),
+            const SizedBox(height: 16),
             head,
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             info,
             ...details,
             reviewsBlock,
@@ -358,10 +368,19 @@ class _Shot {
 /// Rounded photo strip with a "사진 N장" tag; one photo fills the width. With no photo it is the neutral
 /// placeholder, never stock art.
 class _Gallery extends StatelessWidget {
-  const _Gallery({required this.shots, required this.height});
+  const _Gallery({
+    required this.shots,
+    required this.height,
+    required this.restaurant,
+    required this.insight,
+  });
 
   final List<_Shot> shots;
   final double height;
+
+  /// With no photo: the place's category illustration, as on Home (never a stock photo).
+  final Restaurant restaurant;
+  final RestaurantInsight insight;
 
   void _view(BuildContext context, _Shot s) => showDialog<void>(
     context: context,
@@ -384,7 +403,7 @@ class _Gallery extends StatelessWidget {
               child: IconButton(
                 tooltip: context.l10n.commonClose,
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
+                icon: const Icon(Icons.close_outlined, color: Colors.white),
               ),
             ),
           ),
@@ -397,12 +416,12 @@ class _Gallery extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     if (shots.isEmpty) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        child: SizedBox(
-          height: height,
-          child: const RestaurantPhotoPlaceholder(iconSize: 56),
-        ),
+      return RestaurantArt(
+        restaurant: restaurant,
+        insight: insight,
+        radius: AppRadius.card,
+        width: double.infinity,
+        height: height,
       );
     }
     Widget tile(_Shot s) => Semantics(
@@ -467,15 +486,15 @@ class _Gallery extends StatelessWidget {
                   children: [
                     Icon(
                       Icons.photo_library_outlined,
-                      size: 15,
+                      size: 16,
                       color: p.textSecondary,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       context.l10n.detailPhotoCount(shots.length),
                       style: const TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -572,8 +591,8 @@ class _Head extends StatelessWidget {
           r.name,
           style: TextStyle(
             fontSize: large ? 36 : 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: large ? -0.4 : -0.3,
             height: 1.25,
           ),
         ),
@@ -622,7 +641,7 @@ class _Tag extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: strong ? p.rustSoft : p.card,
         borderRadius: BorderRadius.circular(8),
@@ -632,7 +651,7 @@ class _Tag extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 15, color: p.textSecondary),
+            Icon(icon, size: 16, color: p.textSecondary),
             const SizedBox(width: 4),
           ],
           Text(
@@ -654,7 +673,6 @@ class _InfoBox extends StatelessWidget {
   const _InfoBox({
     required this.restaurant,
     required this.insight,
-    required this.lastOrder,
     required this.originLabel,
     required this.meters,
     required this.walkMinutes,
@@ -664,7 +682,6 @@ class _InfoBox extends StatelessWidget {
 
   final Restaurant restaurant;
   final RestaurantInsight insight;
-  final int? lastOrder;
   final String? originLabel;
   final int meters;
   final int walkMinutes;
@@ -677,7 +694,7 @@ class _InfoBox extends StatelessWidget {
     final p = context.palette;
     final r = restaurant;
     final muted = AppText.body.copyWith(color: p.textSecondary);
-    final note = TextStyle(fontSize: 12.5, height: 1.4, color: p.textMuted);
+    final note = TextStyle(fontSize: 12, height: 1.5, color: p.textMuted);
     final phone = r.phone.trim();
     final amenities = <(IconData, String)>[
       if (insight.hasBreakTime == false)
@@ -697,12 +714,6 @@ class _InfoBox extends StatelessWidget {
     return HomeCard(
       child: Column(
         children: [
-          if (lastOrder != null)
-            _InfoRow(
-              icon: Icons.schedule_outlined,
-              label: l10n.homeLastOrder,
-              child: Text(formatMinutesOfDay(lastOrder!), style: AppText.body),
-            ),
           _InfoRow(
             icon: Icons.place_outlined,
             label: l10n.detailInfoLocation,
@@ -714,7 +725,7 @@ class _InfoBox extends StatelessWidget {
             ),
           ),
           _InfoRow(
-            icon: Icons.directions_walk_rounded,
+            icon: Icons.directions_walk_outlined,
             label: l10n.detailInfoRoute,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -749,7 +760,7 @@ class _InfoBox extends StatelessWidget {
                 if (onKakaoMap != null) ...[
                   const SizedBox(height: 8),
                   V5SmallButton(
-                    icon: Icons.open_in_new_rounded,
+                    icon: Icons.open_in_new_outlined,
                     label: l10n.restaurantOpenKakaoMap,
                     onPressed: onKakaoMap!,
                   ),
@@ -786,15 +797,6 @@ class _InfoBox extends StatelessWidget {
                     ],
                   ),
           ),
-          if (insight.minPriceKrw != null)
-            _InfoRow(
-              icon: Icons.payments_outlined,
-              label: l10n.detailInfoPrice,
-              child: Text(
-                l10n.detailPriceNote(insight.minPriceKrw!),
-                style: AppText.body,
-              ),
-            ),
         ],
       ),
     );
@@ -816,7 +818,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -865,7 +867,7 @@ class _MenuRow extends StatelessWidget {
     final l10n = context.l10n;
     final muted = AppText.caption(context).copyWith(fontSize: 13);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

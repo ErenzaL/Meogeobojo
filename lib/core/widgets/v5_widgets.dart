@@ -460,8 +460,9 @@ class V5SmallButton extends StatelessWidget {
               padding: pad,
               shape: shape,
               textStyle: const TextStyle(
+                fontFamily: AppText.fontFamily,
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
             child: child,
@@ -474,8 +475,9 @@ class V5SmallButton extends StatelessWidget {
               shape: shape,
               side: BorderSide(color: p.borderStrong),
               textStyle: const TextStyle(
+                fontFamily: AppText.fontFamily,
                 fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
               ),
             ),
             child: child,

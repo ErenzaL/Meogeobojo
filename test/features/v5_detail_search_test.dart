@@ -81,7 +81,7 @@ void main() {
       await pumpApp(tester, h, home: const SearchScreen());
       await tester.pumpAndSettle();
       expect(find.text('최근 검색'), findsOneWidget);
-      expect(find.text('최근 검색어가 없어요.'), findsOneWidget);
+      expect(find.text('최근 검색어가 없어요'), findsOneWidget);
       expect(find.text('이런 건 어때요?'), findsOneWidget);
       expect(find.text('국밥'), findsOneWidget);
     });

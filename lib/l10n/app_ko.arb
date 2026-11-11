@@ -27,7 +27,7 @@
   "homeHeroTitle": "오늘 뭐 먹을지\n찾아볼까요?",
   "homeHeroSubtitle": "맛있는 한 끼가 기다리고 있어요!",
   "homeSearchLabel": "검색",
-  "searchHint": "메뉴, 식당, 키워드로 검색해보세요",
+  "searchHint": "메뉴·식당 이름으로 찾기",
   "homeNotificationsLabel": "알림",
   "homeNotificationsSoon": "알림 기능은 준비 중이에요.",
   "notificationsTitle": "알림",
@@ -1416,7 +1416,6 @@
   "detailInfoRoute": "가는 길",
   "detailInfoPhone": "전화",
   "detailInfoAmenities": "운영·편의",
-  "detailInfoPrice": "1인 예상",
   "detailRoute": "{origin}에서 도보 약 {minutes}분 · 약 {distance}",
   "@detailRoute": {
     "placeholders": {
@@ -1434,15 +1433,6 @@
   "detailRouteChange": "기준 바꾸기",
   "detailRouteNote": "직선거리로 추정한 시간이에요. 실제 경로는 길찾기에서 확인하세요.",
   "detailAmenitiesNone": "확인된 정보가 없어요",
-  "detailPriceNote": "{price}원부터 · 가장 싼 메뉴 기준",
-  "@detailPriceNote": {
-    "placeholders": {
-      "price": {
-        "type": "int",
-        "format": "decimalPattern"
-      }
-    }
-  },
   "detailMap": "지도",
   "detailDirectionsWalk": "길찾기 · 도보 {minutes}분",
   "@detailDirectionsWalk": {
@@ -1471,7 +1461,7 @@
     }
   },
   "searchRecentTitle": "최근 검색",
-  "searchRecentEmpty": "최근 검색어가 없어요.",
+  "searchRecentEmpty": "최근 검색어가 없어요",
   "searchRecentClear": "지우기",
   "searchSuggestTitle": "이런 건 어때요?",
   "searchResultsLine": "‘{query}’ 검색 결과 {total}곳 · 지금 조건에 맞는 곳 {inside}곳",

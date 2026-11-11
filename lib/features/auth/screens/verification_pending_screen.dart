@@ -156,6 +156,7 @@ class _VerificationPendingScreenState
               foregroundColor: context.palette.accentStrong,
               side: BorderSide(color: context.palette.accent, width: 1.4),
               textStyle: const TextStyle(
+                fontFamily: AppText.fontFamily,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
               ),

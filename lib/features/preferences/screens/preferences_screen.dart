@@ -648,6 +648,7 @@ class _ActionBar extends StatelessWidget {
                             minimumSize: const Size(0, 44),
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             textStyle: const TextStyle(
+                              fontFamily: AppText.fontFamily,
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
                             ),

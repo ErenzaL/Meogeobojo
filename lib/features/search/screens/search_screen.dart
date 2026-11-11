@@ -106,7 +106,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       runSpacing: 8,
       children: [
         PillChip(
-          icon: Icons.tune_rounded,
+          icon: Icons.tune_outlined,
           label: conditions.activeCount > 0
               ? '${l10n.homeConditionsChip} ${conditions.activeCount}'
               : l10n.homeConditionsChip,
@@ -145,14 +145,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       SearchStatus.data when state.results.isEmpty => _list([
         conditionChips,
         V5EmptyState(
-          icon: Icons.search_off_rounded,
+          icon: Icons.search_off_outlined,
           title: l10n.searchNoResultsTitle(state.query),
           message: l10n.searchNoResultsMessage,
         ),
       ]),
       _ => _list([
         conditionChips,
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         Text(
           l10n.searchResultsLine(
             state.query,
@@ -233,6 +233,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           if (recent.isNotEmpty)
             TextButton(
               onPressed: ref.read(recentSearchesProvider.notifier).clear,
+              style: TextButton.styleFrom(foregroundColor: p.textSecondary),
               child: Text(l10n.searchRecentClear),
             ),
         ],
@@ -248,7 +249,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           children: [
             for (final q in recent)
               PillChip(
-                icon: Icons.history_rounded,
+                icon: Icons.history_outlined,
                 label: q,
                 selected: false,
                 onTap: () => _search(q),
@@ -285,7 +286,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       decoration: InputDecoration(
         hintText: context.l10n.searchHint,
         hintStyle: AppText.body.copyWith(color: p.textSecondary),
-        prefixIcon: Icon(Icons.search_rounded, color: p.textSecondary),
+        prefixIcon: Icon(
+          Icons.search_outlined,
+          size: 20,
+          color: p.textSecondary,
+        ),
         filled: true,
         fillColor: p.card,
         isDense: true,
@@ -297,7 +302,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ? null
             : IconButton(
                 tooltip: context.l10n.searchRecentClear,
-                icon: const Icon(Icons.close_rounded, size: 20),
+                icon: const Icon(Icons.close_outlined, size: 20),
                 onPressed: () {
                   _controller.clear();
                   setState(() {});

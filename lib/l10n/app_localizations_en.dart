@@ -73,7 +73,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSearchLabel => 'Search';
 
   @override
-  String get searchHint => 'Search dishes, restaurants, keywords';
+  String get searchHint => 'Search menus or restaurants';
 
   @override
   String get homeNotificationsLabel => 'Notifications';
@@ -2380,9 +2380,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get detailInfoAmenities => 'Amenities';
 
   @override
-  String get detailInfoPrice => 'Per person';
-
-  @override
   String detailRoute(String origin, int minutes, String distance) {
     return 'About $minutes min on foot from $origin · about $distance';
   }
@@ -2396,15 +2393,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get detailAmenitiesNone => 'Nothing confirmed yet';
-
-  @override
-  String detailPriceNote(int price) {
-    final intl.NumberFormat priceNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String priceString = priceNumberFormat.format(price);
-
-    return 'From ₩$priceString · the cheapest item';
-  }
 
   @override
   String get detailMap => 'Map';
@@ -2434,7 +2422,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchRecentTitle => 'Recent searches';
 
   @override
-  String get searchRecentEmpty => 'No recent searches yet.';
+  String get searchRecentEmpty => 'No recent searches yet';
 
   @override
   String get searchRecentClear => 'Clear';

@@ -72,7 +72,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeSearchLabel => '搜索';
 
   @override
-  String get searchHint => '搜索菜品、餐厅、关键词';
+  String get searchHint => '搜索菜品或餐厅';
 
   @override
   String get homeNotificationsLabel => '通知';
@@ -2272,9 +2272,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get detailInfoAmenities => '营业与设施';
 
   @override
-  String get detailInfoPrice => '人均';
-
-  @override
   String detailRoute(String origin, int minutes, String distance) {
     return '从$origin步行约 $minutes 分钟 · 约 $distance';
   }
@@ -2287,15 +2284,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get detailAmenitiesNone => '暂无已确认的信息';
-
-  @override
-  String detailPriceNote(int price) {
-    final intl.NumberFormat priceNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String priceString = priceNumberFormat.format(price);
-
-    return '$priceString 韩元起 · 按最便宜的菜品';
-  }
 
   @override
   String get detailMap => '地图';
@@ -2325,7 +2313,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchRecentTitle => '最近搜索';
 
   @override
-  String get searchRecentEmpty => '暂无最近搜索。';
+  String get searchRecentEmpty => '暂无最近搜索';
 
   @override
   String get searchRecentClear => '清除';

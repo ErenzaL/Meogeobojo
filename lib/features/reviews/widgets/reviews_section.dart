@@ -167,7 +167,7 @@ class _SummaryBox extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   l10n.reviewsCount(summary.count),
-                  style: TextStyle(fontSize: 12.5, color: p.textSecondary),
+                  style: TextStyle(fontSize: 12, color: p.textSecondary),
                 ),
               ],
             ),
@@ -234,7 +234,7 @@ class _EmptyBox extends StatelessWidget {
     final p = context.palette;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: p.fillMuted,
         borderRadius: BorderRadius.circular(AppRadius.card),
@@ -313,6 +313,7 @@ class _ReviewTile extends StatelessWidget {
                 style: TextButton.styleFrom(
                   minimumSize: const Size(0, 32),
                   padding: const EdgeInsets.symmetric(horizontal: 8),
+                  foregroundColor: context.palette.textMuted,
                 ),
                 child: Text(l10n.reportAction),
               ),

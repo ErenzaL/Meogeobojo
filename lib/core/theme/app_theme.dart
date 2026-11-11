@@ -24,18 +24,28 @@ abstract final class AppRadius {
 /// [link] are secondary text, so their colour comes from the palette.
 abstract final class AppText {
   static const heroTitle = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 26,
     height: 1.25,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.4,
   );
   static const sectionTitle = TextStyle(
+    fontFamily: fontFamily,
     fontSize: 18,
     fontWeight: FontWeight.w600,
     letterSpacing: -0.2,
   );
-  static const title = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
-  static const body = TextStyle(fontSize: 15, height: 1.4);
+  static const title = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+  );
+  static const body = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 15,
+    height: 1.4,
+  );
 
   /// Times and prices (19:01, ₩5,100): monospaced, tabular digits so they
   /// line up and do not jitter when a minute ticks over.
@@ -51,10 +61,15 @@ abstract final class AppText {
     );
   }
 
-  static TextStyle caption(BuildContext context) =>
-      TextStyle(fontSize: 12, height: 1.3, color: context.palette.textMuted);
+  static TextStyle caption(BuildContext context) => TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
+    height: 1.3,
+    color: context.palette.textMuted,
+  );
 
   static TextStyle link(BuildContext context) => TextStyle(
+    fontFamily: fontFamily,
     fontSize: 13,
     fontWeight: FontWeight.w600,
     color: context.palette.textSecondary,
@@ -174,7 +189,11 @@ ThemeData _build(Brightness brightness, AppPalette p) {
         disabledForegroundColor: p.onRust.withValues(alpha: 0.9),
         minimumSize: const Size(0, 48),
         shape: round(AppRadius.control),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontFamily: AppText.fontFamily,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -187,7 +206,11 @@ ThemeData _build(Brightness brightness, AppPalette p) {
         side: BorderSide(color: p.borderStrong),
         minimumSize: const Size(0, 48),
         shape: round(AppRadius.control),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(
+          fontFamily: AppText.fontFamily,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -235,6 +258,7 @@ ThemeData _build(Brightness brightness, AppPalette p) {
           ? p.surfaceAlt
           : p.textPrimary,
       contentTextStyle: TextStyle(
+        fontFamily: AppText.fontFamily,
         color: brightness == Brightness.dark ? p.textPrimary : Colors.white,
         fontSize: 14,
       ),

@@ -223,7 +223,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchHint.
   ///
   /// In ko, this message translates to:
-  /// **'메뉴, 식당, 키워드로 검색해보세요'**
+  /// **'메뉴·식당 이름으로 찾기'**
   String get searchHint;
 
   /// No description provided for @homeNotificationsLabel.
@@ -4150,12 +4150,6 @@ abstract class AppLocalizations {
   /// **'운영·편의'**
   String get detailInfoAmenities;
 
-  /// No description provided for @detailInfoPrice.
-  ///
-  /// In ko, this message translates to:
-  /// **'1인 예상'**
-  String get detailInfoPrice;
-
   /// No description provided for @detailRoute.
   ///
   /// In ko, this message translates to:
@@ -4179,12 +4173,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'확인된 정보가 없어요'**
   String get detailAmenitiesNone;
-
-  /// No description provided for @detailPriceNote.
-  ///
-  /// In ko, this message translates to:
-  /// **'{price}원부터 · 가장 싼 메뉴 기준'**
-  String detailPriceNote(int price);
 
   /// No description provided for @detailMap.
   ///
@@ -4231,7 +4219,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchRecentEmpty.
   ///
   /// In ko, this message translates to:
-  /// **'최근 검색어가 없어요.'**
+  /// **'최근 검색어가 없어요'**
   String get searchRecentEmpty;
 
   /// No description provided for @searchRecentClear.

@@ -72,7 +72,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeSearchLabel => '검색';
 
   @override
-  String get searchHint => '메뉴, 식당, 키워드로 검색해보세요';
+  String get searchHint => '메뉴·식당 이름으로 찾기';
 
   @override
   String get homeNotificationsLabel => '알림';
@@ -2285,9 +2285,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get detailInfoAmenities => '운영·편의';
 
   @override
-  String get detailInfoPrice => '1인 예상';
-
-  @override
   String detailRoute(String origin, int minutes, String distance) {
     return '$origin에서 도보 약 $minutes분 · 약 $distance';
   }
@@ -2300,15 +2297,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get detailAmenitiesNone => '확인된 정보가 없어요';
-
-  @override
-  String detailPriceNote(int price) {
-    final intl.NumberFormat priceNumberFormat =
-        intl.NumberFormat.decimalPattern(localeName);
-    final String priceString = priceNumberFormat.format(price);
-
-    return '$priceString원부터 · 가장 싼 메뉴 기준';
-  }
 
   @override
   String get detailMap => '지도';
@@ -2338,7 +2326,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get searchRecentTitle => '최근 검색';
 
   @override
-  String get searchRecentEmpty => '최근 검색어가 없어요.';
+  String get searchRecentEmpty => '최근 검색어가 없어요';
 
   @override
   String get searchRecentClear => '지우기';

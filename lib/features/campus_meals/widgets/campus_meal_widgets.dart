@@ -661,6 +661,7 @@ class MealCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     foregroundColor: context.palette.accentStrong,
                     textStyle: const TextStyle(
+                      fontFamily: AppText.fontFamily,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                     ),

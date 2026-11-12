@@ -18,6 +18,10 @@ abstract final class AppColors {
   /// with the app theme).
   static const pinCampus = Color(0xFF2D201A);
 
+  /// Hairline around a white place tag on the map, and the tags' soft shadow.
+  static const pinTagBorder = Color(0x2B1C1A17);
+  static const pinShadow = Color(0x24000000);
+
   /// Text/icons placed on filled orange.
   static const textOnPrimary = Color(0xFFFFFFFF);
 }

@@ -148,6 +148,23 @@ class HeroCard extends ConsumerWidget {
               ),
             ],
           ),
+          if (!hero.verified) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 17, color: p.statusWarn),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.homeUnverifiedNotice,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: p.statusWarn),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 16),
           const DashedDivider(),
           const SizedBox(height: 16),
@@ -174,13 +191,18 @@ class HeroCard extends ConsumerWidget {
                   label: l10n.homeDirections,
                   onPressed: origin == null
                       ? null
-                      : () => openDirections(
-                          context,
-                          to: r,
-                          fromName: origin.label(l10n),
-                          fromLat: origin.latitude,
-                          fromLng: origin.longitude,
-                        ),
+                      : () {
+                          ref
+                              .read(activeRecommendationProvider.notifier)
+                              .markWent(r.kakaoId);
+                          openDirections(
+                            context,
+                            to: r,
+                            fromName: origin.label(l10n),
+                            fromLat: origin.latitude,
+                            fromLng: origin.longitude,
+                          );
+                        },
                 ),
               ),
               const SizedBox(width: 10),

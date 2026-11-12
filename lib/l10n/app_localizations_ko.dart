@@ -337,7 +337,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get recordsEmptyTitle => '아직 기록이 없어요';
 
   @override
-  String get recordsEmptyMessage => '먹은 음식을 기록하는 기능은 준비 중이에요.';
+  String get recordsEmptyMessage => '식당 정보에서 ‘먹었어요’를 누르면 여기에 기록돼요.';
 
   @override
   String get communityTitle => '밥수다는 준비 중이에요';
@@ -2366,4 +2366,67 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get authWebPanelBody =>
       '로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요.';
+
+  @override
+  String get homeEmptyChange => '조건 변경';
+
+  @override
+  String homeShowUnverified(int count) {
+    return '미확인 후보 $count곳 보기';
+  }
+
+  @override
+  String get homeEmptyUnverifiedMessage =>
+      '가격·편의 정보로 확인된 곳 중에는 없어요. 정보가 없는 후보는 따로 볼 수 있어요.';
+
+  @override
+  String get homeUnverifiedNotice => '가격·편의 정보가 확인되지 않은 후보예요';
+
+  @override
+  String get homeUnverifiedTag => '정보 미확인';
+
+  @override
+  String get homeErrorKeepsConditions => '고른 조건은 그대로 남아 있어요.';
+
+  @override
+  String get homeRankingLink => '전체 추천 순위 보기';
+
+  @override
+  String get homeRankingTitle => '전체 추천 순위';
+
+  @override
+  String homeRankingSub(int count) {
+    return '조건에 맞는 곳 중 상위 $count곳';
+  }
+
+  @override
+  String get homeChangeConditions => '조건 바꿔서 다시 추천받기';
+
+  @override
+  String homePromptOrigin(String origin) {
+    return '$origin 출발 기준으로 추천해요';
+  }
+
+  @override
+  String get homePromptOriginChange => '변경';
+
+  @override
+  String get mealAteButton => '먹었어요 · 평가 남기기';
+
+  @override
+  String get mealAteSub => 'MY 식사 기록에 남아요';
+
+  @override
+  String get mealSaved => 'MY 식사 기록에 남겼어요';
+
+  @override
+  String get mealSeeRecords => '기록 보기';
+
+  @override
+  String mealCheckTitle(String name) {
+    return '$name에 다녀오셨어요?';
+  }
+
+  @override
+  String get mealCheckDismiss => '아직이요';
 }

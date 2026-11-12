@@ -825,7 +825,8 @@ void main() {
       );
       await openHome(tester, repo: repo);
       expect(find.text('맛집을 불러오지 못했어요'), findsOneWidget);
-      expect(find.text('인터넷 연결을 확인해주세요.'), findsOneWidget);
+      // The chosen conditions are kept for the retry, and it says so.
+      expect(find.text('인터넷 연결을 확인해주세요.\n고른 조건은 그대로 남아 있어요.'), findsOneWidget);
       final before = repo.nearbyCalls.length;
       await tester.tap(find.text('다시 시도'));
       await tester.pumpAndSettle();
@@ -1273,7 +1274,15 @@ void main() {
           .read(conditionsProvider.notifier)
           .update((c) => c.copyWith(budget: BudgetOption.max10000));
       await tester.pumpAndSettle();
+      // No place has a known price: "조건 충족 후보 없음", with the
+      // unconfirmed places one tap away.
+      expect(find.byType(HeroCard), findsNothing);
+      final unverified = find.textContaining('미확인 후보');
+      await tester.ensureVisible(unverified);
+      await tester.tap(unverified);
+      await tester.pumpAndSettle();
       expect(find.byType(HeroCard), findsOneWidget);
+      expect(find.text('가격·편의 정보가 확인되지 않은 후보예요'), findsOneWidget);
       await tester.tap(find.text('오늘의 추천 받기'));
       await tester.pumpAndSettle();
       await tester.drag(find.byType(Scrollable).first, const Offset(0, 600));
@@ -1285,6 +1294,44 @@ void main() {
       expect(find.byType(HeroCard), findsNothing);
       expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
       expect(find.byTooltip('처음부터 다시'), findsNothing);
+    });
+
+    testWidgets('coming back opens the recommendation still in use', (
+      tester,
+    ) async {
+      final h = await openHome(tester, recsRequested: false);
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      // Asking alone (the ranking itself unchanged) already makes it "in use".
+      expect(h.sp.getString(activeRecommendationPrefsKey), isNotNull);
+      // 다음 추천 (what the card's button does).
+      h.container
+          .read(heroPickProvider.notifier)
+          .step(h.container.read(homeRecsProvider).value!, 1);
+      await tester.pumpAndSettle();
+      final shown = h.container.read(homeRecsProvider).value!.hero;
+      expect(shown, isNot(h.container.read(homeRecsProvider).value!.ranked[0]));
+      final saved = h.sp.getString(activeRecommendationPrefsKey);
+      expect(saved, contains(shown.restaurant.kakaoId));
+
+      // A new start of the app with that on the device: straight to the pick.
+      final again = await openHome(
+        tester,
+        recsRequested: false,
+        storage: {'app_language': 'ko', activeRecommendationPrefsKey: saved!},
+      );
+      expect(find.text('조건을 고르고 추천받아 보세요'), findsNothing);
+      expect(
+        again.container.read(homeRecsProvider).value!.hero.restaurant.kakaoId,
+        shown.restaurant.kakaoId,
+      );
+
+      // 처음부터 다시 ends it.
+      final restart = find.byTooltip('처음부터 다시');
+      await tester.ensureVisible(restart);
+      await tester.tap(restart);
+      await tester.pumpAndSettle();
+      expect(again.sp.getString(activeRecommendationPrefsKey), isNull);
     });
   });
 

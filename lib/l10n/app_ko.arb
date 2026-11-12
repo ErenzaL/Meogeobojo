@@ -222,7 +222,7 @@
   "favoriteRemove": "즐겨찾기 해제",
   "favoriteSaveFailed": "즐겨찾기를 저장하지 못했어요. 잠시 후 다시 시도해주세요.",
   "recordsEmptyTitle": "아직 기록이 없어요",
-  "recordsEmptyMessage": "먹은 음식을 기록하는 기능은 준비 중이에요.",
+  "recordsEmptyMessage": "식당 정보에서 ‘먹었어요’를 누르면 여기에 기록돼요.",
   "communityTitle": "밥수다는 준비 중이에요",
   "communityMessage": "같은 학교 친구들과 맛집 이야기를 나눌 수 있도록\n열심히 만들고 있어요!",
   "recommendStrategyProximity": "{university}에서 가까운 순",
@@ -1492,5 +1492,51 @@
   "authHeroSubtitle": "추천은 로그인 없이도 볼 수 있어요.\n리뷰와 밥수다 글을 남길 때 로그인해 주세요.",
   "authWebStartTitle": "시작하기",
   "authWebStartSubtitle": "추천은 로그인 없이도 볼 수 있어요. 글을 쓸 때만 필요해요.",
-  "authWebPanelBody": "로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요."
+  "authWebPanelBody": "로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요.",
+  "homeEmptyChange": "조건 변경",
+  "homeShowUnverified": "미확인 후보 {count}곳 보기",
+  "@homeShowUnverified": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeEmptyUnverifiedMessage": "가격·편의 정보로 확인된 곳 중에는 없어요. 정보가 없는 후보는 따로 볼 수 있어요.",
+  "homeUnverifiedNotice": "가격·편의 정보가 확인되지 않은 후보예요",
+  "homeUnverifiedTag": "정보 미확인",
+  "homeErrorKeepsConditions": "고른 조건은 그대로 남아 있어요.",
+  "homeRankingLink": "전체 추천 순위 보기",
+  "homeRankingTitle": "전체 추천 순위",
+  "homeRankingSub": "조건에 맞는 곳 중 상위 {count}곳",
+  "@homeRankingSub": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeChangeConditions": "조건 바꿔서 다시 추천받기",
+  "homePromptOrigin": "{origin} 출발 기준으로 추천해요",
+  "@homePromptOrigin": {
+    "placeholders": {
+      "origin": {
+        "type": "String"
+      }
+    }
+  },
+  "homePromptOriginChange": "변경",
+  "mealAteButton": "먹었어요 · 평가 남기기",
+  "mealAteSub": "MY 식사 기록에 남아요",
+  "mealSaved": "MY 식사 기록에 남겼어요",
+  "mealSeeRecords": "기록 보기",
+  "mealCheckTitle": "{name}에 다녀오셨어요?",
+  "@mealCheckTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mealCheckDismiss": "아직이요"
 }

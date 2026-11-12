@@ -5,6 +5,7 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/seoul_clock.dart';
+import '../../conditions/widgets/conditions_sheet.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
@@ -15,6 +16,7 @@ import '../games/game_sheet.dart';
 import '../providers/home_providers.dart';
 import '../utils/home_text.dart';
 import 'home_card_parts.dart';
+import 'ranking_sheet.dart';
 import 'restaurant_art.dart';
 
 /// "마음에 안 들면": a shuffle button and the next two picks, each compared
@@ -76,34 +78,55 @@ class AlternativesSection extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 14),
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
+        _LinkRow(
+          label: l10n.homeRankingLink,
+          onTap: () => showRankingSheet(context, recs),
+        ),
+        _LinkRow(
+          label: l10n.homeChangeConditions,
+          onTap: () => showConditionsSheet(context),
+        ),
+        _LinkRow(
+          label: l10n.homeSeeOnMap(recs.total),
           onTap: () =>
               ref.read(shellTabProvider.notifier).select(ShellTabs.map),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-            child: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    l10n.homeSeeOnMap(recs.total),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.chevron_right_rounded, size: 20),
-              ],
-            ),
-          ),
         ),
       ],
     );
   }
+}
+
+class _LinkRow extends StatelessWidget {
+  const _LinkRow({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    borderRadius: BorderRadius.circular(8),
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.chevron_right_rounded, size: 20),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Full-width entry to the pick-by-game sheet, in the app's soft accent tone.
@@ -292,13 +315,18 @@ class _AltRow extends ConsumerWidget {
               tooltip: l10n.homeDirections,
               onPressed: origin == null
                   ? null
-                  : () => openDirections(
-                      context,
-                      to: r,
-                      fromName: origin.label(l10n),
-                      fromLat: origin.latitude,
-                      fromLng: origin.longitude,
-                    ),
+                  : () {
+                      ref
+                          .read(activeRecommendationProvider.notifier)
+                          .markWent(r.kakaoId);
+                      openDirections(
+                        context,
+                        to: r,
+                        fromName: origin.label(l10n),
+                        fromLat: origin.latitude,
+                        fromLng: origin.longitude,
+                      );
+                    },
               icon: Icon(Icons.directions_outlined, color: p.textSecondary),
             ),
           ],

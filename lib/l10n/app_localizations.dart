@@ -691,7 +691,7 @@ abstract class AppLocalizations {
   /// No description provided for @recordsEmptyMessage.
   ///
   /// In ko, this message translates to:
-  /// **'먹은 음식을 기록하는 기능은 준비 중이에요.'**
+  /// **'식당 정보에서 ‘먹었어요’를 누르면 여기에 기록돼요.'**
   String get recordsEmptyMessage;
 
   /// No description provided for @communityTitle.
@@ -4287,6 +4287,114 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'로그인하면 리뷰와 밥수다 글을 남기고, 다른 기기에서도 취향과 저장한 식당을 이어서 볼 수 있어요.'**
   String get authWebPanelBody;
+
+  /// No description provided for @homeEmptyChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건 변경'**
+  String get homeEmptyChange;
+
+  /// No description provided for @homeShowUnverified.
+  ///
+  /// In ko, this message translates to:
+  /// **'미확인 후보 {count}곳 보기'**
+  String homeShowUnverified(int count);
+
+  /// No description provided for @homeEmptyUnverifiedMessage.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격·편의 정보로 확인된 곳 중에는 없어요. 정보가 없는 후보는 따로 볼 수 있어요.'**
+  String get homeEmptyUnverifiedMessage;
+
+  /// No description provided for @homeUnverifiedNotice.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격·편의 정보가 확인되지 않은 후보예요'**
+  String get homeUnverifiedNotice;
+
+  /// No description provided for @homeUnverifiedTag.
+  ///
+  /// In ko, this message translates to:
+  /// **'정보 미확인'**
+  String get homeUnverifiedTag;
+
+  /// No description provided for @homeErrorKeepsConditions.
+  ///
+  /// In ko, this message translates to:
+  /// **'고른 조건은 그대로 남아 있어요.'**
+  String get homeErrorKeepsConditions;
+
+  /// No description provided for @homeRankingLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체 추천 순위 보기'**
+  String get homeRankingLink;
+
+  /// No description provided for @homeRankingTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체 추천 순위'**
+  String get homeRankingTitle;
+
+  /// No description provided for @homeRankingSub.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 곳 중 상위 {count}곳'**
+  String homeRankingSub(int count);
+
+  /// No description provided for @homeChangeConditions.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건 바꿔서 다시 추천받기'**
+  String get homeChangeConditions;
+
+  /// No description provided for @homePromptOrigin.
+  ///
+  /// In ko, this message translates to:
+  /// **'{origin} 출발 기준으로 추천해요'**
+  String homePromptOrigin(String origin);
+
+  /// No description provided for @homePromptOriginChange.
+  ///
+  /// In ko, this message translates to:
+  /// **'변경'**
+  String get homePromptOriginChange;
+
+  /// No description provided for @mealAteButton.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹었어요 · 평가 남기기'**
+  String get mealAteButton;
+
+  /// No description provided for @mealAteSub.
+  ///
+  /// In ko, this message translates to:
+  /// **'MY 식사 기록에 남아요'**
+  String get mealAteSub;
+
+  /// No description provided for @mealSaved.
+  ///
+  /// In ko, this message translates to:
+  /// **'MY 식사 기록에 남겼어요'**
+  String get mealSaved;
+
+  /// No description provided for @mealSeeRecords.
+  ///
+  /// In ko, this message translates to:
+  /// **'기록 보기'**
+  String get mealSeeRecords;
+
+  /// No description provided for @mealCheckTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}에 다녀오셨어요?'**
+  String mealCheckTitle(String name);
+
+  /// No description provided for @mealCheckDismiss.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직이요'**
+  String get mealCheckDismiss;
 }
 
 class _AppLocalizationsDelegate

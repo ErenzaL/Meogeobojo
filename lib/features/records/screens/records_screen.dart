@@ -13,11 +13,14 @@ import '../../home/widgets/home_card_parts.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../profile/screens/saved_restaurants_screen.dart';
 import '../../recommendation/providers/ranking_providers.dart';
+import '../../restaurants/providers/restaurant_providers.dart';
+import '../../restaurants/screens/restaurant_detail_screen.dart';
+import '../meal_records.dart';
 
-/// 기록 (V5): a private food diary page. The recording feature itself is not
-/// built yet, so the figures are shown as "—" (never invented) and the add
-/// actions say so; guests are asked to sign in first because records belong to
-/// an account. "가고 싶은 곳" is the user's real saved restaurants.
+/// 기록 (V5): a private food diary page. Meals come from "먹었어요" (식당 정보
+/// or the Home card after 길찾기); figures with no data behind them (spend)
+/// stay "—", never invented. Guests are asked to sign in first because records
+/// belong to an account. "가고 싶은 곳" is the user's real saved restaurants.
 class RecordsScreen extends ConsumerWidget {
   const RecordsScreen({super.key});
 
@@ -42,7 +45,17 @@ class RecordsScreen extends ConsumerWidget {
     final saved = signedIn && favorites.hasValue
         ? '${favorites.requireValue.length}'
         : '—';
-    final month = ref.watch(seoulNowProvider).month;
+    final now = ref.watch(seoulNowProvider);
+    final month = now.month;
+    final meals = ref.watch(mealRecordsProvider);
+    final thisMonth = meals
+        .where((m) => m.eatenAt.year == now.year && m.eatenAt.month == month)
+        .length;
+    // Opens the place again when it is still in the nearby list.
+    final nearby = {
+      for (final r in ref.watch(allNearbyRestaurantsProvider).value ?? const [])
+        r.kakaoId: r,
+    };
 
     return V5Page(
       children: [
@@ -63,14 +76,14 @@ class RecordsScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-        _ReportCard(month: month),
+        _ReportCard(month: month, meals: signedIn ? '$thisMonth' : '—'),
         const SizedBox(height: 14),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             PillChip(
-              label: l10n.recordsTabEaten('—'),
+              label: l10n.recordsTabEaten(signedIn ? '${meals.length}' : '—'),
               selected: true,
               onTap: () {},
             ),
@@ -94,27 +107,50 @@ class RecordsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        V5EmptyState(
-          icon: Icons.menu_book_outlined,
-          title: l10n.recordsNoRecordsTitle,
-          message: l10n.recordsNoRecordsBody,
-          actions: [
-            FilledButton.icon(
-              onPressed: () => _add(context, ref),
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: Text(l10n.recordsFirst),
-            ),
-          ],
-        ),
+        if (meals.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          V5RowGroup(
+            rows: [
+              for (final m in meals)
+                V5Row(
+                  icon: Icons.restaurant_rounded,
+                  title: m.name,
+                  subtitle: [
+                    if (m.category.isNotEmpty) m.category,
+                    MaterialLocalizations.of(context)
+                        .formatMediumDate(m.eatenAt),
+                  ].join(' · '),
+                  onTap: nearby[m.kakaoId] == null
+                      ? null
+                      : () => openRestaurantDetail(context, nearby[m.kakaoId]!),
+                ),
+            ],
+          ),
+        ] else
+          V5EmptyState(
+            icon: Icons.menu_book_outlined,
+            title: l10n.recordsNoRecordsTitle,
+            message: l10n.recordsNoRecordsBody,
+            actions: [
+              FilledButton.icon(
+                onPressed: () => _add(context, ref),
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: Text(l10n.recordsFirst),
+              ),
+            ],
+          ),
       ],
     );
   }
 }
 
 class _ReportCard extends StatelessWidget {
-  const _ReportCard({required this.month});
+  const _ReportCard({required this.month, required this.meals});
 
   final int month;
+
+  /// This month's meals, or "—" for a guest.
+  final String meals;
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +214,7 @@ class _ReportCard extends StatelessWidget {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  stat('—', l10n.recordsStatMeals),
+                  stat(meals, l10n.recordsStatMeals),
                   VerticalDivider(width: 1, color: p.borderStrong),
                   stat('—', l10n.recordsStatSpend),
                   VerticalDivider(width: 1, color: p.borderStrong),

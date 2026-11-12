@@ -14,6 +14,7 @@ import '../../auth/widgets/auth_prompt.dart';
 import '../../contributions/screens/my_contributions_screen.dart';
 import '../../contributions/widgets/photo_contribution_sheet.dart';
 import '../../favorites/widgets/favorite_button.dart';
+import '../../home/providers/home_providers.dart';
 import '../../home/widgets/home_card_parts.dart';
 import '../../home/widgets/restaurant_art.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
@@ -22,6 +23,7 @@ import '../../origin/widgets/origin_sheet.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../recommendation/restaurant_insight.dart';
+import '../../records/meal_records.dart';
 import '../../reviews/models/student_review.dart';
 import '../../reviews/providers/review_providers.dart';
 import '../../reviews/widgets/reviews_section.dart';
@@ -136,6 +138,7 @@ class _RestaurantDetailScreenState
     void directions() {
       final o = origin;
       if (o == null) return;
+      ref.read(activeRecommendationProvider.notifier).markWent(r.kakaoId);
       openDirections(
         context,
         to: r,
@@ -200,6 +203,12 @@ class _RestaurantDetailScreenState
       padding: const EdgeInsets.only(top: 20),
       child: V5RowGroup(
         rows: [
+          V5Row(
+            icon: Icons.check_circle_outline_rounded,
+            title: l10n.mealAteButton,
+            subtitle: l10n.mealAteSub,
+            onTap: () => markEaten(context, ref, r),
+          ),
           V5Row(
             icon: Icons.add_a_photo_outlined,
             title: l10n.photoUploadButton,

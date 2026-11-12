@@ -336,7 +336,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recordsEmptyTitle => '还没有记录';
 
   @override
-  String get recordsEmptyMessage => '记录所吃美食的功能正在准备中。';
+  String get recordsEmptyMessage => '在餐厅信息中点“吃过了”即可记录在这里。';
 
   @override
   String get communityTitle => '美食交流即将上线';
@@ -2351,4 +2351,67 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get authWebPanelBody => '登录后可以发表评价和帖子，在其他设备上也能继续看到你的口味设置和收藏的餐厅。';
+
+  @override
+  String get homeEmptyChange => '更改条件';
+
+  @override
+  String homeShowUnverified(int count) {
+    return '查看$count家未确认的候选';
+  }
+
+  @override
+  String get homeEmptyUnverifiedMessage =>
+      '在已确认价格或设施信息的餐厅中没有符合的。可以单独查看信息未确认的候选。';
+
+  @override
+  String get homeUnverifiedNotice => '该餐厅的价格或设施信息尚未确认';
+
+  @override
+  String get homeUnverifiedTag => '信息未确认';
+
+  @override
+  String get homeErrorKeepsConditions => '已选条件会保留。';
+
+  @override
+  String get homeRankingLink => '查看完整推荐排名';
+
+  @override
+  String get homeRankingTitle => '完整推荐排名';
+
+  @override
+  String homeRankingSub(int count) {
+    return '符合条件的前$count家';
+  }
+
+  @override
+  String get homeChangeConditions => '更改条件重新推荐';
+
+  @override
+  String homePromptOrigin(String origin) {
+    return '以$origin为出发点推荐';
+  }
+
+  @override
+  String get homePromptOriginChange => '更改';
+
+  @override
+  String get mealAteButton => '吃过了 · 留下评价';
+
+  @override
+  String get mealAteSub => '保存到“我的”用餐记录';
+
+  @override
+  String get mealSaved => '已保存到用餐记录';
+
+  @override
+  String get mealSeeRecords => '查看';
+
+  @override
+  String mealCheckTitle(String name) {
+    return '去过$name了吗？';
+  }
+
+  @override
+  String get mealCheckDismiss => '还没有';
 }

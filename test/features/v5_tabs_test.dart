@@ -187,14 +187,14 @@ void main() {
       expect(find.text('아직 남긴 기록이 없어요'), findsOneWidget);
     });
 
-    testWidgets('"가고 싶은 곳" is still the real saved count; add is honest', (
+    testWidgets('"가고 싶은 곳" is still the real saved count; add points to 먹었어요', (
       tester,
     ) async {
       await openRecords(tester, favorites: {'a', 'b'});
       expect(find.text('가고 싶은 곳 2'), findsOneWidget);
       await tester.tap(find.text('기록하기'));
       await tester.pump();
-      expect(find.textContaining('준비 중'), findsOneWidget);
+      expect(find.textContaining('먹었어요'), findsOneWidget);
     });
 
     testWidgets('back returns to MY', (tester) async {

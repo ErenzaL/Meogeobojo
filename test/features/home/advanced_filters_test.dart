@@ -105,7 +105,13 @@ void main() {
         expect(cond(h).needs, {Need.quickMeal});
         expect(find.byType(InputChip), findsNWidgets(3));
 
-        await tester.tap(find.text('모두 풀기').last);
+        // Home's own empty state has a 모두 풀기 too; this is the chip row's.
+        await tester.tap(
+          find.descendant(
+            of: find.byKey(const ValueKey('applied-filters')),
+            matching: find.text('모두 풀기'),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(cond(h), Conditions.defaults);
         expect(find.byKey(const ValueKey('applied-filters')), findsNothing);

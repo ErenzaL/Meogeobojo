@@ -77,6 +77,15 @@ admin check, publication validation, per-restaurant lock, version and audit entr
 * Tests: `admin/src/features/restaurants/bulkVisibility.test.ts` (engine), `BulkPublish.test.tsx` (page), `supabase/tests/bulk_publish_test.sql` (database: only the
   selected restaurants change, nothing else is written, public read, authorization, validation).
 
+### Choosing a restaurant on 메뉴·가격 (organised by school)
+
+The page lists **every** managed restaurant (the same `restaurant_overrides` rows as the 식당 page, whatever their status), read page by
+page so nothing is cut off at 1000 rows, and groups them by school (`restaurant_university_links`). A restaurant of several schools is
+listed under each; one with no school is under "대학교 미지정". Each row shows its status, how many active published menu lines it has
+("메뉴 없음" when none) and the publishing marker (초안 있음 / 예약됨). Filters: search (name or category), school, and menu
+(with / without menus). Pure grouping and filtering logic: `admin/src/features/menus/restaurantPicker.ts`. The CSV export can also take
+"선택한 대학교의 식당" (the school chosen in the filter).
+
 ### Menu CSV: template, import, export (Admin → 메뉴·가격)
 Buttons **CSV 양식 다운로드 / CSV 가져오기 / CSV 내보내기**. **No new database function and no migration:** an import saves a restaurant's menus as a **draft** through the
 existing `cms_save_draft('restaurant_menus', restaurantId, {items}, revision)` (merged onto what the editor shows: its draft, else the live list), and the optional

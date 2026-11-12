@@ -256,10 +256,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
+  /// Bumped by every [_syncMarkers]; an older one still drawing styles when a
+  /// newer one starts must not touch the map.
+  int _syncGen = 0;
+
   Future<void> _syncMarkers() async {
     final c = _controller;
     final origin = ref.read(originProvider);
     if (c == null || !_stylesReady || origin == null || !mounted) return;
+    final gen = ++_syncGen;
+    bool stale() => !mounted || gen != _syncGen;
     final items = ref.read(filteredRestaurantsProvider).value ?? const [];
     final originLabel = origin.label(context.l10n);
     final look = _tagLook();
@@ -271,8 +277,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
         () => renderOriginPin(originLabel, scale: look.scale),
       );
       final places = [for (final r in items) await _placeMarker(c, r, look)];
-      if (!mounted) return;
+      if (stale()) return;
       await c.clearMarkers();
+      if (stale()) return;
       await c.addMarkers(
         markerOptions: [
           // The pin marks where the walk starts (the chosen origin).
@@ -289,6 +296,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
           ...places,
         ],
       );
+      if (stale()) return;
       await _fitResultsOnce(origin, items);
     } catch (e) {
       debugPrint('Map marker update failed: $e');

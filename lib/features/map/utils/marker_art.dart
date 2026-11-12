@@ -26,20 +26,28 @@ double markerScale(double devicePixelRatio) =>
     ? devicePixelRatio
     : 1;
 
-TextPainter _text(String s, double size, Color color) => TextPainter(
-  text: TextSpan(
-    text: s,
-    style: TextStyle(
-      fontFamily: _font,
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-      color: color,
-      height: 1.2,
-    ),
-  ),
-  textDirection: TextDirection.ltr,
-  maxLines: 1,
-)..layout();
+/// The widest a label may be (logical px) when [reserved] more goes beside it
+/// in a bitmap drawn at [scale]: past [kMaxMarkerEdge] pixels the map SDK
+/// refuses the marker, so longer text ends in "…" instead.
+double _room(double scale, double reserved) =>
+    (kMaxMarkerEdge - 1) / scale - reserved;
+
+TextPainter _text(String s, double size, Color color, double maxWidth) =>
+    TextPainter(
+      text: TextSpan(
+        text: s,
+        style: TextStyle(
+          fontFamily: _font,
+          fontSize: size,
+          fontWeight: FontWeight.w600,
+          color: color,
+          height: 1.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: maxWidth);
 
 void _softShadow(Canvas canvas, RRect r) => canvas.drawRRect(
   r.shift(const Offset(0, 1)),
@@ -77,7 +85,6 @@ Future<Uint8List> renderPlaceTag(
 }) {
   final h = selected ? 30.0 : 26.0;
   final pad = selected ? 10.0 : 8.0;
-  final text = _text(label, selected ? 13 : 12, selected ? Colors.white : _ink);
   final check = selected
       ? (TextPainter(
           text: TextSpan(
@@ -93,6 +100,12 @@ Future<Uint8List> renderPlaceTag(
         )..layout())
       : null;
   final iconW = check == null ? 0.0 : check.width + 3;
+  final text = _text(
+    label,
+    selected ? 13 : 12,
+    selected ? Colors.white : _ink,
+    _room(scale, _shadow * 2 + pad * 2 + iconW),
+  );
   final w = pad * 2 + iconW + text.width - (selected ? 2 : 0);
   return _bitmap(Size(w + _shadow * 2, h + _shadow * 2), scale, (c) {
     final box = RRect.fromRectAndRadius(
@@ -123,7 +136,7 @@ Future<Uint8List> renderPlaceTag(
 /// tip is the exact spot.
 Future<Uint8List> renderOriginPin(String label, {required double scale}) {
   const labelH = 20.0, gap = 3.0, pinW = 22.0, pinH = 28.0;
-  final text = _text(label, 11.5, Colors.white);
+  final text = _text(label, 11.5, Colors.white, _room(scale, _shadow * 2 + 12));
   final labelW = text.width + 12;
   final w = math.max(labelW, pinW) + _shadow * 2;
   final h = labelH + gap + pinH + _shadow * 2;

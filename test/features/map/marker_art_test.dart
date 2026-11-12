@@ -22,4 +22,22 @@ void main() {
       expect(inspectPng(sharp)!.height, closeTo(t.height * 3, 3));
     });
   });
+
+  testWidgets('a long name still fits the SDK limit on a dense phone', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      // The pin picker allows 20 characters; Android draws at up to ~4x.
+      final name = '가' * 20;
+      for (final scale in [3.0, 4.0]) {
+        for (final png in [
+          await renderOriginPin(name, scale: scale),
+          await renderPlaceTag(name, selected: true, scale: scale),
+          await renderPlaceTag(name, selected: false, scale: scale),
+        ]) {
+          expect(isSafeMarkerPng(png), isTrue, reason: '${inspectPng(png)}');
+        }
+      }
+    });
+  });
 }

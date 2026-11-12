@@ -1,21 +1,22 @@
-import type { Visibility } from '../restaurants/schema'
+import type { Visibility } from '../schema'
 
 /**
- * The restaurant list of the 메뉴·가격 page: EVERY managed restaurant (the same rows as the 식당 page), organised by school.
+ * The restaurant list of the 메뉴·가격 and 사진 관리 pages: EVERY managed restaurant (the same rows as the 식당 page), organised by school.
  * Pure functions only; the page fetches the rows and this decides what is listed and how it is grouped.
  *
  *  - A restaurant that belongs to several schools is listed under each of them (it is one restaurant: selecting it from any
- *    group opens the same menu).
+ *    group opens the same restaurant).
  *  - A restaurant with no school link is listed under "대학교 미지정" instead of disappearing.
- *  - "Has a menu" means it has at least one active published menu line; a menu that only exists in a draft does not count.
+ *  - "Has content" (a menu, a photo) comes from the live rows: something that only exists in a draft does not count.
+ *    The page passes the per-restaurant counts, so this module does not care what is being counted.
  */
 export const NO_UNIVERSITY = '__none'
 export const UNASSIGNED_LABEL = '대학교 미지정'
 
 export type PickerRestaurant = { id: string; name_ko: string; category: string | null; visibility: Visibility | null; universityIds: string[] }
 export type PickerUniversity = { id: string; name_ko: string }
-export type MenuFilter = '' | 'none' | 'has'
-export type PickerFilters = { search: string; university: string; menu: MenuFilter }
+export type CountFilter = '' | 'none' | 'has'
+export type PickerFilters = { search: string; university: string; has: CountFilter }
 export type PickerGroup = { key: string; name: string; restaurants: PickerRestaurant[]; withMenu: number }
 export type PickerView = { groups: PickerGroup[]; ids: string[]; total: number; withMenu: number; withoutMenu: number }
 
@@ -60,8 +61,8 @@ export function buildView(restaurants: PickerRestaurant[], universities: PickerU
 
   const listed = restaurants.filter((r) => {
     if (needle && !`${r.name_ko} ${r.category ?? ''}`.toLowerCase().includes(needle)) return false
-    if (f.menu === 'has' && !hasMenu(r)) return false
-    if (f.menu === 'none' && hasMenu(r)) return false
+    if (f.has === 'has' && !hasMenu(r)) return false
+    if (f.has === 'none' && hasMenu(r)) return false
     const own = knownSchools(r, schools)
     if (f.university === NO_UNIVERSITY) return own.length === 0
     if (f.university) return own.includes(f.university)

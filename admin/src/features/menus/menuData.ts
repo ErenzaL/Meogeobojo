@@ -4,7 +4,6 @@ import { chunk } from '../restaurants/kakao'
 import { sortItems } from './menu'
 import type { ExportRestaurant, ExportSource } from './menuExport'
 import type { MenuState, RestaurantRef, SaveDeps, PublishDeps } from './menuImport'
-import { toPickerRestaurant, type PickerRestaurant, type RawPickerRow } from './restaurantPicker'
 
 const TYPE = 'restaurant_menus' as const
 const clean = (s: string) => s.replace(/[%,()*\\]/g, ' ').trim()
@@ -50,38 +49,6 @@ export const saveDeps: SaveDeps = {
   saveDraft: async (id, items, expected) => { const r = await cmsSaveDraft(TYPE, id, { items }, expected); return { revision: r.revision } },
 }
 export const publishDeps: PublishDeps = { publish: (id, rev, reason) => cmsPublish(TYPE, id, rev, reason) }
-
-// ---- the restaurant list of the page ---------------------------------------------------------------------------------
-const PAGE = 1000
-
-/** Every row of a query, page by page (the API answers at most 1000 rows per request), up to [cap] rows. */
-async function readAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>, cap: number): Promise<T[]> {
-  const out: T[] = []
-  for (let from = 0; from < cap; from += PAGE) {
-    const { data, error } = await page(from, from + PAGE - 1)
-    if (error) throw error
-    const rows = (data ?? []) as T[]
-    out.push(...rows)
-    if (rows.length < PAGE) break
-  }
-  return out
-}
-
-/** All managed restaurants (the same table the 식당 page lists) with the schools they belong to. */
-export async function fetchPickerRestaurants(): Promise<PickerRestaurant[]> {
-  const rows = await readAll<RawPickerRow>((from, to) => supabase.from('restaurant_overrides')
-    .select('id,name_ko,category,visibility,restaurant_university_links(university_id)').order('name_ko').order('id').range(from, to), 20000)
-  return rows.map(toPickerRestaurant)
-}
-
-/** How many active published menu lines each restaurant has. */
-export async function fetchMenuCounts(): Promise<Map<string, number>> {
-  const rows = await readAll<{ restaurant_id: string | null }>((from, to) => supabase.from('restaurant_menus')
-    .select('restaurant_id').eq('status', 'active').order('id').range(from, to), 100000)
-  const out = new Map<string, number>()
-  for (const r of rows) if (r.restaurant_id) out.set(r.restaurant_id, (out.get(r.restaurant_id) ?? 0) + 1)
-  return out
-}
 
 // ---- export --------------------------------------------------------------------------------------------------------
 export type ExportScopeArg = { restaurantId: string } | { search: string } | { universityId: string } | 'all'

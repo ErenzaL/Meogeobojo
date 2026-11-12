@@ -2,15 +2,21 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Badge, Card, EmptyState, ErrorState, Field, Input, Select, Skeleton } from '@/components/ui'
 import type { OverviewRow } from '@/lib/cms'
-import { VISIBILITY_LABEL } from '../restaurants/schema'
-import { buildView, NO_UNIVERSITY, UNASSIGNED_LABEL, universityCounts, type MenuFilter, type PickerFilters, type PickerRestaurant, type PickerUniversity } from './restaurantPicker'
+import { VISIBILITY_LABEL } from '../schema'
+import { buildView, NO_UNIVERSITY, UNASSIGNED_LABEL, universityCounts, type CountFilter, type PickerFilters, type PickerRestaurant, type PickerUniversity } from './pickerLogic'
 
 const visTone = { draft: 'neutral', published: 'green', hidden: 'amber', archived: 'red' } as const
 
+/** What the page manages for a restaurant: its words in the list ("메뉴 3개", "사진 없음", …). */
+export type PickerItem = { label: string; unit: string; subject: string }
+export const MENU_ITEM: PickerItem = { label: '메뉴', unit: '개', subject: '메뉴가' }
+export const PHOTO_ITEM: PickerItem = { label: '사진', unit: '장', subject: '사진이' }
+
 type Props = {
+  item: PickerItem
   restaurants: PickerRestaurant[] | undefined
   universities: PickerUniversity[]
-  menuCounts: Map<string, number>
+  counts: Map<string, number>
   overview: Map<string, OverviewRow>
   loading: boolean
   error: unknown
@@ -21,8 +27,8 @@ type Props = {
   onSelect: (id: string) => void
 }
 
-/** Every managed restaurant, grouped by school, with search and school / menu filters. Selecting one opens its menu editor. */
-export default function MenuRestaurantPicker({ restaurants, universities, menuCounts, overview, loading, error, onRetry, filters, onFilters, selectedId, onSelect }: Props) {
+/** Every managed restaurant, grouped by school, with search and school / has-content filters. Selecting one opens its editor. */
+export default function RestaurantPicker({ item, restaurants, universities, counts: menuCounts, overview, loading, error, onRetry, filters, onFilters, selectedId, onSelect }: Props) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const all = useMemo(() => restaurants ?? [], [restaurants])
   const counts = useMemo(() => universityCounts(all, universities), [all, universities])
@@ -44,9 +50,9 @@ export default function MenuRestaurantPicker({ restaurants, universities, menuCo
             <option value={NO_UNIVERSITY}>{UNASSIGNED_LABEL} ({counts.unassigned})</option>
           </Select>
         </Field>
-        <Field label="메뉴" htmlFor="rm">
-          <Select id="rm" value={filters.menu} onChange={(e) => set({ menu: e.target.value as MenuFilter })}>
-            <option value="">전체</option><option value="none">메뉴 없는 식당</option><option value="has">메뉴 있는 식당</option>
+        <Field label={item.label} htmlFor="rm">
+          <Select id="rm" value={filters.has} onChange={(e) => set({ has: e.target.value as CountFilter })}>
+            <option value="">전체</option><option value="none">{item.label} 없는 식당</option><option value="has">{item.label} 있는 식당</option>
           </Select>
         </Field>
       </div>
@@ -56,7 +62,7 @@ export default function MenuRestaurantPicker({ restaurants, universities, menuCo
       {!loading && error == null && (
         <>
           <p role="status" className="text-sm text-muted">
-            전체 {all.length}곳 중 <b className="text-ink">{view.total}곳</b> · 메뉴 있음 {view.withMenu} / 없음 {view.withoutMenu}
+            전체 {all.length}곳 중 <b className="text-ink">{view.total}곳</b> · {item.label} 있음 {view.withMenu} / 없음 {view.withoutMenu}
           </p>
           {view.total === 0
             ? <EmptyState>{all.length === 0 ? '관리 중인 식당이 없어요. 식당 메뉴에서 먼저 식당을 추가하세요.' : '조건에 맞는 식당이 없어요.'}</EmptyState>
@@ -70,7 +76,7 @@ export default function MenuRestaurantPicker({ restaurants, universities, menuCo
                         className="sticky top-0 z-10 flex w-full items-center gap-2 border-b border-line bg-page px-3 py-2 text-left text-sm font-bold">
                         {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                         <span>{g.name}</span>
-                        <span className="font-normal text-muted">{g.restaurants.length}곳 · 메뉴 없음 {g.restaurants.length - g.withMenu}</span>
+                        <span className="font-normal text-muted">{g.restaurants.length}곳 · {item.label} 없음 {g.restaurants.length - g.withMenu}</span>
                       </button>
                       {open && (
                         <ul>
@@ -84,7 +90,7 @@ export default function MenuRestaurantPicker({ restaurants, universities, menuCo
                                   className={`flex w-full flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-left text-sm hover:bg-page ${active ? 'bg-brand/30 font-semibold' : ''}`}>
                                   <span className="min-w-0 flex-1 truncate">{r.name_ko}{r.category ? <span className="ml-2 text-xs font-normal text-muted">{r.category}</span> : null}</span>
                                   {r.visibility && <Badge tone={visTone[r.visibility]}>{VISIBILITY_LABEL[r.visibility]}</Badge>}
-                                  {n > 0 ? <Badge tone="neutral">메뉴 {n}개</Badge> : <Badge tone="amber">메뉴 없음</Badge>}
+                                  {n > 0 ? <Badge tone="neutral">{item.label} {n}{item.unit}</Badge> : <Badge tone="amber">{item.label} 없음</Badge>}
                                   {o?.scheduled_at ? <Badge tone="brand">예약됨</Badge> : o?.has_draft ? <Badge tone="brand">초안 있음</Badge> : null}
                                 </button>
                               </li>)
@@ -96,7 +102,7 @@ export default function MenuRestaurantPicker({ restaurants, universities, menuCo
           <p className="text-sm text-muted" aria-live="polite">
             {selected
               ? <>선택한 식당: <b className="text-ink">{selected.name_ko}</b>{selected.universityIds.map(schoolName).filter(Boolean).length > 0 ? ` · ${selected.universityIds.map(schoolName).filter(Boolean).join(', ')}` : ''}</>
-              : '식당을 고르면 메뉴가 보여요. 여러 대학교에 걸친 식당은 각 대학교에 모두 보여요.'}
+              : `식당을 고르면 ${item.subject} 보여요. 여러 대학교에 걸친 식당은 각 대학교에 모두 보여요.`}
           </p>
         </>)}
     </Card>

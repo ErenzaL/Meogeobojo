@@ -32,9 +32,8 @@ const livePhotos = (photos: unknown[], over: Record<string, unknown> = {}) => {
 const saved = () => (fake.rpcs.filter((r) => r.name === 'cms_save_draft').at(-1)!.args as { p_type: string; p_id: string; p_data: { photos: Record<string, unknown>[] }; p_expected_revision: number })
 const noLiveWrites = () => { for (const op of ['insert', 'update', 'upsert', 'delete']) expect(fake.last('restaurant_photos', op)).toBeUndefined() }
 async function choose() {
-  await screen.findByText('식당을 선택하면 사진이 보여요.')
-  await waitFor(() => expect(screen.getByRole('option', { name: '온기식당' })).toBeTruthy())
-  await userEvent.selectOptions(screen.getByLabelText('식당 선택'), 'r1')
+  await screen.findByText('위 목록에서 식당을 선택하면 사진이 보여요.')
+  await userEvent.click(await screen.findByRole('button', { name: /온기식당/ }))
 }
 
 beforeEach(() => {

@@ -77,14 +77,15 @@ admin check, publication validation, per-restaurant lock, version and audit entr
 * Tests: `admin/src/features/restaurants/bulkVisibility.test.ts` (engine), `BulkPublish.test.tsx` (page), `supabase/tests/bulk_publish_test.sql` (database: only the
   selected restaurants change, nothing else is written, public read, authorization, validation).
 
-### Choosing a restaurant on 메뉴·가격 (organised by school)
+### Choosing a restaurant on 메뉴·가격 and 사진 관리 (organised by school)
 
-The page lists **every** managed restaurant (the same `restaurant_overrides` rows as the 식당 page, whatever their status), read page by
-page so nothing is cut off at 1000 rows, and groups them by school (`restaurant_university_links`). A restaurant of several schools is
-listed under each; one with no school is under "대학교 미지정". Each row shows its status, how many active published menu lines it has
-("메뉴 없음" when none) and the publishing marker (초안 있음 / 예약됨). Filters: search (name or category), school, and menu
-(with / without menus). Pure grouping and filtering logic: `admin/src/features/menus/restaurantPicker.ts`. The CSV export can also take
-"선택한 대학교의 식당" (the school chosen in the filter).
+Both pages use the same picker. It lists **every** managed restaurant (the same `restaurant_overrides` rows as the 식당 page, whatever
+their status), read page by page so nothing is cut off at 1000 rows, and groups them by school (`restaurant_university_links`). A
+restaurant of several schools is listed under each; one with no school is under "대학교 미지정". Each row shows its status, how many
+live items it has ("메뉴 3개" / "사진 2장", or "메뉴 없음" / "사진 없음"; menus: active published lines, photos: published photos
+including the cover) and the publishing marker (초안 있음 / 예약됨). Filters: search (name or category), school, and with / without
+items. Code: `admin/src/features/restaurants/picker/` (`pickerLogic.ts` grouping and filtering, `pickerData.ts` reads,
+`RestaurantPicker.tsx`). The menu CSV export can also take "선택한 대학교의 식당" (the school chosen in the filter).
 
 ### Menu CSV: template, import, export (Admin → 메뉴·가격)
 Buttons **CSV 양식 다운로드 / CSV 가져오기 / CSV 내보내기**. **No new database function and no migration:** an import saves a restaurant's menus as a **draft** through the

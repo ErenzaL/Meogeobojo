@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { makeQueryClient } from '@/App'
 import { fake } from '@/test/fakeSupabase'
-import { cafeteriaRow, cafeteriaTitle, emptyCafeteriaForm, nextSortOrder, periodsOf, daysOf, validateCafeteria } from './model'
+import { cafeteriaRow, cafeteriaTitle, emptyCafeteriaForm, periodsOf, daysOf, validateCafeteria } from './model'
 
 vi.mock('@/lib/supabase', async () => {
   const m = await import('@/test/fakeSupabase')
@@ -40,13 +40,6 @@ describe('cafeteria form logic', () => {
     const f = { ...emptyCafeteriaForm('u1'), name_ko: ' 학생식당 ', sort_order: ' 3 ', location: ' 1층 ' }
     expect(cafeteriaRow(f)).toMatchObject({ name_ko: '학생식당', sort_order: 3, location_description: '1층' })
     expect(validateCafeteria({ ...f, name_ko: '가'.repeat(61), operating_note: '가'.repeat(301), sort_order: 'x' })).toMatchObject({ name_ko: expect.any(String), operating_note: expect.any(String), sort_order: expect.any(String) })
-  })
-  it('a new cafeteria is ordered after the university\'s others, so it never takes the first place', () => {
-    const c = (university_id: string, sort_order: number, status = 'active') => ({ university_id, sort_order, status }) as never
-    expect(nextSortOrder([], 'u1')).toBe('0')
-    expect(nextSortOrder([c('u1', 1)], 'u1')).toBe('2')
-    expect(nextSortOrder([c('u1', 1), c('u1', 4), c('u2', 9)], 'u1')).toBe('5')
-    expect(nextSortOrder([c('u1', 7, 'archived')], 'u1')).toBe('0')
   })
   it('an unnamed cafeteria is labelled by its kind, not a made-up name', () => {
     expect(cafeteriaTitle({ name_ko: null, kind: 'student' })).toBe('학생식당 (이름 미확인)')
@@ -103,31 +96,43 @@ describe('학식 식당 추가 / 수정', () => {
     })
   })
 
-  it('a second cafeteria is ordered after the first and must be told apart by name', async () => {
-    await open([CAF({ sort_order: 1 })])
+  it('a second cafeteria must be told apart by name', async () => {
+    await open([CAF()])
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
     const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
-    expect((within(modal).getByLabelText('표시 순서', { exact: false }) as HTMLInputElement).value).toBe('2')
     // the campus already has one: a nameless second one could not be told apart in the app
     expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
     await userEvent.type(within(modal).getByLabelText(/이름 \(한국어\)/), '학생회관식당')
     expect(within(modal).queryByText(/여러 곳이에요/)).toBeNull()
   })
 
-  it('the first cafeteria of a campus needs no such reminder, and the order follows the chosen university', async () => {
-    await open([CAF({ sort_order: 3 })])
+  it('the first cafeteria of a campus needs no such reminder, and follows the chosen university', async () => {
+    await open([CAF()])
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
     const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
-    const order = () => (within(modal).getByLabelText('표시 순서', { exact: false }) as HTMLInputElement).value
-    expect(order()).toBe('4')
+    expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
     await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u2')
-    expect(order()).toBe('0')
     expect(within(modal).queryByText(/여러 곳이에요/)).toBeNull()
-    // an order typed by hand is kept when the university changes afterwards
-    await userEvent.clear(within(modal).getByLabelText('표시 순서', { exact: false }))
-    await userEvent.type(within(modal).getByLabelText('표시 순서', { exact: false }), '8')
     await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u1')
-    expect(order()).toBe('8')
+    expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
+  })
+
+  it('there is no manual order: cafeterias come in the order they were added, and the form says so', async () => {
+    await open([CAF()])
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    expect(within(modal).queryByLabelText('표시 순서', { exact: false })).toBeNull()
+    expect(within(modal).getByText(/등록한 순서대로 나와요/)).toBeTruthy()
+  })
+
+  it('the list is read oldest first (newest at the bottom), not by a hand-set number', async () => {
+    await open([CAF({ id: 'c1', name_ko: '향설1관' }), CAF({ id: 'c2', name_ko: '교직원식당' })])
+    const q = fake.calls.filter((c) => c.table === 'campus_cafeterias' && c.op === 'select').at(-1)!
+    const orders = q.filters.filter((f) => f[0] === 'order').map((f) => f[1])
+    expect(orders).toEqual(['created_at', 'id'])
+    expect(orders).not.toContain('sort_order')
+    // shown in the order the database returns them
+    expect(names()).toEqual(['향설1관', '교직원식당'])
   })
 
   it('editing a cafeteria never asks for a name just because it has no siblings, and only counts the others', async () => {

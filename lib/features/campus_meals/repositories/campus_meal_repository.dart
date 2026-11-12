@@ -27,8 +27,9 @@ class SupabaseCampusMealRepository implements CampusMealRepository {
         .from('campus_cafeterias')
         .select()
         .eq('university_id', universityId)
-        .order('sort_order')
-        .order('created_at');
+        // oldest first: the cafeteria added first stays on top, each new one goes to the bottom
+        .order('created_at')
+        .order('id');
     return rows.map(CampusCafeteria.fromJson).toList();
   }
 

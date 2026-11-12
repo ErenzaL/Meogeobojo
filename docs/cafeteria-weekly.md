@@ -121,10 +121,11 @@ A university can have any number of cafeterias (Admin → 학식 → 학식 식�
   only for meals entered somewhere in the shown week (any status, so a meal marked "운영 안 함" still explains itself) and opens on the next meal that
   exists when the usual one for the time of day is missing (`visibleMealTypes`, `resolveMealType`). A week with nothing entered falls back to the
   cafeteria's own 운영하는 식사 setting. Nothing is required in Admin: an empty cell changes nothing and shows nothing.
-* **Admin.** The new-cafeteria form puts a new cafeteria **after** the university's existing ones (표시 순서 = highest + 1), so adding a second one never
-  takes the first place (the app opens on the first student cafeteria and lists them in this order). When the university already has another cafeteria
-  and the name is empty, the form asks for a name: the picker shows the name, and nameless ones can only be called "학생식당 1 / 2". The weekly grid no
-  longer counts "n/15칸" as if every slot were due.
+* **Order.** Cafeterias are listed **oldest first, newest at the bottom**: by `created_at`, then `id`, in the Admin list, the Home picker and the weekly page
+  picker alike (the manual 표시 순서 field is gone from the form; the `sort_order` column stays in the table but no longer decides anything). The cafeteria the
+  app opens on is therefore the first *student* cafeteria that was added.
+* **Admin.** When the university already has another cafeteria and the name is empty, the form asks for a name: the picker shows the name, and nameless ones
+  can only be called "학생식당 1 / 2". The weekly grid no longer counts "n/15칸" as if every slot were due.
 * **Rollout.** Admin and web update when this is merged to `main` (Render). The phone apps need a new build. No migration; existing data is untouched.
 
 ## 11. Weekly update from a CSV, one cafeteria and one week at a time

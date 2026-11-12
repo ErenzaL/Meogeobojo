@@ -9,6 +9,7 @@ import '../../features/campus_meals/models/campus_meal_models.dart';
 import '../../features/campus_meals/providers/campus_meal_providers.dart';
 import '../../features/content/providers/app_content_providers.dart';
 import '../../features/missions/providers/mission_providers.dart';
+import '../../features/recommendation/providers/ranking_providers.dart';
 import '../../features/restaurants/providers/restaurant_providers.dart';
 import '../../features/university/models/university.dart';
 import '../../features/university/providers/university_providers.dart';
@@ -293,6 +294,9 @@ void invalidateForTable(ProviderContainer ref, String table) {
       ref.invalidate(restaurantOverridesProvider);
       ref.invalidate(restaurantMenusProvider);
       ref.invalidate(restaurantPhotosProvider);
+      // What the conditions are judged on (prices, hours, menus).
+      ref.invalidate(nearbyMenusProvider);
+      ref.invalidate(insightsForIdsProvider);
       // Visibility / name changes are applied when the lists are fetched.
       ref.invalidate(allNearbyRestaurantsProvider);
       ref.invalidate(nearbyRestaurantsProvider);
@@ -343,6 +347,8 @@ void refreshLiveContent(ProviderContainer ref) {
   ref.invalidate(restaurantOverridesProvider);
   ref.invalidate(restaurantMenusProvider);
   ref.invalidate(restaurantPhotosProvider);
+  ref.invalidate(nearbyMenusProvider);
+  ref.invalidate(insightsForIdsProvider);
   unawaited(_reloadUniversitiesIfChanged(ref));
   unawaited(_reloadCafeteriasIfChanged(ref));
 }

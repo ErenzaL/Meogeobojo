@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/campus_points.dart';
+import 'package:meogeobojo/features/conditions/providers/conditions_providers.dart';
+import 'package:meogeobojo/features/home/providers/home_providers.dart';
+import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
+import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 import 'package:meogeobojo/features/map/screens/map_screen.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/navigation/utils/url_sync.dart';
 import 'package:meogeobojo/features/origin/models/origin.dart';
+import 'package:meogeobojo/features/origin/widgets/origin_row.dart';
 import 'package:meogeobojo/features/origin/providers/origin_providers.dart';
 import 'package:meogeobojo/features/origin/screens/pin_picker_screen.dart';
 import 'package:meogeobojo/features/recommendation/home_ranking.dart';
@@ -51,6 +56,49 @@ void main() {
       expect(m, closeTo(257, 2));
       expect(metersFromOrigin(null, r), isNull); // origin still loading
     });
+  });
+
+  testWidgets('each start point previews its own nearest match, even one '
+      'outside the current distance limit', (tester) async {
+    final back = campusPointsFor(kDefaultUniversityId)
+        .firstWhere((p) => p.id == 'gate_back');
+    final h = await buildHarness(
+      restaurants: FakeRestaurantRepository(
+        items: [
+          Restaurant(
+            kakaoId: 'b1',
+            name: '후문식당',
+            categoryName: '음식점 > 한식',
+            categoryGroupCode: 'FD6',
+            address: '',
+            roadAddress: '',
+            phone: '',
+            latitude: back.latitude,
+            longitude: back.longitude,
+            distanceMeters: 0,
+            placeUrl: null,
+          ),
+        ],
+      ),
+    );
+    await pumpApp(tester, h, home: const AppShell());
+    // 도보 5분 from 정문 leaves nothing; from 후문 the place is right there.
+    h.container
+        .read(conditionsProvider.notifier)
+        .update((c) => c.copyWith(distance: DistanceOption.walk5));
+    await tester.pumpAndSettle();
+    expect(h.container.read(homePoolRankedProvider).value, isEmpty);
+    await tester.tap(find.text('정문 기준'));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (w) => w is OriginRow && w.origin.id == 'gate_back',
+        ),
+        matching: find.text('가장 가까운 곳: 후문식당 · 예상 도보 약 1분'),
+      ),
+      findsOneWidget,
+    );
   });
 
   group('기숙사 7곳 (3)', () {
@@ -232,6 +280,34 @@ void main() {
       _nav(tester).pop();
       await tester.pumpAndSettle();
       expect(calls.last, ('/home', true));
+    });
+
+    testWidgets('opened cold on a shared link (or refreshed on a detail), '
+        'the place opens over Home', (tester) async {
+      final dispatcher = tester.binding.platformDispatcher;
+      dispatcher.defaultRouteNameTestValue = '/restaurant/1?name=x';
+      addTearDown(dispatcher.clearDefaultRouteNameTestValue);
+      final calls = <(String, bool)>[];
+      final h = await buildHarness(
+        extraOverrides: [
+          urlSyncEnabledProvider.overrideWithValue(true),
+          // Like the browser: reporting a path changes the address bar.
+          urlReporterProvider.overrideWithValue((
+            uri, {
+            required replace,
+          }) async {
+            calls.add((uri.path, replace));
+            dispatcher.defaultRouteNameTestValue = uri.toString();
+          }),
+          urlHistoryModeProvider.overrideWithValue(() async {}),
+        ],
+      );
+      await pumpApp(tester, h, home: const AppShell());
+      expect(find.byType(RestaurantDetailScreen), findsOneWidget);
+      expect(calls, [('/home', true), ('/restaurant/1', false)]);
+      _nav(tester).pop(); // Back lands on Home
+      await tester.pumpAndSettle();
+      expect(find.byType(RestaurantDetailScreen), findsNothing);
     });
 
     testWidgets('a pasted link opens the same place, signed out', (

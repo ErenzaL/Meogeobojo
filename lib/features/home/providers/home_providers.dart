@@ -7,6 +7,7 @@ import '../../conditions/providers/conditions_providers.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
+import '../../recommendation/restaurant_insight.dart';
 import '../../restaurants/models/food_category.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
@@ -141,40 +142,60 @@ class HeroPickNotifier extends Notifier<String?> {
   }
 }
 
-/// What Home and the map rank (they share the category choice). With nothing
-/// chosen (전체) it is the shared nearby list. With categories chosen it is
-/// built from Kakao's results FOR THOSE CATEGORIES (not by filtering the
-/// nearest places of any kind, which usually holds only a few of them), then
-/// judged by the same conditions on the same data, so it always agrees with
-/// the filters. Confirmed matches come first, then "정보 미확인" ones.
-final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
-  ref,
-) {
+/// The places Home and the map judge (they share the category choice),
+/// before any condition. With nothing chosen (전체) it is the shared nearby
+/// list. With categories chosen it is Kakao's results FOR THOSE CATEGORIES
+/// (not the nearest places of any kind filtered down, which usually holds
+/// only a few of them).
+final homePoolProvider = Provider<AsyncValue<List<Restaurant>>>((ref) {
   final categories = ref.watch(homeCategoryProvider);
-  if (categories.isEmpty) return ref.watch(rankedRestaurantsProvider);
+  if (categories.isEmpty) return ref.watch(allNearbyRestaurantsProvider);
   final lists = [
     for (final c in categories)
       ref.watch(
         categoryRestaurantsProvider(categoryQuery(c, GlobalCuisine.all)),
       ),
   ];
-  final AsyncValue<List<Restaurant>> pool;
   if (lists.any((l) => l.isLoading) && lists.every((l) => !l.hasError)) {
-    pool = const AsyncLoading();
-  } else if (lists.every((l) => l.hasError)) {
-    pool = AsyncError(
+    return const AsyncLoading();
+  }
+  if (lists.every((l) => l.hasError)) {
+    return AsyncError(
       lists.first.error!,
       lists.first.stackTrace ?? StackTrace.empty,
     );
-  } else {
-    final seen = <String>{};
-    pool = AsyncData([
-      for (final l in lists)
-        for (final r in l.value ?? const <Restaurant>[])
-          if (categories.any((c) => c.matches(r)) && seen.add(r.kakaoId)) r,
-    ]);
   }
-  return rankPool(ref, pool);
+  final seen = <String>{};
+  return AsyncData([
+    for (final l in lists)
+      for (final r in l.value ?? const <Restaurant>[])
+        if (categories.any((c) => c.matches(r)) && seen.add(r.kakaoId)) r,
+  ]);
+});
+
+/// The admin data [homePoolProvider]'s places are judged on.
+final homePoolInsightsProvider = Provider<Map<String, RestaurantInsight>>((
+  ref,
+) {
+  final base = ref.watch(restaurantInsightsProvider);
+  if (ref.watch(homeCategoryProvider).isEmpty) return base;
+  final ids = [
+    for (final r in ref.watch(homePoolProvider).value ?? const <Restaurant>[])
+      r.kakaoId,
+  ]..sort();
+  return {...base, ...?ref.watch(insightsForIdsProvider(ids.join(','))).value};
+});
+
+/// [homePoolProvider] judged by the shared conditions on the same data as
+/// every other list, so it always agrees with the filters. Confirmed matches
+/// come first, then "정보 미확인" ones.
+final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
+  ref,
+) {
+  if (ref.watch(homeCategoryProvider).isEmpty) {
+    return ref.watch(rankedRestaurantsProvider);
+  }
+  return rankPool(ref, ref.watch(homePoolProvider));
 });
 
 /// The confirmed matches on Home and the map (markers, counts, the 조건

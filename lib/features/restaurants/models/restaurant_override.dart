@@ -51,6 +51,15 @@ class RestaurantOverride {
     final id = j['kakao_place_id'] as String?;
     if (id == null || id.isEmpty) return null;
     final status = j['business_status'] as String?;
+    final hours = j['opening_hours'];
+    // The admin enters it as opening_hours.open ("11:00").
+    final open = clockMinutes(hours is Map ? hours['open'] : null);
+    var lastOrder = clockMinutes(j['last_order_time']);
+    // Stored as a time of day: a last order after midnight ("01:00") belongs
+    // to the evening before, so it goes past 1440 (01:00 = 1500).
+    if (lastOrder != null && open != null && lastOrder <= open) {
+      lastOrder += 1440;
+    }
     String? text(Object? v) {
       final t = (v as String?)?.trim();
       return (t == null || t.isEmpty) ? null : t;
@@ -67,13 +76,8 @@ class RestaurantOverride {
       displayOrder: (j['display_order'] as num?)?.toInt(),
       insight: RestaurantInsight(
         minPriceKrw: (j['price_min_krw'] as num?)?.toInt(),
-        // The admin enters it as opening_hours.open ("11:00").
-        openMinutes: clockMinutes(
-          (j['opening_hours'] is Map)
-              ? (j['opening_hours'] as Map)['open']
-              : null,
-        ),
-        lastOrderMinutes: clockMinutes(j['last_order_time']),
+        openMinutes: open,
+        lastOrderMinutes: lastOrder,
         breakTime: breakWindow(j['break_time']),
         closed: status == 'temporarily_closed' || status == 'closed',
         imageUrl: j['image_url'] as String?,

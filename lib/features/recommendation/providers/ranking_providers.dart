@@ -141,7 +141,9 @@ AsyncValue<List<RankedRestaurant>> rankPool(
   final ids = [for (final r in pool.value ?? const <Restaurant>[]) r.kakaoId]
     ..sort();
   final extra = ref.watch(insightsForIdsProvider(ids.join(',')));
-  if (pool.hasValue && extra.isLoading) return const AsyncLoading();
+  if (pool.hasValue && !extra.hasValue && !extra.hasError) {
+    return const AsyncLoading();
+  }
   return rankWithSharedConditions(
     ref,
     pool,

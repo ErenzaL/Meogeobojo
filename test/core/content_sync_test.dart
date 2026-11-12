@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/sync/content_sync.dart';
+import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/navigation/providers/shell_tab_provider.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
@@ -102,6 +103,41 @@ void main() {
       expect(overrides.forPlacesCalls, greaterThan(before), reason: table);
     }
   });
+
+  for (final source in ['restaurant_overrides', 'restaurant_menus', 'poll']) {
+    testWidgets('$source refreshes both insight caches while observed', (
+      tester,
+    ) async {
+      final h = await open(tester);
+      final sub = h.container.listen(insightsForIdsProvider('a'), (_, _) {});
+      addTearDown(sub.close);
+      await h.container.read(insightsForIdsProvider('a').future);
+      await h.container.read(nearbyMenusProvider.future);
+      overrides.menuItems['a'] = [
+        RestaurantMenuItem.fromJson({
+          'name_ko': 'meal',
+          'category': '식사',
+          'price_krw': 7000,
+        })!,
+      ];
+      overrides.overrides['a'] = RestaurantOverride.fromJson({
+        'kakao_place_id': 'a',
+        'opening_hours': {'open': '17:00'},
+        'last_order_time': '01:00',
+      })!;
+      if (source == 'poll') {
+        refreshLiveContent(h.container);
+      } else {
+        invalidateForTable(h.container, source);
+      }
+      await tester.pumpAndSettle();
+      final fresh = await h.container.read(insightsForIdsProvider('a').future);
+      expect(fresh['a']!.menus.single.priceKrw, 7000);
+      expect(fresh['a']!.lastOrderMinutes, 1500);
+      final nearby = await h.container.read(nearbyMenusProvider.future);
+      expect(nearby['a']!.single.priceKrw, 7000);
+    });
+  }
 
   testWidgets('a burst of changes is one refresh, not one per row', (
     tester,

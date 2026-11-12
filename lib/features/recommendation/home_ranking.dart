@@ -372,14 +372,19 @@ OrderStatus orderStatusAt({
 }) {
   final last = lastOrderMinutes;
   if (last == null) return const OrderStatus(OrderStatusKind.unknown);
-  final arrival = nowMinutes + walkMinutes;
-  if (openMinutes != null && arrival < openMinutes && last <= 1440) {
+  // After midnight, a place taking orders until 01:00 (= 1500) is still on
+  // the evening's timeline.
+  final now = last > 1440 && nowMinutes + walkMinutes + 1440 <= last
+      ? nowMinutes + 1440
+      : nowMinutes;
+  final arrival = now + walkMinutes;
+  if (openMinutes != null && arrival < openMinutes) {
     return OrderStatus(OrderStatusKind.notOpenYet, lastOrderMinutes: last);
   }
   final slack = last - arrival;
   final kind = slack < 0
       ? OrderStatusKind.closedBeforeArrival
-      : (last - nowMinutes <= 60
+      : (last - now <= 60
             ? OrderStatusKind.closesSoon
             : OrderStatusKind.available);
   return OrderStatus(kind, lastOrderMinutes: last, slackMinutes: slack);

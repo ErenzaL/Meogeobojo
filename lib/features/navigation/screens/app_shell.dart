@@ -73,6 +73,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// returns to a known state instead of an anonymous one.
   void _startUrlSync() {
     if (!ref.read(urlSyncEnabledProvider)) return;
+    // Read now: the first report below rewrites the address bar (and so
+    // Uri.base) to the tab's path.
+    final link = restaurantLinkOf(initialShellRoute());
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       await ref.read(urlHistoryModeProvider)();
@@ -83,7 +86,6 @@ class _AppShellState extends ConsumerState<AppShell> {
       );
       // Opened on a restaurant's address (a shared link, a refresh on the
       // details): show that place over Home, which Back then returns to.
-      final link = restaurantLinkOf(initialShellRoute());
       if (link != null && mounted) {
         await Navigator.of(context)
             .push(restaurantLinkRoute(link, fromBrowser: false));

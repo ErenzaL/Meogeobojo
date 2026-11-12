@@ -151,6 +151,30 @@ void main() {
     );
   });
 
+  test('an admin "01:00" last order after a 17:00 opening is the same '
+      'evening', () {
+    final i = RestaurantOverride.fromJson({
+      'kakao_place_id': '1',
+      'opening_hours': {'open': '17:00'},
+      'last_order_time': '01:00:00',
+    })!.insight;
+    expect(i.lastOrderMinutes, 25 * 60);
+    const open = Conditions(openNowOnly: true);
+    expect(judgeRestaurant(i, open, 30).verdict, Verdict.match); // 00:30
+    expect(judgeRestaurant(i, open, 18 * 60).verdict, Verdict.match);
+    expect(judgeRestaurant(i, open, 10 * 60).verdict, Verdict.excluded);
+    expect(judgeRestaurant(i, open, 90).verdict, Verdict.excluded); // 01:30
+    // The order status agrees: at 00:30, 30 minutes before the last order.
+    final s = orderStatusAt(
+      lastOrderMinutes: i.lastOrderMinutes,
+      openMinutes: i.openMinutes,
+      walkMinutes: 0,
+      nowMinutes: 30,
+    );
+    expect(s.kind, OrderStatusKind.closesSoon);
+    expect(s.slackMinutes, 30);
+  });
+
   test('the admin break time is read only when it is a clear range', () {
     expect(breakWindow('15:00-17:00'), (900, 1020));
     expect(breakWindow(' 9:30 ~ 10:00 '), (570, 600));

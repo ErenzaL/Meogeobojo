@@ -34,10 +34,11 @@ class _OriginSheet extends ConsumerWidget {
     final l10n = context.l10n;
     final options = ref.watch(originOptionsProvider);
     final current = ref.watch(originProvider);
-    // The places Home and the map judge (same categories, conditions, data).
-    final pool = ref.watch(homePoolRankedProvider).value ?? const [];
-    final places = [for (final x in pool) x.restaurant];
-    final insights = {for (final x in pool) x.restaurant.kakaoId: x.insight};
+    // The places Home and the map judge, BEFORE the conditions: a distance
+    // limit is measured again from each row's own point.
+    final places = ref.watch(homePoolProvider).value ?? const [];
+    final insights = ref.watch(homePoolInsightsProvider);
+    final hidden = ref.watch(hiddenPlaceIdsProvider);
     final conditions = ref.watch(conditionsProvider);
     final now = ref.watch(seoulNowProvider);
 
@@ -48,6 +49,7 @@ class _OriginSheet extends ConsumerWidget {
       lng: o.longitude,
       conditions: conditions.copyWith(sort: SortMode.distance),
       insights: insights,
+      hiddenIds: hidden,
       nowMinutes: now.hour * 60 + now.minute,
     ).confirmed.firstOrNull;
 

@@ -2420,7 +2420,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String condShowUnverified(int count) {
-    return '查看$count家未确认候选';
+    return '查看$count家未确认';
   }
 
   @override

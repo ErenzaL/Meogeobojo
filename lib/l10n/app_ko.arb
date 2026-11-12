@@ -1546,7 +1546,7 @@
   "missingHours": "운영정보 미확인",
   "missingAmenities": "편의정보 미확인",
   "homeHideUnverified": "미확인 후보 접기",
-  "condShowUnverified": "미확인 후보 {count}곳 보기",
+  "condShowUnverified": "미확인 {count}곳 보기",
   "@condShowUnverified": {
     "placeholders": {
       "count": {

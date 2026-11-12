@@ -6,7 +6,6 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/widgets/mascot_message.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/skeleton.dart';
-import '../../conditions/providers/conditions_providers.dart';
 import '../../conditions/widgets/conditions_sheet.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
@@ -140,8 +139,9 @@ class RecsError extends ConsumerWidget {
   }
 }
 
-/// No place is confirmed to fit the conditions: change them, open the
-/// [unverified] places whose data could not confirm them, or reset.
+/// No place is confirmed to fit the conditions: change them, or open the
+/// [unverified] places whose data could not confirm them (조건 초기화 is the
+/// button above, once).
 class RecsEmpty extends ConsumerWidget {
   const RecsEmpty({super.key, this.unverified = 0});
 
@@ -182,17 +182,6 @@ class RecsEmpty extends ConsumerWidget {
                     : l10n.homeShowUnverified(unverified),
               ),
             ),
-          TextButton.icon(
-            onPressed: () {
-              ref.read(conditionsProvider.notifier).clear();
-              ref.read(homeCategoryProvider.notifier).clear();
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: context.palette.textSecondary,
-            ),
-            icon: const Icon(Icons.restart_alt_rounded, size: 18),
-            label: Text(l10n.homeRestart),
-          ),
         ],
       ),
     );
@@ -264,6 +253,7 @@ class UnverifiedSection extends ConsumerWidget {
             clip: true,
             padding: EdgeInsets.zero,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (var i = 0; i < items.length; i++) ...[
                   if (i > 0) Divider(height: 1, color: p.hairline),

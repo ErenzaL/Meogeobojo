@@ -2434,7 +2434,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String condShowUnverified(int count) {
-    return '미확인 후보 $count곳 보기';
+    return '미확인 $count곳 보기';
   }
 
   @override

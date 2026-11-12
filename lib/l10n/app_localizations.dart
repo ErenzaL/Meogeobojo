@@ -4399,7 +4399,7 @@ abstract class AppLocalizations {
   /// No description provided for @condShowUnverified.
   ///
   /// In ko, this message translates to:
-  /// **'미확인 후보 {count}곳 보기'**
+  /// **'미확인 {count}곳 보기'**
   String condShowUnverified(int count);
 
   /// No description provided for @detailOrderNotOpen.

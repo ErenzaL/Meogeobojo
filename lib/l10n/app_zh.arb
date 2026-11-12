@@ -810,7 +810,7 @@
   "missingHours": "营业信息未确认",
   "missingAmenities": "设施信息未确认",
   "homeHideUnverified": "收起未确认的候选",
-  "condShowUnverified": "查看{count}家未确认候选",
+  "condShowUnverified": "查看{count}家未确认",
   "detailOrderNotOpen": "预计到达时尚未营业",
   "homeOtherCandidate": "看看其他候选",
   "homeEditConditions": "修改条件",

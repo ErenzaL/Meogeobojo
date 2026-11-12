@@ -15,6 +15,8 @@ import '../../content/providers/app_content_providers.dart';
 import '../../university/providers/university_account_sync.dart';
 import '../../university/providers/university_providers.dart';
 import '../providers/shell_tab_provider.dart';
+import '../../restaurants/screens/restaurant_link_screen.dart';
+import '../../restaurants/utils/restaurant_link.dart';
 import '../utils/url_sync.dart';
 import '../widgets/web_header.dart';
 import '../widgets/floating_nav_bar.dart';
@@ -79,6 +81,13 @@ class _AppShellState extends ConsumerState<AppShell> {
         Uri(path: shellPathFor(ref.read(shellTabProvider))),
         replace: true,
       );
+      // Opened on a restaurant's address (a shared link, a refresh on the
+      // details): show that place over Home, which Back then returns to.
+      final link = restaurantLinkOf(initialShellRoute());
+      if (link != null && mounted) {
+        await Navigator.of(context)
+            .push(restaurantLinkRoute(link, fromBrowser: false));
+      }
     });
   }
 

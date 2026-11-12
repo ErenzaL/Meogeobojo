@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../restaurants/screens/restaurant_detail_screen.dart';
+import '../../restaurants/screens/restaurant_link_screen.dart';
+import '../../restaurants/utils/restaurant_link.dart';
 import '../providers/shell_tab_provider.dart';
 
 /// Browser address bar <-> tabs. The five tabs have URLs (`/#/home`, `/#/map`, `/#/community`, `/#/missions`, `/#/profile`);
@@ -46,6 +49,9 @@ class UrlTabRoute extends PageRouteBuilder<void> {
 }
 
 Route<dynamic>? generateUrlRoute(RouteSettings settings) {
+  // A restaurant's own address (a pasted or shared link, Forward).
+  final link = restaurantLinkOf(settings.name);
+  if (link != null) return restaurantLinkRoute(link);
   final tab = shellTabForPath(settings.name);
   return tab == null ? null : UrlTabRoute(tab);
 }
@@ -91,10 +97,32 @@ class UrlHistoryObserver extends NavigatorObserver {
       return;
     }
     if (!_ref.read(urlSyncEnabledProvider)) return;
+    if (route is RestaurantDetailRoute) {
+      // A restaurant has its own address, so a refresh keeps it open.
+      if (!route.fromBrowser) {
+        _ref.read(urlReporterProvider)(Uri.parse(route.path), replace: false);
+      }
+      return;
+    }
     final tab = _ref.read(shellTabProvider);
     _ref.read(urlReporterProvider)(
       Uri(path: shellPathFor(tab)),
       replace: false,
+    );
+  }
+
+  /// Leaving a restaurant with the app's own back button: the address bar
+  /// must not keep naming it (a refresh would reopen it).
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (route is! RestaurantDetailRoute) return;
+    if (!_ref.read(urlSyncEnabledProvider)) return;
+    final under = previousRoute;
+    _ref.read(urlReporterProvider)(
+      under is RestaurantDetailRoute
+          ? Uri.parse(under.path)
+          : Uri(path: shellPathFor(_ref.read(shellTabProvider))),
+      replace: true,
     );
   }
 }

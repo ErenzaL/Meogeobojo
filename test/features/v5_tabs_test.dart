@@ -20,8 +20,8 @@ Restaurant spot(String name, double dLat) => Restaurant(
   address: '',
   roadAddress: '',
   phone: '',
-  latitude: 36.7680 + dLat,
-  longitude: 126.9305,
+  latitude: 36.769563 + dLat,
+  longitude: 126.92736,
   distanceMeters: 0,
   placeUrl: null,
 );
@@ -79,7 +79,7 @@ void main() {
       expect(find.text('정문 기준'), findsOneWidget);
       expect(find.text('지금 주문 가능'), findsOneWidget);
       expect(find.text('브레이크타임 없음'), findsOneWidget);
-      expect(find.text('조건에 맞는 3곳'), findsOneWidget);
+      expect(find.text('조건에 맞는 식당 3곳'), findsOneWidget);
       expect(find.text('추천순'), findsOneWidget);
       expect(find.textContaining('직선거리로 추정'), findsOneWidget);
       expect(find.text('가까운집'), findsOneWidget);
@@ -90,11 +90,14 @@ void main() {
       tester,
     ) async {
       final h = await open(tester, ShellTabs.map);
+      // Off by default; the chip turns it on (and off again).
+      expect(h.container.read(conditionsProvider).openNowOnly, isFalse);
+      await tester.tap(find.text('지금 주문 가능'));
+      await tester.pumpAndSettle();
       expect(h.container.read(conditionsProvider).openNowOnly, isTrue);
       await tester.tap(find.text('지금 주문 가능'));
       await tester.pumpAndSettle();
       expect(h.container.read(conditionsProvider).openNowOnly, isFalse);
-      expect(find.text('지금 주문 가능'), findsNothing);
 
       await tester.tap(find.text('주차 가능'));
       await tester.pumpAndSettle();
@@ -116,13 +119,13 @@ void main() {
           .read(conditionsProvider.notifier)
           .update((c) => c.copyWith(cuisines: {Cuisine.japanese}));
       await tester.pumpAndSettle();
-      expect(find.text('조건에 맞는 0곳'), findsOneWidget);
+      expect(find.text('조건에 맞는 식당 0곳'), findsOneWidget);
       expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
       // The empty state offers to clear everything; clearing restores the list.
-      expect(find.text('모두 풀기'), findsOneWidget);
+      expect(find.text('조건 초기화'), findsOneWidget);
       h.container.read(conditionsProvider.notifier).clear();
       await tester.pumpAndSettle();
-      expect(find.text('조건에 맞는 3곳'), findsOneWidget);
+      expect(find.text('조건에 맞는 식당 3곳'), findsOneWidget);
     });
 
     testWidgets('no overflow on a small phone with large text', (tester) async {

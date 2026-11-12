@@ -7,16 +7,47 @@ import '../restaurants/models/restaurant.dart';
 import 'preference_filter.dart';
 import 'restaurant_insight.dart';
 
-/// Why a place is shown first. The UI turns this into localized text.
-enum ReasonKind { cuisine, budget, closest, walk }
+/// Why a place is shown first. Only facts that were actually checked: the
+/// UI turns this into localized text.
+enum ReasonKind { budget, cuisine, closest, walk }
 
 class RecommendReason {
-  const RecommendReason(this.kind, {this.cuisine});
+  const RecommendReason(this.kind, {this.cuisine, this.budget});
 
   final ReasonKind kind;
 
   /// Set for [ReasonKind.cuisine]: the chosen cuisine this place matched.
   final Cuisine? cuisine;
+
+  /// Set for [ReasonKind.budget]: the budget a meal on the menu fits.
+  final BudgetOption? budget;
+}
+
+/// How a place stands against the chosen conditions. Home, the map, search
+/// and the 조건 sheet all use this one judgement.
+enum Verdict {
+  /// Every chosen condition was checked and holds.
+  match,
+
+  /// No condition is known to fail, but some data needed to check one is
+  /// missing: listed apart, never as a match.
+  unverified,
+
+  /// At least one chosen condition clearly fails: shown nowhere.
+  excluded,
+}
+
+/// What could not be checked for an [Verdict.unverified] place.
+enum MissingInfo { price, hours, amenities }
+
+class Judgement {
+  const Judgement(this.verdict, {this.missing = const {}, this.mealPriceKrw});
+
+  final Verdict verdict;
+  final Set<MissingInfo> missing;
+
+  /// The cheapest meal for one that fits the budget then (budget chosen only).
+  final int? mealPriceKrw;
 }
 
 class RankedRestaurant {
@@ -26,7 +57,7 @@ class RankedRestaurant {
     required this.walkMinutes,
     required this.insight,
     required this.reason,
-    this.verified = true,
+    this.missing = const {},
   });
 
   final Restaurant restaurant;
@@ -37,10 +68,24 @@ class RankedRestaurant {
   final RestaurantInsight insight;
   final RecommendReason reason;
 
-  /// False when a condition the user chose (budget, 운영·편의) could not be
-  /// checked because the data is missing: the place is kept, as everywhere in
-  /// the app, but it is a "미확인 후보", not a confirmed match.
-  final bool verified;
+  /// Empty for a confirmed match; otherwise what could not be checked.
+  final Set<MissingInfo> missing;
+
+  /// A confirmed match ("조건 충족 확인"), not a "정보 미확인" candidate.
+  bool get verified => missing.isEmpty;
+}
+
+/// Confirmed matches and "정보 미확인" candidates of one ranking.
+extension RankedSplit on List<RankedRestaurant> {
+  List<RankedRestaurant> get confirmed => [
+    for (final r in this)
+      if (r.verified) r,
+  ];
+
+  List<RankedRestaurant> get unconfirmed => [
+    for (final r in this)
+      if (!r.verified) r,
+  ];
 }
 
 /// Walking minutes for a straight-line distance, at least 1. Uses the same
@@ -48,11 +93,97 @@ class RankedRestaurant {
 int walkMinutesFor(int meters) =>
     math.max(1, (meters / walkMetersPerMinute).round());
 
-/// Filters by [conditions], measures from ([lat], [lng]) and orders.
+/// Judges one place against [c], for someone arriving at [arrivalMinutes]
+/// (Seoul minute of the day).
 ///
-/// Today "추천순" is distance order: there is no popularity, price or visit
-/// data to rank with, so the soft conditions (party, needs, untried first)
-/// are stored but do not change the order yet. Nothing is invented.
+/// Budget: a place fits when a MEAL for one (식사·면류·분식 on the menu,
+/// available, served at that time) costs within the budget. A cheap side dish
+/// never counts, and neither does a lunch-only dish at dinner. It fails when
+/// even the cheapest item is over budget, or when every meal served then is,
+/// with no unclassified or unpriced line left that could still fit.
+///
+/// 지금 주문 가능: fails when the place is marked closed, has not opened yet,
+/// is on its break, or takes the last order before arrival. It is confirmed
+/// only when both the opening time and the last order are known: hours alone
+/// say "open", not "still taking orders".
+Judgement judgeRestaurant(
+  RestaurantInsight i,
+  Conditions c,
+  int arrivalMinutes,
+) {
+  final missing = <MissingInfo>{};
+  int? mealPrice;
+
+  final amount = c.budget.amountKrw;
+  if (amount != null) {
+    final max = c.budget.type == BudgetType.max;
+    bool fits(int price) => max ? price <= amount : price >= amount;
+    final meals = [
+      for (final m in i.menus)
+        if (m.available &&
+            m.isMeal &&
+            m.priceKrw != null &&
+            m.servedAt(arrivalMinutes))
+          m.priceKrw!,
+    ];
+    final fitting = meals.where(fits).toList()..sort();
+    if (fitting.isNotEmpty) {
+      mealPrice = fitting.first;
+    } else {
+      final cheapest = i.minPriceKrw;
+      final unclear = i.menus.any(
+        (m) => m.available && (m.priceKrw == null || !m.kindKnown),
+      );
+      final overAll = max && cheapest != null && cheapest > amount;
+      if (overAll || (meals.isNotEmpty && !unclear)) {
+        return const Judgement(Verdict.excluded);
+      }
+      missing.add(MissingInfo.price);
+    }
+  }
+
+  if (c.openNowOnly) {
+    final last = i.lastOrderMinutes;
+    // After midnight, a place that closes at 01:00 is still "today".
+    var arrival = arrivalMinutes;
+    if (last != null && last > 1440 && arrival + 1440 <= last) arrival += 1440;
+    final open = i.openMinutes;
+    final pause = i.breakTime;
+    if (i.closed ||
+        (last != null && arrival > last) ||
+        (open != null && arrival < open) ||
+        (pause != null && arrival >= pause.$1 && arrival < pause.$2)) {
+      return const Judgement(Verdict.excluded);
+    }
+    if (open == null || last == null) missing.add(MissingInfo.hours);
+  }
+
+  for (final a in c.amenities) {
+    final known = switch (a) {
+      Amenity.noBreakTime => i.hasBreakTime == null ? null : !i.hasBreakTime!,
+      Amenity.parking => i.parking,
+      Amenity.localCurrency => i.localCurrency,
+      Amenity.fastTurnover => i.fastTurnover,
+      Amenity.takeout => i.takeout,
+      Amenity.openLate => i.openLate,
+    };
+    if (known == false) return const Judgement(Verdict.excluded);
+    if (known == null) missing.add(MissingInfo.amenities);
+  }
+
+  return Judgement(
+    missing.isEmpty ? Verdict.match : Verdict.unverified,
+    missing: missing,
+    mealPriceKrw: mealPrice,
+  );
+}
+
+/// Filters by [conditions], measures from ([lat], [lng]) and orders: the
+/// confirmed matches first, then the "정보 미확인" candidates. Places that
+/// clearly fail a condition are dropped.
+///
+/// "추천순" is distance order: there is no popularity data to rank with.
+/// "안 가 본 곳 먼저" puts places without a meal record ([visitedIds]) ahead.
 List<RankedRestaurant> rankRestaurants({
   required List<Restaurant> all,
   required double lat,
@@ -61,6 +192,7 @@ List<RankedRestaurant> rankRestaurants({
   required Map<String, RestaurantInsight> insights,
   required int nowMinutes,
   Set<String> hiddenIds = const {},
+  Set<String> visitedIds = const {},
 }) {
   final maxMeters = maxDistanceMeters(conditions.distance);
   final cuisines = conditions.cuisines;
@@ -79,10 +211,13 @@ List<RankedRestaurant> rankRestaurants({
       continue;
     }
     final i = insights[r.kakaoId] ?? RestaurantInsight.unknown;
-    if (!_passesData(i, conditions, nowMinutes + walkMinutesFor(meters))) {
-      continue;
-    }
-    kept.add((r: r, meters: meters, i: i, verified: _confirms(i, conditions)));
+    final j = judgeRestaurant(
+      i,
+      conditions,
+      nowMinutes + walkMinutesFor(meters),
+    );
+    if (j.verdict == Verdict.excluded) continue;
+    kept.add((r: r, meters: meters, i: i, j: j));
   }
 
   int byDistance(_Kept a, _Kept b) {
@@ -97,10 +232,13 @@ List<RankedRestaurant> rankRestaurants({
     return desc ? b.compareTo(a) : a.compareTo(b);
   }
 
-  final int Function(_Kept, _Kept) order = switch (conditions.sort) {
+  final int Function(_Kept, _Kept) base = switch (conditions.sort) {
     SortMode.recommended || SortMode.distance => byDistance,
     SortMode.price => (a, b) {
-      final c = unknownLast(a.i.minPriceKrw, b.i.minPriceKrw);
+      final c = unknownLast(
+        a.j.mealPriceKrw ?? a.i.minPriceKrw,
+        b.j.mealPriceKrw ?? b.i.minPriceKrw,
+      );
       return c != 0 ? c : byDistance(a, b);
     },
     SortMode.rating => (a, b) {
@@ -108,13 +246,22 @@ List<RankedRestaurant> rankRestaurants({
       return c != 0 ? c : byDistance(a, b);
     },
   };
-  // Confirmed matches first; with no data condition chosen every place is
-  // confirmed, so the order is exactly as before.
-  kept.sort(
-    (a, b) => a.verified == b.verified ? order(a, b) : (a.verified ? -1 : 1),
-  );
+  int order(_Kept a, _Kept b) {
+    if (conditions.untriedFirst) {
+      final va = visitedIds.contains(a.r.kakaoId);
+      final vb = visitedIds.contains(b.r.kakaoId);
+      if (va != vb) return va ? 1 : -1;
+    }
+    return base(a, b);
+  }
 
-  final closest = kept.isEmpty ? 0 : kept.map((e) => e.meters).reduce(math.min);
+  bool ok(_Kept k) => k.j.verdict == Verdict.match;
+  kept.sort((a, b) => ok(a) == ok(b) ? order(a, b) : (ok(a) ? -1 : 1));
+
+  final matched = kept.where(ok);
+  final closest = matched.isEmpty
+      ? 0
+      : matched.map((e) => e.meters).reduce(math.min);
   return [
     for (final e in kept)
       RankedRestaurant(
@@ -122,82 +269,28 @@ List<RankedRestaurant> rankRestaurants({
         meters: e.meters,
         walkMinutes: walkMinutesFor(e.meters),
         insight: e.i,
-        reason: _reasonFor(e.r, e.meters, e.i, conditions, closest),
-        verified: e.verified,
+        reason: _reasonFor(e, conditions, closest),
+        missing: e.j.missing,
       ),
   ];
 }
 
-typedef _Kept = ({
-  Restaurant r,
-  int meters,
-  RestaurantInsight i,
-  bool verified,
-});
+typedef _Kept = ({Restaurant r, int meters, RestaurantInsight i, Judgement j});
 
-/// Hard conditions that need data. Unknown data keeps the place.
-bool _passesData(RestaurantInsight i, Conditions c, int arrivalMinutes) {
-  final price = i.minPriceKrw;
-  final amount = c.budget.amountKrw;
-  if (price != null && amount != null) {
-    if (c.budget.type == BudgetType.max && price > amount) return false;
-    if (c.budget.type == BudgetType.min && price < amount) return false;
+/// The strongest reason that was actually checked for this place. The budget
+/// comes first, and only a confirmed meal price gives it.
+RecommendReason _reasonFor(_Kept e, Conditions c, int closestMeters) {
+  if (e.j.mealPriceKrw != null && c.budget.amountKrw != null) {
+    return RecommendReason(ReasonKind.budget, budget: c.budget);
   }
-  final lastOrder = i.lastOrderMinutes;
-  if (c.openNowOnly && lastOrder != null && arrivalMinutes > lastOrder) {
-    return false;
-  }
-  bool ok(bool? v) => v != false; // unknown passes
-  for (final a in c.amenities) {
-    final pass = switch (a) {
-      Amenity.noBreakTime => i.hasBreakTime == null || !i.hasBreakTime!,
-      Amenity.parking => ok(i.parking),
-      Amenity.localCurrency => ok(i.localCurrency),
-      Amenity.fastTurnover => ok(i.fastTurnover),
-      Amenity.takeout => ok(i.takeout),
-      Amenity.openLate => ok(i.openLate),
-    };
-    if (!pass) return false;
-  }
-  return true;
-}
-
-/// Whether the data confirms every data condition the user chose. 영업 중만
-/// is left out: it is on by default and hours are rarely known, so counting it
-/// would make almost every place "미확인".
-bool _confirms(RestaurantInsight i, Conditions c) {
-  if (c.budget.amountKrw != null && i.minPriceKrw == null) return false;
-  for (final a in c.amenities) {
-    final known = switch (a) {
-      Amenity.noBreakTime => i.hasBreakTime,
-      Amenity.parking => i.parking,
-      Amenity.localCurrency => i.localCurrency,
-      Amenity.fastTurnover => i.fastTurnover,
-      Amenity.takeout => i.takeout,
-      Amenity.openLate => i.openLate,
-    };
-    if (known == null) return false;
-  }
-  return true;
-}
-
-/// The strongest reason that is actually true for this place.
-RecommendReason _reasonFor(
-  Restaurant r,
-  int meters,
-  RestaurantInsight i,
-  Conditions c,
-  int closestMeters,
-) {
   for (final cuisine in Cuisine.values) {
-    if (c.cuisines.contains(cuisine) && cuisineMatches(r, cuisine)) {
+    if (c.cuisines.contains(cuisine) && cuisineMatches(e.r, cuisine)) {
       return RecommendReason(ReasonKind.cuisine, cuisine: cuisine);
     }
   }
-  if (c.budget != BudgetOption.any && i.minPriceKrw != null) {
-    return const RecommendReason(ReasonKind.budget);
+  if (e.j.verdict == Verdict.match && e.meters <= closestMeters) {
+    return const RecommendReason(ReasonKind.closest);
   }
-  if (meters <= closestMeters) return const RecommendReason(ReasonKind.closest);
   return const RecommendReason(ReasonKind.walk);
 }
 
@@ -243,6 +336,9 @@ Comparison compareAgainst(RankedRestaurant top, RankedRestaurant other) {
 enum OrderStatusKind {
   /// No last-order data: the UI says nothing about it.
   unknown,
+
+  /// Arrives before the opening time.
+  notOpenYet,
   available,
 
   /// Closes within an hour, or before the walker would arrive.
@@ -262,6 +358,7 @@ class OrderStatus {
 
 OrderStatus orderStatus(RankedRestaurant r, int nowMinutes) => orderStatusAt(
   lastOrderMinutes: r.insight.lastOrderMinutes,
+  openMinutes: r.insight.openMinutes,
   walkMinutes: r.walkMinutes,
   nowMinutes: nowMinutes,
 );
@@ -271,10 +368,14 @@ OrderStatus orderStatusAt({
   required int? lastOrderMinutes,
   required int walkMinutes,
   required int nowMinutes,
+  int? openMinutes,
 }) {
   final last = lastOrderMinutes;
   if (last == null) return const OrderStatus(OrderStatusKind.unknown);
   final arrival = nowMinutes + walkMinutes;
+  if (openMinutes != null && arrival < openMinutes && last <= 1440) {
+    return OrderStatus(OrderStatusKind.notOpenYet, lastOrderMinutes: last);
+  }
   final slack = last - arrival;
   final kind = slack < 0
       ? OrderStatusKind.closedBeforeArrival

@@ -14,9 +14,11 @@ double haversineMeters(double lat1, double lng1, double lat2, double lng2) {
   return 2 * earthRadius * math.asin(math.min(1, math.sqrt(a)));
 }
 
-/// "850m" / "1.2km". Straight-line distance, not walking time.
+/// "260m" / "1.2km": the one display rule for every screen. Under 1 km it is
+/// rounded to 10 m, from 1 km on it is km with one decimal. It is a
+/// straight-line distance: callers say so ("직선 약 260m").
 String formatDistance(int meters) {
-  if (meters < 1000) return '${meters}m';
-  final km = meters / 1000;
-  return '${km.toStringAsFixed(km < 10 ? 1 : 0)}km';
+  final tens = (meters / 10).round() * 10;
+  if (tens < 1000) return '${tens}m';
+  return '${(meters / 1000).toStringAsFixed(1)}km';
 }

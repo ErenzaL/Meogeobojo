@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/seoul_clock.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../origin/providers/origin_providers.dart';
+import '../../records/meal_records.dart';
 import '../../restaurants/models/restaurant.dart';
+import '../../restaurants/models/restaurant_override.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../home_ranking.dart';
 import '../restaurant_insight.dart';
@@ -35,14 +37,57 @@ final seoulNowProvider = Provider.autoDispose<DateTime>(
   (ref) => seoulWall(ref.watch(minuteTickProvider).value ?? DateTime.now()),
 );
 
-/// Price / hours / photo per `kakaoId`, from what admins entered
-/// (`restaurant_overrides`). Places without an entry stay "unknown".
+/// Price / hours / menus / photo per `kakaoId`, from what admins entered
+/// (`restaurant_overrides`, `restaurant_menus`) for the places around the
+/// campus. Places without an entry stay "unknown".
 final restaurantInsightsProvider = Provider<Map<String, RestaurantInsight>>(
-  (ref) => {
-    for (final o
-        in (ref.watch(restaurantOverridesProvider).value ?? const {}).values)
-      o.kakaoId: o.insight,
-  },
+  (ref) => insightsFrom(
+    ref.watch(restaurantOverridesProvider).value ?? const {},
+    ref.watch(nearbyMenusProvider).value ?? const {},
+  ),
+);
+
+/// Menus of the places around the campus (the budget is judged on them).
+final nearbyMenusProvider =
+    FutureProvider<Map<String, List<RestaurantMenuItem>>>((ref) async {
+      final places = await ref.watch(allNearbyRestaurantsProvider.future);
+      return ref.watch(restaurantOverrideRepositoryProvider).menusForPlaces([
+        for (final r in places) r.kakaoId,
+      ]);
+    });
+
+/// Overrides and menus combined into one insight per place.
+Map<String, RestaurantInsight> insightsFrom(
+  Map<String, RestaurantOverride> overrides,
+  Map<String, List<RestaurantMenuItem>> menus,
+) => {
+  for (final id in {...overrides.keys, ...menus.keys})
+    id: (overrides[id]?.insight ?? RestaurantInsight.unknown).withMenus([
+      for (final m in menus[id] ?? const <RestaurantMenuItem>[]) m.line,
+    ]),
+};
+
+/// The same, for an arbitrary list of places (a chosen category, search
+/// results), keyed by their Kakao ids joined with ",": every list is judged
+/// on exactly the data the others use.
+final insightsForIdsProvider = FutureProvider.autoDispose
+    .family<Map<String, RestaurantInsight>, String>((ref, idsKey) async {
+      if (idsKey.isEmpty) return const {};
+      final ids = idsKey.split(',');
+      final repo = ref.watch(restaurantOverrideRepositoryProvider);
+      final both = await Future.wait([
+        repo.forPlaces(ids),
+        repo.menusForPlaces(ids),
+      ]);
+      return insightsFrom(
+        both[0] as Map<String, RestaurantOverride>,
+        both[1] as Map<String, List<RestaurantMenuItem>>,
+      );
+    });
+
+/// Places with a meal record ("안 가 본 곳 먼저").
+final visitedPlaceIdsProvider = Provider<Set<String>>(
+  (ref) => {for (final m in ref.watch(mealRecordsProvider)) m.kakaoId},
 );
 
 /// Places an admin hid or archived: never shown in lists.
@@ -66,6 +111,7 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
   final insights = {...ref.watch(restaurantInsightsProvider), ...extraInsights};
   final now = ref.watch(seoulNowProvider);
   final hidden = ref.watch(hiddenPlaceIdsProvider);
+  final visited = ref.watch(visitedPlaceIdsProvider);
   if (origin == null) {
     // No origin yet: either the campus is still loading, or it failed.
     return places.hasError
@@ -80,21 +126,32 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
       conditions: conditions,
       insights: insights,
       hiddenIds: hidden,
+      visitedIds: visited,
       nowMinutes: minutesOfDay(now),
     ),
   );
 }
 
-/// Places that pass the shared conditions, measured from the chosen origin
-/// and ordered. Home, the map and search all read this one list.
+/// [rankWithSharedConditions] for a list that is not the nearby pool: its
+/// admin data is fetched first, so the verdicts match every other screen.
+AsyncValue<List<RankedRestaurant>> rankPool(
+  Ref ref,
+  AsyncValue<List<Restaurant>> pool,
+) {
+  final ids = [for (final r in pool.value ?? const <Restaurant>[]) r.kakaoId]
+    ..sort();
+  final extra = ref.watch(insightsForIdsProvider(ids.join(',')));
+  if (pool.hasValue && extra.isLoading) return const AsyncLoading();
+  return rankWithSharedConditions(
+    ref,
+    pool,
+    extraInsights: extra.value ?? const {},
+  );
+}
+
+/// Places around the campus that pass the shared conditions, measured from
+/// the chosen origin and ordered (confirmed matches first).
 final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>(
   (ref) =>
       rankWithSharedConditions(ref, ref.watch(allNearbyRestaurantsProvider)),
-);
-
-/// Same list without the ranking details (map markers, search filtering).
-final filteredRestaurantsProvider = Provider<AsyncValue<List<Restaurant>>>(
-  (ref) => ref
-      .watch(rankedRestaurantsProvider)
-      .whenData((l) => [for (final r in l) r.restaurant]),
 );

@@ -180,6 +180,7 @@ void main() {
       '"continue without signing in" goes to Home and keeps the university',
       (tester) async {
         final h = await buildHarness(
+          allCampuses: true,
           storage: {
             'app_language': 'ko',
             'selected_university_id': '5c0a8f3e-0003-4a6e-9b1d-000000000003',

@@ -55,6 +55,7 @@ Future<(Harness, FakeCampusMealRepository)> open(
         ],
       );
   final h = await buildHarness(
+    allCampuses: true,
     storage: {'app_language': lang},
     meals: fake,
     extraOverrides: [
@@ -152,6 +153,7 @@ void main() {
         },
       );
       final h = await buildHarness(
+        allCampuses: true,
         storage: {'app_language': lang},
         meals: fake,
         extraOverrides: [

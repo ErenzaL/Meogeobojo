@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../recommendation/home_ranking.dart';
+import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
@@ -101,6 +103,17 @@ final searchProvider =
     NotifierProvider.autoDispose<SearchNotifier, SearchState>(
       SearchNotifier.new,
     );
+
+/// The search results judged exactly like Home and the map (same origin,
+/// conditions and admin data, fetched for these places): confirmed matches
+/// first, then the "정보 미확인" ones. Places that fail a condition are not in
+/// it (the screen shows them apart, dimmed).
+final searchRankedProvider =
+    Provider.autoDispose<AsyncValue<List<RankedRestaurant>>>((ref) {
+      final s = ref.watch(searchProvider);
+      if (s.status != SearchStatus.data) return const AsyncData([]);
+      return rankPool(ref, AsyncData(s.results));
+    });
 
 /// The last searches the student finished (submitted or picked), newest first. Stored on the device only.
 class RecentSearchesNotifier extends Notifier<List<String>> {

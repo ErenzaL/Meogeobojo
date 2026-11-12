@@ -26,6 +26,8 @@ export const restaurantSchema = z
     longitude: coord(-180, 180, '경도'),
     description: z.string().trim().max(2000, '2000자 이하로 입력해 주세요'),
     break_time: z.string().trim().max(60),
+    // Kept in opening_hours.open: the app needs it with the last order to say a place is still taking orders.
+    open_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),
     last_order_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),
     business_status: z.enum(['', ...BUSINESS_STATUSES]),
     price_min_krw: digits,
@@ -46,7 +48,7 @@ export type RestaurantForm = z.infer<typeof restaurantSchema>
 
 export const emptyRestaurantForm: RestaurantForm = {
   name_ko: '', name_en: '', kakao_place_id: '', category: '', address: '', phone: '', latitude: '', longitude: '',
-  description: '', break_time: '', last_order_time: '', business_status: '', price_min_krw: '', price_max_krw: '',
+  description: '', break_time: '', open_time: '', last_order_time: '', business_status: '', price_min_krw: '', price_max_krw: '',
   avg_cost_krw: '', dining_purposes: '', image_url: '', visibility: 'draft', featured: false, display_order: '', university_ids: [],
 }
 
@@ -59,6 +61,7 @@ export function toRow(v: RestaurantForm) {
     name_ko: v.name_ko, name_en: nul(v.name_en), kakao_place_id: nul(v.kakao_place_id), category: nul(v.category),
     address: nul(v.address), phone: nul(v.phone), latitude: num(v.latitude), longitude: num(v.longitude),
     description: nul(v.description), break_time: nul(v.break_time),
+    opening_hours: v.open_time.trim() === '' ? {} : { open: v.open_time.trim() },
     last_order_time: nul(v.last_order_time), business_status: v.business_status === '' ? null : v.business_status,
     price_min_krw: num(v.price_min_krw), price_max_krw: num(v.price_max_krw), avg_cost_krw: num(v.avg_cost_krw),
     dining_purposes: v.dining_purposes.split(',').map((s) => s.trim()).filter(Boolean),
@@ -75,7 +78,9 @@ export function fromRow(r: DbRow, universityIds: string[]): RestaurantForm {
   return {
     name_ko: str(r.name_ko), name_en: str(r.name_en), kakao_place_id: str(r.kakao_place_id), category: str(r.category),
     address: str(r.address), phone: str(r.phone), latitude: str(r.latitude), longitude: str(r.longitude),
-    description: str(r.description), break_time: str(r.break_time), last_order_time: str(r.last_order_time).slice(0, 5),
+    description: str(r.description), break_time: str(r.break_time),
+    open_time: str((r.opening_hours as Record<string, unknown> | null | undefined)?.open).slice(0, 5),
+    last_order_time: str(r.last_order_time).slice(0, 5),
     business_status: (BUSINESS_STATUSES as readonly string[]).includes(str(r.business_status)) ? (str(r.business_status) as RestaurantForm['business_status']) : '',
     price_min_krw: str(r.price_min_krw), price_max_krw: str(r.price_max_krw), avg_cost_krw: str(r.avg_cost_krw),
     dining_purposes: Array.isArray(r.dining_purposes) ? (r.dining_purposes as string[]).join(', ') : '',
@@ -86,12 +91,15 @@ export function fromRow(r: DbRow, universityIds: string[]): RestaurantForm {
 }
 
 /** The publishable content (a snapshot) from the form: the base snapshot with the
- *  form-managed fields on top. Fields the form does not edit (opening hours) are
- *  carried over, so publishing never wipes them. Identity (Kakao id) and the
+ *  form-managed fields on top. Of opening_hours the form edits only `open`; any
+ *  other key is carried over, so publishing never wipes it. Identity (Kakao id) and the
  *  cover image are not part of a snapshot: the Kakao id never changes and the
  *  cover is published from 사진 관리. */
 export function snapshotFromForm(v: RestaurantForm, base: Record<string, unknown>): Record<string, unknown> {
-  const { kakao_place_id: _k, image_url: _i, ...row } = toRow(v)
-  void _k; void _i
-  return { ...base, ...row, university_ids: v.university_ids }
+  const { kakao_place_id: _k, image_url: _i, opening_hours: _h, ...row } = toRow(v)
+  void _k; void _i; void _h
+  const hours: Record<string, unknown> = { ...((base.opening_hours as Record<string, unknown> | null | undefined) ?? {}) }
+  if (v.open_time.trim() === '') delete hours.open
+  else hours.open = v.open_time.trim()
+  return { ...base, ...row, opening_hours: hours, university_ids: v.university_ids }
 }

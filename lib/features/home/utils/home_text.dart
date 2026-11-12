@@ -12,15 +12,23 @@ String groupedKrw(int v) => _won.format(v);
 /// "₩5,100".
 String wonSigned(int v) => '₩${_won.format(v)}';
 
+/// Why a place is shown, from checked facts only (see `RecommendReason`).
 String reasonText(AppLocalizations l10n, RecommendReason r, int walkMinutes) =>
     switch (r.kind) {
       ReasonKind.cuisine => l10n.homeReasonCuisine(
         cuisineLabel(l10n, r.cuisine!),
       ),
-      ReasonKind.budget => l10n.homeReasonBudget,
+      ReasonKind.budget => l10n.homeReasonMeal(budgetLabel(l10n, r.budget!)),
       ReasonKind.closest => l10n.homeReasonClosest,
       ReasonKind.walk => l10n.homeReasonWalk(walkMinutes),
     };
+
+/// "가격 미확인 · 운영정보 미확인" for a "정보 미확인" candidate.
+String missingText(AppLocalizations l10n, Set<MissingInfo> missing) => [
+  if (missing.contains(MissingInfo.price)) l10n.missingPrice,
+  if (missing.contains(MissingInfo.hours)) l10n.missingHours,
+  if (missing.contains(MissingInfo.amenities)) l10n.missingAmenities,
+].join(' · ');
 
 /// The advantage line of an alternative; its own reason when it has none.
 ///

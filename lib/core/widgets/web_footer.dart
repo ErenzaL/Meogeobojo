@@ -76,7 +76,7 @@ class WebFooter extends ConsumerWidget {
       children: [
         if (universities != null && universities > 0) ...[
           Text(
-            l10n.footerUniversities(universities),
+            l10n.footerAvailableAt,
             style: _body(context)
                 .copyWith(color: p.textPrimary, fontWeight: FontWeight.w600),
           ),

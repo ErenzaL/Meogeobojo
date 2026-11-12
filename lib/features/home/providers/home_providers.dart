@@ -115,6 +115,15 @@ class HeroPickNotifier extends Notifier<String?> {
     return true;
   }
 
+  /// "다른 후보 보기": the next confirmed match, back to the first after the
+  /// last. False when there is no other one (one match shows again, as it
+  /// should).
+  bool next(HomeRecs recs) {
+    if (recs.ranked.length < 2) return false;
+    state = recs.ranked[recs.heroRank % recs.ranked.length].restaurant.kakaoId;
+    return true;
+  }
+
   /// Shows the place with [kakaoId] as the top pick (a game's winner).
   void choose(String kakaoId) => state = kakaoId;
 
@@ -132,11 +141,12 @@ class HeroPickNotifier extends Notifier<String?> {
   }
 }
 
-/// What Home ranks. With nothing chosen (전체) it is the shared list. With
-/// categories chosen it is built from Kakao's results FOR THOSE CATEGORIES
-/// (not by filtering the 15 nearest places of any kind, which usually holds
-/// only a few places of the chosen category), then ranked by the same
-/// conditions, so the result always agrees with the filters.
+/// What Home and the map rank (they share the category choice). With nothing
+/// chosen (전체) it is the shared nearby list. With categories chosen it is
+/// built from Kakao's results FOR THOSE CATEGORIES (not by filtering the
+/// nearest places of any kind, which usually holds only a few of them), then
+/// judged by the same conditions on the same data, so it always agrees with
+/// the filters. Confirmed matches come first, then "정보 미확인" ones.
 final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
   ref,
 ) {
@@ -164,22 +174,17 @@ final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
           if (categories.any((c) => c.matches(r)) && seen.add(r.kakaoId)) r,
     ]);
   }
-  // Prices / hours an admin entered for THESE places (the generic overrides
-  // were fetched for the nearby pool only).
-  final ids = [for (final r in pool.value ?? const <Restaurant>[]) r.kakaoId]
-    ..sort();
-  final extra = ref.watch(overridesForIdsProvider(ids.join(',')));
-  if (pool.hasValue && extra.isLoading) return const AsyncLoading();
-  return rankWithSharedConditions(
-    ref,
-    pool,
-    extraInsights: {
-      for (final o in (extra.value ?? const {}).values) o.kakaoId: o.insight,
-    },
-  );
+  return rankPool(ref, pool);
 });
 
-/// Null data means "nothing matches the conditions".
+/// The confirmed matches on Home and the map (markers, counts, the 조건
+/// sheet's button).
+final homeMatchesProvider = Provider<AsyncValue<List<RankedRestaurant>>>(
+  (ref) => ref.watch(homePoolRankedProvider).whenData((l) => l.confirmed),
+);
+
+/// Null data means "no confirmed match" (the "정보 미확인" ones are listed
+/// apart, see [homePoolRankedProvider]).
 final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
   final restore = ref.watch(restoreHeroProvider);
   final key = ref.watch(homeRecsKeyProvider);
@@ -188,7 +193,7 @@ final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
   final pick =
       ref.watch(heroPickProvider) ??
       (restore != null && restore.key == key ? restore.heroId : null);
-  return ref.watch(homePoolRankedProvider).whenData((ranked) {
+  return ref.watch(homeMatchesProvider).whenData((ranked) {
     if (ranked.isEmpty) return null;
     var index = ranked.indexWhere((r) => r.restaurant.kakaoId == pick);
     if (index < 0) index = 0;
@@ -205,8 +210,7 @@ final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
   });
 });
 
-/// "미확인 후보 보기": shows the places whose data could not confirm the
-/// chosen conditions when no confirmed place is left. Forgotten whenever the
+/// Whether the "가격·운영정보 미확인" list is open. Forgotten whenever the
 /// filters or the origin change.
 final homeShowUnverifiedProvider =
     NotifierProvider<HomeShowUnverifiedNotifier, bool>(
@@ -223,6 +227,8 @@ class HomeShowUnverifiedNotifier extends Notifier<bool> {
   }
 
   void show() => state = true;
+
+  void toggle() => state = !state;
 }
 
 /// Everything a Home pick depends on (origin, conditions, categories) as one

@@ -7,9 +7,9 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import 'marker_image.dart';
 
-/// Map marker art, after the 5th design mock (시안): a small white tag per
-/// place (its price, or its kind when the price is unknown), a dark chip with
-/// a check for the selected place, and the dark origin pin under its name.
+/// Map marker art: an orange location pin per place, the selected place a
+/// larger deep-orange pin with a white ring under a label (its name first,
+/// its kind below), and the dark origin pin under its name.
 ///
 /// The map tiles never change with the app theme, so neither do the colors.
 /// Every marker is anchored at its bottom centre (all three platforms).
@@ -76,59 +76,123 @@ Future<Uint8List> _bitmap(
   }
 }
 
-/// A place: "8,000~" (or "한식") on a white tag; [selected] is the dark chip
-/// with a check, a little larger, like the mock's chosen pin.
-Future<Uint8List> renderPlaceTag(
-  String label, {
+/// Logical size of the transparent box around a place pin: the touch target
+/// (a design goal of 44x44), larger than the pin that is drawn in it.
+const kPinTouchSize = 44.0;
+
+/// A teardrop [w] wide and [h] tall whose tip is at [tip].
+Path _teardrop(Offset tip, double w, double h) {
+  final r = w / 2;
+  final centre = Offset(tip.dx, tip.dy - h + r);
+  return Path()
+    ..moveTo(tip.dx, tip.dy)
+    ..arcTo(
+      Rect.fromCircle(center: centre, radius: r),
+      math.pi * 0.75,
+      math.pi * 1.5,
+      false,
+    )
+    ..close();
+}
+
+/// A place. Unselected: a small orange pin inside a [kPinTouchSize] square
+/// whose bottom centre is the pin's tip. [selected]: a larger pin with a
+/// white ring and a dark edge, under a white label with [name] first and
+/// [kind] after it.
+Future<Uint8List> renderPlacePin({
   required bool selected,
   required double scale,
+  String name = '',
+  String kind = '',
 }) {
-  final h = selected ? 30.0 : 26.0;
-  final pad = selected ? 10.0 : 8.0;
-  final check = selected
-      ? (TextPainter(
-          text: TextSpan(
-            text: String.fromCharCode(Icons.check_rounded.codePoint),
-            style: TextStyle(
-              fontFamily: Icons.check_rounded.fontFamily,
-              package: Icons.check_rounded.fontPackage,
-              fontSize: 16,
-              color: Colors.white,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout())
-      : null;
-  final iconW = check == null ? 0.0 : check.width + 3;
-  final text = _text(
-    label,
-    selected ? 13 : 12,
-    selected ? Colors.white : _ink,
-    _room(scale, _shadow * 2 + pad * 2 + iconW),
-  );
-  final w = pad * 2 + iconW + text.width - (selected ? 2 : 0);
-  return _bitmap(Size(w + _shadow * 2, h + _shadow * 2), scale, (c) {
-    final box = RRect.fromRectAndRadius(
-      Rect.fromLTWH(_shadow, _shadow, w, h),
-      const Radius.circular(8),
-    );
-    _softShadow(c, box);
-    c.drawRRect(box, Paint()..color = selected ? _ink : Colors.white);
-    if (!selected) {
-      c.drawRRect(
-        box.deflate(0.5),
+  if (!selected) {
+    const box = kPinTouchSize, pinW = 20.0, pinH = 26.0;
+    return _bitmap(const Size(box, box), scale, (c) {
+      final pin = _teardrop(const Offset(box / 2, box - 1), pinW, pinH);
+      c.drawShadow(pin, Colors.black, 1.5, false);
+      c.drawPath(pin, Paint()..color = AppColors.primary);
+      c.drawPath(
+        pin,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = AppColors.pinTagBorder,
+          ..strokeWidth = 2
+          ..color = Colors.white,
       );
+      c.drawCircle(
+        Offset(box / 2, box - 1 - pinH + pinW / 2),
+        3.5,
+        Paint()..color = Colors.white,
+      );
+    });
+  }
+  const pinW = 30.0, pinH = 38.0, gap = 4.0, padX = 10.0, padY = 6.0;
+  final room = _room(scale, _shadow * 2 + padX * 2);
+  final title = TextPainter(
+    text: TextSpan(
+      text: name,
+      style: const TextStyle(
+        fontFamily: _font,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+        color: _ink,
+        height: 1.2,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    maxLines: 1,
+    ellipsis: '…',
+  )..layout(maxWidth: room);
+  final sub = _text(kind, 11, _ink.withValues(alpha: 0.62), room);
+  final labelW =
+      math.max(title.width, kind.isEmpty ? 0.0 : sub.width) + padX * 2;
+  final labelH = title.height + (kind.isEmpty ? 0 : sub.height) + padY * 2;
+  final w = math.max(labelW, pinW + 8) + _shadow * 2;
+  final h = labelH + gap + pinH + _shadow * 2;
+  return _bitmap(Size(w, h), scale, (c) {
+    final cx = w / 2;
+    final chip = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(cx, _shadow + labelH / 2),
+        width: labelW,
+        height: labelH,
+      ),
+      const Radius.circular(8),
+    );
+    _softShadow(c, chip);
+    c.drawRRect(chip, Paint()..color = Colors.white);
+    c.drawRRect(
+      chip.deflate(0.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = AppColors.pinTagBorder,
+    );
+    title.paint(c, Offset(cx - title.width / 2, _shadow + padY));
+    if (kind.isNotEmpty) {
+      sub.paint(c, Offset(cx - sub.width / 2, _shadow + padY + title.height));
     }
-    var x = _shadow + pad - (selected ? 2 : 0);
-    if (check != null) {
-      check.paint(c, Offset(x, _shadow + (h - check.height) / 2));
-      x += iconW;
-    }
-    text.paint(c, Offset(x, _shadow + (h - text.height) / 2));
+    final pin = _teardrop(Offset(cx, h - _shadow), pinW, pinH);
+    c.drawShadow(pin, Colors.black, 2, false);
+    c.drawPath(pin, Paint()..color = AppColors.primaryDeep);
+    c.drawPath(
+      pin,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3.5
+        ..color = Colors.white,
+    );
+    c.drawPath(
+      pin,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1
+        ..color = _ink,
+    );
+    c.drawCircle(
+      Offset(cx, h - _shadow - pinH + pinW / 2),
+      5,
+      Paint()..color = Colors.white,
+    );
   });
 }
 
@@ -159,20 +223,9 @@ Future<Uint8List> renderOriginPin(String label, {required double scale}) {
 
     // Teardrop: a circle whose sides run down to the tip at the bottom.
     final top = _shadow + labelH + gap;
-    const r = pinW / 2;
-    final centre = Offset(cx, top + r);
-    final tip = Offset(cx, top + pinH);
-    final pin = Path()
-      ..moveTo(tip.dx, tip.dy)
-      ..arcTo(
-        Rect.fromCircle(center: centre, radius: r),
-        math.pi * 0.75,
-        math.pi * 1.5,
-        false,
-      )
-      ..close();
+    final pin = _teardrop(Offset(cx, top + pinH), pinW, pinH);
     c.drawShadow(pin, Colors.black, 1.5, false);
     c.drawPath(pin, Paint()..color = _ink);
-    c.drawCircle(centre, 4, Paint()..color = Colors.white);
+    c.drawCircle(Offset(cx, top + pinW / 2), 4, Paint()..color = Colors.white);
   });
 }

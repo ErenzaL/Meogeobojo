@@ -54,12 +54,16 @@ final universityAccountSyncProvider = Provider<void>((ref) {
           .read(sharedPreferencesProvider)
           .getString(selectedUniversityPrefsKey);
       final remote = profile.selectedUniversityId;
-      if (remote == null) {
+      final all = await ref.read(universityListProvider.future);
+      final supported = ref.read(supportedUniversityProvider);
+      final remoteSupported = all.any((u) => u.id == remote && supported(u));
+      if (remote == null || !remoteSupported) {
+        // Never adopt a school that is still "준비 중": the account follows the
+        // campus the app really shows.
         await push(selected.id);
       } else if (stored != null && stored != remote) {
         await push(stored);
       } else if (stored == null && remote != selected.id) {
-        final all = await ref.read(universityListProvider.future);
         final adopted = all.where((u) => u.id == remote).firstOrNull;
         if (adopted != null) {
           await ref.read(selectedUniversityProvider.notifier).select(adopted);

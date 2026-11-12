@@ -40,8 +40,10 @@ Restaurant fakeRestaurant(
   address: '충남 아산시',
   roadAddress: '충남 아산시 순천향로 1',
   phone: '',
-  latitude: 36.77,
-  longitude: 126.93,
+  // [distance] metres north of 정문 (the default start point), so the app's
+  // own measure agrees with the distance the fake reports.
+  latitude: 36.769563 + distance / 111195.0,
+  longitude: 126.92736,
   distanceMeters: distance,
   placeUrl: 'https://place.map.kakao.com/$id',
 );
@@ -497,6 +499,14 @@ class FakeRestaurantOverrideRepository implements RestaurantOverrideRepository {
   @override
   Future<List<RestaurantMenuItem>> menus(String kakaoId) async =>
       menuItems[kakaoId] ?? const [];
+
+  @override
+  Future<Map<String, List<RestaurantMenuItem>>> menusForPlaces(
+    List<String> ids,
+  ) async => {
+    for (final id in ids)
+      if (menuItems[id] != null) id: menuItems[id]!,
+  };
 
   @override
   Future<List<RestaurantPhoto>> photos(String kakaoId) async =>

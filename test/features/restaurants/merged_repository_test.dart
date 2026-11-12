@@ -64,7 +64,7 @@ void main() {
     expect(r.phone, '041-111-2222');
     // untouched: what favorites, markers, filters and ranking rely on
     expect(r.categoryName, '음식점 > 한식');
-    expect(r.latitude, 36.77);
+    expect(r.latitude, fakeRestaurant('1').latitude);
     expect(r.distanceMeters, 100);
     expect(r.placeUrl, 'https://place.map.kakao.com/1');
   });

@@ -11,38 +11,47 @@ import '../../origin/widgets/origin_sheet.dart';
 import '../../preferences/models/user_preferences.dart';
 import '../../preferences/restart_onboarding.dart';
 import '../../preferences/screens/preference_labels.dart';
-import '../../recommendation/providers/ranking_providers.dart';
+import '../../home/providers/home_providers.dart';
+import '../../recommendation/home_ranking.dart';
+
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
+
 import '../models/conditions.dart';
 import '../providers/conditions_providers.dart';
 import 'condition_parts.dart';
 
 /// 조건 sheet. Every tap applies immediately to Home, the map and search; the
-/// footer shows how many places the current conditions leave.
+/// footer button counts the confirmed matches of the list the sheet was
+/// opened from ([pool]: Home and the map by default, the results on search),
+/// so its number is what that screen shows once the sheet closes.
 ///
 /// With [focus] only that one setting is shown (a Home filter chip opens just
 /// the setting it stands for, with its own reset); null shows every setting.
 Future<void> showConditionsSheet(
   BuildContext context, {
   ConditionFocus? focus,
-}) => focus == null
-    ? showAppSheet<void>(
-        context,
-        builder: (ctx, controller) => _ConditionsSheet(controller: controller),
-      )
-    : showCompactSheet<void>(
-        context,
-        builder: (ctx) => _ConditionsSheet(focus: focus),
-      );
+  ProviderListenable<AsyncValue<List<RankedRestaurant>>>? pool,
+}) {
+  final counted = pool ?? homePoolRankedProvider;
+  return focus == null
+      ? showAppSheet<void>(
+          context,
+          builder: (ctx, controller) =>
+              _ConditionsSheet(controller: controller, pool: counted),
+        )
+      : showCompactSheet<void>(
+          context,
+          builder: (ctx) => _ConditionsSheet(focus: focus, pool: counted),
+        );
+}
 
 /// Settings of the 조건 sheet that can be opened on their own.
-enum ConditionFocus { budget, distance, ops, party, needs, sort }
+enum ConditionFocus { budget, distance, ops, sort }
 
 /// [c] with only the setting [f] back to its default.
 Conditions _resetSetting(Conditions c, ConditionFocus f) => switch (f) {
   ConditionFocus.budget => c.copyWith(budget: BudgetOption.any),
   ConditionFocus.distance => c.copyWith(distance: DistanceOption.any),
-  ConditionFocus.party => c.copyWith(party: () => null),
-  ConditionFocus.needs => c.copyWith(needs: const {}),
   ConditionFocus.ops => c.copyWith(
     openNowOnly: Conditions.defaults.openNowOnly,
     amenities: const {},
@@ -61,11 +70,12 @@ const _cuisineChoices = [
 ];
 
 class _ConditionsSheet extends ConsumerStatefulWidget {
-  const _ConditionsSheet({this.controller, this.focus});
+  const _ConditionsSheet({required this.pool, this.controller, this.focus});
 
   /// The draggable sheet's scroll controller (full sheet only).
   final ScrollController? controller;
   final ConditionFocus? focus;
+  final ProviderListenable<AsyncValue<List<RankedRestaurant>>> pool;
 
   @override
   ConsumerState<_ConditionsSheet> createState() => _ConditionsSheetState();
@@ -99,16 +109,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
       Amenity.fastTurnover => Icons.bolt_rounded,
       Amenity.takeout => Icons.takeout_dining_outlined,
       Amenity.openLate => Icons.dark_mode_outlined,
-    };
-    String needLabel(Need n) => switch (n) {
-      Need.quietTalk => l10n.condNeedQuiet,
-      Need.quickMeal => l10n.condNeedQuick,
-      Need.generousPortion => l10n.condNeedGenerous,
-    };
-    String partyLabel(CompanionType t) => switch (t) {
-      CompanionType.solo => l10n.companionSolo,
-      CompanionType.friends => l10n.condPartyFew,
-      _ => l10n.companionGroup,
     };
     String sortLabel(SortMode s) => switch (s) {
       SortMode.recommended => l10n.condSortRecommended,
@@ -161,35 +161,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
         ],
       ),
     );
-    final partySection = CondSection(
-      showTitle: widget.focus == null,
-      title: l10n.condParty,
-      child: ChipWrap(
-        children: [
-          for (final t in kPartyOptions)
-            PillChip(
-              label: partyLabel(t),
-              selected: c.party == t,
-              onTap: () =>
-                  set((x) => x.copyWith(party: () => x.party == t ? null : t)),
-            ),
-        ],
-      ),
-    );
-    final needsSection = CondSection(
-      showTitle: widget.focus == null,
-      title: l10n.condNeeds,
-      child: ChipWrap(
-        children: [
-          for (final n in Need.values)
-            PillChip(
-              label: needLabel(n),
-              selected: c.needs.contains(n),
-              onTap: () => set((x) => x.copyWith(needs: toggled(x.needs, n))),
-            ),
-        ],
-      ),
-    );
     final sortSection = CondSection(
       showTitle: widget.focus == null,
       title: l10n.condSort,
@@ -217,8 +188,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
       final (title, content) = switch (focus) {
         ConditionFocus.budget => (l10n.onbBudgetTitle, [budgetSection]),
         ConditionFocus.distance => (l10n.onbDistanceTitle, [distanceSection]),
-        ConditionFocus.party => (l10n.condParty, [partySection]),
-        ConditionFocus.needs => (l10n.condNeeds, [needsSection]),
         ConditionFocus.ops => (l10n.condOps, [openNowRow, opsSection]),
         ConditionFocus.sort => (l10n.condSort, [sortSection]),
       };
@@ -242,6 +211,7 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
             ),
           ),
           _Footer(
+            pool: widget.pool,
             resetLabel: l10n.condResetThis,
             onClear: () => set((x) => _resetSetting(x, focus)),
           ),
@@ -294,8 +264,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
         CondGroupHeader(title: l10n.condSoft),
         const SizedBox(height: 4),
         Text(l10n.condSoftNote, style: AppText.caption(context)),
-        partySection,
-        needsSection,
         CondSwitchRow(
           title: l10n.condUntried,
           hint: l10n.condUntriedHint(ref.watch(visitedRecordCountProvider)),
@@ -310,6 +278,7 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
       children: [
         Expanded(child: body),
         _Footer(
+          pool: widget.pool,
           onClear: notifier.clear,
           onRestart: () => restartOnboarding(context, ref),
         ),
@@ -320,8 +289,14 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
 
 /// Sticky footer: clear / show-count buttons and the start-over link.
 class _Footer extends ConsumerWidget {
-  const _Footer({required this.onClear, this.onRestart, this.resetLabel});
+  const _Footer({
+    required this.pool,
+    required this.onClear,
+    this.onRestart,
+    this.resetLabel,
+  });
 
+  final ProviderListenable<AsyncValue<List<RankedRestaurant>>> pool;
   final VoidCallback onClear;
 
   /// Null in a single-setting sheet (no start-over link there).
@@ -334,8 +309,10 @@ class _Footer extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final p = context.palette;
-    final count = ref.watch(filteredRestaurantsProvider).value?.length;
-    final empty = count == 0;
+    final ranked = ref.watch(pool).value;
+    final count = ranked?.confirmed.length;
+    final unverified = ranked?.unconfirmed.length ?? 0;
+    final empty = count == 0 && unverified == 0;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(14),
     );
@@ -370,7 +347,18 @@ class _Footer extends ConsumerWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: empty ? null : () => Navigator.of(context).pop(),
+                    onPressed: empty
+                        ? null
+                        : () {
+                            // Nothing confirmed: the button opens the
+                            // "정보 미확인" list it counts.
+                            if (count == 0) {
+                              ref
+                                  .read(homeShowUnverifiedProvider.notifier)
+                                  .show();
+                            }
+                            Navigator.of(context).pop();
+                          },
                     style: FilledButton.styleFrom(
                       backgroundColor: p.rust,
                       foregroundColor: p.onRust,
@@ -382,6 +370,8 @@ class _Footer extends ConsumerWidget {
                           ? l10n.condNoMatch
                           : count == null
                           ? l10n.commonClose
+                          : count == 0
+                          ? l10n.condShowUnverified(unverified)
                           : l10n.condShowCount(count),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -393,7 +383,7 @@ class _Footer extends ConsumerWidget {
             if (onRestart != null)
               TextButton.icon(
                 onPressed: onRestart,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
+                icon: const Icon(Icons.restart_alt_rounded, size: 18),
                 label: Text(l10n.condRestart),
                 style: TextButton.styleFrom(foregroundColor: p.rustText),
               ),

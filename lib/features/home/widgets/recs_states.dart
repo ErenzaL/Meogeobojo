@@ -11,7 +11,10 @@ import '../../conditions/widgets/conditions_sheet.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
 import '../../records/meal_records.dart';
+import '../../recommendation/home_ranking.dart';
 import '../../restaurants/models/restaurant.dart';
+import '../../restaurants/screens/restaurant_detail_screen.dart';
+import '../utils/home_text.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
 import '../providers/home_providers.dart';
@@ -137,38 +140,49 @@ class RecsError extends ConsumerWidget {
   }
 }
 
-/// No place is confirmed to fit the conditions: change them, see the
-/// [unverified] places whose data could not confirm them, or clear them all.
+/// No place is confirmed to fit the conditions: change them, open the
+/// [unverified] places whose data could not confirm them, or reset.
 class RecsEmpty extends ConsumerWidget {
   const RecsEmpty({super.key, this.unverified = 0});
 
-  /// Places that passed only because their data is missing.
+  /// "정보 미확인" places (listed apart, see [UnverifiedSection]).
   final int unverified;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final open = ref.watch(homeShowUnverifiedProvider);
     return HomeCard(
       child: Column(
         children: [
           MascotMessage(
             asset: AppAssets.mascotSearching,
             imageHeight: 90,
-            title: l10n.homeEmptyTitle,
+            title: unverified > 0
+                ? l10n.homeNoConfirmedTitle
+                : l10n.homeEmptyTitle,
             message: unverified > 0
-                ? l10n.homeEmptyUnverifiedMessage
+                ? l10n.homeUnverifiedHint(unverified)
                 : l10n.homeEmptyMessage,
-            actionLabel: l10n.homeEmptyChange,
+            actionLabel: l10n.homeEditConditions,
             onAction: () => showConditionsSheet(context),
           ),
           if (unverified > 0)
             OutlinedButton.icon(
-              onPressed: () =>
-                  ref.read(homeShowUnverifiedProvider.notifier).show(),
-              icon: const Icon(Icons.help_outline_rounded, size: 19),
-              label: Text(l10n.homeShowUnverified(unverified)),
+              onPressed: ref.read(homeShowUnverifiedProvider.notifier).toggle,
+              icon: Icon(
+                open
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.help_outline_rounded,
+                size: 19,
+              ),
+              label: Text(
+                open
+                    ? l10n.homeHideUnverified
+                    : l10n.homeShowUnverified(unverified),
+              ),
             ),
-          TextButton(
+          TextButton.icon(
             onPressed: () {
               ref.read(conditionsProvider.notifier).clear();
               ref.read(homeCategoryProvider.notifier).clear();
@@ -176,7 +190,8 @@ class RecsEmpty extends ConsumerWidget {
             style: TextButton.styleFrom(
               foregroundColor: context.palette.textSecondary,
             ),
-            child: Text(l10n.condResetAll),
+            icon: const Icon(Icons.restart_alt_rounded, size: 18),
+            label: Text(l10n.homeRestart),
           ),
         ],
       ),
@@ -184,8 +199,130 @@ class RecsEmpty extends ConsumerWidget {
   }
 }
 
-/// After 길찾기: "다녀오셨어요?" with 먹었어요 · 평가 남기기 (→ MY 식사 기록) or
-/// 아직이요 (stop asking).
+/// "가격·운영정보 미확인 N곳": the places no condition is known to fail but
+/// whose data could not confirm one. Folded by default, never mixed into the
+/// confirmed results.
+class UnverifiedSection extends ConsumerWidget {
+  const UnverifiedSection({super.key, required this.items, this.onTap});
+
+  final List<RankedRestaurant> items;
+
+  /// Overrides opening the details (the desktop map focuses the pin).
+  final void Function(Restaurant restaurant)? onTap;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final open = ref.watch(homeShowUnverifiedProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          expanded: open,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: ref.read(homeShowUnverifiedProvider.notifier).toggle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.help_outline_rounded,
+                    size: 19,
+                    color: p.statusWarn,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.listUnverifiedTitle(items.length),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    open
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: p.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (open) ...[
+          Text(
+            l10n.listUnverifiedNote,
+            style: TextStyle(fontSize: 13.5, color: p.textMuted),
+          ),
+          const SizedBox(height: 8),
+          HomeCard(
+            clip: true,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0) Divider(height: 1, color: p.hairline),
+                  _UnverifiedRow(item: items[i], onTap: onTap),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _UnverifiedRow extends StatelessWidget {
+  const _UnverifiedRow({required this.item, this.onTap});
+
+  final RankedRestaurant item;
+  final void Function(Restaurant restaurant)? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final r = item.restaurant;
+    return InkWell(
+      onTap: () => onTap == null ? openRestaurantDetail(context, r) : onTap!(r),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              r.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${r.categoryTag} · ${l10n.homeWalkAbout(item.walkMinutes)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13.5, color: p.textMuted),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              missingText(l10n, item.missing),
+              style: TextStyle(fontSize: 13, color: p.statusWarn),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// After 길찾기: "다녀오셨어요?" with 먹었어요 (→ MY 식사 기록) or 아직이요
+/// (stop asking). Writing a review is offered afterwards, as a choice.
 class MealCheckBanner extends ConsumerWidget {
   const MealCheckBanner({super.key, required this.restaurant});
 
@@ -197,7 +334,7 @@ class MealCheckBanner extends ConsumerWidget {
     final ate = RustButton(
       icon: Icons.check_circle_outline_rounded,
       label: l10n.mealAteButton,
-      onPressed: () => markEaten(context, ref, restaurant),
+      onPressed: () => markEaten(context, ref, restaurant, offerReview: true),
     );
     final notYet = OutlineActionButton(
       label: l10n.mealCheckDismiss,
@@ -230,6 +367,56 @@ class MealCheckBanner extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [ate, const SizedBox(height: 8), notYet],
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Right after a meal was recorded from Home: a review is offered, never
+/// opened by itself.
+class ReviewPromptCard extends ConsumerWidget {
+  const ReviewPromptCard({super.key, required this.restaurant});
+
+  final Restaurant restaurant;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final prompt = ref.read(reviewPromptProvider.notifier);
+    return HomeCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.reviewPromptTitle(restaurant.name),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: RustButton(
+                  icon: Icons.rate_review_outlined,
+                  label: l10n.reviewPromptWrite,
+                  onPressed: () {
+                    prompt.dismiss();
+                    writeReviewFor(context, ref, restaurant);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlineActionButton(
+                  label: l10n.reviewPromptSkip,
+                  onPressed: prompt.dismiss,
+                ),
+              ),
+            ],
           ),
         ],
       ),

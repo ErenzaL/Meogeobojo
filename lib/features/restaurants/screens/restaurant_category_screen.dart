@@ -13,6 +13,8 @@ import '../../university/models/university_display.dart';
 import '../../university/providers/university_providers.dart';
 import '../../university/widgets/university_sheet.dart';
 import '../models/food_category.dart';
+import '../../origin/providers/origin_providers.dart';
+import '../../origin/widgets/origin_sheet.dart';
 import '../models/restaurant.dart';
 import '../providers/restaurant_providers.dart';
 import '../widgets/category_tile.dart';
@@ -120,7 +122,10 @@ class _RestaurantCategoryScreenState
     final list = [...items];
     switch (_sort) {
       case RestaurantSort.distance:
-        list.sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
+        // From the chosen origin, the same measure as the rest of the app.
+        final o = ref.watch(originProvider); // called from build
+        int d(Restaurant r) => metersFromOrigin(o, r) ?? r.distanceMeters;
+        list.sort((a, b) => d(a).compareTo(d(b)));
       case RestaurantSort.name:
         list.sort((a, b) => a.name.compareTo(b.name));
     }
@@ -291,8 +296,9 @@ class _RestaurantCategoryScreenState
   }
 }
 
-/// "[Category] 음식점"  +  sort control, then the results.
-class _Content extends StatelessWidget {
+/// "[Category] 음식점"  +  sort control, the start point the distances are
+/// measured from, then the results.
+class _Content extends ConsumerWidget {
   const _Content({
     required this.heading,
     required this.sort,
@@ -310,9 +316,10 @@ class _Content extends StatelessWidget {
   final String? note;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final p = context.palette;
+    final origin = ref.watch(originProvider);
     return ListView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.screenH,
@@ -374,6 +381,19 @@ class _Content extends StatelessWidget {
             ),
           ],
         ),
+        if (origin != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => showOriginSheet(context),
+              style: TextButton.styleFrom(
+                foregroundColor: p.textSecondary,
+                padding: EdgeInsets.zero,
+              ),
+              icon: const Icon(Icons.place_outlined, size: 18),
+              label: Text(l10n.homeOriginChip(origin.label(l10n))),
+            ),
+          ),
         if (note != null) ...[
           Text(note!, style: AppText.caption(context).copyWith(fontSize: 12)),
         ],

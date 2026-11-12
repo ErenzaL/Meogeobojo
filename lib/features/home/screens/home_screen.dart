@@ -10,6 +10,11 @@ import '../../../core/widgets/v5_widgets.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../missions/providers/mission_providers.dart';
 import '../../conditions/providers/conditions_providers.dart';
+import '../../conditions/widgets/conditions_sheet.dart';
+import '../../records/meal_records.dart';
+import '../../origin/widgets/origin_sheet.dart';
+import '../../university/widgets/university_sheet.dart';
+import '../../recommendation/home_ranking.dart';
 import '../providers/home_providers.dart';
 import '../widgets/alternatives_section.dart';
 import '../widgets/cafeteria_card.dart';
@@ -49,11 +54,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// one from the last visit back once the same filters are in place again.
   void _remember(HomeRecs? data) {
     final key = ref.read(homeRecsKeyProvider);
+    // Only a confirmed match is ever "the recommendation in use".
     if (data == null || key == null || !ref.read(homeShowRecsProvider)) return;
-    // Nothing confirmed is on screen (the "조건 충족 후보 없음" card).
-    if (!data.ranked.first.verified && !ref.read(homeShowUnverifiedProvider)) {
-      return;
-    }
     final heroId = data.hero.restaurant.kakaoId;
     final restore = ref.read(restoreHeroProvider);
     if (restore != null && restore.key == key) {
@@ -66,8 +68,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(activeRecommendationProvider.notifier).save(heroId, key);
   }
 
-  /// "오늘의 추천 받기": runs the recommendation again for the current
-  /// filters (the top-ranked place, or a retry if the list failed to load).
+  /// "조건에 맞게 추천받기": runs the recommendation for the current filters
+  /// (the top-ranked match, or a retry if the list failed to load).
   void _recommend() {
     // Counts toward "오늘 뭐 먹지?" (one per day, decided by the server).
     logMissionActivity(ref, 'recommendation_view');
@@ -101,8 +103,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
     ref.listen(homeRecsProvider, remember);
     ref.listen(homeShowRecsProvider, remember);
-    ref.listen(homeShowUnverifiedProvider, remember);
+    // "정보 미확인" places: never the hero, listed apart under the results.
+    final unverified =
+        ref.watch(homePoolRankedProvider).value?.unconfirmed ?? const [];
+    final shown = showRecs ? recs.value : null;
     final went = ref.watch(activeRecommendationProvider.select((a) => a?.went));
+    final reviewFor = ref.watch(reviewPromptProvider);
 
     return Scaffold(
       backgroundColor: whitePageColor(context),
@@ -134,6 +140,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ] else
                 Padding(padding: pad, child: HomeWelcome()),
               Padding(padding: pad, child: HomeNotices()),
+              // The saved start point is gone (the old "기숙사"): say which
+              // one is used meanwhile and offer to choose.
+              Padding(padding: pad, child: const OriginReselectBanner()),
+              Padding(padding: pad, child: const UniversitySwitchBanner()),
               Padding(padding: pad, child: HomeSearchField()),
               const SizedBox(height: 14),
               HomeCategoryBar(padding: pad),
@@ -153,6 +163,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 padding: pad,
                 child: HomeRecommendButton(
                   onPressed: _recommend,
+                  onOther: shown == null
+                      ? null
+                      : () => ref.read(heroPickProvider.notifier).next(shown),
+                  onEdit: () => showConditionsSheet(context),
+                  onlyOne: shown != null && shown.total < 2,
                   onRestart: showRecs ? _restart : null,
                 ),
               ),
@@ -168,74 +183,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         : recs.when(
                             loading: () => const RecsSkeleton(),
                             error: (e, _) => RecsError(error: e),
-                            data: (data) => data == null
-                                ? const RecsEmpty()
-                                // No confirmed match: offer the unconfirmed ones instead of showing them as if they fit.
-                                : !data.ranked.first.verified &&
-                                      !ref.watch(homeShowUnverifiedProvider)
-                                ? RecsEmpty(unverified: data.total)
-                                : Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Changing the pick fades the new card in.
-                                      AnimatedSwitcher(
-                                        duration: const Duration(
-                                          milliseconds: 260,
-                                        ),
-                                        switchInCurve: Curves.easeOutCubic,
-                                        transitionBuilder: (child, animation) =>
-                                            FadeTransition(
-                                              opacity: animation,
-                                              child: SlideTransition(
-                                                position: Tween(
-                                                  begin: const Offset(0.04, 0),
-                                                  end: Offset.zero,
-                                                ).animate(animation),
-                                                child: child,
-                                              ),
-                                            ),
-                                        child: HeroCard(
-                                          key: ValueKey(
-                                            data.hero.restaurant.kakaoId,
+                            data: (data) => Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (data == null)
+                                  RecsEmpty(unverified: unverified.length)
+                                else ...[
+                                  // Changing the pick fades the new card in.
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 260),
+                                    switchInCurve: Curves.easeOutCubic,
+                                    transitionBuilder: (child, animation) =>
+                                        FadeTransition(
+                                          opacity: animation,
+                                          child: SlideTransition(
+                                            position: Tween(
+                                              begin: const Offset(0.04, 0),
+                                              end: Offset.zero,
+                                            ).animate(animation),
+                                            child: child,
                                           ),
-                                          recs: data,
                                         ),
+                                    child: HeroCard(
+                                      key: ValueKey(
+                                        data.hero.restaurant.kakaoId,
                                       ),
-                                      const SizedBox(height: 28),
-                                      AlternativesSection(recs: data),
-                                      const SizedBox(height: 28),
-                                      // Before 학식: the places that fit the filters.
-                                      TodayPicksSection(
-                                        ranked: featuredFirst(
-                                          data.ranked,
-                                          ref
-                                                  .watch(
-                                                    restaurantOverridesProvider,
-                                                  )
-                                                  .value ??
-                                              const {},
-                                          ref.watch(featuredContentIdsProvider),
-                                        ),
-                                        categories: categories,
-                                        bleed: twoColumn ? 0 : gutter,
-                                        // website: a responsive grid of cards
-                                        grid:
-                                            twoColumn &&
-                                            WebLayout.fullWidthOf(context),
-                                      ),
-                                    ],
+                                      recs: data,
+                                    ),
                                   ),
+                                  const SizedBox(height: 28),
+                                  AlternativesSection(recs: data),
+                                  const SizedBox(height: 28),
+                                  // Before 학식: the places that fit the filters.
+                                  TodayPicksSection(
+                                    ranked: featuredFirst(
+                                      data.ranked,
+                                      ref
+                                              .watch(
+                                                restaurantOverridesProvider,
+                                              )
+                                              .value ??
+                                          const {},
+                                      ref.watch(featuredContentIdsProvider),
+                                    ),
+                                    categories: categories,
+                                    bleed: twoColumn ? 0 : gutter,
+                                    // website: a responsive grid of cards
+                                    grid:
+                                        twoColumn &&
+                                        WebLayout.fullWidthOf(context),
+                                  ),
+                                ],
+                                if (unverified.isNotEmpty) ...[
+                                  const SizedBox(height: 20),
+                                  UnverifiedSection(items: unverified),
+                                ],
+                              ],
+                            ),
                           );
                     // Back from 길찾기: did they eat there? Asked whatever the
                     // ranking shows now (the place may have closed or left the
                     // filters while they were eating).
-                    final recsColumn = went == null
+                    final recsColumn = went == null && reviewFor == null
                         ? recsBody
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              MealCheckBanner(restaurant: went),
+                              if (went != null)
+                                MealCheckBanner(restaurant: went)
+                              else
+                                ReviewPromptCard(restaurant: reviewFor!),
                               const SizedBox(height: 16),
                               recsBody,
                             ],

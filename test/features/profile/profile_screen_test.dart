@@ -10,6 +10,7 @@ import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
 import 'package:meogeobojo/features/preferences/screens/preferences_screen.dart';
 import 'package:meogeobojo/features/profile/screens/profile_screen.dart';
+import 'package:meogeobojo/features/university/providers/university_providers.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../support/fakes.dart';
@@ -129,12 +130,42 @@ void main() {
         await tester.tap(find.text('순천향대학교'));
         await tester.pumpAndSettle();
         expect(find.text('학교 선택'), findsOneWidget);
+        // Only 순천향대학교 is available: the others say "준비 중" in words.
+        expect(find.text('현재 순천향대학교에서 이용할 수 있어요'), findsOneWidget);
+        expect(find.text('준비 중'), findsWidgets);
         await tester.enterText(find.byType(TextField), '호서');
         await tester.pumpAndSettle();
         await tester.tap(find.text('호서대학교'));
         await tester.pumpAndSettle();
-        expect(find.text('호서대학교'), findsOneWidget);
-        expect(find.text('순천향대학교'), findsNothing);
+        // Nothing changes: the sheet stays open and says why.
+        expect(find.text('현재 순천향대학교만 이용할 수 있어요.'), findsOneWidget);
+        expect(find.text('학교 선택'), findsOneWidget);
+        expect(
+          h.container.read(selectedUniversityProvider).value!.nameKo,
+          '순천향대학교',
+        );
+      },
+    );
+
+    testWidgets(
+      'a saved campus that is still 준비 중 becomes 순천향대학교, and Home says so',
+      (tester) async {
+        final h = await signedIn(
+          storage: const {
+            'app_language': 'ko',
+            'selected_university_id': '5c0a8f3e-0002-4a6e-9b1d-000000000002',
+          },
+        );
+        await pumpApp(tester, h, home: const AppShell());
+        expect(
+          h.container.read(selectedUniversityProvider).value!.nameKo,
+          '순천향대학교',
+        );
+        expect(
+          h.sp.getString('selected_university_id'),
+          '5c0a8f3e-0001-4a6e-9b1d-000000000001',
+        );
+        expect(find.textContaining('호서대학교는 아직 준비 중이라'), findsOneWidget);
       },
     );
 

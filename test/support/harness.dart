@@ -69,6 +69,10 @@ Future<Harness> buildHarness({
   FakeContributionRepository? contributions,
   FakePhotoPicker? photoPicker,
   UniversityRepository? universities,
+
+  /// Every listed campus is selectable (the app offers only 순천향대학교 for
+  /// now): for tests about switching campus.
+  bool allCampuses = false,
 }) async {
   SharedPreferences.setMockInitialValues(storage);
   final sp = await SharedPreferences.getInstance();
@@ -96,6 +100,8 @@ Future<Harness> buildHarness({
         universities ?? FakeUniversityRepository(kVerifiedUniversities),
       ),
       restaurantRepositoryProvider.overrideWithValue(r),
+      if (allCampuses)
+        supportedUniversityProvider.overrideWithValue((_) => true),
       authGatewayProvider.overrideWithValue(a),
       profileRepositoryProvider.overrideWithValue(p),
       preferencesRepositoryProvider.overrideWithValue(pr),

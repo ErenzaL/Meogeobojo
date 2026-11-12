@@ -16,8 +16,8 @@ Restaurant _spot(int i) => Restaurant(
   address: '',
   roadAddress: '',
   phone: '',
-  latitude: 36.7680 + 0.0004 * (i + 1),
-  longitude: 126.9305,
+  latitude: 36.769563 + 0.0004 * (i + 1),
+  longitude: 126.92736,
   distanceMeters: 0,
   placeUrl: null,
 );
@@ -62,7 +62,7 @@ void main() {
         await pumpApp(tester, h, home: const AppShell(), size: size);
         await tester.pumpAndSettle();
 
-        final button = find.text('오늘의 추천 받기');
+        final button = find.text('조건에 맞게 추천받기');
         expect(button, findsOneWidget);
         if (scrolled > 0) {
           await tester.drag(

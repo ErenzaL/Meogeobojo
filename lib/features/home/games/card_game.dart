@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../recommendation/home_ranking.dart';
+import 'game_candidates.dart';
 import 'game_slice_colors.dart';
 
 /// Face-down cards, one per place, already shuffled. Flip one: that place is
@@ -17,8 +17,8 @@ class CardGame extends StatefulWidget {
     this.random,
   });
 
-  final List<RankedRestaurant> items;
-  final ValueChanged<RankedRestaurant> onDone;
+  final List<GameCandidate> items;
+  final ValueChanged<GameCandidate> onDone;
   final Random? random;
 
   @override
@@ -26,7 +26,7 @@ class CardGame extends StatefulWidget {
 }
 
 class _CardGameState extends State<CardGame> {
-  late final List<RankedRestaurant> _cards = [...widget.items]
+  late final List<GameCandidate> _cards = [...widget.items]
     ..shuffle(widget.random ?? Random());
   int? _picked;
   bool _revealAll = false;
@@ -60,8 +60,9 @@ class _CardGameState extends State<CardGame> {
           children: [
             for (var i = 0; i < _cards.length; i++)
               _FlipCard(
-                name: _cards[i].restaurant.name,
-                tag: _cards[i].restaurant.categoryTag,
+                name: _cards[i].name,
+                tag: _cards[i].tag,
+                compact: _cards.length > 4,
                 index: i,
                 flipped: _picked == i || _revealAll,
                 dimmed: _revealAll && _picked != i,
@@ -82,6 +83,7 @@ class _FlipCard extends StatelessWidget {
     required this.flipped,
     required this.dimmed,
     required this.onTap,
+    this.compact = false,
   });
 
   final String name;
@@ -91,8 +93,11 @@ class _FlipCard extends StatelessWidget {
   final bool dimmed;
   final VoidCallback? onTap;
 
-  static const _w = 132.0;
-  static const _h = 168.0;
+  /// Five or six cards: smaller, so three fit on a phone row.
+  final bool compact;
+
+  double get _w => compact ? 100 : 132;
+  double get _h => compact ? 132 : 168;
 
   @override
   Widget build(BuildContext context) {

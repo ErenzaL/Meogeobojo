@@ -169,6 +169,8 @@ Future<Harness> openMissions(
   Size size = const Size(390, 1500),
 }) async {
   final h = await buildHarness(
+    // Home starts before a pick, so its first button is "조건에 맞게 추천받기".
+    recsRequested: false,
     auth: signedIn ? FakeAuthGateway(user: fakeUser()) : null,
     profiles: FakeProfileRepository(onboardingCompleted: true, nickname: '민수'),
     prefs: FakePreferencesRepository(
@@ -530,7 +532,7 @@ void main() {
       );
       h.container.read(shellTabProvider.notifier).select(ShellTabs.home);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('미션 완료!'), findsOneWidget);
@@ -548,7 +550,7 @@ void main() {
       final h = await openMissions(tester, repo: repo);
       h.container.read(shellTabProvider.notifier).select(ShellTabs.home);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       expect(repo.activity, [('recommendation_view', '')]);
     });
@@ -572,7 +574,7 @@ void main() {
       final h = await openMissions(tester, repo: repo, signedIn: false);
       h.container.read(shellTabProvider.notifier).select(ShellTabs.home);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       expect(repo.activity, isEmpty);
     });
@@ -584,7 +586,7 @@ void main() {
       final h = await openMissions(tester, repo: repo);
       h.container.read(shellTabProvider.notifier).select(ShellTabs.home);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.byType(HomeScreen), findsOneWidget);

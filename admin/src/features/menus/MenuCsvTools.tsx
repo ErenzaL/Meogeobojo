@@ -20,7 +20,9 @@ const today = () => new Date().toISOString().slice(0, 10).replace(/-/g, '')
 type Selected = { id: string; name_ko: string } | null
 
 /** 메뉴·가격 CSV: 양식 다운로드 / 가져오기 / 내보내기. */
-export default function MenuCsvTools({ selected, search }: { selected: Selected; search: string }) {
+type School = { id: string; name: string } | null
+
+export default function MenuCsvTools({ selected, search, university = null }: { selected: Selected; search: string; university?: School }) {
   const [dialog, setDialog] = useState<'import' | 'export' | null>(null)
   const qc = useQueryClient()
   const refresh = () => { void qc.invalidateQueries({ queryKey: ['cms', 'restaurant_menus'] }); void qc.invalidateQueries({ queryKey: ['cms-overview', 'restaurant_menus'] }); void qc.invalidateQueries({ queryKey: ['menus'] }) }
@@ -30,7 +32,7 @@ export default function MenuCsvTools({ selected, search }: { selected: Selected;
       <Button variant="outline" onClick={() => setDialog('import')}><Upload className="size-4" />CSV 가져오기</Button>
       <Button variant="outline" onClick={() => setDialog('export')}><Download className="size-4" />CSV 내보내기</Button>
       {dialog === 'import' && <ImportDialog selected={selected} onClose={(changed) => { setDialog(null); if (changed) refresh() }} />}
-      {dialog === 'export' && <ExportDialog selected={selected} search={search} onClose={() => setDialog(null)} />}
+      {dialog === 'export' && <ExportDialog selected={selected} search={search} university={university} onClose={() => setDialog(null)} />}
     </>
   )
 }
@@ -285,12 +287,12 @@ function PreviewRow({ r }: { r: PlanRow }) {
 // ---------------------------------------------------------------------------------------------------------------------
 // export
 // ---------------------------------------------------------------------------------------------------------------------
-type ExportScope = 'selected' | 'search' | 'all'
+type ExportScope = 'selected' | 'university' | 'search' | 'all'
 
-function ExportDialog({ selected, search, onClose }: { selected: Selected; search: string; onClose: () => void }) {
+function ExportDialog({ selected, search, university, onClose }: { selected: Selected; search: string; university: School; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { const d = ref.current; if (d && !d.open) d.showModal?.() }, [])
-  const [scope, setScope] = useState<ExportScope>(selected ? 'selected' : 'all')
+  const [scope, setScope] = useState<ExportScope>(selected ? 'selected' : university ? 'university' : 'all')
   const [source, setSource] = useState<ExportSource>('editing')
   const [archived, setArchived] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -299,7 +301,7 @@ function ExportDialog({ selected, search, onClose }: { selected: Selected; searc
   const run = async () => {
     setBusy(true); setResult(null)
     try {
-      const restaurants = await fetchExportRestaurants(scope === 'selected' && selected ? { restaurantId: selected.id } : scope === 'search' ? { search } : 'all')
+      const restaurants = await fetchExportRestaurants(scope === 'selected' && selected ? { restaurantId: selected.id } : scope === 'university' && university ? { universityId: university.id } : scope === 'search' ? { search } : 'all')
       const items = await fetchExportItems(restaurants.map((r) => r.id), source)
       const rows = exportRows(restaurants, items, archived)
       downloadText(`menus-${scope}-${today()}.csv`, buildMenuCsv(rows, EXPORT_COLUMNS))
@@ -314,6 +316,7 @@ function ExportDialog({ selected, search, onClose }: { selected: Selected; searc
         <h2 className="text-lg font-bold">메뉴 CSV 내보내기</h2>
         <fieldset className="space-y-1 text-sm"><legend className="mb-1 text-xs font-semibold text-muted">내보낼 식당</legend>
           <label className={`flex items-center gap-2 ${selected ? '' : 'opacity-50'}`}><input type="radio" name="escope" disabled={!selected} checked={scope === 'selected'} onChange={() => setScope('selected')} />선택한 식당{selected ? ` (${selected.name_ko})` : ' (식당을 먼저 선택하세요)'}</label>
+          <label className={`flex items-center gap-2 ${university ? '' : 'opacity-50'}`}><input type="radio" name="escope" disabled={!university} checked={scope === 'university'} onChange={() => setScope('university')} />선택한 대학교의 식당{university ? ` (${university.name})` : ' (위에서 대학교를 먼저 고르세요)'}</label>
           <label className="flex items-center gap-2"><input type="radio" name="escope" checked={scope === 'search'} onChange={() => setScope('search')} />검색한 식당{search.trim() ? ` (“${search.trim()}”)` : ' (검색어가 없으면 전체)'}</label>
           <label className="flex items-center gap-2"><input type="radio" name="escope" checked={scope === 'all'} onChange={() => setScope('all')} />모든 식당</label>
         </fieldset>

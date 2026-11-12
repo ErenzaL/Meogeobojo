@@ -94,9 +94,7 @@ const saves = () => fake.rpcs.filter((r) => r.name === 'cms_save_draft').map((r)
 function open() { return render(<MemoryRouter initialEntries={['/menus']}><App client={makeQueryClient()} /></MemoryRouter>) }
 async function ready() { open(); await screen.findByRole('button', { name: /CSV 가져오기/ }) }
 async function pickRestaurant(name: string) {
-  const select = await screen.findByLabelText('식당 선택')
-  await waitFor(() => expect(within(select).getByRole('option', { name: new RegExp(name) })).toBeTruthy())
-  await userEvent.selectOptions(select, within(select).getByRole('option', { name: new RegExp(name) }))
+  await userEvent.click(await screen.findByRole('button', { name: new RegExp(name) }))
   await screen.findByRole('heading', { name: '새 메뉴' }) // the menu editor of that restaurant has loaded
 }
 async function openImport(text: string) {

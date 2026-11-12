@@ -30,8 +30,7 @@ async function openMenus(items: unknown[], state: Record<string, unknown> = {}) 
   fake.respond('rpc:cms_save_draft', { data: { revision: 1, base_version: 1, updated_at: '2026-11-10T00:00:00Z' } })
   fake.respond('rpc:cms_overview', { data: [] })
   render(<MemoryRouter initialEntries={['/menus']}><App client={makeQueryClient()} /></MemoryRouter>)
-  await waitFor(() => expect(screen.getByRole('option', { name: '온기식당' })).toBeTruthy())
-  await userEvent.selectOptions(screen.getByLabelText('식당 선택'), 'r1')
+  await userEvent.click(await screen.findByRole('button', { name: /온기식당/ }))
 }
 const saved = () => (fake.rpcs.filter((r) => r.name === 'cms_save_draft').at(-1)!.args as { p_type: string; p_id: string; p_data: { items: Record<string, unknown>[] }; p_expected_revision: number })
 const noLiveWrites = () => { for (const op of ['insert', 'update', 'upsert', 'delete']) expect(fake.last('restaurant_menus', op)).toBeUndefined() }

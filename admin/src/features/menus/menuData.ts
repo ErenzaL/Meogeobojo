@@ -4,6 +4,7 @@ import { chunk } from '../restaurants/kakao'
 import { sortItems } from './menu'
 import type { ExportRestaurant, ExportSource } from './menuExport'
 import type { MenuState, RestaurantRef, SaveDeps, PublishDeps } from './menuImport'
+import { toPickerRestaurant, type PickerRestaurant, type RawPickerRow } from './restaurantPicker'
 
 const TYPE = 'restaurant_menus' as const
 const clean = (s: string) => s.replace(/[%,()*\\]/g, ' ').trim()
@@ -50,16 +51,52 @@ export const saveDeps: SaveDeps = {
 }
 export const publishDeps: PublishDeps = { publish: (id, rev, reason) => cmsPublish(TYPE, id, rev, reason) }
 
+// ---- the restaurant list of the page ---------------------------------------------------------------------------------
+const PAGE = 1000
+
+/** Every row of a query, page by page (the API answers at most 1000 rows per request), up to [cap] rows. */
+async function readAll<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>, cap: number): Promise<T[]> {
+  const out: T[] = []
+  for (let from = 0; from < cap; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1)
+    if (error) throw error
+    const rows = (data ?? []) as T[]
+    out.push(...rows)
+    if (rows.length < PAGE) break
+  }
+  return out
+}
+
+/** All managed restaurants (the same table the 식당 page lists) with the schools they belong to. */
+export async function fetchPickerRestaurants(): Promise<PickerRestaurant[]> {
+  const rows = await readAll<RawPickerRow>((from, to) => supabase.from('restaurant_overrides')
+    .select('id,name_ko,category,visibility,restaurant_university_links(university_id)').order('name_ko').order('id').range(from, to), 20000)
+  return rows.map(toPickerRestaurant)
+}
+
+/** How many active published menu lines each restaurant has. */
+export async function fetchMenuCounts(): Promise<Map<string, number>> {
+  const rows = await readAll<{ restaurant_id: string | null }>((from, to) => supabase.from('restaurant_menus')
+    .select('restaurant_id').eq('status', 'active').order('id').range(from, to), 100000)
+  const out = new Map<string, number>()
+  for (const r of rows) if (r.restaurant_id) out.set(r.restaurant_id, (out.get(r.restaurant_id) ?? 0) + 1)
+  return out
+}
+
 // ---- export --------------------------------------------------------------------------------------------------------
-export async function fetchExportRestaurants(scope: { restaurantId: string } | { search: string } | 'all'): Promise<ExportRestaurant[]> {
+export type ExportScopeArg = { restaurantId: string } | { search: string } | { universityId: string } | 'all'
+
+export async function fetchExportRestaurants(scope: ExportScopeArg): Promise<ExportRestaurant[]> {
   const out: ExportRestaurant[] = []
   for (let from = 0; from < 5000; from += 1000) {
-    let q = supabase.from('restaurant_overrides').select('id,kakao_place_id,name_ko')
+    const bySchool = scope !== 'all' && 'universityId' in scope
+    let q = supabase.from('restaurant_overrides').select(bySchool ? 'id,kakao_place_id,name_ko,restaurant_university_links!inner(university_id)' : 'id,kakao_place_id,name_ko')
     if (scope !== 'all' && 'restaurantId' in scope) q = q.eq('id', scope.restaurantId)
-    else if (scope !== 'all' && scope.search.trim()) q = q.ilike('name_ko', `%${clean(scope.search)}%`)
+    else if (scope !== 'all' && 'universityId' in scope) q = q.eq('restaurant_university_links.university_id', scope.universityId)
+    else if (scope !== 'all' && 'search' in scope && scope.search.trim()) q = q.ilike('name_ko', `%${clean(scope.search)}%`)
     const { data, error } = await q.order('name_ko').range(from, from + 999)
     if (error) throw error
-    out.push(...(data as ExportRestaurant[]))
+    out.push(...(data as unknown as ExportRestaurant[]))
     if (data.length < 1000) break
   }
   return out

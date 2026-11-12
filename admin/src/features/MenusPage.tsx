@@ -7,8 +7,12 @@ import { cmsOverview, cmsSaveDraft, cmsState, diffSnapshots, isConflict, type Me
 import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
+import { useUniversities } from './restaurants/RestaurantsPage'
 import MenuCsvTools from './menus/MenuCsvTools'
+import { fetchMenuCounts, fetchPickerRestaurants } from './menus/menuData'
 import MenuPreview from './menus/MenuPreview'
+import MenuRestaurantPicker from './menus/MenuRestaurantPicker'
+import type { PickerFilters } from './menus/restaurantPicker'
 import { draftFromItem, emptyMenuDraft, itemFromDraft, MENU_CATEGORIES, sortItems, validateMenu, type MenuDraft } from './menus/menu'
 
 export { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, validateImageFile } from '@/lib/images'
@@ -22,7 +26,8 @@ type Msg = { tone: 'ok' | 'bad'; text: string }
 export default function MenusPage() {
   const qc = useQueryClient()
   const [restaurantId, setRestaurantId] = useState('')
-  const [q, setQ] = useState('')
+  const [filters, setFilters] = useState<PickerFilters>({ search: '', university: '', menu: '' })
+  const q = filters.search
   const [message, setMessage] = useState<Msg | null>(null)
   const [editing, setEditing] = useState<MenuItem | null>(null)
   const [showArchived, setShowArchived] = useState(false)
@@ -32,16 +37,13 @@ export default function MenusPage() {
   const [unsaved, setUnsaved] = useState<Record<string, string>>({}) // item id -> storage path of an upload no draft references yet
   const [previewing, setPreviewing] = useState(false)
 
-  const restaurants = useQuery({
-    queryKey: ['restaurant-picker', q],
-    queryFn: async () => {
-      let query = supabase.from('restaurant_overrides').select('id,name_ko').order('name_ko').limit(50)
-      if (q.trim()) query = query.ilike('name_ko', `%${q.trim().replace(/[%,()*\\]/g, ' ')}%`)
-      const { data, error } = await query
-      if (error) throw error
-      return data as { id: string; name_ko: string }[]
-    },
-  })
+  // Every managed restaurant (the same rows as the 식당 page), grouped by school; not a capped search result.
+  const restaurants = useQuery({ queryKey: ['menu-picker', 'restaurants'], queryFn: fetchPickerRestaurants, refetchOnMount: 'always' })
+  const menuCounts = useQuery({ queryKey: ['menu-picker', 'counts'], queryFn: fetchMenuCounts, refetchOnMount: 'always' })
+  const universities = useUniversities()
+  const schools = useMemo(() => (universities.data ?? []).map((u) => ({ id: u.id, name_ko: u.name_ko })), [universities.data])
+  const counts = useMemo(() => menuCounts.data ?? new Map<string, number>(), [menuCounts.data])
+  const school = schools.find((u) => u.id === filters.university)
   const overview = useQuery({ queryKey: ['cms-overview', TYPE], queryFn: () => cmsOverview(TYPE) })
   const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
 
@@ -57,7 +59,7 @@ export default function MenusPage() {
   const liveById = useMemo(() => new Map(((state?.live.items as MenuItem[] | undefined) ?? []).map((i) => [i.id, i])), [state])
 
   const refresh = async () => {
-    await qc.invalidateQueries({ queryKey: ['cms', TYPE, restaurantId] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['menus'] })
+    await qc.invalidateQueries({ queryKey: ['cms', TYPE, restaurantId] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['menus'] }); await qc.invalidateQueries({ queryKey: ['menu-picker'] })
   }
   const change = (next: MenuItem[]) => { setEdited(sortItems(next)); setEditBase((b) => b ?? serverRev) }
   const resetLocal = () => { setEdited(null); setEditBase(null); setEditing(null); setForm(emptyMenuDraft); setUnsaved({}) }
@@ -125,25 +127,15 @@ export default function MenusPage() {
     const o = liveById.get(m.id)
     return !o ? 'new' : diffSnapshots({ items: [o] }, { items: [m] }).some((c) => c.key.startsWith('chg:')) ? 'edited' : null
   }
-  const label = (r: { id: string; name_ko: string }) => {
-    const o = ov.get(r.id)
-    return `${r.name_ko}${o?.scheduled_at ? ' · 예약됨' : o?.has_draft ? ' · 초안 있음' : ''}`
-  }
-
   return (
     <>
-      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요."
-        actions={<MenuCsvTools selected={restaurantId ? { id: restaurantId, name_ko: restaurants.data?.find((r) => r.id === restaurantId)?.name_ko ?? '' } : null} search={q} />} />
+      <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 대학교별로 묶인 목록에서 식당을 고르세요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요."
+        actions={<MenuCsvTools selected={restaurantId ? { id: restaurantId, name_ko: restaurants.data?.find((r) => r.id === restaurantId)?.name_ko ?? '' } : null} search={q} university={school ? { id: school.id, name: school.name_ko } : null} />} />
       {message && !restaurantId && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{message.text}</p>}
-      <Card className="mb-5 grid gap-3 sm:grid-cols-2">
-        <Field label="식당 검색" htmlFor="rq"><Input id="rq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름으로 검색" /></Field>
-        <Field label="식당 선택" htmlFor="rs">
-          <Select id="rs" value={restaurantId} onChange={(e) => { setRestaurantId(e.target.value); resetLocal(); setMessage(null) }}>
-            <option value="">선택하세요</option>{restaurants.data?.map((r) => <option key={r.id} value={r.id}>{label(r)}</option>)}
-          </Select>
-        </Field>
-      </Card>
-      {!restaurantId && <EmptyState>식당을 선택하면 메뉴가 보여요.</EmptyState>}
+      <MenuRestaurantPicker restaurants={restaurants.data} universities={schools} menuCounts={counts} overview={ov}
+        loading={restaurants.isLoading} error={restaurants.error} onRetry={() => void restaurants.refetch()}
+        filters={filters} onFilters={setFilters} selectedId={restaurantId} onSelect={(id) => { setRestaurantId(id); resetLocal(); setMessage(null) }} />
+      {!restaurantId && <EmptyState>위 목록에서 식당을 선택하면 메뉴가 보여요.</EmptyState>}
       {restaurantId && cms.isLoading && <Skeleton className="h-40 w-full" />}
       {restaurantId && cms.error && <ErrorState error={cms.error} onRetry={() => void cms.refetch()} />}
       {restaurantId && state && (

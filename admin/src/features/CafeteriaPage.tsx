@@ -177,7 +177,7 @@ export default function CafeteriaPage() {
             </div>
           </div>
           {!legacy && caf.status !== 'active' && <p className="rounded-xl bg-page p-3 text-sm text-muted">이 식당은 {caf.status === 'inactive' ? '비활성' : '보관'} 상태라 앱에 보이지 않아요. 메뉴를 게시해 두고 준비가 되면 &lsquo;운영 중으로&rsquo;를 눌러 주세요.</p>}
-          {tab === 'week' && <WeekEditor key={`${caf.id}`} cafeteria={{ id: caf.id, name: cafeteriaTitle(caf), mealPeriods: periods, operatingDays: daysOf(caf) }} week={week} onWeek={setWeek} onChanged={() => void refreshBadges()} />}
+          {tab === 'week' && <WeekEditor key={`${caf.id}`} cafeteria={{ id: caf.id, name: cafeteriaTitle(caf), names: [caf.name_ko, caf.name_en, caf.name_zh].filter((n): n is string => !!n), universityId: caf.university_id, universityName: caf.universities?.name_ko ?? university?.name_ko ?? '', mealPeriods: periods, operatingDays: daysOf(caf) }} week={week} onWeek={setWeek} onChanged={() => void refreshBadges()} />}
           {tab === 'info' && (
             <Card className="space-y-2 text-sm" aria-label="식당 정보">
               <div><b>대학교</b> {caf.universities?.name_ko ?? university?.name_ko}</div>

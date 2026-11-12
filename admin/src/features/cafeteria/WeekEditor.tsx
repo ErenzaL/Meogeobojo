@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock, Copy, CopyPlus, Layers, ListChecks } from 'lucide-react'
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Clock, Copy, CopyPlus, FileUp, Layers, ListChecks } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import PublishingToolbar from '@/components/PublishingToolbar'
 import { Badge, Button, Card, ConfirmDialog, ErrorState, Skeleton } from '@/components/ui'
 import { cafeteriaWeekEntity, cmsPublishWeekDays, cmsSaveDraft, cmsState, isConflict } from '@/lib/cms'
 import { isMissingFunction } from '@/lib/cmsHealth'
 import { errorMessage } from '@/lib/utils'
+import CsvImport from './CsvImport'
 import { addDays, MEAL_LABEL, MEAL_TYPES, seoulToday } from './meal'
 import WeekGrid, { optionLabel } from './WeekGrid'
 import WeekPreview from './WeekPreview'
@@ -17,13 +18,13 @@ import {
 
 const TYPE = 'cafeteria_week' as const
 type Msg = { tone: 'ok' | 'bad'; text: string }
-type Dialog = null | 'copyDay' | 'copyWeek' | 'hours' | 'shared' | 'bulk' | 'publishDays'
+type Dialog = null | 'copyDay' | 'copyWeek' | 'hours' | 'shared' | 'bulk' | 'publishDays' | 'csv'
 
 /** One cafeteria, one week, ONE draft: all menus (Monday-Friday, optionally the weekend) are edited in the same grid and
  *  saved together. The publishing toolbar publishes / schedules / unpublishes / restores the WHOLE week atomically;
  *  "선택한 날만 게시" publishes chosen days atomically. Saving never changes what students see. */
 export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
-  cafeteria: { id: string; name: string; mealPeriods: MealPeriod[]; operatingDays: number[] }; week: string; onWeek: (monday: string) => void; onChanged: () => void
+  cafeteria: { id: string; name: string; names?: string[]; universityId?: string; universityName?: string; mealPeriods: MealPeriod[]; operatingDays: number[] }; week: string; onWeek: (monday: string) => void; onChanged: () => void
 }) {
   const qc = useQueryClient()
   const [edited, setEdited] = useState<WeekMeal[] | null>(null)
@@ -138,6 +139,7 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
         onSaveDraft={() => save.mutate()} onPreview={() => setPreviewing(true)} onChanged={async () => { await refresh(); setMessage(null) }} onConflict={() => void refresh()} />
 
       <Card className="flex flex-wrap items-center gap-2 !p-3">
+        {cafeteria.universityId && <Button size="sm" variant="soft" disabled={dirty} title={dirty ? '먼저 초안을 저장하거나 수정을 버려 주세요' : '이 식당의 이 주 메뉴를 CSV 파일로 한 번에 채워요'} onClick={() => setDialog('csv')}><FileUp className="size-3.5" />CSV로 이 주 채우기</Button>}
         <Button size="sm" variant="outline" onClick={() => setDialog('copyDay')}><Copy className="size-3.5" />요일 복사</Button>
         <Button size="sm" variant="outline" onClick={() => setDialog('copyWeek')}><CopyPlus className="size-3.5" />다른 주 복사</Button>
         <Button size="sm" variant="outline" onClick={() => setDialog('hours')}><Clock className="size-3.5" />공통 운영 시간</Button>
@@ -164,6 +166,9 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
       <WeekGrid dates={dates} periods={periods} meals={meals} liveKeys={liveKeys} selected={selected} problems={problems} ops={ops} />
 
       <WeekPreview open={previewing} live={state.live} draft={state.draft?.data ?? state.live} dates={weekDates(week, weekend || draftMeals.some((m) => isWeekend(m.date)))} periods={periods} onClose={() => setPreviewing(false)} />
+      {dialog === 'csv' && cafeteria.universityId && (
+        <CsvImport onClose={() => setDialog(null)} onDone={() => { reset(); void refresh() }}
+          scope={{ universityId: cafeteria.universityId, universityName: cafeteria.universityName ?? '', cafeteriaId: cafeteria.id, cafeteriaName: cafeteria.name, cafeteriaNames: cafeteria.names ?? [], weekStart: week, periods, weekend }} />)}
       {dialog === 'copyDay' && <CopyDayDialog open dates={dates} onClose={() => setDialog(null)} onApply={(from, to, overwrite) => {
         const run = () => { change(copyDay(meals, from, to, { overwrite })); setMessage({ tone: 'ok', text: `${from} 의 메뉴를 ${to.length}일에 복사했어요. 확인한 뒤 '초안 저장'을 눌러 주세요.` }) }
         if (overwrite && to.some((d) => meals.some((m) => m.date === d))) setConfirm({ title: '그 요일의 메뉴를 덮어쓸까요?', text: '선택한 요일에 이미 입력된 메뉴가 바뀌어요 (저장 전에는 되돌릴 수 있어요).', label: '덮어쓰기', run })

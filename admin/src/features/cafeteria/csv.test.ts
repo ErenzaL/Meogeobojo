@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { decodeProblem, normalizeDate, normalizeMeal, normalizePrice, normalizeProgram, normalizeRow, normalizeTime, parseCsv, REQUIRED, TEMPLATE_CSV, TEMPLATE_HEADER, toRpcRow, toTable } from './csv'
+import { decodeProblem, isBlankScopedRow, normalizeScopedRow, SCOPED_COLUMNS, SCOPED_REQUIRED, scopedTemplateCsv, normalizeDate, normalizeMeal, normalizePrice, normalizeProgram, normalizeRow, normalizeTime, parseCsv, REQUIRED, TEMPLATE_CSV, TEMPLATE_HEADER, toRpcRow, toTable } from './csv'
 
 describe('parseCsv', () => {
   it('reads Korean text, with and without a UTF-8 BOM', () => {
@@ -174,5 +174,79 @@ describe('the 향설1관 weekly menu table (supabase/cafeteria/examples)', () =>
     expect(rows.find((x) => x.meal_type === 'breakfast')!.dishes.filter((d) => d.shared).map((d) => d.name_ko)).toEqual(['아산쌀밥', '김치', '샐러드'])
     expect(rows.find((x) => x.meal_type === 'dinner')!.dishes.filter((d) => d.shared).map((d) => d.name_ko)).toEqual(['김치', '샐러드'])
     expect(rows.every((r) => r.labels.length === 0)).toBe(true)
+  })
+})
+
+describe('one cafeteria, one week', () => {
+  const scope = { universityId: 'u1', universityName: '순천향대학교', cafeteriaId: 'c1', cafeteriaName: '교직원식당', cafeteriaNames: ['교직원식당', 'Staff Hall'], weekStart: '2026-11-09', periods: ['lunch', 'dinner'] as ('lunch' | 'dinner')[], weekend: false }
+  const row = (cells: Record<string, string>, line = 2) => ({ line, cells: cells as never })
+
+  it('needs only the date, the meal and the menu name: no university or cafeteria columns', () => {
+    expect([...SCOPED_REQUIRED]).toEqual(['date', 'meal_type', 'menu_name'])
+    const t = toTable(parseCsv('date,meal_type,menu_name\n2026-11-09,중식,제육'), SCOPED_REQUIRED)
+    expect(t.missing).toEqual([])
+    expect(toTable(parseCsv('date,menu_name\n2026-11-09,제육'), SCOPED_REQUIRED).missing).toEqual(['meal_type'])
+    // the full importer still wants every column
+    expect(toTable(parseCsv('date,meal_type,menu_name\n2026-11-09,중식,제육')).missing).toContain('university')
+  })
+
+  it('a row belongs to the cafeteria being edited, whatever the file says or leaves out', () => {
+    const r = normalizeScopedRow(row({ date: '2026-11-10', meal_type: '중식', menu_name: '제육볶음', price: '5,500' }), scope)
+    expect(r.errors).toEqual([])
+    expect(toRpcRow(r)).toMatchObject({ university_id: 'u1', cafeteria_id: 'c1', date: '2026-11-10', meal_type: 'lunch', menu_name: '제육볶음', price: '5500' })
+  })
+
+  it('only dates inside the week count (Monday to Sunday)', () => {
+    const at = (date: string) => normalizeScopedRow(row({ date, meal_type: '중식', menu_name: 'x' }), scope).errors
+    expect(at('2026-11-09')).toEqual([])
+    expect(at('2026-11-15')).toEqual([])
+    expect(at('2026-11-08')[0]).toMatch(/이 주\(2026-11-09 ~ 2026-11-15\)의 날짜가 아니에요/)
+    expect(at('2026-11-16')[0]).toMatch(/날짜가 아니에요/)
+    expect(at('2026.11.12')).toEqual([]) // other date spellings are read first, then checked
+  })
+
+  it('a row of another cafeteria or university is refused, a matching name (any language) is fine', () => {
+    const err = (extra: Record<string, string>) => normalizeScopedRow(row({ date: '2026-11-10', meal_type: '중식', menu_name: 'x', ...extra }), scope).errors
+    expect(err({ cafeteria_name: '교직원식당' })).toEqual([])
+    expect(err({ cafeteria_name: 'staff hall' })).toEqual([])
+    expect(err({ cafeteria_name: '학생식당' })[0]).toMatch(/다른 식당\(학생식당\)의 행이에요/)
+    expect(err({ university: '호서대학교' })[0]).toMatch(/다른 대학교\(호서대학교\)의 행이에요/)
+    expect(err({ university: '순천향대학교', cafeteria_name: '교직원식당' })).toEqual([])
+  })
+
+  it('a cafeteria without a known name does not reject a name column it cannot compare', () => {
+    const noName = { ...scope, cafeteriaNames: [] as string[] }
+    expect(normalizeScopedRow(row({ date: '2026-11-10', meal_type: '중식', menu_name: 'x', cafeteria_name: '아무거나' }), noName).errors).toEqual([])
+  })
+
+  it('the usual row problems are still reported', () => {
+    const e = normalizeScopedRow(row({ date: '2026-11-10', meal_type: '간식', menu_name: 'x', price: 'abc' }), scope).errors
+    expect(e.some((m) => /식사 종류/.test(m))).toBe(true)
+    expect(e.some((m) => /가격/.test(m))).toBe(true)
+  })
+
+  it('an unfilled template row is blank (skipped), a half-filled one is not', () => {
+    expect(isBlankScopedRow(row({ date: '2026-11-10', meal_type: '석식', menu_name: '', price: '', serving_time: '' }))).toBe(true)
+    expect(isBlankScopedRow(row({ date: '2026-11-10', meal_type: '석식', menu_name: '', price: '6000' }))).toBe(false)
+    expect(isBlankScopedRow(row({ date: '2026-11-10', meal_type: '석식', menu_name: '비빔밥' }))).toBe(false)
+  })
+
+  it('the template has a row per day and served meal for THIS week, nothing else filled in', () => {
+    const lines = scopedTemplateCsv(scope).trim().split('\r\n')
+    expect(lines[0]).toBe(SCOPED_COLUMNS.join(','))
+    expect(lines).toHaveLength(1 + 5 * 2) // Mon-Fri x lunch + dinner
+    expect(lines[1].split(',')[0]).toBe('2026-11-09')
+    expect(lines[1].split(',')[1]).toBe('중식')
+    expect(lines[2].split(',')[1]).toBe('석식')
+    expect(lines.at(-1)!.split(',')[0]).toBe('2026-11-13')
+    for (const l of lines.slice(1)) { const c = l.split(','); expect(c).toHaveLength(SCOPED_COLUMNS.length); expect(c.slice(2).every((x) => x === '')).toBe(true) }
+    expect(scopedTemplateCsv({ ...scope, weekend: true }).trim().split('\r\n')).toHaveLength(1 + 7 * 2)
+    expect(scopedTemplateCsv({ ...scope, periods: ['breakfast', 'lunch', 'dinner'] }).trim().split('\r\n')).toHaveLength(1 + 5 * 3)
+  })
+
+  it('an unfilled template read back by the browser is entirely blank, so it can never import anything by accident', () => {
+    const t = toTable(parseCsv(scopedTemplateCsv(scope)), SCOPED_REQUIRED)
+    expect(t.missing).toEqual([])
+    expect(t.rows.every(isBlankScopedRow)).toBe(true)
   })
 })

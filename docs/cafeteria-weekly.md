@@ -127,3 +127,20 @@ A university can have any number of cafeterias (Admin → 학식 → 학식 식�
   longer counts "n/15칸" as if every slot were due.
 * **Rollout.** Admin and web update when this is merged to `main` (Render). The phone apps need a new build. No migration; existing data is untouched.
 
+## 11. Weekly update from a CSV, one cafeteria and one week at a time
+Admin → 학식 → pick the cafeteria → 주간 메뉴 → choose the week → **CSV로 이 주 채우기**.
+
+1. **이 주 양식 내려받기** gives `학식_<식당>_<월요일>.csv`: one row per day and per meal *this cafeteria serves* (Mon-Fri, plus the weekend if it opens then),
+   with only `date` and `meal_type` filled in. The admin fills `menu_name` (required) and whatever else is known (price, `serving_time`, `side_dishes` ... the same
+   columns as the page-wide importer) and uploads the file.
+2. **Rows left empty are skipped**, not errors, so a meal the cafeteria does not serve that day stays out (and then does not appear in the app, see §10).
+3. The importer is **scoped**: the university and cafeteria are the ones being edited, so the file needs **no** university / cafeteria columns; a name column is
+   allowed but must match (any of the cafeteria's Korean / English / Chinese names), otherwise that row is refused (a wrong file cannot reach another restaurant).
+   Every date must lie in the shown week (Mon-Sun); other dates are refused row by row. Rows with errors are listed and never sent; the rest can still be imported.
+4. Preview (a server dry run: new / changed / unchanged per row) then **초안으로 가져오기**. Default mode is "만들고 수정하기" (upsert); the other two modes remain.
+   Nothing is published: the menus land in the week's draft, the grid reloads, and the usual preview → 지금 게시 / 예약 게시 applies.
+5. The button waits while the grid has unsaved edits (save or discard them first), so an import can never clash with hand edits.
+
+It uses the existing server function `cafeteria_import` with `university_id` / `cafeteria_id` (no migration, no new permission). The page-wide
+**CSV 일괄 등록** stays for files that cover several cafeterias, weeks or universities.
+

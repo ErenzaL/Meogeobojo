@@ -564,3 +564,111 @@ describe('실제 식단표 형식: several dishes per meal, shared dishes, origi
     expect(saved().p_data.meals[0].extra).toEqual({ notice: '유지' })
   }, 30000)
 })
+
+describe('weekly CSV: one cafeteria, one week, from the weekly editor', () => {
+  const csvFile = (text: string, name = 'week.csv') => new File([text], name, { type: 'text/csv' })
+  const importCalls = () => fake.rpcs.filter((r) => r.name === 'cafeteria_import').map((r) => r.args as { p_rows: { line: number; university_id: string; cafeteria_id: string; date: string; meal_type: string; menu_name: string }[]; p_mode: string; p_dry_run: boolean; p_create_missing: boolean })
+  const entry = (line: number, status: string, over: Record<string, unknown> = {}) => ({ line, status, message: null, university: '순천향대학교', cafeteria: '학생식당', ...over })
+  const answer = (created: number) => ({ dry_run: true, mode: 'upsert', multi_university: false, universities: ['순천향대학교'], new_cafeterias: [], rows: Array.from({ length: created }, (_, i) => entry(i + 2, 'create')),
+    summary: { created, updated: 0, unchanged: 0, skipped: 0, failed: 0, cafeterias_created: 0, weeks_changed: 1 } })
+  const dialogTitle = `학생식당 · ${MON} 주 CSV 가져오기`
+  const openCsv = async () => {
+    await openWeek()
+    await user().click(screen.getByRole('button', { name: /CSV로 이 주 채우기/ }))
+    return screen.findByRole('dialog', { name: dialogTitle })
+  }
+  const upload = (dlg: HTMLElement, file: File) => userEvent.upload(within(dlg).getByLabelText('CSV 파일 선택'), file)
+
+  it('opens a dialog about THIS cafeteria and week, with this week\'s template', async () => {
+    const dlg = await openCsv()
+    expect(dlg.textContent).toMatch(/순천향대학교 · 학생식당/)
+    expect(dlg.textContent).toContain(`${MON} ~ ${d(6)}`)
+    expect(within(dlg).getByRole('button', { name: /이 주 양식 내려받기/ })).toBeTruthy()
+    // nothing about creating restaurants or several universities: it cannot touch anything else
+    expect(within(dlg).queryByText(/없는 식당은 새로 만들기/)).toBeNull()
+    URL.createObjectURL = vi.fn(() => 'blob:x'); URL.revokeObjectURL = vi.fn()
+    await userEvent.click(within(dlg).getByRole('button', { name: /이 주 양식 내려받기/ }))
+    expect((URL.createObjectURL as unknown as { mock: { calls: [Blob][] } }).mock.calls[0][0].type).toMatch(/text\/csv/)
+  })
+
+  it('a file of just date, meal and menu is previewed for this cafeteria, then saved as drafts only', async () => {
+    fake.respond('rpc:cafeteria_import', { data: answer(2) })
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`date,meal_type,menu_name,price\n${d(1)},중식,제육볶음,5500\n${d(1)},석식,비빔밥,5000\n`))
+    const preview = await within(dlg).findByLabelText('가져오기 미리보기')
+    expect(within(preview).getByText('제육볶음')).toBeTruthy()
+    await waitFor(() => expect(importCalls()).toHaveLength(1))
+    expect(importCalls()[0]).toMatchObject({ p_dry_run: true, p_create_missing: false, p_mode: 'upsert' })
+    expect(importCalls()[0].p_rows).toHaveLength(2)
+    expect(importCalls()[0].p_rows[0]).toMatchObject({ university_id: 'u1', cafeteria_id: 'c1', date: d(1), meal_type: 'lunch', menu_name: '제육볶음' })
+
+    await userEvent.click(await within(dlg).findByRole('button', { name: /2행을 초안으로 가져오기/ }))
+    expect(await within(dlg).findByText(/초안으로 저장했어요/)).toBeTruthy()
+    const apply = importCalls().at(-1)!
+    expect(apply.p_dry_run).toBe(false)
+    expect(apply.p_create_missing).toBe(false)
+    liveWrites() // nothing went to the live tables
+    // the weekly editor reloads what the import saved
+    await waitFor(() => expect(fake.rpcs.filter((r) => r.name === 'cms_state').length).toBeGreaterThan(1))
+    await userEvent.click(within(dlg).getByRole('button', { name: '닫고 이 주 확인하기' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: dialogTitle })).toBeNull())
+  })
+
+  it('rows from another week are refused and never sent to the server', async () => {
+    fake.respond('rpc:cafeteria_import', { data: answer(1) })
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`date,meal_type,menu_name\n${d(2)},중식,이번 주 메뉴\n${addDays(MON, 7)},중식,다음 주 메뉴\n${addDays(MON, -1)},중식,지난 주 메뉴\n`))
+    const preview = await within(dlg).findByLabelText('가져오기 미리보기')
+    expect(within(preview).getAllByText(/이 주\(.*\)의 날짜가 아니에요/)).toHaveLength(2)
+    await waitFor(() => expect(importCalls()).toHaveLength(1))
+    expect(importCalls()[0].p_rows.map((r) => r.menu_name)).toEqual(['이번 주 메뉴'])
+    expect(await within(dlg).findByRole('button', { name: /오류 없는 1행만 초안으로 가져오기/ })).toBeTruthy()
+  })
+
+  it('a file made for another cafeteria is refused row by row', async () => {
+    fake.respond('rpc:cafeteria_import', { data: answer(1) })
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`cafeteria_name,date,meal_type,menu_name\n학생식당,${d(0)},중식,맞는 식당\n교직원식당,${d(0)},석식,다른 식당\n`))
+    const preview = await within(dlg).findByLabelText('가져오기 미리보기')
+    expect(within(preview).getByText(/다른 식당\(교직원식당\)의 행이에요/)).toBeTruthy()
+    await waitFor(() => expect(importCalls()).toHaveLength(1))
+    expect(importCalls()[0].p_rows.map((r) => r.menu_name)).toEqual(['맞는 식당'])
+  })
+
+  it('template rows left empty are skipped with a note, not reported as errors', async () => {
+    fake.respond('rpc:cafeteria_import', { data: answer(1) })
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`date,meal_type,menu_name,price\n${d(0)},조식,,\n${d(0)},중식,김치찌개,5500\n${d(0)},석식,,\n`))
+    await within(dlg).findByLabelText('가져오기 미리보기')
+    expect(dlg.textContent).toMatch(/메뉴가 비어 있는 2줄은 건너뛰어요/)
+    await waitFor(() => expect(importCalls()).toHaveLength(1))
+    expect(importCalls()[0].p_rows).toHaveLength(1)
+    expect((await within(dlg).findByLabelText('미리보기 요약')).textContent).toMatch(/오류 0/)
+    expect(within(dlg).queryByText(/메뉴 이름.*비어/)).toBeNull()
+  })
+
+  it('an untouched template says there is nothing to import and calls nothing', async () => {
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`date,meal_type,menu_name\n${d(0)},중식,\n${d(0)},석식,\n`))
+    expect(await within(dlg).findByText(/입력된 메뉴가 없어요/)).toBeTruthy()
+    expect(importCalls()).toHaveLength(0)
+  })
+
+  it('a missing required column is explained', async () => {
+    const dlg = await openCsv()
+    await upload(dlg, csvFile(`date,menu_name\n${d(0)},김치찌개\n`))
+    expect(await within(dlg).findByText(/필수 열이 없어요: meal_type/)).toBeTruthy()
+    expect(importCalls()).toHaveLength(0)
+  })
+
+  it('unsaved edits in the grid come first: the button waits until they are saved or discarded', async () => {
+    await openWeek()
+    await fill(d(1), '중식', '손으로 입력')
+    expect((screen.getByRole('button', { name: /CSV로 이 주 채우기/ }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('the page-wide 일괄 등록 stays, for files that cover several restaurants and weeks', async () => {
+    await openWeek()
+    expect(screen.getByRole('button', { name: /CSV 일괄 등록/ })).toBeTruthy()
+  })
+})

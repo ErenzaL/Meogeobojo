@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildView, NO_UNIVERSITY, toPickerRestaurant, universityCounts, UNASSIGNED_LABEL, type PickerFilters, type PickerRestaurant } from './restaurantPicker'
+import { buildView, NO_UNIVERSITY, toPickerRestaurant, universityCounts, UNASSIGNED_LABEL, type PickerFilters, type PickerRestaurant } from './pickerLogic'
 
 const U = [{ id: 'u2', name_ko: '한국대학교' }, { id: 'u1', name_ko: '가나대학교' }]
 const R = (id: string, name: string, universityIds: string[], over: Partial<PickerRestaurant> = {}): PickerRestaurant =>
   ({ id, name_ko: name, category: null, visibility: 'draft', universityIds, ...over })
-const none: PickerFilters = { search: '', university: '', menu: '' }
+const none: PickerFilters = { search: '', university: '', has: '' }
 const names = (v: ReturnType<typeof buildView>, key: string) => v.groups.find((g) => g.key === key)?.restaurants.map((r) => r.name_ko)
 
 const LIST = [
@@ -77,17 +77,17 @@ describe('buildView: filters', () => {
     const counts = new Map([['a', 2], ['c', 1]])
     const all = buildView(LIST, U, counts, none)
     expect([all.withMenu, all.withoutMenu]).toEqual([2, 3])
-    expect(buildView(LIST, U, counts, { ...none, menu: 'has' }).ids.sort()).toEqual(['a', 'c'])
-    expect(buildView(LIST, U, counts, { ...none, menu: 'none' }).ids.sort()).toEqual(['b', 'd', 'e'])
+    expect(buildView(LIST, U, counts, { ...none, has: 'has' }).ids.sort()).toEqual(['a', 'c'])
+    expect(buildView(LIST, U, counts, { ...none, has: 'none' }).ids.sort()).toEqual(['b', 'd', 'e'])
     expect(all.groups.find((g) => g.key === 'u1')!.withMenu).toBe(1)
   })
 
   it('a zero count means no menu', () => {
-    expect(buildView([R('a', '가', ['u1'])], U, new Map([['a', 0]]), { ...none, menu: 'none' }).total).toBe(1)
+    expect(buildView([R('a', '가', ['u1'])], U, new Map([['a', 0]]), { ...none, has: 'none' }).total).toBe(1)
   })
 
   it('filters combine', () => {
-    const v = buildView(LIST, U, new Map([['a', 1]]), { search: '식당', university: 'u1', menu: 'none' })
+    const v = buildView(LIST, U, new Map([['a', 1]]), { search: '식당', university: 'u1', has: 'none' })
     expect(v.ids.sort()).toEqual(['b', 'd'])
   })
 })

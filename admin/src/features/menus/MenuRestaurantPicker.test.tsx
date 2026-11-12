@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App, { makeQueryClient } from '@/App'
 import { fake } from '@/test/fakeSupabase'
-import { fetchMenuCounts, fetchPickerRestaurants } from './menuData'
+import { fetchMenuCounts, fetchPickerRestaurants } from '../restaurants/picker/pickerData'
 
 vi.mock('@/lib/supabase', async () => {
   const m = await import('@/test/fakeSupabase')

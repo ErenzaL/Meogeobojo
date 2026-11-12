@@ -8,11 +8,11 @@ import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/imag
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 import { useUniversities } from './restaurants/RestaurantsPage'
+import { fetchMenuCounts, fetchPickerRestaurants } from './restaurants/picker/pickerData'
+import RestaurantPicker, { MENU_ITEM } from './restaurants/picker/RestaurantPicker'
+import type { PickerFilters } from './restaurants/picker/pickerLogic'
 import MenuCsvTools from './menus/MenuCsvTools'
-import { fetchMenuCounts, fetchPickerRestaurants } from './menus/menuData'
 import MenuPreview from './menus/MenuPreview'
-import MenuRestaurantPicker from './menus/MenuRestaurantPicker'
-import type { PickerFilters } from './menus/restaurantPicker'
 import { draftFromItem, emptyMenuDraft, itemFromDraft, MENU_CATEGORIES, sortItems, validateMenu, type MenuDraft } from './menus/menu'
 
 export { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, validateImageFile } from '@/lib/images'
@@ -26,7 +26,7 @@ type Msg = { tone: 'ok' | 'bad'; text: string }
 export default function MenusPage() {
   const qc = useQueryClient()
   const [restaurantId, setRestaurantId] = useState('')
-  const [filters, setFilters] = useState<PickerFilters>({ search: '', university: '', menu: '' })
+  const [filters, setFilters] = useState<PickerFilters>({ search: '', university: '', has: '' })
   const q = filters.search
   const [message, setMessage] = useState<Msg | null>(null)
   const [editing, setEditing] = useState<MenuItem | null>(null)
@@ -132,7 +132,7 @@ export default function MenusPage() {
       <PageHeader title="메뉴·가격" description="식당별 메뉴와 가격(원)을 관리해요. 대학교별로 묶인 목록에서 식당을 고르세요. 가격을 모르면 비워 두세요. 수정은 초안으로 저장되고, 게시해야 앱 식당 상세에 반영돼요."
         actions={<MenuCsvTools selected={restaurantId ? { id: restaurantId, name_ko: restaurants.data?.find((r) => r.id === restaurantId)?.name_ko ?? '' } : null} search={q} university={school ? { id: school.id, name: school.name_ko } : null} />} />
       {message && !restaurantId && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{message.text}</p>}
-      <MenuRestaurantPicker restaurants={restaurants.data} universities={schools} menuCounts={counts} overview={ov}
+      <RestaurantPicker item={MENU_ITEM} restaurants={restaurants.data} universities={schools} counts={counts} overview={ov}
         loading={restaurants.isLoading} error={restaurants.error} onRetry={() => void restaurants.refetch()}
         filters={filters} onFilters={setFilters} selectedId={restaurantId} onSelect={(id) => { setRestaurantId(id); resetLocal(); setMessage(null) }} />
       {!restaurantId && <EmptyState>위 목록에서 식당을 선택하면 메뉴가 보여요.</EmptyState>}

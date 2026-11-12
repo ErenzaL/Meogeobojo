@@ -2,12 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive, ArrowDown, ArrowUp, ImagePlus, ImageOff, RotateCcw, Star, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import PublishingToolbar from '@/components/PublishingToolbar'
-import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, PageHeader, Select, Skeleton } from '@/components/ui'
+import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, PageHeader, Skeleton } from '@/components/ui'
 import { cmsOverview, cmsSaveDraft, cmsState, diffSnapshots, isConflict, type OverviewRow, type PhotoItem } from '@/lib/cms'
 import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 import PhotoPreview from './photos/PhotoPreview'
+import { useUniversities } from './restaurants/RestaurantsPage'
+import { fetchPhotoCounts, fetchPickerRestaurants } from './restaurants/picker/pickerData'
+import type { PickerFilters } from './restaurants/picker/pickerLogic'
+import RestaurantPicker, { PHOTO_ITEM } from './restaurants/picker/RestaurantPicker'
 import { shownInApp, sortPhotos } from './photos/photo'
 
 export type Photo = PhotoItem
@@ -21,7 +25,7 @@ type Msg = { tone: 'ok' | 'bad'; text: string }
 export default function PhotosPage() {
   const qc = useQueryClient()
   const [restaurantId, setRestaurantId] = useState('')
-  const [q, setQ] = useState('')
+  const [filters, setFilters] = useState<PickerFilters>({ search: '', university: '', has: '' })
   const [message, setMessage] = useState<Msg | null>(null)
   const [busy, setBusy] = useState(false)
   const [credit, setCredit] = useState('')
@@ -30,16 +34,12 @@ export default function PhotosPage() {
   const [unsaved, setUnsaved] = useState<Record<string, string>>({}) // photo id -> storage path of an upload no draft references yet
   const [previewing, setPreviewing] = useState(false)
 
-  const restaurants = useQuery({
-    queryKey: ['restaurant-picker', q, 'vis'],
-    queryFn: async () => {
-      let query = supabase.from('restaurant_overrides').select('id,name_ko,visibility').order('name_ko').limit(50)
-      if (q.trim()) query = query.ilike('name_ko', `%${q.trim().replace(/[%,()*\\]/g, ' ')}%`)
-      const { data, error } = await query
-      if (error) throw error
-      return data as { id: string; name_ko: string; visibility: string }[]
-    },
-  })
+  // Every managed restaurant (the same rows as the 식당 page), grouped by school; not a capped search result.
+  const restaurants = useQuery({ queryKey: ['photo-picker', 'restaurants'], queryFn: fetchPickerRestaurants, refetchOnMount: 'always' })
+  const photoCounts = useQuery({ queryKey: ['photo-picker', 'counts'], queryFn: fetchPhotoCounts, refetchOnMount: 'always' })
+  const universities = useUniversities()
+  const schools = useMemo(() => (universities.data ?? []).map((u) => ({ id: u.id, name_ko: u.name_ko })), [universities.data])
+  const counts = useMemo(() => photoCounts.data ?? new Map<string, number>(), [photoCounts.data])
   const overview = useQuery({ queryKey: ['cms-overview', TYPE], queryFn: () => cmsOverview(TYPE) })
   const ov = useMemo(() => new Map<string, OverviewRow>((overview.data ?? []).map((r) => [r.entity_id, r])), [overview.data])
   const cms = useQuery({ queryKey: ['cms', TYPE, restaurantId], enabled: !!restaurantId, queryFn: () => cmsState(TYPE, restaurantId) })
@@ -56,7 +56,7 @@ export default function PhotosPage() {
   const selected = restaurants.data?.find((r) => r.id === restaurantId)
 
   const refresh = async () => {
-    await qc.invalidateQueries({ queryKey: ['cms', TYPE, restaurantId] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['photos'] })
+    await qc.invalidateQueries({ queryKey: ['cms', TYPE, restaurantId] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['photos'] }); await qc.invalidateQueries({ queryKey: ['photo-picker'] })
   }
   const change = (next: PhotoItem[]) => { setEdited(sortPhotos(next)); setEditBase((b) => b ?? serverRev) }
   const resetLocal = () => { setEdited(null); setEditBase(null); setUnsaved({}) }
@@ -152,15 +152,10 @@ export default function PhotosPage() {
     <>
       <PageHeader title="사진 관리" description="식당 대표 사진과 갤러리를 올려요. 큰 사진은 올리기 전에 자동으로 줄여요. 올리거나 고친 내용은 초안으로 저장되고, 게시해야 앱 식당 상세에 보여요." />
       {message && !restaurantId && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{message.text}</p>}
-      <Card className="mb-5 grid gap-3 sm:grid-cols-2">
-        <Field label="식당 검색" htmlFor="pq"><Input id="pq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="이름으로 검색" /></Field>
-        <Field label="식당 선택" htmlFor="ps">
-          <Select id="ps" value={restaurantId} onChange={(e) => { setRestaurantId(e.target.value); resetLocal(); setMessage(null) }}>
-            <option value="">선택하세요</option>{restaurants.data?.map((r) => { const o = ov.get(r.id); return <option key={r.id} value={r.id}>{r.name_ko}{o?.scheduled_at ? ' · 예약됨' : o?.has_draft ? ' · 초안 있음' : ''}</option> })}
-          </Select>
-        </Field>
-      </Card>
-      {!restaurantId && <EmptyState>식당을 선택하면 사진이 보여요.</EmptyState>}
+      <RestaurantPicker item={PHOTO_ITEM} restaurants={restaurants.data} universities={schools} counts={counts} overview={ov}
+        loading={restaurants.isLoading} error={restaurants.error} onRetry={() => void restaurants.refetch()}
+        filters={filters} onFilters={setFilters} selectedId={restaurantId} onSelect={(id) => { setRestaurantId(id); resetLocal(); setMessage(null) }} />
+      {!restaurantId && <EmptyState>위 목록에서 식당을 선택하면 사진이 보여요.</EmptyState>}
       {restaurantId && cms.isLoading && <Skeleton className="h-48 w-full" />}
       {restaurantId && cms.error && <ErrorState error={cms.error} onRetry={() => void cms.refetch()} />}
       {restaurantId && state && (
@@ -175,7 +170,7 @@ export default function PhotosPage() {
                 <Button size="sm" onClick={() => setEditBase(serverRev)}>내 수정으로 덮어쓰기</Button>
               </div>
             </div>)}
-          {selected && selected.visibility !== 'published' && (
+          {selected && selected.visibility && selected.visibility !== 'published' && (
             <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">이 식당은 아직 &lsquo;{selected.visibility}&rsquo; 상태라 앱에 사진이 보이지 않아요. 식당을 공개하면 함께 보여요.</p>
           )}
           <section aria-labelledby="cover-h">

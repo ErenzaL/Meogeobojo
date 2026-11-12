@@ -4,7 +4,7 @@ import { Button, ConfirmDialog, Field, Input, Modal, Select, Textarea } from '@/
 import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
-import { cafeteriaRow, cafeteriaToForm, DAYS, emptyCafeteriaForm, kindLabel, KINDS, nextSortOrder, PERIOD_LABEL, PERIODS, STATUS_LABEL, STATUSES, validateCafeteria, type Cafeteria, type CafeteriaForm } from './model'
+import { cafeteriaRow, cafeteriaToForm, DAYS, emptyCafeteriaForm, kindLabel, KINDS, PERIOD_LABEL, PERIODS, STATUS_LABEL, STATUSES, validateCafeteria, type Cafeteria, type CafeteriaForm } from './model'
 
 type Uni = { id: string; name_ko: string }
 
@@ -15,8 +15,7 @@ export default function CafeteriaFormModal({ cafeteria, existing = [], universit
 }) {
   const qc = useQueryClient()
   const isNew = cafeteria === null
-  const [f, setF] = useState<CafeteriaForm>(() => (cafeteria ? cafeteriaToForm(cafeteria) : { ...emptyCafeteriaForm(defaultUniversity), sort_order: nextSortOrder(existing, defaultUniversity) }))
-  const [orderTouched, setOrderTouched] = useState(false)
+  const [f, setF] = useState<CafeteriaForm>(() => (cafeteria ? cafeteriaToForm(cafeteria) : emptyCafeteriaForm(defaultUniversity)))
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [err, setErr] = useState<string | null>(null)
   const [moveAsk, setMoveAsk] = useState(false)
@@ -71,7 +70,7 @@ export default function CafeteriaFormModal({ cafeteria, existing = [], universit
     <Modal open title={isNew ? '학식 식당 추가' : '학식 식당 수정'} onClose={close}>
       <div className="space-y-3">
         <Field label="대학교" htmlFor="cf_uni" error={errors.university_id}>
-          <Select id="cf_uni" value={f.university_id} onChange={(e) => { const u = e.target.value; setF((p) => ({ ...p, university_id: u, ...(isNew && !orderTouched ? { sort_order: nextSortOrder(existing, u) } : {}) })) }}>
+          <Select id="cf_uni" value={f.university_id} onChange={(e) => set('university_id', e.target.value)}>
             <option value="">선택하세요</option>{universities.map((u) => <option key={u.id} value={u.id}>{u.name_ko}</option>)}
           </Select>
         </Field>
@@ -84,10 +83,8 @@ export default function CafeteriaFormModal({ cafeteria, existing = [], universit
           <Field label="영어 이름 (선택)" htmlFor="cf_en" error={errors.name_en}><Input id="cf_en" value={f.name_en} onChange={(e) => set('name_en', e.target.value)} /></Field>
           <Field label="중국어 이름 (선택)" htmlFor="cf_zh" error={errors.name_zh}><Input id="cf_zh" value={f.name_zh} onChange={(e) => set('name_zh', e.target.value)} /></Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="종류" htmlFor="cf_kind"><Select id="cf_kind" value={f.kind} onChange={(e) => set('kind', e.target.value as CafeteriaForm['kind'])}>{KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}</Select></Field>
-          <Field label="표시 순서" htmlFor="cf_order" error={errors.sort_order} hint="작을수록 앱에서 먼저 나와요"><Input id="cf_order" inputMode="numeric" value={f.sort_order} onChange={(e) => { setOrderTouched(true); set('sort_order', e.target.value) }} /></Field>
-        </div>
+        <Field label="종류" htmlFor="cf_kind"><Select id="cf_kind" value={f.kind} onChange={(e) => set('kind', e.target.value as CafeteriaForm['kind'])}>{KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}</Select></Field>
+        <p className="-mt-1 text-xs text-muted">식당은 등록한 순서대로 나와요 (먼저 등록한 식당이 위). 앱에서 처음 보이는 식당은 학생식당 중 가장 먼저 등록한 식당이에요.</p>
         <Field label="위치 / 건물 설명 (선택)" htmlFor="cf_loc"><Input id="cf_loc" value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="예: 학생회관 1층" /></Field>
         {!weekly && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">운영 식사·요일·사진은 데이터베이스 업데이트(20261118000100) 뒤에 쓸 수 있어요.</p>}
         <fieldset className="space-y-1" disabled={!weekly}><legend className="text-sm font-medium">운영하는 식사</legend>

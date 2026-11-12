@@ -40,13 +40,6 @@ export const emptyCafeteriaForm = (university_id = ''): CafeteriaForm => ({
   university_id, kind: 'student', name_ko: '', name_en: '', name_zh: '', location: '', sort_order: '0', status: 'inactive', operating_note: '',
   meal_periods: [...PERIODS], operating_days: [1, 2, 3, 4, 5], photo_url: null, photo_path: null,
 })
-/** A new cafeteria goes after the ones the university already has, so adding a second one never pushes the first off the top
- *  (the app opens on the first student cafeteria and lists them in this order). */
-export const nextSortOrder = (existing: Pick<Cafeteria, 'university_id' | 'sort_order' | 'status'>[], universityId: string): string => {
-  const orders = existing.filter((c) => c.university_id === universityId && c.status !== 'archived').map((c) => Number(c.sort_order) || 0)
-  return orders.length ? String(Math.max(...orders) + 1) : '0'
-}
-
 export const cafeteriaToForm = (c: Cafeteria): CafeteriaForm => ({
   university_id: c.university_id, kind: c.kind, name_ko: c.name_ko ?? '', name_en: c.name_en ?? '', name_zh: c.name_zh ?? '',
   location: c.location_description ?? '', sort_order: String(c.sort_order ?? 0), status: c.status, operating_note: c.operating_note ?? '',

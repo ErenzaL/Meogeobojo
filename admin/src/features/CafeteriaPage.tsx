@@ -26,13 +26,13 @@ function useCafeterias() {
     queryFn: async (): Promise<{ rows: Cafeteria[]; legacy: boolean; weekly: boolean }> => {
       const cols = 'id,university_id,kind,name_ko,name_en,name_zh,location_description,sort_order'
       const missing = (e: unknown) => (e as { code?: string })?.code === '42703' || /does not exist|schema cache/i.test((e as { message?: string })?.message ?? '')
-      const a = await supabase.from('campus_cafeterias').select(`${cols},status,operating_note,meal_periods,operating_days,photo_url,photo_path,universities(name_ko)`).order('sort_order').order('created_at')
+      const a = await supabase.from('campus_cafeterias').select(`${cols},status,operating_note,meal_periods,operating_days,photo_url,photo_path,universities(name_ko)`).order('created_at').order('id')
       if (!a.error) return { rows: a.data as unknown as Cafeteria[], legacy: false, weekly: true }
       if (!missing(a.error)) throw a.error
-      const b = await supabase.from('campus_cafeterias').select(`${cols},status,operating_note,universities(name_ko)`).order('sort_order').order('created_at')
+      const b = await supabase.from('campus_cafeterias').select(`${cols},status,operating_note,universities(name_ko)`).order('created_at').order('id')
       if (!b.error) return { rows: b.data as unknown as Cafeteria[], legacy: false, weekly: false }
       if (!missing(b.error)) throw b.error
-      const c = await supabase.from('campus_cafeterias').select(`${cols},universities(name_ko)`).order('sort_order').order('created_at')
+      const c = await supabase.from('campus_cafeterias').select(`${cols},universities(name_ko)`).order('created_at').order('id')
       if (c.error) throw c.error
       return { rows: (c.data as unknown as Cafeteria[]).map((x) => ({ ...x, status: 'active', operating_note: null })), legacy: true, weekly: false }
     },
@@ -111,7 +111,7 @@ export default function CafeteriaPage() {
 
   return (
     <>
-      <PageHeader title="학식" description="대학교마다 학식 식당을 여러 곳 등록하고, 식당마다 한 주의 메뉴를 한꺼번에 입력해요. 조식 · 중식 · 석식은 하는 식사만 입력하면 돼요. 학생은 앱과 웹에서 식당을 골라 볼 수 있어요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 보여요."
+      <PageHeader title="학식" description="대학교마다 학식 식당을 여러 곳 등록하고 (먼저 등록한 식당이 위, 새로 등록한 식당이 아래에 나와요), 식당마다 한 주의 메뉴를 한꺼번에 입력해요. 조식 · 중식 · 석식은 하는 식사만 입력하면 돼요. 학생은 앱과 웹에서 식당을 골라 볼 수 있어요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 보여요."
         actions={<div className="flex gap-2"><Button variant="outline" onClick={() => setCsv(true)}><FileUp className="size-4" />CSV 일괄 등록</Button><Button onClick={() => setCafModal('new')}><Plus className="size-4" />학식 식당 추가</Button></div>} />
       {notice && <p role="status" className="mb-4 rounded-xl bg-brand/30 p-3 text-sm">{notice}</p>}
       {legacy && (

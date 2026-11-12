@@ -153,9 +153,18 @@ class _Body extends ConsumerWidget {
     final ctrl = ref.read(campusMealSelectionProvider.notifier);
     final cafeteria = ref.watch(effectiveCafeteriaProvider).value;
     if (cafeteria == null) return const SizedBox.shrink();
-    // Only the meals this cafeteria serves; a stale pick falls back to the first one.
-    final types = cafeteria.mealTypes;
-    final mealType = types.contains(sel.mealType) ? sel.mealType : types.first;
+    // Tabs only for the meals an admin actually entered this week (breakfast, lunch and
+    // dinner are each optional). While the first load of a week is running there is
+    // nothing to base them on, so the row waits instead of flashing meals that vanish.
+    final week = ref.watch(
+      campusWeekMealsProvider((
+        cafeteriaId: cafeteria.id,
+        weekStart: sel.weekStart,
+      )),
+    );
+    final weekLoading = week.isLoading && !week.hasValue;
+    final types = visibleMealTypes(cafeteria, week.value);
+    final mealType = resolveMealType(sel.mealType, types);
     final today = ctrl.today;
     String labelOf(CampusCafeteria c) =>
         cafeteriaLabel(l10n, locale, c, cafeterias);
@@ -218,11 +227,12 @@ class _Body extends ConsumerWidget {
             operatingDays: cafeteria.operatingDays,
           ),
           const SizedBox(height: 10),
-          MealTabs(
-            selected: mealType,
-            onSelect: ctrl.selectMealType,
-            types: types,
-          ),
+          if (!weekLoading)
+            MealTabs(
+              selected: mealType,
+              onSelect: ctrl.selectMealType,
+              types: types,
+            ),
           const SizedBox(height: 16),
           Text(
             l10n.mealHeading(

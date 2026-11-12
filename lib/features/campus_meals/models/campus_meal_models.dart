@@ -195,6 +195,43 @@ String cafeteriaLabel(
   return l10n.mealCafeteriaNth(base, sameKind.indexOf(cafeteria) + 1);
 }
 
+/// The cafeteria to show: the user's [pick] when it still belongs to [all],
+/// otherwise the first student cafeteria, otherwise the first one. Null only
+/// when the campus has none. Home and the weekly page share this rule.
+CampusCafeteria? chooseCafeteria(List<CampusCafeteria> all, String? pick) {
+  if (all.isEmpty) return null;
+  for (final c in all) {
+    if (c.id == pick) return c;
+  }
+  return all.firstWhere(
+    (c) => c.kind == CafeteriaKind.student,
+    orElse: () => all.first,
+  );
+}
+
+/// The meal tabs of a week: only meals an admin actually entered (any status,
+/// so a meal marked closed still explains itself). Nothing is assumed, so a
+/// cafeteria that only serves lunch shows one tab. A week with no meals at all
+/// (or one not loaded) falls back to what the cafeteria is set up to serve.
+List<MealType> visibleMealTypes(CampusCafeteria cafeteria, WeekMeals? week) {
+  if (week == null || week.isEmpty) return cafeteria.mealTypes;
+  return [
+    for (final t in MealType.values)
+      if (week.meals.any((m) => m.type == t)) t,
+  ];
+}
+
+/// [wanted] when it is one of [types], otherwise the next meal of the day that
+/// is, otherwise the last one (so a missing breakfast opens on lunch, a missing
+/// dinner on lunch).
+MealType resolveMealType(MealType wanted, List<MealType> types) {
+  if (types.contains(wanted)) return wanted;
+  for (final t in MealType.values) {
+    if (t.index > wanted.index && types.contains(t)) return t;
+  }
+  return types.last;
+}
+
 /// Dish categories. An older app version that does not know a newer category
 /// shows the dish as `other`, so adding categories never breaks installed apps.
 enum MenuItemKind {

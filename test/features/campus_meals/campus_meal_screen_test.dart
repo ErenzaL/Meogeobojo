@@ -52,6 +52,12 @@ Future<(Harness, FakeCampusMealRepository)> open(
             MealType.dinner,
             items: const [MenuItem(nameKo: '제육볶음')],
           ),
+          // breakfast is only entered for Wednesday: the 조식 tab exists, Tuesday's is empty
+          fakeMeal(
+            '2026-11-04',
+            MealType.breakfast,
+            items: const [MenuItem(nameKo: '토스트')],
+          ),
         ],
       );
   final h = await buildHarness(
@@ -554,14 +560,115 @@ void main() {
       await tester.tap(find.text('석식'));
       await tester.pumpAndSettle();
       expect(find.text('공개된 메뉴가 없어요'), findsOneWidget);
-      await tester.tap(find.text('조식'));
+      // breakfast was never entered: there is no tab for it, and nothing says "closed"
+      expect(find.text('조식'), findsNothing);
+      expect(find.text('중식'), findsOneWidget);
+      expect(find.text('석식'), findsOneWidget);
+    });
+  });
+
+  group('meals are optional: only entered meals get a tab', () {
+    Future<void> openWith(
+      WidgetTester tester,
+      List<CafeteriaMeal> meals, {
+      DateTime Function()? now,
+      CampusCafeteria? cafeteria,
+    }) => open(
+      tester,
+      now: now,
+      repo: FakeCampusMealRepository(
+        cafeteriasByUniversity: {
+          univ1: [cafeteria ?? fakeCafeteria('c1')],
+        },
+        meals: meals,
+      ),
+    );
+
+    testWidgets('a cafeteria that only serves lunch shows one tab', (
+      tester,
+    ) async {
+      await openWith(tester, [fakeMeal('2026-11-03', MealType.lunch)]);
+      final tabs = tester.widget<MealTabs>(find.byType(MealTabs));
+      expect(tabs.types, [MealType.lunch]);
+      expect(find.text('조식'), findsNothing);
+      expect(find.text('석식'), findsNothing);
+    });
+
+    testWidgets('no breakfast anywhere this week: breakfast is not offered', (
+      tester,
+    ) async {
+      await openWith(tester, [
+        fakeMeal('2026-11-03', MealType.lunch),
+        fakeMeal('2026-11-03', MealType.dinner),
+      ]);
+      final tabs = tester.widget<MealTabs>(find.byType(MealTabs));
+      expect(tabs.types, [MealType.lunch, MealType.dinner]);
+    });
+
+    testWidgets('the tabs follow what is entered for the week shown', (
+      tester,
+    ) async {
+      // this week: lunch only; next week: lunch and dinner
+      await openWith(tester, [
+        fakeMeal('2026-11-03', MealType.lunch),
+        fakeMeal('2026-11-10', MealType.lunch),
+        fakeMeal('2026-11-10', MealType.dinner),
+      ]);
+      expect(tester.widget<MealTabs>(find.byType(MealTabs)).types, [
+        MealType.lunch,
+      ]);
+      await tester.tap(find.byTooltip('다음 주'));
       await tester.pumpAndSettle();
-      expect(find.text('이 시간에는 운영하지 않아요'), findsNothing);
+      expect(tester.widget<MealTabs>(find.byType(MealTabs)).types, [
+        MealType.lunch,
+        MealType.dinner,
+      ]);
+    });
+
+    testWidgets('the time-of-day default moves to a meal that exists', (
+      tester,
+    ) async {
+      // 07:00 would open breakfast, but only dinner is entered
+      await openWith(tester, [
+        fakeMeal('2026-11-03', MealType.dinner),
+      ], now: () => DateTime.utc(2026, 11, 2, 22));
       expect(
-        find.text('등록된 식단 정보가 없습니다.'),
-        findsOneWidget,
-        reason: 'unknown, not closed',
+        tester.widget<MealTabs>(find.byType(MealTabs)).selected,
+        MealType.dinner,
       );
+      expect(find.text('오늘 석식 학식'), findsOneWidget);
+    });
+
+    testWidgets('a meal marked closed is an entry: it keeps its tab', (
+      tester,
+    ) async {
+      await openWith(tester, [
+        fakeMeal('2026-11-03', MealType.lunch),
+        fakeMeal(
+          '2026-11-03',
+          MealType.dinner,
+          status: MealStatus.closed,
+          items: const [],
+        ),
+      ]);
+      expect(find.text('석식'), findsOneWidget);
+    });
+
+    testWidgets('an empty week falls back to what the cafeteria serves', (
+      tester,
+    ) async {
+      await openWith(
+        tester,
+        const [],
+        cafeteria: fakeCafeteria(
+          'c1',
+          mealTypes: const [MealType.lunch, MealType.dinner],
+        ),
+      );
+      expect(tester.widget<MealTabs>(find.byType(MealTabs)).types, [
+        MealType.lunch,
+        MealType.dinner,
+      ]);
     });
   });
 

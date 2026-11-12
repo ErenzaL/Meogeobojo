@@ -90,7 +90,7 @@ describe('주간 식단표: Monday-Friday x breakfast / lunch / dinner', () => {
     for (const meal of ['조식', '중식', '석식']) expect(within(grid).getByRole('rowheader', { name: meal })).toBeTruthy()
     expect(within(grid).queryByLabelText(`${d(5)} 중식`)).toBeNull()
     expect(within(grid).getAllByRole('columnheader')).toHaveLength(6) // the corner + 5 days
-    expect(screen.getByText(/0\/15칸 입력/)).toBeTruthy()
+    expect(screen.getByText(/^0칸 입력/)).toBeTruthy()
   })
 
   it('"토·일도 편집" adds Saturday and Sunday; a cafeteria that opens at weekends shows them from the start', async () => {
@@ -98,7 +98,7 @@ describe('주간 식단표: Monday-Friday x breakfast / lunch / dinner', () => {
     await user().click(screen.getByLabelText('주말 표시'))
     expect(screen.getByLabelText(`${d(5)} 중식`, { selector: 'td' })).toBeTruthy()
     expect(screen.getByLabelText(`${d(6)} 석식`, { selector: 'td' })).toBeTruthy()
-    expect(screen.getByText(/0\/21칸 입력/)).toBeTruthy()
+    expect(screen.getByText(/^0칸 입력/)).toBeTruthy()
   })
   it('opens with Saturday when the cafeteria operates on Saturdays', async () => {
     await openWeek({ caf: { operating_days: [1, 2, 3, 4, 5, 6] } })
@@ -133,7 +133,7 @@ describe('한 번에 한 주: bulk weekly editing, one save', () => {
       await fill(date, '중식', `중식 ${date}`, '5500')
       await fill(date, '석식', `석식 ${date}`, '6000')
     }
-    expect(screen.getByText(/15\/15칸 입력 · 메뉴 15개/)).toBeTruthy()
+    expect(screen.getByText(/^15칸 입력 · 메뉴 15개/)).toBeTruthy()
     await user().click(screen.getByRole('button', { name: '초안 저장' }))
     await screen.findByText(/한 주 전체를 초안으로 저장했어요/)
     expect(fake.rpcs.filter((r) => r.name === 'cms_save_draft')).toHaveLength(1)

@@ -138,7 +138,7 @@ class _RestaurantDetailScreenState
     void directions() {
       final o = origin;
       if (o == null) return;
-      ref.read(activeRecommendationProvider.notifier).markWent(r.kakaoId);
+      ref.read(activeRecommendationProvider.notifier).markWent(r);
       openDirections(
         context,
         to: r,

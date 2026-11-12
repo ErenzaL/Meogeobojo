@@ -111,15 +111,17 @@ Future<void> markEaten(
   final ok = await requireAuth(context, ref, reason: AuthReason.records);
   if (!ok || !context.mounted) return;
   ref.read(mealRecordsProvider.notifier).add(r);
+  // Also takes the 다녀오셨어요? banner (and [context] with it) off the screen.
   ref.read(activeRecommendationProvider.notifier).finish();
 
   final l10n = context.l10n;
   final nav = Navigator.of(context);
-  ScaffoldMessenger.of(context)
+  final messenger = ScaffoldMessenger.of(context);
+  void say(String text) => messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(l10n.mealSaved),
+        content: Text(text),
         action: SnackBarAction(
           label: l10n.mealSeeRecords,
           onPressed: () => nav.push<void>(
@@ -128,13 +130,24 @@ Future<void> markEaten(
         ),
       ),
     );
+  say(l10n.mealSaved);
 
-  StudentReview? mine;
+  // The editor must open on the user's own review: saving an empty form over
+  // it would erase its text. So it is fetched, never taken from a list that
+  // may still be loading, and a failed fetch opens no editor.
   final me = ref.read(currentUserProvider)?.id;
-  for (final x
-      in ref.read(restaurantReviewsProvider(r.kakaoId)).value ??
-          const <StudentReview>[]) {
-    if (x.userId == me) mine = x;
+  final List<StudentReview> reviews;
+  try {
+    reviews = await ref.read(reviewRepositoryProvider).forPlace(r.kakaoId);
+  } catch (e) {
+    debugPrint('Own review lookup failed: $e');
+    say(l10n.mealSavedReviewLoadFailed);
+    return;
   }
-  await showReviewEditorSheet(context, restaurant: r, existing: mine);
+  if (!nav.mounted) return;
+  await showReviewEditorSheet(
+    nav.context,
+    restaurant: r,
+    existing: reviews.where((x) => x.userId == me).firstOrNull,
+  );
 }

@@ -194,7 +194,7 @@ class HeroCard extends ConsumerWidget {
                       : () {
                           ref
                               .read(activeRecommendationProvider.notifier)
-                              .markWent(r.kakaoId);
+                              .markWent(r);
                           openDirections(
                             context,
                             to: r,

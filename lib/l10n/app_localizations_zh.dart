@@ -2405,6 +2405,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mealSaved => '已保存到用餐记录';
 
   @override
+  String get mealSavedReviewLoadFailed => '已保存到用餐记录。无法加载你的评价，因此未打开评价窗口';
+
+  @override
   String get mealSeeRecords => '查看';
 
   @override

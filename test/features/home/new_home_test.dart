@@ -31,6 +31,7 @@ import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:meogeobojo/features/home/widgets/home_filter_bar.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
+import 'package:meogeobojo/features/reviews/models/student_review.dart';
 
 import 'package:meogeobojo/features/university/models/university.dart';
 
@@ -73,9 +74,13 @@ Future<Harness> openHome(
   Map<String, Object> storage = const {'app_language': 'ko'},
   Size size = const Size(390, 844),
   bool recsRequested = true,
+  FakeAuthGateway? auth,
+  FakeReviewRepository? reviews,
 }) async {
   final h = await buildHarness(
     recsRequested: recsRequested,
+    auth: auth,
+    reviews: reviews,
     storage: storage,
     restaurants: repo ?? FakeRestaurantRepository(items: _places),
     meals: meals,
@@ -1304,9 +1309,7 @@ void main() {
       await tester.tap(find.text('오늘의 추천 받기'));
       await tester.pumpAndSettle();
       final hero = h.container.read(homeRecsProvider).value!.hero.restaurant;
-      h.container
-          .read(activeRecommendationProvider.notifier)
-          .markWent(hero.kakaoId);
+      h.container.read(activeRecommendationProvider.notifier).markWent(hero);
       await tester.pumpAndSettle();
       expect(find.text('${hero.name}에 다녀오셨어요?'), findsOneWidget);
       for (final label in ['먹었어요 · 평가 남기기', '아직이요']) {
@@ -1318,6 +1321,51 @@ void main() {
           reason: '"$label" is cut off',
         );
       }
+    });
+
+    testWidgets('다녀오셨어요? is still asked once the place left the ranking', (
+      tester,
+    ) async {
+      final h = await openHome(tester, recsRequested: false);
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      // e.g. it closed while they were eating (the open-now filter drops it).
+      h.container
+          .read(activeRecommendationProvider.notifier)
+          .markWent(spot('문닫은집', 0.001));
+      await tester.pumpAndSettle();
+      expect(find.text('문닫은집에 다녀오셨어요?'), findsOneWidget);
+    });
+
+    testWidgets('먹었어요 opens the editor on the review already written', (
+      tester,
+    ) async {
+      final h = await openHome(
+        tester,
+        recsRequested: false,
+        auth: FakeAuthGateway(user: fakeUser()),
+        reviews: FakeReviewRepository([
+          StudentReview(
+            id: 'mine',
+            userId: 'user-1',
+            kakaoPlaceId: '가까운집',
+            rating: 4,
+            body: '국물이 진해요',
+            createdAt: DateTime.utc(2026, 11, 9),
+            moderationStatus: 'visible',
+          ),
+        ]),
+      );
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      h.container
+          .read(activeRecommendationProvider.notifier)
+          .markWent(spot('가까운집', 0.0005));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('먹었어요 · 평가 남기기'));
+      await tester.pumpAndSettle();
+      // Not an empty form that would erase the text when saved.
+      expect(find.widgetWithText(TextField, '국물이 진해요'), findsOneWidget);
     });
 
     testWidgets('coming back opens the recommendation still in use', (

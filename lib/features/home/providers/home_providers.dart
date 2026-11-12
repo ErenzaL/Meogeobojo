@@ -257,19 +257,27 @@ class ActiveRecommendation {
     required this.heroId,
     required this.key,
     required this.at,
-    this.wentTo,
+    this.went,
   });
 
   final String heroId;
   final String key;
   final DateTime at;
-  final String? wentTo;
+
+  /// Where 길찾기 was opened for. Kept whole (not looked up in the ranking),
+  /// so "다녀오셨어요?" is still asked after the place closed or dropped out
+  /// of the filters.
+  final Restaurant? went;
+
+  String? get wentTo => went?.kakaoId;
 
   Map<String, Object?> toJson() => {
     'hero': heroId,
     'key': key,
     'at': at.millisecondsSinceEpoch,
-    'went': wentTo,
+    'went': went?.kakaoId,
+    'wentName': went?.name,
+    'wentCategory': went?.categoryName,
   };
 
   static ActiveRecommendation? fromJson(Object? j) {
@@ -278,12 +286,27 @@ class ActiveRecommendation {
     final key = j['key'];
     final at = j['at'];
     if (hero is! String || key is! String || at is! int) return null;
-    final went = j['went'];
+    final went = j['went'], name = j['wentName'], category = j['wentCategory'];
     return ActiveRecommendation(
       heroId: hero,
       key: key,
       at: DateTime.fromMillisecondsSinceEpoch(at),
-      wentTo: went is String ? went : null,
+      // Only what the meal check needs (the record and the review).
+      went: went is String && name is String
+          ? Restaurant(
+              kakaoId: went,
+              name: name,
+              categoryName: category is String ? category : '',
+              categoryGroupCode: '',
+              address: '',
+              roadAddress: '',
+              phone: '',
+              latitude: 0,
+              longitude: 0,
+              distanceMeters: 0,
+              placeUrl: null,
+            )
+          : null,
     );
   }
 }
@@ -343,21 +366,21 @@ class ActiveRecommendationNotifier extends Notifier<ActiveRecommendation?> {
         heroId: heroId,
         key: key,
         at: DateTime.now(),
-        wentTo: s?.wentTo,
+        went: s?.went,
       ),
     );
   }
 
-  /// 길찾기 was opened for [kakaoId]. Only while a recommendation is in use.
-  void markWent(String kakaoId) {
+  /// 길찾기 was opened for [r]. Only while a recommendation is in use.
+  void markWent(Restaurant r) {
     final s = state;
-    if (s == null || s.wentTo == kakaoId) return;
+    if (s == null || s.wentTo == r.kakaoId) return;
     _write(
       ActiveRecommendation(
         heroId: s.heroId,
         key: s.key,
         at: DateTime.now(),
-        wentTo: kakaoId,
+        went: r,
       ),
     );
   }
@@ -369,8 +392,15 @@ class ActiveRecommendationNotifier extends Notifier<ActiveRecommendation?> {
     _write(ActiveRecommendation(heroId: s.heroId, key: s.key, at: s.at));
   }
 
+  /// A new recommendation was asked for: the card is saved again, even when
+  /// it shows the place a meal was just logged for.
+  void startNew() => _finished = null;
+
   /// Started over: the next visit starts fresh.
-  void clear() => _write(null);
+  void clear() {
+    startNew();
+    _write(null);
+  }
 
   /// Ate there: the recommendation is finished; the next visit starts fresh.
   void finish() {

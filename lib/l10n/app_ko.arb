@@ -1529,6 +1529,7 @@
   "mealAteButton": "먹었어요 · 평가 남기기",
   "mealAteSub": "MY 식사 기록에 남아요",
   "mealSaved": "MY 식사 기록에 남겼어요",
+  "mealSavedReviewLoadFailed": "식사 기록은 남겼어요. 내 평가를 불러오지 못해 평가 창은 열지 않았어요",
   "mealSeeRecords": "기록 보기",
   "mealCheckTitle": "{name}에 다녀오셨어요?",
   "@mealCheckTitle": {

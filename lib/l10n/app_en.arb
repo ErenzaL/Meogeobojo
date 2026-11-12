@@ -814,6 +814,7 @@
   "mealAteButton": "I ate here · Rate it",
   "mealAteSub": "Saved to your meal records in MY",
   "mealSaved": "Saved to your meal records",
+  "mealSavedReviewLoadFailed": "Saved to your meal records. Couldn't load your review, so the rating form didn't open",
   "mealSeeRecords": "View",
   "mealCheckTitle": "Did you eat at {name}?",
   "mealCheckDismiss": "Not yet"

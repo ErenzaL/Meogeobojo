@@ -814,6 +814,7 @@
   "mealAteButton": "吃过了 · 留下评价",
   "mealAteSub": "保存到“我的”用餐记录",
   "mealSaved": "已保存到用餐记录",
+  "mealSavedReviewLoadFailed": "已保存到用餐记录。无法加载你的评价，因此未打开评价窗口",
   "mealSeeRecords": "查看",
   "mealCheckTitle": "去过{name}了吗？",
   "mealCheckDismiss": "还没有"

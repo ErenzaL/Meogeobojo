@@ -318,7 +318,7 @@ class _AltRow extends ConsumerWidget {
                   : () {
                       ref
                           .read(activeRecommendationProvider.notifier)
-                          .markWent(r.kakaoId);
+                          .markWent(r);
                       openDirections(
                         context,
                         to: r,

@@ -77,6 +77,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     ref.read(homeRecsRequestedProvider.notifier).request();
     ref.read(heroPickProvider.notifier).reset();
+    // A new recommendation is in use even when it is the same place as the
+    // meal just logged, and even if nothing on screen changes.
+    ref.read(activeRecommendationProvider.notifier).startNew();
+    _remember(ref.read(homeRecsProvider).value);
     // The result appears in place. The page is deliberately NOT scrolled to it: it used to jump away from the button
     // the user had just tapped.
   }
@@ -98,9 +102,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen(homeRecsProvider, remember);
     ref.listen(homeShowRecsProvider, remember);
     ref.listen(homeShowUnverifiedProvider, remember);
-    final wentTo = ref.watch(
-      activeRecommendationProvider.select((a) => a?.wentTo),
-    );
+    final went = ref.watch(activeRecommendationProvider.select((a) => a?.went));
 
     return Scaffold(
       backgroundColor: whitePageColor(context),
@@ -161,7 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   builder: (context, box) {
                     final twoColumn =
                         box.maxWidth >= Breakpoints.homeTwoColumn - 2 * 20;
-                    final recsColumn = !showRecs
+                    final recsBody = !showRecs
                         ? const RecsPrompt()
                         : recs.when(
                             loading: () => const RecsSkeleton(),
@@ -176,14 +178,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Back from 길찾기: did they eat there?
-                                      for (final r in data.ranked)
-                                        if (r.restaurant.kakaoId == wentTo) ...[
-                                          MealCheckBanner(
-                                            restaurant: r.restaurant,
-                                          ),
-                                          const SizedBox(height: 16),
-                                        ],
                                       // Changing the pick fades the new card in.
                                       AnimatedSwitcher(
                                         duration: const Duration(
@@ -232,6 +226,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                     ],
                                   ),
+                          );
+                    // Back from 길찾기: did they eat there? Asked whatever the
+                    // ranking shows now (the place may have closed or left the
+                    // filters while they were eating).
+                    final recsColumn = went == null
+                        ? recsBody
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              MealCheckBanner(restaurant: went),
+                              const SizedBox(height: 16),
+                              recsBody,
+                            ],
                           );
                     // Tablet / desktop: recommendations left, cafeteria right.
                     if (twoColumn) {

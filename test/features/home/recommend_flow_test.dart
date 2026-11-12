@@ -31,7 +31,12 @@ Future<ProviderContainer> containerWith(
 }
 
 String saved(DateTime at) => jsonEncode(
-  ActiveRecommendation(heroId: 'A', key: 'k', at: at, wentTo: 'B').toJson(),
+  ActiveRecommendation(
+    heroId: 'A',
+    key: 'k',
+    at: at,
+    went: fakeRestaurant('B'),
+  ).toJson(),
 );
 
 void main() {
@@ -77,6 +82,8 @@ void main() {
         final active = c.read(activeRecommendationProvider);
         expect(active?.heroId, 'A');
         expect(active?.wentTo, 'B');
+        // The meal check needs the place even if it is no longer ranked.
+        expect(active?.went?.name, '테스트식당B');
         expect(c.read(restoreHeroProvider)?.heroId, 'A');
         expect(c.read(homeRecsRequestedProvider), isTrue);
       },
@@ -93,6 +100,21 @@ void main() {
       final sp = c.read(sharedPreferencesProvider);
       expect(sp.getString(activeRecommendationPrefsKey), isNull);
     });
+
+    test(
+      'a logged meal is not saved again until a new recommendation',
+      () async {
+        final c = await containerWith(const {});
+        final active = c.read(activeRecommendationProvider.notifier);
+        active.save('A', 'k');
+        active.finish();
+        active.save('A', 'k'); // the same card is still on screen
+        expect(c.read(activeRecommendationProvider), isNull);
+        active.startNew(); // "오늘의 추천 받기"
+        active.save('A', 'k');
+        expect(c.read(activeRecommendationProvider)?.heroId, 'A');
+      },
+    );
 
     test('clear() forgets it on the device', () async {
       final c = await containerWith({

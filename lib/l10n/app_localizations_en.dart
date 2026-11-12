@@ -2519,6 +2519,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mealSaved => 'Saved to your meal records';
 
   @override
+  String get mealSavedReviewLoadFailed =>
+      'Saved to your meal records. Couldn\'t load your review, so the rating form didn\'t open';
+
+  @override
   String get mealSeeRecords => 'View';
 
   @override

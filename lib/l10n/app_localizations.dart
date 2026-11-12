@@ -4378,6 +4378,12 @@ abstract class AppLocalizations {
   /// **'MY 식사 기록에 남겼어요'**
   String get mealSaved;
 
+  /// No description provided for @mealSavedReviewLoadFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'식사 기록은 남겼어요. 내 평가를 불러오지 못해 평가 창은 열지 않았어요'**
+  String get mealSavedReviewLoadFailed;
+
   /// No description provided for @mealSeeRecords.
   ///
   /// In ko, this message translates to:

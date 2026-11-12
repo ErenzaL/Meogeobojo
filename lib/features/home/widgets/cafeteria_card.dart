@@ -46,8 +46,10 @@ class CafeteriaCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            // the day chip sits at the right edge of the card
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
+              Flexible(
                 child: Text(
                   l10n.homeMealTitle,
                   maxLines: 1,
@@ -58,7 +60,8 @@ class CafeteriaCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (chip != null)
+              if (chip != null) ...[
+                const SizedBox(width: 8),
                 Flexible(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -77,6 +80,7 @@ class CafeteriaCard extends ConsumerWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
           // A campus can have several cafeterias: the student picks which one to see

@@ -1282,6 +1282,28 @@ void main() {
       expect(find.text('₩1,000'), findsOneWidget);
     });
 
+    testWidgets('the 내일 식단 chip sits at the right edge of the card', (
+      tester,
+    ) async {
+      await openHome(
+        tester,
+        meals: repo([
+          fakeMeal('2026-11-09', MealType.dinner, start: '17:00', end: '18:30'),
+          fakeMeal('2026-11-10', MealType.breakfast, price: 1000),
+        ]),
+      );
+      await scrollDown(tester);
+      final chip = find.ancestor(
+        of: find.text('내일 식단'),
+        matching: find.byType(Container),
+      );
+      final chipRight = tester.getRect(chip.first).right;
+      final listRight = tester
+          .getRect(find.byKey(const ValueKey('home-meal-list')))
+          .right;
+      expect(chipRight, closeTo(listRight, 0.5));
+    });
+
     testWidgets('no cafeteria data: says so, buttons still work', (
       tester,
     ) async {

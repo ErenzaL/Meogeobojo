@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../preferences/providers/preferences_providers.dart';
+import '../../records/meal_records.dart';
 import '../models/conditions.dart';
 
 /// The one set of conditions behind Home, the map and search. Starts from the
@@ -35,6 +36,7 @@ class ConditionsNotifier extends Notifier<Conditions> {
   void clear() => state = Conditions.defaults;
 }
 
-/// How many meals the user has logged ("먹은 기록"). The records feature is
-/// not built yet, so this is honestly zero.
-final visitedRecordCountProvider = Provider<int>((ref) => 0);
+/// How many meals the user has logged ("먹은 기록").
+final visitedRecordCountProvider = Provider<int>(
+  (ref) => ref.watch(mealRecordsProvider).length,
+);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,6 +41,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.read(homeCategoryProvider.notifier).clear();
     ref.read(heroPickProvider.notifier).reset();
     ref.read(homeRecsRequestedProvider.notifier).reset();
+    ref.read(activeRecommendationProvider.notifier).clear();
+    ref.read(restoreHeroProvider.notifier).consume();
+  }
+
+  /// Remembers the pick on screen as the recommendation in use, and puts the
+  /// one from the last visit back once the same filters are in place again.
+  void _remember(HomeRecs? data) {
+    final key = ref.read(homeRecsKeyProvider);
+    if (data == null || key == null || !ref.read(homeShowRecsProvider)) return;
+    // Nothing confirmed is on screen (the "조건 충족 후보 없음" card).
+    if (!data.ranked.first.verified && !ref.read(homeShowUnverifiedProvider)) {
+      return;
+    }
+    final heroId = data.hero.restaurant.kakaoId;
+    final restore = ref.read(restoreHeroProvider);
+    if (restore != null && restore.key == key) {
+      ref.read(restoreHeroProvider.notifier).consume();
+      // From here on it is an ordinary pick (reset by any filter change).
+      if (heroId == restore.heroId) {
+        ref.read(heroPickProvider.notifier).choose(heroId);
+      }
+    }
+    ref.read(activeRecommendationProvider.notifier).save(heroId, key);
   }
 
   /// "오늘의 추천 받기": runs the recommendation again for the current
@@ -52,6 +77,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     ref.read(homeRecsRequestedProvider.notifier).request();
     ref.read(heroPickProvider.notifier).reset();
+    // A new recommendation is in use even when it is the same place as the
+    // meal just logged, and even if nothing on screen changes.
+    ref.read(activeRecommendationProvider.notifier).startNew();
+    _remember(ref.read(homeRecsProvider).value);
     // The result appears in place. The page is deliberately NOT scrolled to it: it used to jump away from the button
     // the user had just tapped.
   }
@@ -64,6 +93,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final recs = ref.watch(homeRecsProvider);
     final categories = ref.watch(homeCategoryProvider);
     final showRecs = ref.watch(homeShowRecsProvider);
+    // Deferred: a listener may run while a widget is building. Asking for a
+    // pick or showing the unconfirmed ones changes what is on screen without
+    // changing the ranking, so those are listened to as well.
+    void remember(_, _) => scheduleMicrotask(() {
+      if (mounted) _remember(ref.read(homeRecsProvider).value);
+    });
+    ref.listen(homeRecsProvider, remember);
+    ref.listen(homeShowRecsProvider, remember);
+    ref.listen(homeShowUnverifiedProvider, remember);
+    final went = ref.watch(activeRecommendationProvider.select((a) => a?.went));
 
     return Scaffold(
       backgroundColor: whitePageColor(context),
@@ -124,13 +163,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   builder: (context, box) {
                     final twoColumn =
                         box.maxWidth >= Breakpoints.homeTwoColumn - 2 * 20;
-                    final recsColumn = !showRecs
+                    final recsBody = !showRecs
                         ? const RecsPrompt()
                         : recs.when(
                             loading: () => const RecsSkeleton(),
                             error: (e, _) => RecsError(error: e),
                             data: (data) => data == null
                                 ? const RecsEmpty()
+                                // No confirmed match: offer the unconfirmed ones instead of showing them as if they fit.
+                                : !data.ranked.first.verified &&
+                                      !ref.watch(homeShowUnverifiedProvider)
+                                ? RecsEmpty(unverified: data.total)
                                 : Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -183,6 +226,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                     ],
                                   ),
+                          );
+                    // Back from 길찾기: did they eat there? Asked whatever the
+                    // ranking shows now (the place may have closed or left the
+                    // filters while they were eating).
+                    final recsColumn = went == null
+                        ? recsBody
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              MealCheckBanner(restaurant: went),
+                              const SizedBox(height: 16),
+                              recsBody,
+                            ],
                           );
                     // Tablet / desktop: recommendations left, cafeteria right.
                     if (twoColumn) {

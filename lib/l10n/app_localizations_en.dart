@@ -357,7 +357,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recordsEmptyTitle => 'No records yet';
 
   @override
-  String get recordsEmptyMessage => 'Logging what you ate is coming soon.';
+  String get recordsEmptyMessage =>
+      'Tap \"I ate here\" on a place to log it here.';
 
   @override
   String get communityTitle => 'Food Talk is coming soon';
@@ -2463,4 +2464,72 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authWebPanelBody =>
       'Signed in, you can write reviews and posts, and your taste and saved places follow you to other devices.';
+
+  @override
+  String get homeEmptyChange => 'Change conditions';
+
+  @override
+  String homeShowUnverified(int count) {
+    return 'See $count unconfirmed places';
+  }
+
+  @override
+  String get homeEmptyUnverifiedMessage =>
+      'No place with known price or amenity info fits. Places without that info can be viewed separately.';
+
+  @override
+  String get homeUnverifiedNotice =>
+      'This place\'s price or amenity info isn\'t confirmed';
+
+  @override
+  String get homeUnverifiedTag => 'Unconfirmed';
+
+  @override
+  String get homeErrorKeepsConditions => 'Your conditions are kept.';
+
+  @override
+  String get homeRankingLink => 'See the full ranking';
+
+  @override
+  String get homeRankingTitle => 'Full ranking';
+
+  @override
+  String homeRankingSub(int count) {
+    return 'Top $count places that fit your conditions';
+  }
+
+  @override
+  String get homeChangeConditions => 'Change conditions and recommend again';
+
+  @override
+  String homePromptOrigin(String origin) {
+    return 'Recommending from $origin';
+  }
+
+  @override
+  String get homePromptOriginChange => 'Change';
+
+  @override
+  String get mealAteButton => 'I ate here · Rate it';
+
+  @override
+  String get mealAteSub => 'Saved to your meal records in MY';
+
+  @override
+  String get mealSaved => 'Saved to your meal records';
+
+  @override
+  String get mealSavedReviewLoadFailed =>
+      'Saved to your meal records. Couldn\'t load your review, so the rating form didn\'t open';
+
+  @override
+  String get mealSeeRecords => 'View';
+
+  @override
+  String mealCheckTitle(String name) {
+    return 'Did you eat at $name?';
+  }
+
+  @override
+  String get mealCheckDismiss => 'Not yet';
 }

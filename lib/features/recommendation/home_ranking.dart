@@ -26,6 +26,7 @@ class RankedRestaurant {
     required this.walkMinutes,
     required this.insight,
     required this.reason,
+    this.verified = true,
   });
 
   final Restaurant restaurant;
@@ -35,6 +36,11 @@ class RankedRestaurant {
   final int walkMinutes;
   final RestaurantInsight insight;
   final RecommendReason reason;
+
+  /// False when a condition the user chose (budget, 운영·편의) could not be
+  /// checked because the data is missing: the place is kept, as everywhere in
+  /// the app, but it is a "미확인 후보", not a confirmed match.
+  final bool verified;
 }
 
 /// Walking minutes for a straight-line distance, at least 1. Uses the same
@@ -60,7 +66,7 @@ List<RankedRestaurant> rankRestaurants({
   final cuisines = conditions.cuisines;
   final wantsCafe = cuisines.contains(Cuisine.cafe);
 
-  final kept = <({Restaurant r, int meters, RestaurantInsight i})>[];
+  final kept = <_Kept>[];
   for (final r in all) {
     if (hiddenIds.contains(r.kakaoId)) continue; // hidden by an admin
     final isFood =
@@ -76,10 +82,10 @@ List<RankedRestaurant> rankRestaurants({
     if (!_passesData(i, conditions, nowMinutes + walkMinutesFor(meters))) {
       continue;
     }
-    kept.add((r: r, meters: meters, i: i));
+    kept.add((r: r, meters: meters, i: i, verified: _confirms(i, conditions)));
   }
 
-  int byDistance(a, b) {
+  int byDistance(_Kept a, _Kept b) {
     final c = a.meters.compareTo(b.meters);
     return c != 0 ? c : a.r.name.compareTo(b.r.name);
   }
@@ -91,7 +97,7 @@ List<RankedRestaurant> rankRestaurants({
     return desc ? b.compareTo(a) : a.compareTo(b);
   }
 
-  kept.sort(switch (conditions.sort) {
+  final int Function(_Kept, _Kept) order = switch (conditions.sort) {
     SortMode.recommended || SortMode.distance => byDistance,
     SortMode.price => (a, b) {
       final c = unknownLast(a.i.minPriceKrw, b.i.minPriceKrw);
@@ -101,7 +107,12 @@ List<RankedRestaurant> rankRestaurants({
       final c = unknownLast(a.i.rating, b.i.rating, desc: true);
       return c != 0 ? c : byDistance(a, b);
     },
-  });
+  };
+  // Confirmed matches first; with no data condition chosen every place is
+  // confirmed, so the order is exactly as before.
+  kept.sort(
+    (a, b) => a.verified == b.verified ? order(a, b) : (a.verified ? -1 : 1),
+  );
 
   final closest = kept.isEmpty ? 0 : kept.map((e) => e.meters).reduce(math.min);
   return [
@@ -112,9 +123,17 @@ List<RankedRestaurant> rankRestaurants({
         walkMinutes: walkMinutesFor(e.meters),
         insight: e.i,
         reason: _reasonFor(e.r, e.meters, e.i, conditions, closest),
+        verified: e.verified,
       ),
   ];
 }
+
+typedef _Kept = ({
+  Restaurant r,
+  int meters,
+  RestaurantInsight i,
+  bool verified,
+});
 
 /// Hard conditions that need data. Unknown data keeps the place.
 bool _passesData(RestaurantInsight i, Conditions c, int arrivalMinutes) {
@@ -139,6 +158,25 @@ bool _passesData(RestaurantInsight i, Conditions c, int arrivalMinutes) {
       Amenity.openLate => ok(i.openLate),
     };
     if (!pass) return false;
+  }
+  return true;
+}
+
+/// Whether the data confirms every data condition the user chose. 영업 중만
+/// is left out: it is on by default and hours are rarely known, so counting it
+/// would make almost every place "미확인".
+bool _confirms(RestaurantInsight i, Conditions c) {
+  if (c.budget.amountKrw != null && i.minPriceKrw == null) return false;
+  for (final a in c.amenities) {
+    final known = switch (a) {
+      Amenity.noBreakTime => i.hasBreakTime,
+      Amenity.parking => i.parking,
+      Amenity.localCurrency => i.localCurrency,
+      Amenity.fastTurnover => i.fastTurnover,
+      Amenity.takeout => i.takeout,
+      Amenity.openLate => i.openLate,
+    };
+    if (known == null) return false;
   }
   return true;
 }

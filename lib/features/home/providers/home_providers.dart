@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/food_category.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
+import '../../university/providers/university_providers.dart';
 
 /// What the Home cards show: the hero, and the alternatives under it.
 class HomeRecs {
@@ -68,8 +70,9 @@ final homeRecsRequestedProvider =
     );
 
 class HomeRecsRequestedNotifier extends Notifier<bool> {
+  /// Coming back with a recommendation still in use skips straight to it.
   @override
-  bool build() => false;
+  bool build() => ref.read(activeRecommendationProvider) != null;
 
   void request() => state = true;
 
@@ -178,7 +181,13 @@ final homePoolRankedProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
 
 /// Null data means "nothing matches the conditions".
 final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
-  final pick = ref.watch(heroPickProvider);
+  final restore = ref.watch(restoreHeroProvider);
+  final key = ref.watch(homeRecsKeyProvider);
+  // The place shown when the user left, until they pick another one, and only
+  // while everything it was chosen under is the same again.
+  final pick =
+      ref.watch(heroPickProvider) ??
+      (restore != null && restore.key == key ? restore.heroId : null);
   return ref.watch(homePoolRankedProvider).whenData((ranked) {
     if (ranked.isEmpty) return null;
     var index = ranked.indexWhere((r) => r.restaurant.kakaoId == pick);
@@ -195,3 +204,222 @@ final homeRecsProvider = Provider<AsyncValue<HomeRecs?>>((ref) {
     );
   });
 });
+
+/// "미확인 후보 보기": shows the places whose data could not confirm the
+/// chosen conditions when no confirmed place is left. Forgotten whenever the
+/// filters or the origin change.
+final homeShowUnverifiedProvider =
+    NotifierProvider<HomeShowUnverifiedNotifier, bool>(
+      HomeShowUnverifiedNotifier.new,
+    );
+
+class HomeShowUnverifiedNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.watch(originProvider.select((o) => o?.id));
+    ref.watch(conditionsProvider);
+    ref.watch(homeCategoryProvider);
+    return false;
+  }
+
+  void show() => state = true;
+}
+
+/// Everything a Home pick depends on (origin, conditions, categories) as one
+/// stable string, so a restored pick is used only under the same filters.
+/// Null until the origin is known.
+final homeRecsKeyProvider = Provider<String?>((ref) {
+  final origin = ref.watch(originProvider.select((o) => o?.id));
+  if (origin == null) return null;
+  final c = ref.watch(conditionsProvider);
+  String names(Iterable<Enum> s) =>
+      (s.map((e) => e.name).toList()..sort()).join(',');
+  return [
+    origin,
+    c.budget.name,
+    c.distance.name,
+    c.openNowOnly,
+    names(c.cuisines),
+    names(c.amenities),
+    c.party?.name,
+    names(c.needs),
+    c.untriedFirst,
+    c.sort.name,
+    names(ref.watch(homeCategoryProvider)),
+  ].join('|');
+});
+
+/// The recommendation the user is in the middle of: the place on the Home
+/// card, the filters it was picked under and (once 길찾기 was opened) the
+/// place they set off to. Kept on the device so coming back opens it again.
+class ActiveRecommendation {
+  const ActiveRecommendation({
+    required this.heroId,
+    required this.key,
+    required this.at,
+    this.went,
+  });
+
+  final String heroId;
+  final String key;
+  final DateTime at;
+
+  /// Where 길찾기 was opened for. Kept whole (not looked up in the ranking),
+  /// so "다녀오셨어요?" is still asked after the place closed or dropped out
+  /// of the filters.
+  final Restaurant? went;
+
+  String? get wentTo => went?.kakaoId;
+
+  Map<String, Object?> toJson() => {
+    'hero': heroId,
+    'key': key,
+    'at': at.millisecondsSinceEpoch,
+    'went': went?.kakaoId,
+    'wentName': went?.name,
+    'wentCategory': went?.categoryName,
+  };
+
+  static ActiveRecommendation? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final hero = j['hero'];
+    final key = j['key'];
+    final at = j['at'];
+    if (hero is! String || key is! String || at is! int) return null;
+    final went = j['went'], name = j['wentName'], category = j['wentCategory'];
+    return ActiveRecommendation(
+      heroId: hero,
+      key: key,
+      at: DateTime.fromMillisecondsSinceEpoch(at),
+      // Only what the meal check needs (the record and the review).
+      went: went is String && name is String
+          ? Restaurant(
+              kakaoId: went,
+              name: name,
+              categoryName: category is String ? category : '',
+              categoryGroupCode: '',
+              address: '',
+              roadAddress: '',
+              phone: '',
+              latitude: 0,
+              longitude: 0,
+              distanceMeters: 0,
+              placeUrl: null,
+            )
+          : null,
+    );
+  }
+}
+
+const activeRecommendationPrefsKey = 'home_active_recommendation';
+
+// ponytail: a fixed 3 h window stands in for "this meal"; tie it to meal
+// times if lunch picks start showing up at dinner.
+const activeRecommendationTtl = Duration(hours: 3);
+
+final activeRecommendationProvider =
+    NotifierProvider<ActiveRecommendationNotifier, ActiveRecommendation?>(
+      ActiveRecommendationNotifier.new,
+    );
+
+class ActiveRecommendationNotifier extends Notifier<ActiveRecommendation?> {
+  @override
+  ActiveRecommendation? build() {
+    final sp = ref.read(sharedPreferencesProvider);
+    final raw = sp.getString(activeRecommendationPrefsKey);
+    ActiveRecommendation? saved;
+    try {
+      saved = raw == null
+          ? null
+          : ActiveRecommendation.fromJson(jsonDecode(raw));
+    } on FormatException {
+      saved = null;
+    }
+    if (saved == null ||
+        DateTime.now().difference(saved.at) > activeRecommendationTtl) {
+      if (raw != null) sp.remove(activeRecommendationPrefsKey);
+      return null;
+    }
+    return saved;
+  }
+
+  void _write(ActiveRecommendation? next) {
+    state = next;
+    final sp = ref.read(sharedPreferencesProvider);
+    if (next == null) {
+      sp.remove(activeRecommendationPrefsKey);
+    } else {
+      sp.setString(activeRecommendationPrefsKey, jsonEncode(next.toJson()));
+    }
+  }
+
+  /// The pick a meal was logged for: not saved again while it stays on screen.
+  (String, String)? _finished;
+
+  /// The card now shows [heroId] under [key].
+  void save(String heroId, String key) {
+    if (_finished == (heroId, key)) return;
+    final s = state;
+    if (s != null && s.heroId == heroId && s.key == key) return;
+    _write(
+      ActiveRecommendation(
+        heroId: heroId,
+        key: key,
+        at: DateTime.now(),
+        went: s?.went,
+      ),
+    );
+  }
+
+  /// 길찾기 was opened for [r]. Only while a recommendation is in use.
+  void markWent(Restaurant r) {
+    final s = state;
+    if (s == null || s.wentTo == r.kakaoId) return;
+    _write(
+      ActiveRecommendation(
+        heroId: s.heroId,
+        key: s.key,
+        at: DateTime.now(),
+        went: r,
+      ),
+    );
+  }
+
+  /// "아직이요": stop asking whether they ate there.
+  void forgetWent() {
+    final s = state;
+    if (s == null || s.wentTo == null) return;
+    _write(ActiveRecommendation(heroId: s.heroId, key: s.key, at: s.at));
+  }
+
+  /// A new recommendation was asked for: the card is saved again, even when
+  /// it shows the place a meal was just logged for.
+  void startNew() => _finished = null;
+
+  /// Started over: the next visit starts fresh.
+  void clear() {
+    startNew();
+    _write(null);
+  }
+
+  /// Ate there: the recommendation is finished; the next visit starts fresh.
+  void finish() {
+    final s = state;
+    if (s != null) _finished = (s.heroId, s.key);
+    _write(null);
+  }
+}
+
+/// The pick to show again after coming back, until it has been shown (it then
+/// lives on in [heroPickProvider]) or the user starts over.
+final restoreHeroProvider =
+    NotifierProvider<RestoreHeroNotifier, ActiveRecommendation?>(
+      RestoreHeroNotifier.new,
+    );
+
+class RestoreHeroNotifier extends Notifier<ActiveRecommendation?> {
+  @override
+  ActiveRecommendation? build() => ref.read(activeRecommendationProvider);
+
+  void consume() => state = null;
+}

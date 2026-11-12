@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/theme/theme_controller.dart';
 import 'package:meogeobojo/core/widgets/pill_chip.dart';
@@ -1294,6 +1295,29 @@ void main() {
       expect(find.byType(HeroCard), findsNothing);
       expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
       expect(find.byTooltip('처음부터 다시'), findsNothing);
+    });
+
+    testWidgets('after 길찾기 the 다녀오셨어요? card shows both labels whole at 390', (
+      tester,
+    ) async {
+      final h = await openHome(tester, recsRequested: false);
+      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.pumpAndSettle();
+      final hero = h.container.read(homeRecsProvider).value!.hero.restaurant;
+      h.container
+          .read(activeRecommendationProvider.notifier)
+          .markWent(hero.kakaoId);
+      await tester.pumpAndSettle();
+      expect(find.text('${hero.name}에 다녀오셨어요?'), findsOneWidget);
+      for (final label in ['먹었어요 · 평가 남기기', '아직이요']) {
+        expect(
+          tester
+              .renderObject<RenderParagraph>(find.text(label))
+              .didExceedMaxLines,
+          isFalse,
+          reason: '"$label" is cut off',
+        );
+      }
     });
 
     testWidgets('coming back opens the recommendation still in use', (

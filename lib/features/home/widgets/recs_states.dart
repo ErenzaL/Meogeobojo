@@ -194,6 +194,16 @@ class MealCheckBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final ate = RustButton(
+      icon: Icons.check_circle_outline_rounded,
+      label: l10n.mealAteButton,
+      onPressed: () => markEaten(context, ref, restaurant),
+    );
+    final notYet = OutlineActionButton(
+      label: l10n.mealCheckDismiss,
+      onPressed: () =>
+          ref.read(activeRecommendationProvider.notifier).forgetWent(),
+    );
     return HomeCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,26 +215,21 @@ class MealCheckBanner extends ConsumerWidget {
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: RustButton(
-                  icon: Icons.check_circle_outline_rounded,
-                  label: l10n.mealAteButton,
-                  onPressed: () => markEaten(context, ref, restaurant),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlineActionButton(
-                  label: l10n.mealCheckDismiss,
-                  onPressed: () => ref
-                      .read(activeRecommendationProvider.notifier)
-                      .forgetWent(),
-                ),
-              ),
-            ],
+          // Side by side only where both labels fit whole; on a phone the
+          // buttons stack, each at full width.
+          LayoutBuilder(
+            builder: (context, box) => box.maxWidth >= 420
+                ? Row(
+                    children: [
+                      Expanded(flex: 2, child: ate),
+                      const SizedBox(width: 10),
+                      Expanded(child: notYet),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [ate, const SizedBox(height: 8), notYet],
+                  ),
           ),
         ],
       ),

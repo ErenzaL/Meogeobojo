@@ -203,8 +203,10 @@ void main() {
     testWidgets('no breakfast data: empty state, no program claim', (
       tester,
     ) async {
+      // breakfast exists later in the week, not on the opened day
       final h = await openPage(tester, [
         fakeMeal('2026-11-09', MealType.lunch),
+        fakeMeal('2026-11-12', MealType.breakfast),
       ]);
       h.container
           .read(campusMealSelectionProvider.notifier)

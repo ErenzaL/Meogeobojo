@@ -44,27 +44,20 @@ class CampusMealSelection {
     required this.weekStart,
     required this.date,
     required this.mealType,
-    this.cafeteriaId,
   });
 
   final DateTime weekStart;
   final DateTime date;
   final MealType mealType;
 
-  /// The user's pick; may be stale after a university change, so always go
-  /// through [effectiveCafeteriaProvider].
-  final String? cafeteriaId;
-
   CampusMealSelection copyWith({
     DateTime? weekStart,
     DateTime? date,
     MealType? mealType,
-    String? Function()? cafeteriaId,
   }) => CampusMealSelection(
     weekStart: weekStart ?? this.weekStart,
     date: date ?? this.date,
     mealType: mealType ?? this.mealType,
-    cafeteriaId: cafeteriaId != null ? cafeteriaId() : this.cafeteriaId,
   );
 }
 
@@ -93,8 +86,10 @@ class CampusMealSelectionController extends Notifier<CampusMealSelection> {
 
   void selectMealType(MealType t) => state = state.copyWith(mealType: t);
 
+  /// The cafeteria is remembered per university and shared with Home, so it
+  /// lives in [selectedCafeteriaIdProvider], not in this page-only state.
   void selectCafeteria(String id) =>
-      state = state.copyWith(cafeteriaId: () => id);
+      ref.read(selectedCafeteriaIdProvider.notifier).select(id);
 
   /// Moves by whole weeks keeping the same weekday selected.
   void shiftWeek(int weeks) {
@@ -126,18 +121,50 @@ final campusCafeteriasProvider =
       return ref.watch(campusMealRepositoryProvider).cafeterias(university.id);
     });
 
+/// The cafeteria the user picked for the selected university (Home and the
+/// weekly page share it), remembered on the device. One pick per university, so
+/// choosing at one campus never changes another. Null until the user picks.
+final selectedCafeteriaIdProvider =
+    NotifierProvider<SelectedCafeteriaController, String?>(
+      SelectedCafeteriaController.new,
+    );
+
+String selectedCafeteriaPrefsKey(String universityId) =>
+    'selected_cafeteria_id:$universityId';
+
+class SelectedCafeteriaController extends Notifier<String?> {
+  String? _universityId;
+
+  @override
+  String? build() {
+    _universityId = ref.watch(
+      selectedUniversityProvider.select((u) => u.value?.id),
+    );
+    final id = _universityId;
+    if (id == null) return null;
+    return ref
+        .read(sharedPreferencesProvider)
+        .getString(selectedCafeteriaPrefsKey(id));
+  }
+
+  Future<void> select(String cafeteriaId) async {
+    final id = _universityId;
+    state = cafeteriaId;
+    if (id == null) return;
+    await ref
+        .read(sharedPreferencesProvider)
+        .setString(selectedCafeteriaPrefsKey(id), cafeteriaId);
+  }
+}
+
 /// The cafeteria actually shown: the user's pick if it still belongs to the
-/// selected university, otherwise the first one. Null when there are none.
+/// selected university, otherwise the first student cafeteria (see
+/// [chooseCafeteria]). Null when there are none.
 final effectiveCafeteriaProvider =
     Provider.autoDispose<AsyncValue<CampusCafeteria?>>((ref) {
       final list = ref.watch(campusCafeteriasProvider);
-      final pick = ref.watch(
-        campusMealSelectionProvider.select((s) => s.cafeteriaId),
-      );
-      return list.whenData((all) {
-        if (all.isEmpty) return null;
-        return all.firstWhere((c) => c.id == pick, orElse: () => all.first);
-      });
+      final pick = ref.watch(selectedCafeteriaIdProvider);
+      return list.whenData((all) => chooseCafeteria(all, pick));
     });
 
 typedef WeekKey = ({String cafeteriaId, DateTime weekStart});

@@ -33,7 +33,11 @@ import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
 import 'package:meogeobojo/features/reviews/models/student_review.dart';
 
+import 'package:meogeobojo/features/campus_meals/widgets/campus_meal_widgets.dart'
+    show CafeteriaSelector;
 import 'package:meogeobojo/features/university/models/university.dart';
+import 'package:meogeobojo/features/university/providers/university_providers.dart'
+    show sharedPreferencesProvider;
 
 import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart'
     show restaurantOverridesProvider;
@@ -1013,6 +1017,223 @@ void main() {
         tester.widget<ThousandWonMark>(mark).label,
         '천원의 아침밥',
       ); // what screen readers say
+    });
+
+    group('choosing the cafeteria', () {
+      final hall = fakeCafeteria('c1', nameKo: '향설1관');
+      final center = fakeCafeteria('c2', nameKo: '학생회관식당');
+      final selector = find.byKey(const ValueKey('home-cafeteria-selector'));
+      // the weekly page has its own clock: put it on the same Monday evening as Home
+      final weeklyClock = campusMealClockProvider.overrideWithValue(
+        () => DateTime.utc(2026, 11, 9, 10),
+      );
+
+      FakeCampusMealRepository two() => FakeCampusMealRepository(
+        cafeteriasByUniversity: {
+          univId: [hall, center],
+        },
+        meals: [
+          fakeMeal(
+            '2026-11-09',
+            MealType.dinner,
+            cafeteriaId: 'c1',
+            start: '17:00',
+            end: '19:30',
+            items: const [MenuItem(nameKo: '제육볶음', kind: MenuItemKind.main)],
+          ),
+          fakeMeal(
+            '2026-11-09',
+            MealType.dinner,
+            cafeteriaId: 'c2',
+            start: '17:00',
+            end: '19:30',
+            items: const [MenuItem(nameKo: '돈가스', kind: MenuItemKind.main)],
+          ),
+          // the second cafeteria also serves lunch; the first does not
+          fakeMeal(
+            '2026-11-09',
+            MealType.lunch,
+            cafeteriaId: 'c2',
+            start: '11:30',
+            end: '14:00',
+            items: const [MenuItem(nameKo: '쌀국수', kind: MenuItemKind.main)],
+          ),
+        ],
+      );
+
+      Future<void> pick(WidgetTester tester, String name) async {
+        await reveal(tester, selector);
+        await tester.tap(selector);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(name).last);
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('one cafeteria: there is nothing to choose', (tester) async {
+        await openHome(
+          tester,
+          meals: FakeCampusMealRepository(
+            cafeteriasByUniversity: {
+              univId: [hall],
+            },
+            meals: [fakeMeal('2026-11-09', MealType.dinner, cafeteriaId: 'c1')],
+          ),
+        );
+        await scrollDown(tester);
+        expect(find.text('오늘의 학식'), findsOneWidget);
+        expect(selector, findsNothing);
+      });
+
+      testWidgets('several cafeterias: the first is shown, any can be picked', (
+        tester,
+      ) async {
+        await openHome(tester, meals: two());
+        await scrollDown(tester);
+        expect(selector, findsOneWidget);
+        expect(
+          find.descendant(of: selector, matching: find.text('향설1관')),
+          findsOneWidget,
+        );
+        expect(find.text('제육볶음'), findsOneWidget);
+        expect(find.text('돈가스'), findsNothing);
+        // the first cafeteria has no lunch, so only dinner is listed
+        expect(find.byKey(const ValueKey('home-meal-lunch')), findsNothing);
+
+        await pick(tester, '학생회관식당');
+        expect(
+          find.descendant(of: selector, matching: find.text('학생회관식당')),
+          findsOneWidget,
+        );
+        expect(find.text('돈가스'), findsOneWidget);
+        expect(find.text('제육볶음'), findsNothing);
+        // this cafeteria also serves lunch: both meals are listed now
+        expect(find.byKey(const ValueKey('home-meal-lunch')), findsOneWidget);
+        expect(find.text('쌀국수'), findsOneWidget);
+      });
+
+      testWidgets('the choice is remembered per university', (tester) async {
+        final h = await openHome(tester, meals: two());
+        await scrollDown(tester);
+        await pick(tester, '학생회관식당');
+        expect(h.container.read(selectedCafeteriaIdProvider), 'c2');
+        expect(
+          h.container
+              .read(sharedPreferencesProvider)
+              .getString(selectedCafeteriaPrefsKey(univId)),
+          'c2',
+        );
+      });
+
+      testWidgets('a remembered choice is used on the next start', (
+        tester,
+      ) async {
+        await openHome(
+          tester,
+          meals: two(),
+          storage: {
+            'app_language': 'ko',
+            selectedCafeteriaPrefsKey(univId): 'c2',
+          },
+        );
+        await scrollDown(tester);
+        expect(
+          find.descendant(of: selector, matching: find.text('학생회관식당')),
+          findsOneWidget,
+        );
+        expect(find.text('돈가스'), findsOneWidget);
+        expect(find.text('제육볶음'), findsNothing);
+      });
+
+      testWidgets(
+        'a remembered cafeteria that is gone falls back to the first',
+        (tester) async {
+          await openHome(
+            tester,
+            meals: two(),
+            storage: {
+              'app_language': 'ko',
+              selectedCafeteriaPrefsKey(univId): 'deleted',
+            },
+          );
+          await scrollDown(tester);
+          expect(find.text('제육볶음'), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a cafeteria with nothing entered says so and stays pickable',
+        (tester) async {
+          await openHome(
+            tester,
+            meals: FakeCampusMealRepository(
+              cafeteriasByUniversity: {
+                univId: [hall, center],
+              },
+              meals: [
+                fakeMeal('2026-11-09', MealType.dinner, cafeteriaId: 'c1'),
+              ],
+            ),
+          );
+          await scrollDown(tester);
+          await pick(tester, '학생회관식당');
+          expect(find.text('곧 먹을 수 있는 학식 메뉴가 아직 등록되지 않았어요.'), findsOneWidget);
+          expect(selector, findsOneWidget);
+          await pick(tester, '향설1관');
+          expect(
+            find.byKey(const ValueKey('home-meal-dinner')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('the weekly page opens on the cafeteria chosen on Home', (
+        tester,
+      ) async {
+        await openHome(tester, meals: two(), overrides: [weeklyClock]);
+        await scrollDown(tester);
+        await pick(tester, '학생회관식당');
+        await reveal(tester, find.text('이번 주 식단'));
+        await tester.tap(find.text('이번 주 식단'));
+        await tester.pumpAndSettle();
+        expect(find.byType(CampusMealScreen), findsOneWidget);
+        final page = find.byType(CampusMealScreen);
+        expect(
+          find.descendant(of: page, matching: find.text('학생회관식당')),
+          findsWidgets,
+        );
+        expect(
+          find.descendant(of: page, matching: find.text('돈가스')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(of: page, matching: find.text('제육볶음')),
+          findsNothing,
+        );
+      });
+
+      testWidgets('a choice on the weekly page shows on Home too', (
+        tester,
+      ) async {
+        await openHome(tester, meals: two(), overrides: [weeklyClock]);
+        await reveal(tester, find.text('이번 주 식단'));
+        await tester.tap(find.text('이번 주 식단'));
+        await tester.pumpAndSettle();
+        final page = find.byType(CampusMealScreen);
+        await tester.tap(
+          find.descendant(of: page, matching: find.byType(CafeteriaSelector)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('학생회관식당').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        await scrollDown(tester);
+        expect(
+          find.descendant(of: selector, matching: find.text('학생회관식당')),
+          findsOneWidget,
+        );
+        expect(find.text('돈가스'), findsOneWidget);
+      });
     });
 
     testWidgets('a day with only some meals lists only those', (tester) async {

@@ -109,3 +109,21 @@ Rollback: 게시 이력 → 이전 버전 복원 (whole week), 게시 중단, �
 - [ ] unpublish the week → app clears (no restart); roll back → it returns
 - [ ] CSV: example file → preview → drafts → publish; same file again → "변경 없음"; a bad row is listed, not imported
 - [ ] disable a cafeteria → it disappears from the app
+
+## 10. Several cafeterias per university, and meals that are optional
+A university can have any number of cafeterias (Admin → 학식 → 학식 식당 추가; no database change was needed, `campus_cafeterias` already allows it).
+
+* **Choosing (app and web).** The 오늘의 학식 card on Home shows a picker (the same widget as the weekly page) as soon as the campus has more than one
+  active cafeteria; with one there is nothing to choose and nothing is drawn. The choice is shared by Home and 이번 주 식단 (change it in either, both follow)
+  and remembered on the device **per university** (`selected_cafeteria_id:<university id>`), so choosing at one campus never changes another.
+  With no choice yet (or a remembered cafeteria that was removed or switched off) the first *student* cafeteria is shown, else the first one (`chooseCafeteria`).
+* **Meals are optional.** 조식, 중식 and 석식 are each entered or not. Home lists only the meals that have a published menu. The weekly page offers a tab
+  only for meals entered somewhere in the shown week (any status, so a meal marked "운영 안 함" still explains itself) and opens on the next meal that
+  exists when the usual one for the time of day is missing (`visibleMealTypes`, `resolveMealType`). A week with nothing entered falls back to the
+  cafeteria's own 운영하는 식사 setting. Nothing is required in Admin: an empty cell changes nothing and shows nothing.
+* **Admin.** The new-cafeteria form puts a new cafeteria **after** the university's existing ones (표시 순서 = highest + 1), so adding a second one never
+  takes the first place (the app opens on the first student cafeteria and lists them in this order). When the university already has another cafeteria
+  and the name is empty, the form asks for a name: the picker shows the name, and nameless ones can only be called "학생식당 1 / 2". The weekly grid no
+  longer counts "n/15칸" as if every slot were due.
+* **Rollout.** Admin and web update when this is merged to `main` (Render). The phone apps need a new build. No migration; existing data is untouched.
+

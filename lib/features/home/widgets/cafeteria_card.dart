@@ -7,7 +7,9 @@ import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../campus_meals/models/campus_meal_models.dart';
+import '../../campus_meals/providers/campus_meal_providers.dart';
 import '../../campus_meals/screens/campus_meal_screen.dart';
+import '../../campus_meals/widgets/campus_meal_widgets.dart';
 import '../providers/home_meal_providers.dart';
 import '../screens/outside_compare_screen.dart';
 import '../utils/home_text.dart';
@@ -27,8 +29,12 @@ class CafeteriaCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final locale = Localizations.localeOf(context);
     final day = ref.watch(homeDayMealsProvider);
     final source = ref.watch(homeMealSourceProvider);
+    // `.value` keeps the last answer while a new cafeteria's meals load, so the picker stays put
+    final cafeterias = source.value?.all ?? const <CampusCafeteria>[];
+    final picked = source.value?.cafeteria;
 
     // No chip for today's list; after the last meal the list is tomorrow's, which the chip says.
     final String? chip = day.value?.when == MealWhen.tomorrow
@@ -73,6 +79,19 @@ class CafeteriaCard extends ConsumerWidget {
                 ),
             ],
           ),
+          // A campus can have several cafeterias: the student picks which one to see
+          // (remembered, and the same choice the weekly page opens on).
+          if (cafeterias.length > 1 && picked != null) ...[
+            const SizedBox(height: 12),
+            CafeteriaSelector(
+              key: const ValueKey('home-cafeteria-selector'),
+              cafeterias: cafeterias,
+              selected: picked,
+              labelOf: (c) => cafeteriaLabel(l10n, locale, c, cafeterias),
+              onSelect: (c) =>
+                  ref.read(selectedCafeteriaIdProvider.notifier).select(c.id),
+            ),
+          ],
           const SizedBox(height: 14),
           day.when(
             loading: () => const SkeletonBox(height: 110, radius: 16),

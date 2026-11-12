@@ -277,4 +277,96 @@ void main() {
       },
     );
   });
+
+  group('which cafeteria is shown', () {
+    final dorm = fakeCafeteria('dorm', kind: CafeteriaKind.dormitory);
+    final hall = fakeCafeteria('hall');
+    final center = fakeCafeteria('center');
+
+    test('none registered: nothing', () {
+      expect(chooseCafeteria(const [], null), isNull);
+      expect(chooseCafeteria(const [], 'hall'), isNull);
+    });
+
+    test('the pick wins when it belongs to the campus', () {
+      expect(chooseCafeteria([hall, center], 'center'), center);
+      expect(chooseCafeteria([dorm, hall], 'dorm'), dorm);
+    });
+
+    test('no pick: the first student cafeteria, not just the first', () {
+      expect(chooseCafeteria([dorm, hall, center], null), hall);
+    });
+
+    test('a pick that no longer exists falls back the same way', () {
+      expect(chooseCafeteria([dorm, hall], 'removed'), hall);
+    });
+
+    test('no student cafeteria at all: the first one', () {
+      expect(chooseCafeteria([dorm], null), dorm);
+    });
+  });
+
+  group('which meals get a tab', () {
+    final lunchAndDinner = fakeCafeteria(
+      'c1',
+      mealTypes: const [MealType.lunch, MealType.dinner],
+    );
+    WeekMeals week(List<CafeteriaMeal> m) => WeekMeals(d(2026, 11, 2), m);
+
+    test('only meals that were entered, in breakfast-lunch-dinner order', () {
+      final w = week([
+        fakeMeal('2026-11-04', MealType.dinner),
+        fakeMeal('2026-11-03', MealType.breakfast),
+      ]);
+      expect(visibleMealTypes(fakeCafeteria('c1'), w), [
+        MealType.breakfast,
+        MealType.dinner,
+      ]);
+    });
+
+    test('entered data wins over the cafeteria\'s own setting', () {
+      final w = week([fakeMeal('2026-11-03', MealType.breakfast)]);
+      expect(visibleMealTypes(lunchAndDinner, w), [MealType.breakfast]);
+    });
+
+    test('every status counts as entered (closed explains itself)', () {
+      final w = week([
+        fakeMeal(
+          '2026-11-03',
+          MealType.dinner,
+          status: MealStatus.closed,
+          items: const [],
+        ),
+      ]);
+      expect(visibleMealTypes(fakeCafeteria('c1'), w), [MealType.dinner]);
+    });
+
+    test('an empty or unloaded week falls back to the cafeteria setting', () {
+      expect(visibleMealTypes(lunchAndDinner, week(const [])), [
+        MealType.lunch,
+        MealType.dinner,
+      ]);
+      expect(visibleMealTypes(lunchAndDinner, null), [
+        MealType.lunch,
+        MealType.dinner,
+      ]);
+    });
+
+    test('a wanted meal that is there stays; otherwise the next one', () {
+      const lunchDinner = [MealType.lunch, MealType.dinner];
+      expect(resolveMealType(MealType.lunch, lunchDinner), MealType.lunch);
+      expect(resolveMealType(MealType.breakfast, lunchDinner), MealType.lunch);
+      expect(
+        resolveMealType(MealType.lunch, [MealType.dinner]),
+        MealType.dinner,
+      );
+    });
+
+    test('after the last meal of the day, the last one that exists', () {
+      expect(
+        resolveMealType(MealType.dinner, [MealType.breakfast, MealType.lunch]),
+        MealType.lunch,
+      );
+    });
+  });
 }

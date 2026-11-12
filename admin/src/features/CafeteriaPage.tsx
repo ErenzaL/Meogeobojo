@@ -111,7 +111,7 @@ export default function CafeteriaPage() {
 
   return (
     <>
-      <PageHeader title="학식" description="대학교별로 학식 식당을 등록하고, 식당마다 한 주의 조식 · 중식 · 석식 메뉴를 한꺼번에 입력해요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 보여요."
+      <PageHeader title="학식" description="대학교마다 학식 식당을 여러 곳 등록하고, 식당마다 한 주의 메뉴를 한꺼번에 입력해요. 조식 · 중식 · 석식은 하는 식사만 입력하면 돼요. 학생은 앱과 웹에서 식당을 골라 볼 수 있어요. 수정은 초안으로 저장되고, 게시하거나 예약해야 앱에 보여요."
         actions={<div className="flex gap-2"><Button variant="outline" onClick={() => setCsv(true)}><FileUp className="size-4" />CSV 일괄 등록</Button><Button onClick={() => setCafModal('new')}><Plus className="size-4" />학식 식당 추가</Button></div>} />
       {notice && <p role="status" className="mb-4 rounded-xl bg-brand/30 p-3 text-sm">{notice}</p>}
       {legacy && (
@@ -138,7 +138,7 @@ export default function CafeteriaPage() {
           <div className="grid gap-3 sm:grid-cols-2" aria-label="대학교 현황">
             <div className="rounded-xl bg-page p-3"><div className="text-xs text-muted">등록된 학식 식당</div><div className="text-2xl font-bold">{ofUniversity.filter((c) => c.status !== 'archived').length}</div>
               <div className="text-xs text-muted">운영 중 {ofUniversity.filter((c) => c.status === 'active').length}곳{ofUniversity.some((c) => c.status === 'inactive') ? ` · 비활성 ${ofUniversity.filter((c) => c.status === 'inactive').length}곳` : ''}{ofUniversity.some((c) => c.status === 'archived') ? ` · 보관 ${ofUniversity.filter((c) => c.status === 'archived').length}곳` : ''}</div></div>
-            <div className="rounded-xl bg-page p-3"><div className="text-xs text-muted">메뉴 관리</div><div className="text-lg font-bold">조식 · 중식 · 석식</div><div className="text-xs text-muted">월~금 한 주를 한 번에 입력하고 한꺼번에 게시해요</div></div>
+            <div className="rounded-xl bg-page p-3"><div className="text-xs text-muted">메뉴 관리</div><div className="text-lg font-bold">식당마다 한 주씩</div><div className="text-xs text-muted">하는 식사만 입력하면 돼요 · 입력하지 않은 식사는 앱에 나타나지 않아요</div></div>
           </div>)}
       </Card>
 
@@ -195,7 +195,7 @@ export default function CafeteriaPage() {
       {!caf && listed.length > 0 && <EmptyState>식당 카드의 &lsquo;메뉴 관리&rsquo;를 누르면 한 주 메뉴를 입력할 수 있어요.</EmptyState>}
 
       {cafModal && (
-        <CafeteriaFormModal cafeteria={cafModal === 'edit' ? caf : null} universities={(unis.data ?? []).map((u) => ({ id: u.id, name_ko: u.name_ko }))} defaultUniversity={universityId} legacy={legacy} weekly={weekly}
+        <CafeteriaFormModal cafeteria={cafModal === 'edit' ? caf : null} existing={all} universities={(unis.data ?? []).map((u) => ({ id: u.id, name_ko: u.name_ko }))} defaultUniversity={universityId} legacy={legacy} weekly={weekly}
           onClose={() => setCafModal(null)}
           onSaved={(id, msg, uni) => { setCafModal(null); setNotice(msg); setPickedUniversity(uni); setPickedCafeteria(id); setFilter('live') }} />)}
       {csv && <CsvImport onClose={() => setCsv(false)} onDone={() => { void qc.invalidateQueries({ queryKey: ['cafeterias'] }); void refreshBadges() }} />}

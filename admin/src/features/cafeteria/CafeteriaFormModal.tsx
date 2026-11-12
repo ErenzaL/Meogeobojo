@@ -4,18 +4,19 @@ import { Button, ConfirmDialog, Field, Input, Modal, Select, Textarea } from '@/
 import { ALLOWED_IMAGE_TYPES, BUCKET, imagePath, prepareImage } from '@/lib/images'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
-import { cafeteriaRow, cafeteriaToForm, DAYS, emptyCafeteriaForm, KINDS, PERIOD_LABEL, PERIODS, STATUS_LABEL, STATUSES, validateCafeteria, type Cafeteria, type CafeteriaForm } from './model'
+import { cafeteriaRow, cafeteriaToForm, DAYS, emptyCafeteriaForm, kindLabel, KINDS, nextSortOrder, PERIOD_LABEL, PERIODS, STATUS_LABEL, STATUSES, validateCafeteria, type Cafeteria, type CafeteriaForm } from './model'
 
 type Uni = { id: string; name_ko: string }
 
 /** Create (cafeteria = null) or edit one campus cafeteria in `campus_cafeterias`.
  *  Names are optional: leave them empty unless an official source gives them. */
-export default function CafeteriaFormModal({ cafeteria, universities, defaultUniversity, legacy = false, weekly = true, onClose, onSaved }: {
-  cafeteria: Cafeteria | null; legacy?: boolean; weekly?: boolean; universities: Uni[]; defaultUniversity: string; onClose: () => void; onSaved: (id: string, msg: string, universityId: string) => void
+export default function CafeteriaFormModal({ cafeteria, existing = [], universities, defaultUniversity, legacy = false, weekly = true, onClose, onSaved }: {
+  cafeteria: Cafeteria | null; existing?: Cafeteria[]; legacy?: boolean; weekly?: boolean; universities: Uni[]; defaultUniversity: string; onClose: () => void; onSaved: (id: string, msg: string, universityId: string) => void
 }) {
   const qc = useQueryClient()
   const isNew = cafeteria === null
-  const [f, setF] = useState<CafeteriaForm>(() => (cafeteria ? cafeteriaToForm(cafeteria) : emptyCafeteriaForm(defaultUniversity)))
+  const [f, setF] = useState<CafeteriaForm>(() => (cafeteria ? cafeteriaToForm(cafeteria) : { ...emptyCafeteriaForm(defaultUniversity), sort_order: nextSortOrder(existing, defaultUniversity) }))
+  const [orderTouched, setOrderTouched] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [err, setErr] = useState<string | null>(null)
   const [moveAsk, setMoveAsk] = useState(false)
@@ -63,12 +64,14 @@ export default function CafeteriaFormModal({ cafeteria, universities, defaultUni
   const close = () => { if (uploaded) void supabase.storage.from(BUCKET).remove([uploaded]); onClose() }
   const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
   const wantsMove = !isNew && f.university_id !== cafeteria.university_id
+  const siblings = existing.filter((c) => c.university_id === f.university_id && c.status !== 'archived' && c.id !== cafeteria?.id)
+  const needsName = f.name_ko.trim() === '' && siblings.length > 0
 
   return (
     <Modal open title={isNew ? '학식 식당 추가' : '학식 식당 수정'} onClose={close}>
       <div className="space-y-3">
         <Field label="대학교" htmlFor="cf_uni" error={errors.university_id}>
-          <Select id="cf_uni" value={f.university_id} onChange={(e) => set('university_id', e.target.value)}>
+          <Select id="cf_uni" value={f.university_id} onChange={(e) => { const u = e.target.value; setF((p) => ({ ...p, university_id: u, ...(isNew && !orderTouched ? { sort_order: nextSortOrder(existing, u) } : {}) })) }}>
             <option value="">선택하세요</option>{universities.map((u) => <option key={u.id} value={u.id}>{u.name_ko}</option>)}
           </Select>
         </Field>
@@ -76,20 +79,21 @@ export default function CafeteriaFormModal({ cafeteria, universities, defaultUni
         <Field label="이름 (한국어)" htmlFor="cf_ko" error={errors.name_ko} hint="공식 이름을 알 때만 입력하세요. 비워 두면 종류로 표시돼요.">
           <Input id="cf_ko" value={f.name_ko} onChange={(e) => set('name_ko', e.target.value)} />
         </Field>
+        {needsName && <p role="status" className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">이 대학교에는 학식 식당이 여러 곳이에요. 학생이 앱에서 식당을 고를 때 이 이름이 보이니, 이름을 적어 주세요. 비워 두면 &lsquo;{kindLabel(f.kind)}&rsquo;으로만 표시돼 구분하기 어려워요.</p>}
         <div className="grid grid-cols-2 gap-3">
           <Field label="영어 이름 (선택)" htmlFor="cf_en" error={errors.name_en}><Input id="cf_en" value={f.name_en} onChange={(e) => set('name_en', e.target.value)} /></Field>
           <Field label="중국어 이름 (선택)" htmlFor="cf_zh" error={errors.name_zh}><Input id="cf_zh" value={f.name_zh} onChange={(e) => set('name_zh', e.target.value)} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="종류" htmlFor="cf_kind"><Select id="cf_kind" value={f.kind} onChange={(e) => set('kind', e.target.value as CafeteriaForm['kind'])}>{KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}</Select></Field>
-          <Field label="표시 순서" htmlFor="cf_order" error={errors.sort_order} hint="작을수록 먼저"><Input id="cf_order" inputMode="numeric" value={f.sort_order} onChange={(e) => set('sort_order', e.target.value)} /></Field>
+          <Field label="표시 순서" htmlFor="cf_order" error={errors.sort_order} hint="작을수록 앱에서 먼저 나와요"><Input id="cf_order" inputMode="numeric" value={f.sort_order} onChange={(e) => { setOrderTouched(true); set('sort_order', e.target.value) }} /></Field>
         </div>
         <Field label="위치 / 건물 설명 (선택)" htmlFor="cf_loc"><Input id="cf_loc" value={f.location} onChange={(e) => set('location', e.target.value)} placeholder="예: 학생회관 1층" /></Field>
         {!weekly && <p className="rounded-xl bg-amber-50 p-3 text-xs text-amber-900">운영 식사·요일·사진은 데이터베이스 업데이트(20261118000100) 뒤에 쓸 수 있어요.</p>}
         <fieldset className="space-y-1" disabled={!weekly}><legend className="text-sm font-medium">운영하는 식사</legend>
           <div className="flex gap-4 text-sm">{PERIODS.map((p) => <label key={p} className="flex items-center gap-1.5"><input type="checkbox" aria-label={`운영 식사 ${PERIOD_LABEL[p]}`} checked={f.meal_periods.includes(p)} onChange={() => set('meal_periods', toggle(f.meal_periods, p))} />{PERIOD_LABEL[p]}</label>)}</div>
           {errors.meal_periods && <p className="text-xs text-red-600">{errors.meal_periods}</p>}
-          <p className="text-xs text-muted">모든 식당이 세 끼를 다 하지는 않아요. 켜지 않은 식사는 메뉴 입력 칸에 나오지 않아요.</p></fieldset>
+          <p className="text-xs text-muted">모든 식당이 세 끼를 다 하지는 않아요. 켜지 않은 식사는 메뉴 입력 칸에 나오지 않아요. 켜 두어도 메뉴를 입력하지 않은 식사는 앱과 웹에 나타나지 않아요.</p></fieldset>
         <fieldset className="space-y-1" disabled={!weekly}><legend className="text-sm font-medium">운영하는 요일</legend>
           <div className="flex flex-wrap gap-3 text-sm">{DAYS.map((d) => <label key={d.value} className="flex items-center gap-1.5"><input type="checkbox" aria-label={`운영 요일 ${d.label}`} checked={f.operating_days.includes(d.value)} onChange={() => set('operating_days', toggle(f.operating_days, d.value))} />{d.label}</label>)}</div>
           {errors.operating_days && <p className="text-xs text-red-600">{errors.operating_days}</p>}</fieldset>

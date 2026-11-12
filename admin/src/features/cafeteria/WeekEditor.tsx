@@ -54,7 +54,6 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
   const dates = weekDates(week, weekend)
   const periods = MEAL_TYPES.filter((t) => cafeteria.mealPeriods.includes(t) || meals.some((m) => m.meal_type === t))
   const counts = weekCounts(meals)
-  const slotsTotal = dates.length * periods.length
 
   const refresh = async () => {
     await qc.invalidateQueries({ queryKey: ['cms', TYPE, id] }); await qc.invalidateQueries({ queryKey: ['cms-overview', TYPE] }); await qc.invalidateQueries({ queryKey: ['cafeteria-weeks'] }); onChanged()
@@ -146,7 +145,7 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
         <Button size="sm" variant="outline" disabled={selected.size === 0} onClick={() => setDialog('bulk')}><ListChecks className="size-3.5" />일괄 수정 ({selected.size})</Button>
         <Button size="sm" variant="soft" disabled={!state.draft || dirty || state.draft.stale || changed.length === 0} title={!state.draft ? '저장한 초안이 있어야 해요' : dirty ? '먼저 초안을 저장해 주세요' : undefined} onClick={() => setDialog('publishDays')}><CalendarDays className="size-3.5" />선택한 날만 게시</Button>
         <label className="ml-auto flex items-center gap-1.5 text-sm"><input type="checkbox" aria-label="주말 표시" checked={weekend} onChange={(e) => setWeekendOn(e.target.checked)} />토·일도 편집</label>
-        <span className="text-xs text-muted">{counts.slots}/{slotsTotal}칸 입력 · 메뉴 {counts.menus}개{counts.thousandWon ? ` · 천원의 아침밥 ${counts.thousandWon}일` : ''}</span>
+        <span className="text-xs text-muted">{counts.slots}칸 입력 · 메뉴 {counts.menus}개{counts.thousandWon ? ` · 천원의 아침밥 ${counts.thousandWon}일` : ''}</span>
       </Card>
 
       {conflict && (
@@ -159,7 +158,7 @@ export default function WeekEditor({ cafeteria, week, onWeek, onChanged }: {
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
         <Badge tone={state.draft ? 'brand' : 'neutral'}>{state.draft ? '초안 있음' : '초안 없음'}</Badge>
         {dirty && <Badge tone="amber">저장하지 않은 수정</Badge>}
-        <span>빈 칸은 아무것도 바꾸지 않아요. 메뉴를 지우거나 &lsquo;운영 안 함&rsquo;으로 바꾸려면 직접 선택하고 확인해 주세요.</span>
+        <span>조식 · 중식 · 석식은 모두 입력하지 않아도 돼요. 입력하지 않은 식사는 앱과 웹에 나타나지 않아요. 빈 칸은 아무것도 바꾸지 않아요. 메뉴를 지우거나 &lsquo;운영 안 함&rsquo;으로 바꾸려면 직접 선택하고 확인해 주세요.</span>
       </div>
 
       <WeekGrid dates={dates} periods={periods} meals={meals} liveKeys={liveKeys} selected={selected} problems={problems} ops={ops} />

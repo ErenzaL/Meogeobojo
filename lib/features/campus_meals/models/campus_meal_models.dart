@@ -87,6 +87,7 @@ class CampusCafeteria {
     this.mealTypes = MealType.values,
     this.operatingDays = const {1, 2, 3, 4, 5},
     this.photoUrl,
+    this.createdAt,
   });
 
   final String id;
@@ -109,6 +110,9 @@ class CampusCafeteria {
   /// Photo of the cafeteria (https only).
   final String? photoUrl;
 
+  /// When the admin added it: the list is ordered by this, oldest first.
+  final DateTime? createdAt;
+
   bool serves(MealType t) => mealTypes.contains(t);
 
   /// Saturday / Sunday are shown only for a cafeteria that opens then.
@@ -128,6 +132,7 @@ class CampusCafeteria {
     mealTypes: _mealTypes(j['meal_periods']),
     operatingDays: _days(j['operating_days']),
     photoUrl: _https(j['photo_url']),
+    createdAt: DateTime.tryParse((j['created_at'] as String?) ?? ''),
   );
 
   static List<MealType> _mealTypes(Object? v) {
@@ -193,6 +198,26 @@ String cafeteriaLabel(
   final base = cafeteria.kind.label(l10n);
   if (sameKind.length < 2) return base;
   return l10n.mealCafeteriaNth(base, sameKind.indexOf(cafeteria) + 1);
+}
+
+/// The cafeterias of a campus, the one the admin added first on top and each newer one below it. A cafeteria
+/// without a known creation time goes after the dated ones, and equal times keep the order they came in.
+List<CampusCafeteria> oldestFirst(List<CampusCafeteria> all) {
+  final indexed = [for (var i = 0; i < all.length; i++) (i, all[i])];
+  indexed.sort((a, b) {
+    final x = a.$2.createdAt;
+    final y = b.$2.createdAt;
+    if (x != null && y != null) {
+      final c = x.compareTo(y);
+      if (c != 0) return c;
+    } else if (x != null) {
+      return -1;
+    } else if (y != null) {
+      return 1;
+    }
+    return a.$1.compareTo(b.$1);
+  });
+  return [for (final e in indexed) e.$2];
 }
 
 /// The cafeteria to show: the user's [pick] when it still belongs to [all],

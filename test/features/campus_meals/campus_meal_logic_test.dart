@@ -369,4 +369,63 @@ void main() {
       );
     });
   });
+
+  group('cafeteria order: the first one added stays on top', () {
+    CampusCafeteria at(String id, DateTime? t) =>
+        fakeCafeteria(id, createdAt: t);
+    final nov10 = DateTime.utc(2026, 11, 10, 15, 5);
+    final nov12 = DateTime.utc(2026, 11, 12, 10, 32);
+    final nov13 = DateTime.utc(2026, 11, 13);
+
+    test('oldest first, whatever order they arrive in', () {
+      final a = at('hyangseol', nov10);
+      final b = at('staff', nov12);
+      final c = at('dorm', nov13);
+      expect(oldestFirst([b, a, c]).map((x) => x.id), [
+        'hyangseol',
+        'staff',
+        'dorm',
+      ]);
+      expect(oldestFirst([c, b, a]).map((x) => x.id), [
+        'hyangseol',
+        'staff',
+        'dorm',
+      ]);
+    });
+
+    test('equal times and unknown times keep their order, unknown last', () {
+      expect(
+        oldestFirst([
+          at('x', null),
+          at('b', nov12),
+          at('y', null),
+          at('a', nov12),
+        ]).map((c) => c.id),
+        ['b', 'a', 'x', 'y'],
+      );
+    });
+
+    test('the creation time is read from the database row', () {
+      final c = CampusCafeteria.fromJson({
+        'id': 'c1',
+        'university_id': 'u1',
+        'kind': 'student',
+        'created_at': '2026-11-10T15:05:52.319779+00:00',
+      });
+      expect(c.createdAt, DateTime.utc(2026, 11, 10, 15, 5, 52, 319, 779));
+      expect(
+        CampusCafeteria.fromJson({
+          'id': 'c2',
+          'university_id': 'u1',
+          'kind': 'student',
+        }).createdAt,
+        isNull,
+      );
+    });
+
+    test('with no pick the oldest student cafeteria is the one shown', () {
+      final all = oldestFirst([at('staff', nov12), at('hyangseol', nov10)]);
+      expect(chooseCafeteria(all, null)!.id, 'hyangseol');
+    });
+  });
 }

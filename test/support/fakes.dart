@@ -369,6 +369,7 @@ CampusCafeteria fakeCafeteria(
   List<MealType> mealTypes = MealType.values,
   Set<int> operatingDays = const {1, 2, 3, 4, 5},
   String? photoUrl,
+  DateTime? createdAt,
 }) => CampusCafeteria(
   id: id,
   universityId: universityId,
@@ -380,6 +381,7 @@ CampusCafeteria fakeCafeteria(
   mealTypes: mealTypes,
   operatingDays: operatingDays,
   photoUrl: photoUrl,
+  createdAt: createdAt,
 );
 
 CafeteriaMeal fakeMeal(

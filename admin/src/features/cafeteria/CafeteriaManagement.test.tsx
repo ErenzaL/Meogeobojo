@@ -96,6 +96,52 @@ describe('학식 식당 추가 / 수정', () => {
     })
   })
 
+  it('a second cafeteria must be told apart by name', async () => {
+    await open([CAF()])
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    // the campus already has one: a nameless second one could not be told apart in the app
+    expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
+    await userEvent.type(within(modal).getByLabelText(/이름 \(한국어\)/), '학생회관식당')
+    expect(within(modal).queryByText(/여러 곳이에요/)).toBeNull()
+  })
+
+  it('the first cafeteria of a campus needs no such reminder, and follows the chosen university', async () => {
+    await open([CAF()])
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
+    await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u2')
+    expect(within(modal).queryByText(/여러 곳이에요/)).toBeNull()
+    await userEvent.selectOptions(within(modal).getByLabelText('대학교'), 'u1')
+    expect(within(modal).getByText(/여러 곳이에요/)).toBeTruthy()
+  })
+
+  it('there is no manual order: cafeterias come in the order they were added, and the form says so', async () => {
+    await open([CAF()])
+    await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 추가' })
+    expect(within(modal).queryByLabelText('표시 순서', { exact: false })).toBeNull()
+    expect(within(modal).getByText(/등록한 순서대로 나와요/)).toBeTruthy()
+  })
+
+  it('the list is read oldest first (newest at the bottom), not by a hand-set number', async () => {
+    await open([CAF({ id: 'c1', name_ko: '향설1관' }), CAF({ id: 'c2', name_ko: '교직원식당' })])
+    const q = fake.calls.filter((c) => c.table === 'campus_cafeterias' && c.op === 'select').at(-1)!
+    const orders = q.filters.filter((f) => f[0] === 'order').map((f) => f[1])
+    expect(orders).toEqual(['created_at', 'id'])
+    expect(orders).not.toContain('sort_order')
+    // shown in the order the database returns them
+    expect(names()).toEqual(['향설1관', '교직원식당'])
+  })
+
+  it('editing a cafeteria never asks for a name just because it has no siblings, and only counts the others', async () => {
+    await open([CAF({ name_ko: null })]); await openCaf('학생식당 (이름 미확인)')
+    await userEvent.click(screen.getByRole('button', { name: /식당 정보 수정/ }))
+    const modal = await screen.findByRole('dialog', { name: '학식 식당 수정' })
+    expect(within(modal).queryByText(/여러 곳이에요/)).toBeNull()
+  })
+
   it('refuses a cafeteria that serves no meal at all', async () => {
     await open([])
     await userEvent.click(screen.getByRole('button', { name: /학식 식당 추가/ }))

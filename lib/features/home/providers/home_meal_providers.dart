@@ -26,11 +26,12 @@ final homeMealSourceProvider = FutureProvider<HomeMealSource>((ref) async {
   // Only the calendar day matters here, so the minute tick does not refetch.
   final today = ref.watch(seoulNowProvider.select((n) => seoulDate(n)));
   final all = await ref.watch(campusCafeteriasProvider.future);
-  if (all.isEmpty) return const HomeMealSource(null, [], []);
-  final cafeteria = all.firstWhere(
-    (c) => c.kind == CafeteriaKind.student,
-    orElse: () => all.first,
+  // the user's pick (shared with the weekly page), else the first student cafeteria
+  final cafeteria = chooseCafeteria(
+    all,
+    ref.watch(selectedCafeteriaIdProvider),
   );
+  if (cafeteria == null) return const HomeMealSource(null, [], []);
   final tomorrow = DateTime.utc(today.year, today.month, today.day + 1);
   final weeks = {weekStartOf(today), weekStartOf(tomorrow)};
   final meals = <CafeteriaMeal>[];

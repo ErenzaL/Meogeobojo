@@ -1,4 +1,5 @@
-import { DIETARY_LABELS, guessKind } from './week'
+import { addDays } from './meal'
+import { DIETARY_LABELS, guessKind, weekDates, type MealPeriod } from './week'
 
 /** Browser-side CSV handling for the cafeteria import: parse (UTF-8 with or without BOM, quoted fields, CRLF),
  *  map headers (English or Korean), normalise every row and report row-level problems. The server validates AGAIN
@@ -47,12 +48,12 @@ const key = (h: string): Column | null => {
 }
 
 export type Table = { columns: (Column | null)[]; missing: string[]; unknown: string[]; rows: { line: number; cells: Partial<Record<Column, string>> }[] }
-export function toTable(grid: string[][]): Table {
-  if (grid.length === 0) return { columns: [], missing: [...REQUIRED], unknown: [], rows: [] }
+export function toTable(grid: string[][], required: readonly Column[] = REQUIRED): Table {
+  if (grid.length === 0) return { columns: [], missing: [...required], unknown: [], rows: [] }
   const columns = grid[0].map(key)
   const present = new Set(columns.filter(Boolean))
   return {
-    columns, missing: REQUIRED.filter((c) => !present.has(c)), unknown: grid[0].filter((_, i) => !columns[i]).map((h) => h.trim()).filter(Boolean),
+    columns, missing: required.filter((c) => !present.has(c)), unknown: grid[0].filter((_, i) => !columns[i]).map((h) => h.trim()).filter(Boolean),
     rows: grid.slice(1).map((r, i) => ({ line: i + 2, cells: Object.fromEntries(columns.map((c, j) => [c, (r[j] ?? '').trim()]).filter(([c]) => c)) as Partial<Record<Column, string>> })),
   }
 }
@@ -141,6 +142,51 @@ export function normalizeRow(r: { line: number; cells: Partial<Record<Column, st
     dishes, origin: c('origin'), labels, labels_verified: verified, sold_out: YES.has(c('sold_out').toLowerCase()), errors,
   }
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+// ONE cafeteria, ONE week: the file of a single restaurant for a single week, uploaded from that week's editor.
+// The cafeteria and university are the ones being edited (no name columns needed), and every date must lie in the week,
+// so a wrong file can never touch another restaurant or another week.
+// ---------------------------------------------------------------------------------------------------------------------
+export type ImportScope = {
+  universityId: string; universityName: string; cafeteriaId: string; cafeteriaName: string
+  /** every name the cafeteria goes by (Korean / English / Chinese), for the optional name column check */
+  cafeteriaNames: string[]
+  weekStart: string; periods: MealPeriod[]; weekend: boolean
+}
+export const SCOPED_REQUIRED = ['date', 'meal_type', 'menu_name'] as const
+export const SCOPED_COLUMNS = [
+  'date', 'meal_type', 'menu_name', 'side_dishes', 'soup', 'rice', 'kimchi', 'salad', 'dessert', 'shared', 'price', 'serving_time',
+  'meal_option', 'program', 'description', 'notes', 'origin', 'labels', 'labels_verified', 'source_url',
+] as const
+
+/** A template row the admin left unfilled (only the date and meal that were pre-filled): skipped, never an error, so a meal the
+ *  cafeteria does not serve is simply left empty. */
+export const isBlankScopedRow = (r: { cells: Partial<Record<Column, string>> }) =>
+  Object.entries(r.cells).every(([k, v]) => !(v ?? '').trim() || k === 'date' || k === 'meal_type' || k === 'university' || k === 'cafeteria_name')
+
+export function normalizeScopedRow(r: { line: number; cells: Partial<Record<Column, string>> }, scope: ImportScope): ImportRow {
+  const fileUni = (r.cells.university ?? '').trim()
+  const fileCaf = (r.cells.cafeteria_name ?? '').trim()
+  const row = normalizeRow({ line: r.line, cells: { ...r.cells, university_id: scope.universityId, cafeteria_id: scope.cafeteriaId } })
+  const errors = [...row.errors]
+  const same = (v: string, names: string[]) => names.some((n) => n.trim().toLowerCase() === v.toLowerCase())
+  if (fileUni && !same(fileUni, [scope.universityName])) errors.push(`다른 대학교(${fileUni})의 행이에요. ${scope.universityName} 파일만 올려 주세요`)
+  if (fileCaf && scope.cafeteriaNames.length > 0 && !same(fileCaf, scope.cafeteriaNames)) errors.push(`다른 식당(${fileCaf})의 행이에요. ${scope.cafeteriaName} 파일만 올려 주세요`)
+  const end = addDays(scope.weekStart, 6)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(row.date) && (row.date < scope.weekStart || row.date > end)) errors.push(`이 주(${scope.weekStart} ~ ${end})의 날짜가 아니에요: ${row.date}`)
+  return { ...row, errors, university: scope.universityName, cafeteria_name: scope.cafeteriaName }
+}
+
+const MEAL_WORD: Record<MealPeriod, string> = { breakfast: '조식', lunch: '중식', dinner: '석식' }
+/** The file to download for this cafeteria and week: one row per day and served meal, date and meal already filled in. The admin fills
+ *  menu_name (and whatever else is known) and deletes nothing: rows left empty are skipped on upload. */
+export function scopedTemplateCsv(scope: Pick<ImportScope, 'weekStart' | 'periods' | 'weekend'>): string {
+  const blank = Array(SCOPED_COLUMNS.length - 2).fill('')
+  const rows = weekDates(scope.weekStart, scope.weekend).flatMap((d) => scope.periods.map((p) => [d, MEAL_WORD[p], ...blank].join(',')))
+  return [SCOPED_COLUMNS.join(','), ...rows].join('\r\n') + '\r\n'
+}
+export const scopedTemplateBlob = (scope: Pick<ImportScope, 'weekStart' | 'periods' | 'weekend'>) => new Blob(['\uFEFF', scopedTemplateCsv(scope)], { type: 'text/csv;charset=utf-8' })
 
 /** What the server receives for a row (empty strings become absent, so the server's defaults and checks apply). */
 export const toRpcRow = (r: ImportRow) => ({

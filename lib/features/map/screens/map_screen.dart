@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +18,7 @@ import '../../university/widgets/university_sheet.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../../core/widgets/responsive.dart';
 import '../utils/kakao_relayout.dart';
-import '../utils/marker_image.dart';
+import '../utils/marker_art.dart';
 import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
 import '../widgets/map_places_sheet.dart';
@@ -30,7 +29,6 @@ import '../../university/providers/university_providers.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../university/models/university_display.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../../core/theme/app_colors.dart';
 
 /// Initializes the Kakao Maps SDK with the *native* app key, lazily: only
 /// when the map tab is first opened, so an SDK problem can never affect
@@ -43,24 +41,7 @@ final kakaoMapInitProvider = FutureProvider<void>((ref) async {
   );
 });
 
-const _restaurantStyle = 'restaurant_pin';
-const _campusStyle = 'campus_pin';
 const _campusMarkerId = 'campus';
-
-Future<Uint8List> _renderPin(Color fill, {int size = 56}) async {
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder);
-  final c = Offset(size / 2, size / 2);
-  canvas.drawCircle(c, size / 2 - 1, Paint()..color = Colors.white);
-  canvas.drawCircle(c, size / 2 - 7, Paint()..color = fill);
-  final image = await recorder.endRecording().toImage(size, size);
-  try {
-    // Verified 8-bit RGBA bytes, never whatever the engine's encoder emitted for this device's surface.
-    return await markerPngFromImage(image);
-  } finally {
-    image.dispose();
-  }
-}
 
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
@@ -73,6 +54,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
     with WidgetsBindingObserver {
   KakaoMapController? _controller;
   bool _stylesReady = false;
+
+  /// Marker styles already handed to the map: one per tag text ("t:8,000~",
+  /// "s:8,000~" when selected, "o:정문" for the origin).
+  final _styles = <String>{};
 
   /// Web: fit the first results (with the campus) into view once per campus, never again, so later filter changes
   /// and the user's own panning/zooming are left alone.
@@ -155,28 +140,6 @@ class _MapScreenState extends ConsumerState<MapScreen>
           clickable: true,
         );
       }
-      await c.registerMarkerStyles(
-        styles: [
-          MarkerStyle(
-            styleId: _restaurantStyle,
-            perLevels: [
-              MarkerPerLevelStyle.fromBytes(
-                bytes: await _renderPin(AppColors.primary),
-                level: 0,
-              ),
-            ],
-          ),
-          MarkerStyle(
-            styleId: _campusStyle,
-            perLevels: [
-              MarkerPerLevelStyle.fromBytes(
-                bytes: await _renderPin(AppColors.pinCampus, size: 68),
-                level: 0,
-              ),
-            ],
-          ),
-        ],
-      );
       _stylesReady = true;
       _clickSub = c.onLabelClickedStream.listen(_onMarkerTapped);
       await _syncMarkers();
@@ -192,7 +155,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     final r = ref.read(mapFocusProvider);
     if (r == null || !mounted) return;
     if (_controller == null) {
-      setState(() => _selected = r);
+      _select(r);
       return;
     }
     ref.read(mapFocusProvider.notifier).clear();
@@ -203,17 +166,120 @@ class _MapScreenState extends ConsumerState<MapScreen>
   void _onMarkerTapped(LabelClickEvent e) {
     final items = ref.read(filteredRestaurantsProvider).value ?? const [];
     final match = items.where((r) => r.kakaoId == e.labelId);
-    if (match.isNotEmpty && mounted) setState(() => _selected = match.first);
+    if (match.isNotEmpty && mounted) _select(match.first);
   }
+
+  /// Selects [r] (or nothing) and swaps the two affected pins: the old one back to its tag, the new one to the dark
+  /// chip. Only those two markers change, so the rest of the map does not flicker.
+  void _select(Restaurant? r) {
+    final old = _selected;
+    setState(() => _selected = r);
+    if (old?.kakaoId == r?.kakaoId) return;
+    final look = _tagLook();
+    unawaited(() async {
+      final c = _controller;
+      if (c == null || !_stylesReady) return;
+      final shown = {
+        for (final x
+            in ref.read(filteredRestaurantsProvider).value ??
+                const <Restaurant>[])
+          x.kakaoId: x,
+      };
+      try {
+        for (final x in [?old, ?r]) {
+          final place = shown[x.kakaoId];
+          if (place == null) continue;
+          final option = await _placeMarker(c, place, look);
+          await c.removeMarker(id: place.kakaoId);
+          await c.addMarker(markerOption: option);
+        }
+      } catch (e) {
+        debugPrint('Map marker restyle failed: $e');
+      }
+    }());
+  }
+
+  /// What the tags need from the context, read once before any await: the price wording and the bitmap scale.
+  ({AppLocalizations l10n, double scale}) _tagLook() => (
+    l10n: context.l10n,
+    scale: markerScale(MediaQuery.devicePixelRatioOf(context)),
+  );
+
+  /// What a place's tag says: its lowest price when an admin entered one (as on the Home cards), otherwise its kind.
+  String _tagText(Restaurant r, AppLocalizations l10n) {
+    final price = ref.read(restaurantInsightsProvider)[r.kakaoId]?.minPriceKrw;
+    if (price != null) return l10n.homePriceFrom(price);
+    final kind = r.categoryTag;
+    return kind.isEmpty ? '•' : kind;
+  }
+
+  /// Hands the map a style for [id] the first time it is needed.
+  Future<void> _ensureStyle(
+    KakaoMapController c,
+    String id,
+    Future<Uint8List> Function() draw,
+  ) async {
+    if (_styles.contains(id)) return;
+    await c.registerMarkerStyles(
+      styles: [
+        MarkerStyle(
+          styleId: id,
+          perLevels: [
+            MarkerPerLevelStyle.fromBytes(bytes: await draw(), level: 0),
+          ],
+        ),
+      ],
+    );
+    _styles.add(id);
+  }
+
+  Future<MarkerOption> _placeMarker(
+    KakaoMapController c,
+    Restaurant r,
+    ({AppLocalizations l10n, double scale}) look,
+  ) async {
+    final selected = _selected?.kakaoId == r.kakaoId;
+    final text = _tagText(r, look.l10n);
+    final style = '${selected ? 's' : 't'}:$text';
+    await _ensureStyle(
+      c,
+      style,
+      () => renderPlaceTag(text, selected: selected, scale: look.scale),
+    );
+    return MarkerOption(
+      id: r.kakaoId,
+      latLng: LatLng(latitude: r.latitude, longitude: r.longitude),
+      styleId: style,
+      rank: selected ? 3 : 1,
+      // Web shows it as the hover title; native would draw it on the map a second time.
+      text: kIsWeb ? r.name : null,
+    );
+  }
+
+  /// Bumped by every [_syncMarkers]; an older one still drawing styles when a
+  /// newer one starts must not touch the map.
+  int _syncGen = 0;
 
   Future<void> _syncMarkers() async {
     final c = _controller;
     final origin = ref.read(originProvider);
     if (c == null || !_stylesReady || origin == null || !mounted) return;
+    final gen = ++_syncGen;
+    bool stale() => !mounted || gen != _syncGen;
     final items = ref.read(filteredRestaurantsProvider).value ?? const [];
     final originLabel = origin.label(context.l10n);
+    final look = _tagLook();
     try {
+      final originStyle = 'o:$originLabel';
+      await _ensureStyle(
+        c,
+        originStyle,
+        () => renderOriginPin(originLabel, scale: look.scale),
+      );
+      final places = [for (final r in items) await _placeMarker(c, r, look)];
+      if (stale()) return;
       await c.clearMarkers();
+      if (stale()) return;
       await c.addMarkers(
         markerOptions: [
           // The pin marks where the walk starts (the chosen origin).
@@ -223,19 +289,14 @@ class _MapScreenState extends ConsumerState<MapScreen>
               latitude: origin.latitude,
               longitude: origin.longitude,
             ),
-            styleId: _campusStyle,
-            text: originLabel,
+            styleId: originStyle,
+            text: kIsWeb ? originLabel : null,
             rank: 2,
           ),
-          for (final r in items)
-            MarkerOption(
-              id: r.kakaoId,
-              latLng: LatLng(latitude: r.latitude, longitude: r.longitude),
-              styleId: _restaurantStyle,
-              rank: 1,
-            ),
+          ...places,
         ],
       );
+      if (stale()) return;
       await _fitResultsOnce(origin, items);
     } catch (e) {
       debugPrint('Map marker update failed: $e');
@@ -269,7 +330,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
 
   /// A list row was chosen: select its pin's card and pan to it, keeping the current zoom.
   Future<void> _focus(Restaurant r) async {
-    setState(() => _selected = r);
+    _select(r);
     final c = _controller;
     if (c == null) return;
     try {
@@ -292,7 +353,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   Future<void> _moveTo(double lat, double lng) async {
     final c = _controller;
     if (c == null) return;
-    setState(() => _selected = null);
+    _select(null);
     try {
       await c.moveCamera(
         cameraUpdate: kIsWeb
@@ -480,7 +541,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
             top: 12,
             child: _SelectedCard(
               restaurant: _selected!,
-              onClose: () => setState(() => _selected = null),
+              onClose: () => _select(null),
             ),
           ),
         if (origin != null)

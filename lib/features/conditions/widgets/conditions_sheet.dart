@@ -302,7 +302,7 @@ class _Footer extends ConsumerWidget {
   /// Null in a single-setting sheet (no start-over link there).
   final VoidCallback? onRestart;
 
-  /// Overrides 모두 풀기 when the sheet holds one setting.
+  /// Overrides 초기화 when the sheet holds one setting.
   final String? resetLabel;
 
   @override

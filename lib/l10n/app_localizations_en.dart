@@ -230,6 +230,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restaurantOpenKakaoMap => 'View on Kakao Map';
 
   @override
+  String get restaurantOpenNaverMap => 'View on Naver Map';
+
+  @override
   String get restaurantLinkOpenFailed => 'Couldn\'t open that link.';
 
   @override
@@ -515,9 +518,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legalPrivacy => 'Privacy Policy';
-
-  @override
-  String get legalNotPublished => 'This document hasn\'t been published yet.';
 
   @override
   String get legalOpenFailed => 'Couldn\'t open the link.';
@@ -1653,7 +1653,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Recommended order is nearest to your starting point first.';
 
   @override
-  String get condResetAll => 'Clear all';
+  String get condResetAll => 'Reset';
 
   @override
   String get condResetThis => 'Reset this';
@@ -2270,9 +2270,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get footerFeedback => 'Send feedback';
 
   @override
-  String get footerContactNotReady => 'The contact channel is not set up yet.';
-
-  @override
   String get footerServiceTitle => 'Service';
 
   @override
@@ -2690,4 +2687,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gameEditCandidates => 'Edit options';
+
+  @override
+  String get supportTitle => 'Support';
+
+  @override
+  String get noticeOpenLink => 'Read more';
+
+  @override
+  String get feedbackCategory => 'Category';
+
+  @override
+  String get feedbackCatQuestion => 'Question';
+
+  @override
+  String get feedbackCatSuggestion => 'Suggestion';
+
+  @override
+  String get feedbackCatBug => 'Bug report';
+
+  @override
+  String get feedbackTitleLabel => 'Title';
+
+  @override
+  String get feedbackBodyLabel => 'Message';
+
+  @override
+  String get feedbackSubmit => 'Send';
+
+  @override
+  String get feedbackNeedTitle => 'Please enter a title.';
+
+  @override
+  String get feedbackNeedBody => 'Please enter a message.';
+
+  @override
+  String get feedbackSent => 'Sent. The team will look at it.';
+
+  @override
+  String get feedbackFailed => 'Couldn\'t send it. Please try again shortly.';
+
+  @override
+  String get authReasonFeedback => 'Sign in to send a question or suggestion.';
+
+  @override
+  String get noticesSeeAll => 'See all';
 }

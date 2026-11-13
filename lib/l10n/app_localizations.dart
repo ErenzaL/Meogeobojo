@@ -502,6 +502,12 @@ abstract class AppLocalizations {
   /// **'카카오맵에서 보기'**
   String get restaurantOpenKakaoMap;
 
+  /// No description provided for @restaurantOpenNaverMap.
+  ///
+  /// In ko, this message translates to:
+  /// **'네이버맵에서 보기'**
+  String get restaurantOpenNaverMap;
+
   /// No description provided for @restaurantLinkOpenFailed.
   ///
   /// In ko, this message translates to:
@@ -951,12 +957,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'개인정보처리방침'**
   String get legalPrivacy;
-
-  /// No description provided for @legalNotPublished.
-  ///
-  /// In ko, this message translates to:
-  /// **'문서가 아직 게시되지 않았어요.'**
-  String get legalNotPublished;
 
   /// No description provided for @legalOpenFailed.
   ///
@@ -2857,13 +2857,13 @@ abstract class AppLocalizations {
   /// No description provided for @condResetAll.
   ///
   /// In ko, this message translates to:
-  /// **'모두 풀기'**
+  /// **'초기화'**
   String get condResetAll;
 
   /// No description provided for @condResetThis.
   ///
   /// In ko, this message translates to:
-  /// **'이 설정만 풀기'**
+  /// **'이 설정 초기화'**
   String get condResetThis;
 
   /// No description provided for @condShowCount.
@@ -3976,12 +3976,6 @@ abstract class AppLocalizations {
   /// **'의견 보내기'**
   String get footerFeedback;
 
-  /// No description provided for @footerContactNotReady.
-  ///
-  /// In ko, this message translates to:
-  /// **'문의 채널은 아직 준비 중이에요.'**
-  String get footerContactNotReady;
-
   /// No description provided for @footerServiceTitle.
   ///
   /// In ko, this message translates to:
@@ -4665,6 +4659,96 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'후보 수정'**
   String get gameEditCandidates;
+
+  /// No description provided for @supportTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'고객 지원'**
+  String get supportTitle;
+
+  /// No description provided for @noticeOpenLink.
+  ///
+  /// In ko, this message translates to:
+  /// **'자세히 보기'**
+  String get noticeOpenLink;
+
+  /// No description provided for @feedbackCategory.
+  ///
+  /// In ko, this message translates to:
+  /// **'카테고리'**
+  String get feedbackCategory;
+
+  /// No description provided for @feedbackCatQuestion.
+  ///
+  /// In ko, this message translates to:
+  /// **'문의'**
+  String get feedbackCatQuestion;
+
+  /// No description provided for @feedbackCatSuggestion.
+  ///
+  /// In ko, this message translates to:
+  /// **'제안'**
+  String get feedbackCatSuggestion;
+
+  /// No description provided for @feedbackCatBug.
+  ///
+  /// In ko, this message translates to:
+  /// **'오류 신고'**
+  String get feedbackCatBug;
+
+  /// No description provided for @feedbackTitleLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목'**
+  String get feedbackTitleLabel;
+
+  /// No description provided for @feedbackBodyLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'내용'**
+  String get feedbackBodyLabel;
+
+  /// No description provided for @feedbackSubmit.
+  ///
+  /// In ko, this message translates to:
+  /// **'제출'**
+  String get feedbackSubmit;
+
+  /// No description provided for @feedbackNeedTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'제목을 입력해 주세요.'**
+  String get feedbackNeedTitle;
+
+  /// No description provided for @feedbackNeedBody.
+  ///
+  /// In ko, this message translates to:
+  /// **'내용을 입력해 주세요.'**
+  String get feedbackNeedBody;
+
+  /// No description provided for @feedbackSent.
+  ///
+  /// In ko, this message translates to:
+  /// **'보냈어요. 운영자가 확인할게요.'**
+  String get feedbackSent;
+
+  /// No description provided for @feedbackFailed.
+  ///
+  /// In ko, this message translates to:
+  /// **'보내지 못했어요. 잠시 후 다시 시도해 주세요.'**
+  String get feedbackFailed;
+
+  /// No description provided for @authReasonFeedback.
+  ///
+  /// In ko, this message translates to:
+  /// **'문의와 제안은 로그인한 뒤에 보낼 수 있어요.'**
+  String get authReasonFeedback;
+
+  /// No description provided for @noticesSeeAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체 보기'**
+  String get noticesSeeAll;
 }
 
 class _AppLocalizationsDelegate

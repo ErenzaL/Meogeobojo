@@ -228,6 +228,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restaurantOpenKakaoMap => '카카오맵에서 보기';
 
   @override
+  String get restaurantOpenNaverMap => '네이버맵에서 보기';
+
+  @override
   String get restaurantLinkOpenFailed => '열 수 없는 링크예요.';
 
   @override
@@ -478,9 +481,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get legalPrivacy => '개인정보처리방침';
-
-  @override
-  String get legalNotPublished => '문서가 아직 게시되지 않았어요.';
 
   @override
   String get legalOpenFailed => '링크를 열 수 없어요.';
@@ -1573,10 +1573,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condSoftNote => '추천순은 선택한 출발점에서 가까운 순이에요.';
 
   @override
-  String get condResetAll => '모두 풀기';
+  String get condResetAll => '초기화';
 
   @override
-  String get condResetThis => '이 설정만 풀기';
+  String get condResetThis => '이 설정 초기화';
 
   @override
   String condShowCount(int count) {
@@ -2173,9 +2173,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get footerFeedback => '의견 보내기';
 
   @override
-  String get footerContactNotReady => '문의 채널은 아직 준비 중이에요.';
-
-  @override
   String get footerServiceTitle => '서비스 정보';
 
   @override
@@ -2584,4 +2581,49 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get gameEditCandidates => '후보 수정';
+
+  @override
+  String get supportTitle => '고객 지원';
+
+  @override
+  String get noticeOpenLink => '자세히 보기';
+
+  @override
+  String get feedbackCategory => '카테고리';
+
+  @override
+  String get feedbackCatQuestion => '문의';
+
+  @override
+  String get feedbackCatSuggestion => '제안';
+
+  @override
+  String get feedbackCatBug => '오류 신고';
+
+  @override
+  String get feedbackTitleLabel => '제목';
+
+  @override
+  String get feedbackBodyLabel => '내용';
+
+  @override
+  String get feedbackSubmit => '제출';
+
+  @override
+  String get feedbackNeedTitle => '제목을 입력해 주세요.';
+
+  @override
+  String get feedbackNeedBody => '내용을 입력해 주세요.';
+
+  @override
+  String get feedbackSent => '보냈어요. 운영자가 확인할게요.';
+
+  @override
+  String get feedbackFailed => '보내지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get authReasonFeedback => '문의와 제안은 로그인한 뒤에 보낼 수 있어요.';
+
+  @override
+  String get noticesSeeAll => '전체 보기';
 }

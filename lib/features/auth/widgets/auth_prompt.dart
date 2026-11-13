@@ -10,7 +10,7 @@ import '../screens/login_screen.dart';
 import '../../../core/theme/app_palette.dart';
 
 /// Why a feature needs an account; picks the explanation shown to guests.
-enum AuthReason { favorite, records, community, profile, contribute }
+enum AuthReason { favorite, records, community, profile, contribute, feedback }
 
 extension on AuthReason {
   String title(AppLocalizations l10n) => switch (this) {
@@ -19,6 +19,7 @@ extension on AuthReason {
     AuthReason.community => l10n.authReasonCommunity,
     AuthReason.profile => l10n.authReasonProfile,
     AuthReason.contribute => l10n.authReasonContribute,
+    AuthReason.feedback => l10n.authReasonFeedback,
   };
 }
 

@@ -227,6 +227,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restaurantOpenKakaoMap => '在 Kakao 地图中查看';
 
   @override
+  String get restaurantOpenNaverMap => '在 Naver 地图中查看';
+
+  @override
   String get restaurantLinkOpenFailed => '无法打开该链接。';
 
   @override
@@ -477,9 +480,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legalPrivacy => '隐私政策';
-
-  @override
-  String get legalNotPublished => '该文件尚未发布。';
 
   @override
   String get legalOpenFailed => '无法打开链接。';
@@ -1566,10 +1566,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condSoftNote => '推荐顺序按离所选出发点由近到远排列。';
 
   @override
-  String get condResetAll => '全部清除';
+  String get condResetAll => '重置';
 
   @override
-  String get condResetThis => '清除此项';
+  String get condResetThis => '重置此项';
 
   @override
   String condShowCount(int count) {
@@ -2163,9 +2163,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get footerFeedback => '发送意见';
 
   @override
-  String get footerContactNotReady => '咨询渠道尚在准备中。';
-
-  @override
   String get footerServiceTitle => '服务信息';
 
   @override
@@ -2570,4 +2567,49 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get gameEditCandidates => '修改候选';
+
+  @override
+  String get supportTitle => '客户支持';
+
+  @override
+  String get noticeOpenLink => '查看详情';
+
+  @override
+  String get feedbackCategory => '类别';
+
+  @override
+  String get feedbackCatQuestion => '咨询';
+
+  @override
+  String get feedbackCatSuggestion => '建议';
+
+  @override
+  String get feedbackCatBug => '错误报告';
+
+  @override
+  String get feedbackTitleLabel => '标题';
+
+  @override
+  String get feedbackBodyLabel => '内容';
+
+  @override
+  String get feedbackSubmit => '提交';
+
+  @override
+  String get feedbackNeedTitle => '请输入标题。';
+
+  @override
+  String get feedbackNeedBody => '请输入内容。';
+
+  @override
+  String get feedbackSent => '已发送，运营团队会查看。';
+
+  @override
+  String get feedbackFailed => '发送失败，请稍后再试。';
+
+  @override
+  String get authReasonFeedback => '登录后才能发送咨询和建议。';
+
+  @override
+  String get noticesSeeAll => '查看全部';
 }

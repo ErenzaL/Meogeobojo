@@ -26,6 +26,16 @@ String restaurantPath(Restaurant r) => Uri(
   return (id: id, name: (name == null || name.isEmpty) ? null : name);
 }
 
+/// The place on Naver Map. Naver knows no Kakao place ids, so it is a search
+/// for the name near the city in its address ("충남 아산시 국수집").
+Uri naverMapUrl(Restaurant r) {
+  final area = (r.roadAddress.isNotEmpty ? r.roadAddress : r.address)
+      .split(' ')
+      .take(2)
+      .join(' ');
+  return Uri.https('map.naver.com', '/p/search/${'$area ${r.name}'.trim()}');
+}
+
 /// The full link to share: this site's address (on the phone apps, the
 /// public website) with the restaurant's path after `#`.
 String restaurantShareUrl(Restaurant r) {

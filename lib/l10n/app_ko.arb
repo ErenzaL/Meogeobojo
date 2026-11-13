@@ -129,6 +129,7 @@
   "restaurantNoPhone": "등록된 전화번호가 없어요",
   "restaurantDataNotice": "사진, 평점, 메뉴·가격, 영업시간은 아직 제공되지 않아요. 자세한 정보는 카카오맵에서 확인해보세요.",
   "restaurantOpenKakaoMap": "카카오맵에서 보기",
+  "restaurantOpenNaverMap": "네이버맵에서 보기",
   "restaurantLinkOpenFailed": "열 수 없는 링크예요.",
   "restaurantErrNetwork": "인터넷 연결을 확인해주세요.",
   "restaurantErrTimeout": "응답이 너무 늦어지고 있어요. 잠시 후 다시 시도해주세요.",
@@ -304,7 +305,6 @@
   "authKakaoWaiting": "카카오 로그인 진행 중…",
   "legalTerms": "이용약관",
   "legalPrivacy": "개인정보처리방침",
-  "legalNotPublished": "문서가 아직 게시되지 않았어요.",
   "legalOpenFailed": "링크를 열 수 없어요.",
   "authEmailLoginTitle": "이메일로 로그인",
   "authEmailLabel": "이메일",
@@ -1007,8 +1007,8 @@
   "condSortPrice": "가격순",
   "condSortRating": "평점순",
   "condSoftNote": "추천순은 선택한 출발점에서 가까운 순이에요.",
-  "condResetAll": "모두 풀기",
-  "condResetThis": "이 설정만 풀기",
+  "condResetAll": "초기화",
+  "condResetThis": "이 설정 초기화",
   "condShowCount": "{count}곳 보기",
   "@condShowCount": {
     "placeholders": {
@@ -1313,7 +1313,6 @@
   "footerContactTitle": "문의 및 제안",
   "footerContactBody": "서비스에 대한 질문이나 제안을 남겨 주세요.",
   "footerFeedback": "의견 보내기",
-  "footerContactNotReady": "문의 채널은 아직 준비 중이에요.",
   "footerServiceTitle": "서비스 정보",
   "footerServiceNote": "식당·학식·미션 정보는 확인된 자료와 운영자가 게시한 내용만 보여 드려요.",
   "footerAboutLink": "서비스 소개",
@@ -1659,5 +1658,20 @@
       }
     }
   },
-  "gameEditCandidates": "후보 수정"
+  "gameEditCandidates": "후보 수정",
+  "supportTitle": "고객 지원",
+  "noticeOpenLink": "자세히 보기",
+  "feedbackCategory": "카테고리",
+  "feedbackCatQuestion": "문의",
+  "feedbackCatSuggestion": "제안",
+  "feedbackCatBug": "오류 신고",
+  "feedbackTitleLabel": "제목",
+  "feedbackBodyLabel": "내용",
+  "feedbackSubmit": "제출",
+  "feedbackNeedTitle": "제목을 입력해 주세요.",
+  "feedbackNeedBody": "내용을 입력해 주세요.",
+  "feedbackSent": "보냈어요. 운영자가 확인할게요.",
+  "feedbackFailed": "보내지 못했어요. 잠시 후 다시 시도해 주세요.",
+  "authReasonFeedback": "문의와 제안은 로그인한 뒤에 보낼 수 있어요.",
+  "noticesSeeAll": "전체 보기"
 }

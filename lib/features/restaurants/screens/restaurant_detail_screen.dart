@@ -196,6 +196,7 @@ class _RestaurantDetailScreenState
       onKakaoMap: r.placeUrl == null
           ? null
           : () => _open(Uri.parse(r.placeUrl!)),
+      onNaverMap: () => _open(naverMapUrl(r)),
     );
     final details = <Widget>[
       // Only say "not provided" when an admin has added nothing.
@@ -723,6 +724,7 @@ class _InfoBox extends StatelessWidget {
     required this.walkMinutes,
     required this.onPhone,
     required this.onKakaoMap,
+    required this.onNaverMap,
   });
 
   final Restaurant restaurant;
@@ -732,6 +734,7 @@ class _InfoBox extends StatelessWidget {
   final int walkMinutes;
   final void Function(String phone) onPhone;
   final VoidCallback? onKakaoMap;
+  final VoidCallback onNaverMap;
 
   @override
   Widget build(BuildContext context) {
@@ -802,14 +805,24 @@ class _InfoBox extends StatelessWidget {
                     ),
                   ),
                 Text(l10n.detailRouteNote, style: note),
-                if (onKakaoMap != null) ...[
-                  const SizedBox(height: 8),
-                  V5SmallButton(
-                    icon: Icons.open_in_new_outlined,
-                    label: l10n.restaurantOpenKakaoMap,
-                    onPressed: onKakaoMap!,
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onKakaoMap != null)
+                      V5SmallButton(
+                        icon: Icons.open_in_new_outlined,
+                        label: l10n.restaurantOpenKakaoMap,
+                        onPressed: onKakaoMap!,
+                      ),
+                    V5SmallButton(
+                      icon: Icons.open_in_new_outlined,
+                      label: l10n.restaurantOpenNaverMap,
+                      onPressed: onNaverMap,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

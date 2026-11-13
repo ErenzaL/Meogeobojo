@@ -191,7 +191,7 @@ class _PanelBody extends ConsumerWidget {
   }
 }
 
-/// One removable chip per condition that differs from the defaults, then "모두 풀기". Hidden when nothing is applied.
+/// One removable chip per condition that differs from the defaults, then "초기화". Hidden when nothing is applied.
 /// Removing a chip resets only that condition.
 class AppliedFilterChips extends ConsumerWidget {
   const AppliedFilterChips({super.key});

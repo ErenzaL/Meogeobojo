@@ -100,11 +100,11 @@ void main() {
         expect(cond(h).budget, BudgetOption.max10000); // untouched
         expect(find.byType(InputChip), findsNWidgets(3));
 
-        // Home's own empty state has a 모두 풀기 too; this is the chip row's.
+        // Home's own empty state has a 초기화 too; this is the chip row's.
         await tester.tap(
           find.descendant(
             of: find.byKey(const ValueKey('applied-filters')),
-            matching: find.text('모두 풀기'),
+            matching: find.text('초기화'),
           ),
         );
         await tester.pumpAndSettle();

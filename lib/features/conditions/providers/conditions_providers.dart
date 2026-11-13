@@ -32,7 +32,7 @@ class ConditionsNotifier extends Notifier<Conditions> {
   void update(Conditions Function(Conditions c) change) =>
       state = change(state);
 
-  /// "모두 풀기": back to the defaults, ignoring saved preferences.
+  /// "초기화": back to the defaults, ignoring saved preferences.
   void clear() => state = Conditions.defaults;
 }
 

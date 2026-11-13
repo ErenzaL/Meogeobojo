@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { errorMessage, formatDateTime } from '@/lib/utils'
 
 type Review = { id: string; kakao_place_id: string; rating: number; body: string | null; moderation_status: 'visible' | 'hidden' | 'removed'; moderation_reason: string | null; created_at: string }
+// 문의 및 제안 arrive as reports of type 'feedback' whose target is the category (migration 20261121000100).
+const TARGET_LABEL: Record<string, string> = { feedback: '문의·제안', review: '리뷰', restaurant: '식당', user: '사용자', question: '문의', suggestion: '제안', bug: '오류 신고' }
 type Report = { id: string; target_type: string; target_id: string; reason: string; description: string | null; status: 'open' | 'resolved' | 'dismissed'; resolution_notes: string | null; created_at: string }
 
 export default function ModerationPage() {
@@ -51,7 +53,7 @@ export default function ModerationPage() {
           <Card key={r.id} className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="font-semibold">{r.reason} <Badge tone={r.status === 'open' ? 'amber' : r.status === 'resolved' ? 'green' : 'neutral'}>{({ open: '대기', resolved: '처리됨', dismissed: '기각' })[r.status]}</Badge></div>
-              <div className="text-sm text-muted">{r.target_type} · {r.target_id} · {formatDateTime(r.created_at)}</div>
+              <div className="text-sm text-muted">{TARGET_LABEL[r.target_type] ?? r.target_type} · {TARGET_LABEL[r.target_id] ?? r.target_id} · {formatDateTime(r.created_at)}</div>
               {r.description && <p className="mt-1 text-sm">{r.description}</p>}
               {r.resolution_notes && <p className="mt-1 text-xs text-muted">처리 메모: {r.resolution_notes}</p>}
             </div>

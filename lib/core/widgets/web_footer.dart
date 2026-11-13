@@ -6,8 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../features/auth/widgets/legal_links.dart';
 import '../../features/content/models/app_content.dart';
 import '../../features/content/providers/app_content_providers.dart';
+import '../../features/support/support.dart';
 import '../../features/university/providers/university_providers.dart';
-import '../config/env.dart';
 import '../l10n/l10n.dart';
 import '../theme/app_palette.dart';
 import 'responsive.dart';
@@ -59,6 +59,13 @@ class WebFooter extends ConsumerWidget {
           Text(l10n.footerNoticesEmpty, style: _body(context))
         else
           for (final n in notices) _NoticeLink(item: n),
+        TextButton(
+          key: const ValueKey('footer-notices-all'),
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(builder: (_) => const NoticesScreen()),
+          ),
+          child: Text(l10n.noticesSeeAll),
+        ),
       ],
     );
     final contact = _Column(
@@ -255,37 +262,18 @@ class _NoticeLink extends StatelessWidget {
 
 /// A working way to send feedback: the configured form (FEEDBACK_URL) or mail address (SUPPORT_EMAIL). Nothing
 /// configured means no button and an honest note, never an invented address.
-class FeedbackLink extends StatelessWidget {
+class FeedbackLink extends ConsumerWidget {
   const FeedbackLink({super.key});
 
-  /// What the link opens, or null when no channel is configured.
-  static Uri? get target {
-    final url = Env.feedbackUrl;
-    if (url != null) return url;
-    final mail = Env.supportEmail;
-    return mail == null ? null : Uri(scheme: 'mailto', path: mail);
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final p = context.palette;
-    final uri = target;
-    if (uri == null) {
-      return Text(
-        l10n.footerContactNotReady,
-        key: const ValueKey('footer-contact-not-ready'),
-        style: TextStyle(fontSize: 14, color: p.textMuted),
-      );
-    }
-    return OutlinedButton.icon(
-      key: const ValueKey('footer-feedback'),
-      onPressed: () => launchUrl(uri, mode: LaunchMode.externalApplication),
-      icon: const Icon(Icons.mail_outline_rounded, size: 18),
-      label: Text(l10n.footerFeedback),
-      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
-    );
-  }
+  Widget build(BuildContext context, WidgetRef ref) => OutlinedButton.icon(
+    key: const ValueKey('footer-feedback'),
+    // The in-app 문의 및 제안 form (sign-in required), stored for the admin.
+    onPressed: () => showFeedbackDialog(context, ref),
+    icon: const Icon(Icons.mail_outline_rounded, size: 18),
+    label: Text(context.l10n.footerFeedback),
+    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
+  );
 }
 
 class _BrandLine extends StatelessWidget {
@@ -352,14 +340,6 @@ class _BrandLine extends StatelessWidget {
               child: Text(l10n.footerAboutLink),
             ),
             const LegalLinks(),
-            if (FeedbackLink.target != null)
-              TextButton(
-                onPressed: () => launchUrl(
-                  FeedbackLink.target!,
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: Text(l10n.footerFeedback),
-              ),
           ],
         ),
       ],

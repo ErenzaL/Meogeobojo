@@ -30,6 +30,7 @@ import 'saved_restaurants_screen.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../settings/screens/appearance_screen.dart';
+import '../../support/support.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -127,6 +128,7 @@ class _GuestView extends ConsumerWidget {
                     _themeRow(context, themeMode),
                   ],
                 ),
+                const SupportSection(),
               ],
             ),
           ),
@@ -260,6 +262,7 @@ class _SignedInView extends ConsumerWidget {
           _themeRow(context, themeMode),
         ],
       ),
+      const SupportSection(),
     ];
     final logoutW = OutlinedButton(
       onPressed: () => ref.read(authControllerProvider.notifier).signOut(),

@@ -472,7 +472,7 @@ void main() {
       await tester.tap(find.widgetWithText(PillChip, '10,000원 이하'));
       await tester.pumpAndSettle();
       // reset clears just this setting
-      await tester.tap(find.text('이 설정만 풀기'));
+      await tester.tap(find.text('이 설정 초기화'));
       await tester.pumpAndSettle();
       expect(
         find.byWidgetPredicate((w) => w is Text && w.data == '상관없어요'),
@@ -735,7 +735,7 @@ void main() {
         const Offset(0, -200),
       );
       expect(find.text('추천순'), findsOneWidget);
-      expect(find.text('모두 풀기'), findsOneWidget);
+      expect(find.text('초기화'), findsOneWidget);
       expect(find.text('처음 화면으로 돌아가 다시 설정'), findsOneWidget);
     });
 
@@ -757,7 +757,7 @@ void main() {
       expect(find.text('먼집'), findsNothing);
     });
 
-    testWidgets('no match disables the button; 모두 풀기 restores', (tester) async {
+    testWidgets('no match disables the button; 초기화 restores', (tester) async {
       final h = await openHome(tester);
       await openSheet(tester);
       await tester.tap(find.text('도보 5분'));
@@ -781,7 +781,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('모두 풀기'),
+          matching: find.text('초기화'),
         ),
       );
       await tester.pumpAndSettle();

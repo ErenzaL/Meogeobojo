@@ -8,6 +8,10 @@ import '../../recommendation/home_ranking.dart';
 const kGameMin = 2;
 const kGameMax = 6;
 
+/// How many recommended places a game starts with (the user can add up to
+/// [kGameMax]).
+const kGameSeed = 4;
+
 /// One thing a game can land on: a real place (with its distance and
 /// details) or a name the user typed, which has no location at all.
 @immutable
@@ -83,7 +87,7 @@ class GameSetupNotifier extends Notifier<GameSetup> {
 
   void setMode(GameMode m) => state = state.copyWith(mode: m);
 
-  /// The recommended places start as the first [kGameMax] matches (or fewer);
+  /// The recommended places start as the first [kGameSeed] matches (or fewer);
   /// afterwards only places that no longer match are dropped.
   void syncPlaces(List<RankedRestaurant> matches) {
     final ids = [for (final m in matches) m.restaurant.kakaoId];
@@ -92,7 +96,7 @@ class GameSetupNotifier extends Notifier<GameSetup> {
             for (final id in state.placeIds)
               if (ids.contains(id)) id,
           ]
-        : ids.take(4).toList();
+        : ids.take(kGameSeed).toList();
     if (state.seeded && listEquals(next, state.placeIds)) return;
     state = state.copyWith(placeIds: next, seeded: true);
   }

@@ -83,6 +83,21 @@ void main() {
       expect(judgeRestaurant(i, _c, 12 * 60).verdict, Verdict.match);
     });
 
+    test('an unpriced, unclassified lunch-only line does not keep a place '
+        '"unconfirmed" at dinner', () {
+      final i = RestaurantInsight(
+        openMinutes: _hours.open,
+        lastOrderMinutes: _hours.last,
+        menus: const [
+          MenuLine(servedFrom: 11 * 60, servedUntil: 14 * 60),
+          MenuLine(priceKrw: 10000, category: '식사'),
+        ],
+      );
+      expect(_judge(i).verdict, Verdict.excluded);
+      // At lunch that line could still fit: unconfirmed, not excluded.
+      expect(judgeRestaurant(i, _c, 12 * 60).verdict, Verdict.unverified);
+    });
+
     test('a 3,000원 side never makes a place "under 8,000원"', () {
       final sideAndDearMeal = _judge(
         RestaurantInsight(

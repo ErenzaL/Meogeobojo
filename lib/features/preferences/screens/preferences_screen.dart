@@ -116,11 +116,8 @@ class _PreferencesScreenState extends ConsumerState<PreferencesScreen> {
       return;
     }
     final pick = eligible[(widget.random ?? Random()).nextInt(eligible.length)];
-    Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => RestaurantDetailScreen(restaurant: pick),
-      ),
-    );
+    // Like every other entry point: the place gets its own address.
+    openRestaurantDetail(context, pick);
   }
 
   @override

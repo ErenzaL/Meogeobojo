@@ -131,8 +131,13 @@ Judgement judgeRestaurant(
       mealPrice = fitting.first;
     } else {
       final cheapest = i.minPriceKrw;
+      // Only lines served then could still fit: an unpriced lunch special
+      // says nothing about dinner.
       final unclear = i.menus.any(
-        (m) => m.available && (m.priceKrw == null || !m.kindKnown),
+        (m) =>
+            m.available &&
+            m.servedAt(arrivalMinutes) &&
+            (m.priceKrw == null || !m.kindKnown),
       );
       final overAll = max && cheapest != null && cheapest > amount;
       if (overAll || (meals.isNotEmpty && !unclear)) {

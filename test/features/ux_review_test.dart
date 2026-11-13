@@ -282,6 +282,29 @@ void main() {
       expect(calls.last, ('/home', true));
     });
 
+    testWidgets('a page opened over a place keeps the place\'s address, also '
+        'after it closes; closing the place then goes back to the tab', (
+      tester,
+    ) async {
+      final (_, calls) = await open(tester);
+      openRestaurantDetail(
+        tester.element(find.byType(AppShell)),
+        fakeRestaurant('1', name: '국수집', distance: 120),
+      );
+      await tester.pumpAndSettle();
+      _nav(tester)
+          .push(MaterialPageRoute<void>(builder: (_) => const Scaffold()));
+      await tester.pumpAndSettle();
+      expect(calls.last, ('/restaurant/1', false));
+      final before = calls.length;
+      _nav(tester).pop();
+      await tester.pumpAndSettle();
+      expect(calls.length, before, reason: 'the bar already names the place');
+      _nav(tester).pop();
+      await tester.pumpAndSettle();
+      expect(calls.last, ('/home', true));
+    });
+
     testWidgets('opened cold on a shared link (or refreshed on a detail), '
         'the place opens over Home', (tester) async {
       final dispatcher = tester.binding.platformDispatcher;

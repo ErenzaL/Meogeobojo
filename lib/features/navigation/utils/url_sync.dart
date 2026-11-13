@@ -91,6 +91,12 @@ class UrlHistoryObserver extends NavigatorObserver {
 
   final WidgetRef _ref;
 
+  /// The address each open screen stands at, so closing one puts back the
+  /// address of the screen under it.
+  final _addresses = Expando<Uri>('url');
+
+  Uri _tabAddress() => Uri(path: shellPathFor(_ref.read(shellTabProvider)));
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (previousRoute == null || route is UrlTabRoute || route is! PageRoute) {
@@ -99,30 +105,31 @@ class UrlHistoryObserver extends NavigatorObserver {
     if (!_ref.read(urlSyncEnabledProvider)) return;
     if (route is RestaurantDetailRoute) {
       // A restaurant has its own address, so a refresh keeps it open.
+      final uri = Uri.parse(route.path);
+      _addresses[route] = uri;
       if (!route.fromBrowser) {
-        _ref.read(urlReporterProvider)(Uri.parse(route.path), replace: false);
+        _ref.read(urlReporterProvider)(uri, replace: false);
       }
       return;
     }
-    final tab = _ref.read(shellTabProvider);
-    _ref.read(urlReporterProvider)(
-      Uri(path: shellPathFor(tab)),
-      replace: false,
-    );
+    // Any other screen keeps the address of the one under it: opened over a
+    // restaurant it stays that restaurant's, so a refresh reopens the place.
+    final uri = _addresses[previousRoute] ?? _tabAddress();
+    _addresses[route] = uri;
+    _ref.read(urlReporterProvider)(uri, replace: false);
   }
 
-  /// Leaving a restaurant with the app's own back button: the address bar
-  /// must not keep naming it (a refresh would reopen it).
+  /// Closing a screen with the app's own back button: the address bar goes
+  /// back to the screen now on top (a restaurant must not stay named after it
+  /// is closed, a refresh would reopen it).
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    if (route is! RestaurantDetailRoute) return;
-    if (!_ref.read(urlSyncEnabledProvider)) return;
-    final under = previousRoute;
-    _ref.read(urlReporterProvider)(
-      under is RestaurantDetailRoute
-          ? Uri.parse(under.path)
-          : Uri(path: shellPathFor(_ref.read(shellTabProvider))),
-      replace: true,
-    );
+    final was = _addresses[route];
+    if (was == null || !_ref.read(urlSyncEnabledProvider)) return;
+    final now =
+        (previousRoute == null ? null : _addresses[previousRoute]) ??
+        _tabAddress();
+    if (now == was) return;
+    _ref.read(urlReporterProvider)(now, replace: true);
   }
 }

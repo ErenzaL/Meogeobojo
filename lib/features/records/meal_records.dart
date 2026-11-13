@@ -80,20 +80,29 @@ class MealRecordsNotifier extends Notifier<List<MealRecord>> {
     }
   }
 
+  /// The write in progress. Writes run one after another, each starting from
+  /// the list the previous one left: two quick 먹었어요 never overwrite each
+  /// other.
+  Future<bool> _writing = Future.value(true);
+
   /// Records [r] and waits until it is really written to the device. Returns
   /// false (and leaves the list as it was) when the write failed.
-  Future<bool> add(Restaurant r, {DateTime? at}) async {
+  Future<bool> add(Restaurant r, {DateTime? at}) {
+    final eatenAt = at ?? DateTime.now();
+    return _writing = _writing.then((_) => _add(r, eatenAt));
+  }
+
+  Future<bool> _add(Restaurant r, DateTime eatenAt) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return false;
-    final before = state;
     final next = [
       MealRecord(
         kakaoId: r.kakaoId,
         name: r.name,
         category: r.categoryTag,
-        eatenAt: at ?? DateTime.now(),
+        eatenAt: eatenAt,
       ),
-      ...before,
+      ...state,
     ];
     bool ok;
     try {
@@ -142,10 +151,29 @@ Future<bool> markEaten(
 }) async {
   final ok = await requireAuth(context, ref, reason: AuthReason.records);
   if (!ok || !context.mounted) return false;
-  final l10n = context.l10n;
-  final nav = Navigator.of(context);
-  final messenger = ScaffoldMessenger.of(context);
-  final saved = await ref.read(mealRecordsProvider.notifier).add(r);
+  // What follows can outlive the widget behind [context] and [ref] (the
+  // 다녀오셨어요? banner closes; 다시 시도 is tapped after leaving the screen), so
+  // it holds the container and the app-level navigator / messenger instead.
+  return _saveMeal(
+    ProviderScope.containerOf(context, listen: false),
+    Navigator.of(context),
+    ScaffoldMessenger.of(context),
+    context.l10n,
+    r,
+    offerReview: offerReview,
+  );
+}
+
+Future<bool> _saveMeal(
+  ProviderContainer c,
+  NavigatorState nav,
+  ScaffoldMessengerState messenger,
+  AppLocalizations l10n,
+  Restaurant r, {
+  required bool offerReview,
+}) async {
+  final saved = await c.read(mealRecordsProvider.notifier).add(r);
+  if (!messenger.mounted) return saved;
   messenger.clearSnackBars();
   if (!saved) {
     messenger.showSnackBar(
@@ -154,19 +182,16 @@ Future<bool> markEaten(
         persist: false,
         action: SnackBarAction(
           label: l10n.commonRetry,
-          onPressed: () {
-            if (nav.mounted) {
-              markEaten(nav.context, ref, r, offerReview: offerReview);
-            }
-          },
+          onPressed: () =>
+              _saveMeal(c, nav, messenger, l10n, r, offerReview: offerReview),
         ),
       ),
     );
     return false;
   }
-  if (offerReview) ref.read(reviewPromptProvider.notifier).offer(r);
-  // Also takes the 다녀오셨어요? banner (and [context] with it) off the screen.
-  ref.read(activeRecommendationProvider.notifier).finish();
+  if (offerReview) c.read(reviewPromptProvider.notifier).offer(r);
+  // Also takes the 다녀오셨어요? banner off the screen.
+  c.read(activeRecommendationProvider.notifier).finish();
   messenger.showSnackBar(
     SnackBar(
       content: Text(l10n.mealSaved),

@@ -56,8 +56,12 @@ class RestaurantOverride {
     final open = clockMinutes(hours is Map ? hours['open'] : null);
     var lastOrder = clockMinutes(j['last_order_time']);
     // Stored as a time of day: a last order after midnight ("01:00") belongs
-    // to the evening before, so it goes past 1440 (01:00 = 1500).
-    if (lastOrder != null && open != null && lastOrder <= open) {
+    // to the evening before, so it goes past 1440 (01:00 = 1500). That is any
+    // last order before 05:00, or one not after the opening time. The first
+    // rule matters for places saved before the opening time existed.
+    if (lastOrder != null &&
+        (lastOrder < kOvernightLastOrderBefore ||
+            (open != null && lastOrder <= open))) {
       lastOrder += 1440;
     }
     String? text(Object? v) {

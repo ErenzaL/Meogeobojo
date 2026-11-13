@@ -153,7 +153,17 @@ AsyncValue<List<RankedRestaurant>> rankPool(
 
 /// Places around the campus that pass the shared conditions, measured from
 /// the chosen origin and ordered (confirmed matches first).
-final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>(
-  (ref) =>
-      rankWithSharedConditions(ref, ref.watch(allNearbyRestaurantsProvider)),
-);
+final rankedRestaurantsProvider = Provider<AsyncValue<List<RankedRestaurant>>>((
+  ref,
+) {
+  final places = ref.watch(allNearbyRestaurantsProvider);
+  // Budgets are judged on the menus: ranking before they arrive would list
+  // every place as "가격 미확인" and then reorder. Wait for the first read, as
+  // [rankPool] does; a refresh keeps the previous menus meanwhile. If they
+  // fail, prices really are unchecked and the places say so.
+  final menus = ref.watch(nearbyMenusProvider);
+  if (places.hasValue && !menus.hasValue && !menus.hasError) {
+    return const AsyncLoading();
+  }
+  return rankWithSharedConditions(ref, places);
+});

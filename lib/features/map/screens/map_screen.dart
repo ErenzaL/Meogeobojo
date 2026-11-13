@@ -240,6 +240,11 @@ class _MapScreenState extends ConsumerState<MapScreen>
   /// The map's own size (logical px), for [_revealAboveCard].
   Size? _mapBox;
 
+  /// The pin swap in progress. Swaps run one after another: two quick taps
+  /// never interleave their remove / add calls (which could leave an older
+  /// pin drawn as the chosen one next to the new one).
+  Future<void> _restyling = Future.value();
+
   /// Selects [r] (or nothing) and swaps the two affected pins: the old one back
   /// to a plain pin, the new one to the larger pin under its name. Only those
   /// two markers change, so the rest of the map does not flicker.
@@ -248,9 +253,9 @@ class _MapScreenState extends ConsumerState<MapScreen>
     setState(() => _selected = r);
     if (old?.kakaoId == r?.kakaoId) return;
     final look = _tagLook();
-    unawaited(() async {
+    _restyling = _restyling.then((_) async {
       final c = _controller;
-      if (c == null || !_stylesReady) return;
+      if (c == null || !_stylesReady || !mounted) return;
       final shown = {
         for (final x
             in ref.read(mapPlacesProvider).value ?? const <Restaurant>[])
@@ -267,7 +272,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
       } catch (e) {
         debugPrint('Map marker restyle failed: $e');
       }
-    }());
+    });
   }
 
   /// What the pins need from the context, read once before any await: the

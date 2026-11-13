@@ -1,11 +1,17 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/features/conditions/models/conditions.dart';
 import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
 import 'package:meogeobojo/features/recommendation/home_ranking.dart';
+import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/recommendation/restaurant_insight.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
+import 'package:meogeobojo/features/restaurants/providers/restaurant_providers.dart';
 
 import '../../support/fakes.dart';
+import '../../support/harness.dart';
 
 /// 8천 원 이하 + 지금 주문 가능, arriving at 18:00 (dinner).
 const _c = Conditions(budget: BudgetOption.max8000, openNowOnly: true);
@@ -173,6 +179,51 @@ void main() {
     );
     expect(s.kind, OrderStatusKind.closesSoon);
     expect(s.slackMinutes, 30);
+  });
+
+  test('an admin "01:00" last order with no opening time (saved before the '
+      'field existed) is still that evening, not 1 a.m. that morning', () {
+    final i = RestaurantOverride.fromJson({
+      'kakao_place_id': '1',
+      'last_order_time': '01:00:00',
+    })!.insight;
+    expect(i.lastOrderMinutes, 25 * 60);
+    const open = Conditions(openNowOnly: true);
+    // 21:00: open, but without an opening time not confirmed.
+    expect(judgeRestaurant(i, open, 21 * 60).verdict, Verdict.unverified);
+    expect(judgeRestaurant(i, open, 30).verdict, Verdict.unverified); // 00:30
+    expect(judgeRestaurant(i, open, 90).verdict, Verdict.excluded); // 01:30
+    final s = orderStatusAt(
+      lastOrderMinutes: i.lastOrderMinutes,
+      walkMinutes: 0,
+      nowMinutes: 21 * 60,
+    );
+    expect(s.kind, OrderStatusKind.available);
+    final late = orderStatusAt(
+      lastOrderMinutes: i.lastOrderMinutes,
+      walkMinutes: 0,
+      nowMinutes: 90, // 01:30
+    );
+    expect(late.kind, OrderStatusKind.closedBeforeArrival);
+    // A daytime last order is left as it is.
+    final lunch = RestaurantOverride.fromJson({
+      'kakao_place_id': '2',
+      'last_order_time': '14:30',
+    })!.insight;
+    expect(lunch.lastOrderMinutes, 14 * 60 + 30);
+  });
+
+  test('the nearby list waits for the menus before judging (no flash of '
+      '"가격 미확인" that then reorders)', () async {
+    final menus = Completer<Map<String, List<RestaurantMenuItem>>>();
+    final h = await buildHarness(
+      extraOverrides: [nearbyMenusProvider.overrideWith((ref) => menus.future)],
+    );
+    await h.container.read(allNearbyRestaurantsProvider.future);
+    expect(h.container.read(rankedRestaurantsProvider).isLoading, isTrue);
+    menus.complete(const {});
+    await h.container.read(nearbyMenusProvider.future);
+    expect(h.container.read(rankedRestaurantsProvider).hasValue, isTrue);
   });
 
   test('the admin break time is read only when it is a clear range', () {

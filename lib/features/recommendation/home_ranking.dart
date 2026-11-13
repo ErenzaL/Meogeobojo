@@ -144,9 +144,12 @@ Judgement judgeRestaurant(
 
   if (c.openNowOnly) {
     final last = i.lastOrderMinutes;
-    // After midnight, a place that closes at 01:00 is still "today".
+    // Before 05:00, a place that takes orders until 01:00 (1500) is still on
+    // the evening's timeline: 00:30 is before its last order, 01:30 after.
     var arrival = arrivalMinutes;
-    if (last != null && last > 1440 && arrival + 1440 <= last) arrival += 1440;
+    if (last != null && last > 1440 && arrival < kOvernightLastOrderBefore) {
+      arrival += 1440;
+    }
     final open = i.openMinutes;
     final pause = i.breakTime;
     if (i.closed ||
@@ -372,9 +375,10 @@ OrderStatus orderStatusAt({
 }) {
   final last = lastOrderMinutes;
   if (last == null) return const OrderStatus(OrderStatusKind.unknown);
-  // After midnight, a place taking orders until 01:00 (= 1500) is still on
-  // the evening's timeline.
-  final now = last > 1440 && nowMinutes + walkMinutes + 1440 <= last
+  // Before 05:00, a place taking orders until 01:00 (= 1500) is still on
+  // the evening's timeline (so 01:30 is past its last order).
+  final now =
+      last > 1440 && nowMinutes + walkMinutes < kOvernightLastOrderBefore
       ? nowMinutes + 1440
       : nowMinutes;
   final arrival = now + walkMinutes;

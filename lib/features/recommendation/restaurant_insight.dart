@@ -40,6 +40,11 @@ class MenuLine {
   }
 }
 
+/// Until this minute of the day (05:00) it is still the evening before for a
+/// place that takes orders past midnight: a last order stored as "01:00" is
+/// 1500 (25:00), and a clock reading of 00:30 is 1470 on that timeline.
+const kOvernightLastOrderBefore = 5 * 60;
+
 /// Facts about a place that Kakao Local does not provide (price, rating,
 /// hours, amenities). EVERY field is optional: unknown means unknown, never a
 /// guess. An unknown value never removes a place; it makes it a "정보 미확인"

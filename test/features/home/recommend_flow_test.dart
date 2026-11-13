@@ -157,4 +157,25 @@ void main() {
     addTearDown(guest.dispose);
     expect(guest.read(mealRecordsProvider), isEmpty);
   });
+
+  test('two 먹었어요 at once are both kept (the second write does not start '
+      'from the list the first one had not saved yet)', () async {
+    final c = await containerWith(const {}, signedIn: true);
+    final notifier = c.read(mealRecordsProvider.notifier);
+    final both = await Future.wait([
+      notifier.add(fakeRestaurant('A')),
+      notifier.add(fakeRestaurant('B')),
+    ]);
+    expect(both, [true, true]);
+    expect(
+      [for (final m in c.read(mealRecordsProvider)) m.kakaoId],
+      ['B', 'A'],
+    );
+    final stored = jsonDecode(
+      c
+          .read(sharedPreferencesProvider)
+          .getString(mealRecordsPrefsKey(fakeUser().id))!,
+    );
+    expect((stored as List).length, 2);
+  });
 }

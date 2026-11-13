@@ -5,7 +5,6 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/seoul_clock.dart';
-import '../../conditions/widgets/conditions_sheet.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
@@ -32,37 +31,12 @@ class AlternativesSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.homeAltTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.sectionTitle.copyWith(fontSize: 21),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Hugs the right edge; wide labels may take up to 60% of the row.
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width * 0.6,
-              ),
-              child: _PickButton(
-                label: l10n.homePickForMe,
-                onTap: () =>
-                    ref.read(heroPickProvider.notifier).pickRandom(recs),
-              ),
-            ),
-          ],
+        Text(
+          l10n.homeAltTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppText.sectionTitle.copyWith(fontSize: 21),
         ),
-        if (recs.ranked.length >= 2) ...[
-          const SizedBox(height: 10),
-          _GameButton(
-            label: l10n.homeGameButton,
-            onTap: () => showGameSheet(context, recs: recs),
-          ),
-        ],
         const SizedBox(height: 12),
         if (recs.alternatives.isNotEmpty)
           HomeCard(
@@ -83,13 +57,15 @@ class AlternativesSection extends ConsumerWidget {
           onTap: () => showRankingSheet(context, recs),
         ),
         _LinkRow(
-          label: l10n.homeChangeConditions,
-          onTap: () => showConditionsSheet(context),
-        ),
-        _LinkRow(
           label: l10n.homeSeeOnMap(recs.total),
           onTap: () =>
               ref.read(shellTabProvider.notifier).select(ShellTabs.map),
+        ),
+        // A secondary way to decide, under the results.
+        const SizedBox(height: 10),
+        _GameButton(
+          label: l10n.homeGameButton,
+          onTap: () => showGameSheet(context, recs: recs),
         ),
       ],
     );
@@ -172,44 +148,6 @@ class _GameButton extends StatelessWidget {
   }
 }
 
-class _PickButton extends StatelessWidget {
-  const _PickButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: context.palette.fillMuted,
-    borderRadius: BorderRadius.circular(14),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.shuffle_rounded, size: 19),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
 class _AltRow extends ConsumerWidget {
   const _AltRow({required this.top, required this.item});
 
@@ -233,6 +171,7 @@ class _AltRow extends ConsumerWidget {
         l10n.homeStatusClosesAt(formatMinutesOfDay(status.lastOrderMinutes!)),
         p.statusWarn,
       ),
+      OrderStatusKind.notOpenYet => (l10n.homeStatusNotOpen, p.statusWarn),
       OrderStatusKind.unknown => (null, p.textSecondary),
     };
 

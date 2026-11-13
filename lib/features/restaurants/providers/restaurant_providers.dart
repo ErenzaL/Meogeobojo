@@ -105,15 +105,3 @@ final restaurantPhotosProvider =
       (ref, kakaoId) =>
           ref.watch(restaurantOverrideRepositoryProvider).photos(kakaoId),
     );
-
-/// Admin data (price, last order, cover ...) for an arbitrary set of places,
-/// keyed by their Kakao ids joined with ",". Used for lists that are not the
-/// generic nearby pool (a chosen category), so their prices and hours are
-/// known too and the conditions apply to them exactly as to every other list.
-final overridesForIdsProvider = FutureProvider.autoDispose
-    .family<Map<String, RestaurantOverride>, String>((ref, idsKey) {
-      if (idsKey.isEmpty) return const {};
-      return ref
-          .watch(restaurantOverrideRepositoryProvider)
-          .forPlaces(idsKey.split(','));
-    });

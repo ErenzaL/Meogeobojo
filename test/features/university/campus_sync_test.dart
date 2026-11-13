@@ -25,6 +25,7 @@ void main() {
     FakeMissionRepository? missions,
   }) async {
     final h = await buildHarness(
+      allCampuses: true,
       storage: storage,
       auth: signedIn ? FakeAuthGateway(user: fakeUser()) : null,
       profiles: profiles,

@@ -34,7 +34,11 @@ Future<Harness> openHome(
   FakeRestaurantRepository? repo,
   Size size = const Size(390, 844),
 }) async {
-  final h = await buildHarness(storage: storage, restaurants: repo);
+  final h = await buildHarness(
+    allCampuses: true,
+    storage: storage,
+    restaurants: repo,
+  );
   await pumpApp(tester, h, home: const CategoryHost(), size: size);
   return h;
 }

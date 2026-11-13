@@ -148,23 +148,6 @@ class HeroCard extends ConsumerWidget {
               ),
             ],
           ),
-          if (!hero.verified) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.info_outline_rounded, size: 17, color: p.statusWarn),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    l10n.homeUnverifiedNotice,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 14, color: p.statusWarn),
-                  ),
-                ),
-              ],
-            ),
-          ],
           const SizedBox(height: 16),
           const DashedDivider(),
           const SizedBox(height: 16),
@@ -214,33 +197,6 @@ class HeroCard extends ConsumerWidget {
               ),
             ],
           ),
-          // Walk through the ranking: the next best place (and back).
-          if (recs.total > 1) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (recs.heroRank > 1) ...[
-                  Expanded(
-                    child: OutlineActionButton(
-                      label: l10n.homePrevPick,
-                      onPressed: () =>
-                          ref.read(heroPickProvider.notifier).step(recs, -1),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                if (recs.heroRank < recs.total)
-                  Expanded(
-                    flex: 2,
-                    child: OutlineActionButton(
-                      label: l10n.homeNextPick,
-                      onPressed: () =>
-                          ref.read(heroPickProvider.notifier).step(recs, 1),
-                    ),
-                  ),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -249,11 +205,12 @@ class HeroCard extends ConsumerWidget {
   Widget _lastOrderColumn(BuildContext context, OrderStatus status) {
     final l10n = context.l10n;
     final last = status.lastOrderMinutes;
-    if (last == null) {
+    if (last == null || status.kind == OrderStatusKind.notOpenYet) {
       return _TimeColumn(
         label: l10n.homeLastOrder,
-        value: '—',
-        sub: l10n.homeNoInfo,
+        value: last == null ? '—' : formatMinutesOfDay(last),
+        sub: last == null ? l10n.homeNoInfo : l10n.detailOrderNotOpen,
+        subColor: last == null ? null : context.palette.statusWarn,
       );
     }
     final tooLate = status.kind == OrderStatusKind.closedBeforeArrival;

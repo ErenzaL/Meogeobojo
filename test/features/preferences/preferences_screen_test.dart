@@ -429,6 +429,11 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(RestaurantDetailScreen), findsOneWidget);
       expect(find.text('국수집1'), findsOneWidget);
+      // The same route as every other entry point (it has its own address).
+      final route = ModalRoute.of(
+        tester.element(find.byType(RestaurantDetailScreen)),
+      );
+      expect(route, isA<RestaurantDetailRoute>());
     });
 
     testWidgets('"랜덤" with nothing eligible says so', (tester) async {

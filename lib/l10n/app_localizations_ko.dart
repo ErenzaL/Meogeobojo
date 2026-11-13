@@ -206,17 +206,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String restaurantTagDistance(String tag, String distance) {
-    return '$tag · 학교에서 $distance';
-  }
-
-  @override
-  String restaurantDistanceFromSchool(String distance) {
-    return '학교에서 $distance';
+    return '$tag · 직선 약 $distance';
   }
 
   @override
   String restaurantDistanceStraight(String distance) {
-    return '학교에서 $distance (직선거리)';
+    return '직선 약 $distance';
   }
 
   @override
@@ -231,6 +226,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get restaurantOpenKakaoMap => '카카오맵에서 보기';
+
+  @override
+  String get restaurantOpenNaverMap => '네이버맵에서 보기';
 
   @override
   String get restaurantLinkOpenFailed => '열 수 없는 링크예요.';
@@ -483,9 +481,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get legalPrivacy => '개인정보처리방침';
-
-  @override
-  String get legalNotPublished => '문서가 아직 게시되지 않았어요.';
 
   @override
   String get legalOpenFailed => '링크를 열 수 없어요.';
@@ -1227,14 +1222,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeReasonBudget => '예산 안이에요';
-
-  @override
-  String get homeReasonClosest => '가장 가까워요';
+  String get homeReasonClosest => '선택한 출발점에서 가까워요';
 
   @override
   String homeReasonWalk(int minutes) {
-    return '걸어서 $minutes분이에요';
+    return '예상 도보 약 $minutes분이에요';
   }
 
   @override
@@ -1245,7 +1237,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String homeWalkAbout(int minutes) {
-    return '도보 약 $minutes분';
+    return '예상 도보 약 $minutes분';
   }
 
   @override
@@ -1279,22 +1271,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeAltTitle => '마음에 안 들면';
 
   @override
-  String get homePickForMe => '하나 골라줘';
-
-  @override
-  String get homeNextPick => '다음 추천 ›';
-
-  @override
-  String get homePrevPick => '‹ 이전';
-
-  @override
-  String get homeRestart => '처음부터 다시';
+  String get homeRestart => '조건 초기화';
 
   @override
   String get homePromptTitle => '조건을 고르고 추천받아 보세요';
 
   @override
-  String get homePromptMessage => '예산·거리 같은 조건을 정하거나 ‘오늘의 추천 받기’를 눌러 보세요.';
+  String get homePromptMessage => '예산·거리 같은 조건을 정하거나 ‘조건에 맞게 추천받기’를 눌러 보세요.';
 
   @override
   String get homeGameButton => '게임으로 정하기';
@@ -1303,7 +1286,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGameTitle => '오늘 뭐 먹지? 게임으로!';
 
   @override
-  String get homeGameSub => '지금 조건에 맞는 곳 중에서 골라요.';
+  String get homeGameSub => '후보를 정하고, 세 게임 중 하나로 골라요. 게임을 바꿔도 후보는 그대로예요.';
 
   @override
   String get homeGameRoulette => '룰렛';
@@ -1339,7 +1322,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeGameResult => '오늘은 여기!';
 
   @override
-  String get homeGameAgain => '다시 하기';
+  String get homeGameAgain => '다시 뽑기';
 
   @override
   String get homeGameConfirm => '여기로 정하기';
@@ -1373,7 +1356,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeCmpLater => '더 늦게까지 열어요';
 
   @override
-  String get homeStatusOrderable => '주문 가능';
+  String get homeStatusOrderable => '마감 전 도착 예상';
 
   @override
   String homeStatusClosesAt(String time) {
@@ -1450,53 +1433,45 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get originSheetDesc =>
-      '고른 위치에서 걷는 거리로 지도와 추천을 다시 정렬해요. 건물 위치는 시연용 예시예요.';
+      '고른 위치에서 직선거리로 홈·지도·검색의 거리와 추천을 다시 계산해요. 위치는 OpenStreetMap 기준이고, 건물은 출입구가 아닌 건물 중심이에요.';
 
   @override
-  String get originGroupGates => '출입문';
-
-  @override
-  String get originGroupColleges => '단과대학';
+  String get originGroupGates => '정문·후문';
 
   @override
   String get originGroupBuildings => '주요 건물';
 
   @override
-  String get originGroupPins => '내 핀';
+  String get originGroupPins => '직접 지정한 위치';
 
   @override
-  String get originNoPins => '아직 저장한 핀이 없어요.';
+  String get originNoPins => '아직 직접 지정한 위치가 없어요.';
 
   @override
   String originNearest(String name, int minutes) {
-    return '가장 가까운 곳: $name · 도보 $minutes분';
+    return '가장 가까운 곳: $name · 예상 도보 약 $minutes분';
   }
 
   @override
   String get originNearestNone => '조건에 맞는 가까운 식당이 없어요';
 
   @override
-  String get originPickOnMap => '지도에서 직접 찍기';
+  String get originPickOnMap => '지도에서 직접 지정하기';
 
   @override
-  String get originPinPickerTitle => '출발 위치 정하기';
+  String get originPinPickerTitle => '출발 위치 직접 지정';
 
   @override
   String get originPinPickerHint => '지도를 움직여 핀을 원하는 곳에 맞춰주세요.';
 
   @override
-  String get originPinConfirm => '여기로 정하기';
+  String get originPinConfirm => '이 위치를 출발점으로 설정';
 
   @override
-  String get originPinNameTitle => '핀 이름';
+  String get originPinNameTitle => '위치 이름';
 
   @override
-  String get originPinNameHint => '예: 기숙사 앞';
-
-  @override
-  String originPinDefaultName(int number) {
-    return '내 핀 $number';
-  }
+  String get originPinNameHint => '예: 동아리방 앞';
 
   @override
   String get originPinDelete => '핀 삭제';
@@ -1517,7 +1492,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condMustHint => '넘는 식당은 빼요';
 
   @override
-  String get condMissingNote => '가격·영업 정보가 없는 식당은 빼지 않고 그대로 보여드려요.';
+  String get condMissingNote => '확인할 정보가 없는 식당은 빼지 않고 ‘정보 미확인’으로 따로 보여드려요.';
 
   @override
   String get condChange => '바꾸기';
@@ -1527,7 +1502,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get condOpenNowHint =>
-      '도착 예상 시각에 주문이 마감되지 않은 곳이에요. 나중에 갈 곳을 찾을 때만 꺼 주세요.';
+      '도착 예상 시각에 영업 중이고 주문 마감 전인 곳이에요. 영업 시작과 주문 마감이 모두 확인돼야 ‘조건 충족’이에요. 대기 시간은 반영하지 않아요.';
 
   @override
   String get condCuisine => '음식 종류';
@@ -1595,14 +1570,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condSortRating => '평점순';
 
   @override
-  String get condSoftNote =>
-      '지금은 가까운 순으로 추천해요. 함께 먹는 사람·필요한 것은 데이터가 생기면 순서에 반영돼요.';
+  String get condSoftNote => '추천순은 선택한 출발점에서 가까운 순이에요.';
 
   @override
-  String get condResetAll => '모두 풀기';
+  String get condResetAll => '초기화';
 
   @override
-  String get condResetThis => '이 설정만 풀기';
+  String get condResetThis => '이 설정 초기화';
 
   @override
   String condShowCount(int count) {
@@ -1956,7 +1930,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String mapMatchCount(int count) {
-    return '조건에 맞는 $count곳';
+    return '조건에 맞는 식당 $count곳';
   }
 
   @override
@@ -1994,7 +1968,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homeSearchFieldHint => '식당, 메뉴, 카테고리 검색';
 
   @override
-  String get homeRecommendButton => '오늘의 추천 받기';
+  String get homeRecommendButton => '조건에 맞게 추천받기';
 
   @override
   String get homeTodayPicksTitle => '오늘의 추천';
@@ -2199,15 +2173,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get footerFeedback => '의견 보내기';
 
   @override
-  String get footerContactNotReady => '문의 채널은 아직 준비 중이에요.';
-
-  @override
   String get footerServiceTitle => '서비스 정보';
-
-  @override
-  String footerUniversities(int count) {
-    return '지원 대학교 $count곳';
-  }
 
   @override
   String get footerServiceNote => '식당·학식·미션 정보는 확인된 자료와 운영자가 게시한 내용만 보여 드려요.';
@@ -2250,7 +2216,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String detailOrderOpen(String time) {
-    return '주문 가능 · $time 주문 마감';
+    return '주문 마감 $time · 마감 전 도착 예상';
   }
 
   @override
@@ -2286,14 +2252,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String detailRoute(String origin, int minutes, String distance) {
-    return '$origin에서 도보 약 $minutes분 · 약 $distance';
+    return '$origin에서 예상 도보 약 $minutes분 · 직선 약 $distance';
   }
 
   @override
   String get detailRouteChange => '기준 바꾸기';
 
   @override
-  String get detailRouteNote => '직선거리로 추정한 시간이에요. 실제 경로는 길찾기에서 확인하세요.';
+  String get detailRouteNote =>
+      '직선거리로 계산한 예상 시간이며 실제 보행 경로와 다를 수 있어요. 실제 경로는 길찾기 앱에서 확인하세요.';
 
   @override
   String get detailAmenitiesNone => '확인된 정보가 없어요';
@@ -2303,7 +2270,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String detailDirectionsWalk(int minutes) {
-    return '길찾기 · 도보 $minutes분';
+    return '길찾기 · 예상 도보 약 $minutes분';
   }
 
   @override
@@ -2376,13 +2343,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeEmptyUnverifiedMessage =>
-      '가격·편의 정보로 확인된 곳 중에는 없어요. 정보가 없는 후보는 따로 볼 수 있어요.';
-
-  @override
-  String get homeUnverifiedNotice => '가격·편의 정보가 확인되지 않은 후보예요';
-
-  @override
   String get homeUnverifiedTag => '정보 미확인';
 
   @override
@@ -2400,9 +2360,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get homeChangeConditions => '조건 바꿔서 다시 추천받기';
-
-  @override
   String homePromptOrigin(String origin) {
     return '$origin 출발 기준으로 추천해요';
   }
@@ -2411,17 +2368,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get homePromptOriginChange => '변경';
 
   @override
-  String get mealAteButton => '먹었어요 · 평가 남기기';
+  String get mealAteButton => '먹었어요';
 
   @override
   String get mealAteSub => 'MY 식사 기록에 남아요';
 
   @override
-  String get mealSaved => 'MY 식사 기록에 남겼어요';
+  String get mealSaved => 'MY 식사 기록에 저장했어요';
 
   @override
   String get mealSavedReviewLoadFailed =>
-      '식사 기록은 남겼어요. 내 평가를 불러오지 못해 평가 창은 열지 않았어요';
+      '내 리뷰를 불러오지 못해 리뷰 창을 열지 않았어요. 잠시 후 다시 시도해 주세요.';
 
   @override
   String get mealSeeRecords => '기록 보기';
@@ -2433,4 +2390,240 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get mealCheckDismiss => '아직이요';
+
+  @override
+  String homeReasonMeal(String budget) {
+    return '$budget 식사 메뉴가 있어요';
+  }
+
+  @override
+  String get homeNoConfirmedTitle => '조건 충족을 확인한 식당이 없어요';
+
+  @override
+  String homeUnverifiedHint(int count) {
+    return '정보가 부족한 후보 $count곳을 따로 확인할 수 있어요.';
+  }
+
+  @override
+  String listMatchTitle(int count) {
+    return '조건에 맞는 식당 $count곳';
+  }
+
+  @override
+  String listUnverifiedTitle(int count) {
+    return '가격·운영정보 미확인 $count곳';
+  }
+
+  @override
+  String get listUnverifiedNote => '조건을 어긴다고 알려진 곳은 아니지만, 확인할 정보가 없어요.';
+
+  @override
+  String get missingPrice => '가격 미확인';
+
+  @override
+  String get missingHours => '운영정보 미확인';
+
+  @override
+  String get missingAmenities => '편의정보 미확인';
+
+  @override
+  String get homeHideUnverified => '미확인 후보 접기';
+
+  @override
+  String condShowUnverified(int count) {
+    return '미확인 $count곳 보기';
+  }
+
+  @override
+  String get detailOrderNotOpen => '도착 예상 시각엔 아직 영업 전이에요';
+
+  @override
+  String get homeOtherCandidate => '다른 후보 보기';
+
+  @override
+  String get homeEditConditions => '조건 수정';
+
+  @override
+  String get homeOnlyOneMatch => '조건에 맞는 식당이 이곳뿐이에요';
+
+  @override
+  String originFromLabel(String origin) {
+    return '출발: $origin';
+  }
+
+  @override
+  String get homeStatusNotOpen => '도착 시각엔 영업 전';
+
+  @override
+  String get originGroupDorms => '기숙사';
+
+  @override
+  String get originPinEdit => '위치 수정';
+
+  @override
+  String get originReselectDorm => '기숙사 출발점이 생활관별로 나뉘었어요. 지내는 생활관을 다시 골라 주세요.';
+
+  @override
+  String get originReselectGone => '이전에 고른 출발점은 이제 쓸 수 없어요. 출발점을 다시 골라 주세요.';
+
+  @override
+  String originUsingNow(String origin) {
+    return '다시 고르기 전까지 $origin 기준으로 계산해요.';
+  }
+
+  @override
+  String get originReselectAction => '출발점 다시 고르기';
+
+  @override
+  String get originPinDefault => '직접 지정한 위치';
+
+  @override
+  String get originPinToCampus => '학교로 이동';
+
+  @override
+  String get profileDefaultOrigin => '기본 출발점';
+
+  @override
+  String get mapCardDetails => '상세 보기';
+
+  @override
+  String get footerAvailableAt => '현재 순천향대학교에서 이용할 수 있어요';
+
+  @override
+  String get universityComingSoon => '준비 중';
+
+  @override
+  String get universityOnlySch => '현재 순천향대학교만 이용할 수 있어요.';
+
+  @override
+  String get universityAvailableNote => '다른 학교는 준비 중이에요.';
+
+  @override
+  String universitySwitched(String school) {
+    return '$school는 아직 준비 중이라 순천향대학교로 바꿨어요. 현재 순천향대학교만 이용할 수 있어요.';
+  }
+
+  @override
+  String get mealSaveFailed => '식사 기록을 저장하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String reviewPromptTitle(String name) {
+    return '$name, 리뷰도 남길까요?';
+  }
+
+  @override
+  String get reviewPromptWrite => '리뷰 쓰기';
+
+  @override
+  String get reviewPromptSkip => '괜찮아요';
+
+  @override
+  String get detailShare => '공유';
+
+  @override
+  String get detailLinkCopied => '식당 링크를 복사했어요. 받은 사람은 로그인 없이 볼 수 있어요.';
+
+  @override
+  String get linkUnavailableTitle => '이 식당 정보를 볼 수 없어요';
+
+  @override
+  String get linkHiddenMessage => '식당이 비공개로 바뀌었어요.';
+
+  @override
+  String get linkMissingMessage => '식당이 삭제되었거나 더 이상 찾을 수 없어요.';
+
+  @override
+  String get linkGoHome => '홈으로';
+
+  @override
+  String get gameModePlaces => '추천 식당으로 정하기';
+
+  @override
+  String get gameModeCustom => '직접 입력해서 정하기';
+
+  @override
+  String gameCandidatesCount(int count, int min, int max) {
+    return '후보 $count개 · $min~$max개';
+  }
+
+  @override
+  String get gameAddPlacesTitle => '추가할 수 있는 식당';
+
+  @override
+  String get gameNameHint => '후보 이름 (예: 학식, 편의점)';
+
+  @override
+  String get gameAdd => '추가';
+
+  @override
+  String get gameEditName => '이름 수정';
+
+  @override
+  String get gameRemove => '후보에서 빼기';
+
+  @override
+  String get gameErrEmpty => '이름을 입력해 주세요';
+
+  @override
+  String gameErrDuplicate(String name) {
+    return '이미 있는 후보예요: $name';
+  }
+
+  @override
+  String gameErrFull(int max) {
+    return '후보는 최대 $max개까지 넣을 수 있어요';
+  }
+
+  @override
+  String gameNeedTwo(int min) {
+    return '후보가 $min개 이상이면 게임을 시작할 수 있어요';
+  }
+
+  @override
+  String get gameEditCandidates => '후보 수정';
+
+  @override
+  String get supportTitle => '고객 지원';
+
+  @override
+  String get noticeOpenLink => '자세히 보기';
+
+  @override
+  String get feedbackCategory => '카테고리';
+
+  @override
+  String get feedbackCatQuestion => '문의';
+
+  @override
+  String get feedbackCatSuggestion => '제안';
+
+  @override
+  String get feedbackCatBug => '오류 신고';
+
+  @override
+  String get feedbackTitleLabel => '제목';
+
+  @override
+  String get feedbackBodyLabel => '내용';
+
+  @override
+  String get feedbackSubmit => '제출';
+
+  @override
+  String get feedbackNeedTitle => '제목을 입력해 주세요.';
+
+  @override
+  String get feedbackNeedBody => '내용을 입력해 주세요.';
+
+  @override
+  String get feedbackSent => '보냈어요. 운영자가 확인할게요.';
+
+  @override
+  String get feedbackFailed => '보내지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String get authReasonFeedback => '문의와 제안은 로그인한 뒤에 보낼 수 있어요.';
+
+  @override
+  String get noticesSeeAll => '전체 보기';
 }

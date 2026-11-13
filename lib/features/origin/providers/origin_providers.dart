@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/campus_points.dart';
+import '../../restaurants/models/restaurant.dart';
 import '../../university/providers/university_providers.dart';
 import '../models/origin.dart';
 
@@ -33,6 +34,7 @@ class SavedPinsNotifier extends Notifier<List<SavedPin>> {
     required String name,
     required double latitude,
     required double longitude,
+    int? zoomLevel,
   }) async {
     final pin = SavedPin(
       id: 'pin_${DateTime.now().microsecondsSinceEpoch}',
@@ -40,10 +42,35 @@ class SavedPinsNotifier extends Notifier<List<SavedPin>> {
       name: name,
       latitude: latitude,
       longitude: longitude,
+      zoomLevel: zoomLevel,
     );
     state = [...state, pin];
     await _persist();
     return pin;
+  }
+
+  /// Moves or renames the pin [id] (it keeps its id, so a selection stays).
+  Future<void> edit(
+    String id, {
+    required String name,
+    required double latitude,
+    required double longitude,
+    int? zoomLevel,
+  }) async {
+    state = [
+      for (final p in state)
+        p.id != id
+            ? p
+            : SavedPin(
+                id: p.id,
+                universityId: p.universityId,
+                name: name,
+                latitude: latitude,
+                longitude: longitude,
+                zoomLevel: zoomLevel ?? p.zoomLevel,
+              ),
+    ];
+    await _persist();
   }
 
   Future<void> remove(String id) async {
@@ -52,6 +79,10 @@ class SavedPinsNotifier extends Notifier<List<SavedPin>> {
         if (p.id != id) p,
     ];
     await _persist();
+    // A deleted pin is not a stale choice to ask about: back to the default.
+    if (ref.read(originSelectionProvider) == id) {
+      await ref.read(originSelectionProvider.notifier).reset();
+    }
   }
 
   Future<void> _persist() => ref
@@ -82,7 +113,7 @@ class OriginSelectionNotifier extends Notifier<String?> {
 }
 
 /// Every origin the user can pick on the selected campus, in sheet order:
-/// gates, colleges, buildings, then their own pins. Campuses without campus
+/// gates, residence halls, buildings, then their own pins. Campuses without campus
 /// points get a single "campus center" entry (the university's own landmark).
 final originOptionsProvider = Provider<List<Origin>>((ref) {
   final university = ref.watch(selectedUniversityProvider).value;
@@ -106,8 +137,8 @@ final originOptionsProvider = Provider<List<Origin>>((ref) {
 });
 
 /// The origin in effect. Falls back to the first gate (정문) or the campus
-/// center when nothing was picked, or when the pick belongs to another campus
-/// or was deleted. Null only while the university is still loading.
+/// center when nothing was picked, or when the pick no longer exists (see
+/// [staleOriginSelectionProvider]). Null only while the university loads.
 final originProvider = Provider<Origin?>((ref) {
   final options = ref.watch(originOptionsProvider);
   if (options.isEmpty) return null;
@@ -120,3 +151,23 @@ final originProvider = Provider<Origin?>((ref) {
     orElse: () => options.first,
   );
 });
+
+/// The saved pick when it no longer names an origin on this campus: the old
+/// single "기숙사" ([kLegacyDormPointId], now one point per residence hall)
+/// or a removed point. The app then measures from the default and asks the
+/// user to choose again; it never guesses which hall they meant.
+final staleOriginSelectionProvider = Provider<String?>((ref) {
+  final options = ref.watch(originOptionsProvider);
+  final picked = ref.watch(originSelectionProvider);
+  if (options.isEmpty || picked == null) return null;
+  return options.any((o) => o.id == picked) ? null : picked;
+});
+
+/// Straight-line metres from [o] (the chosen origin) to [r]. Null while the
+/// origin loads, or for a place kept without coordinates. Never the distance
+/// Kakao measured from the campus landmark: every screen measures from the
+/// same origin.
+int? metersFromOrigin(Origin? o, Restaurant r) =>
+    o == null || (r.latitude == 0 && r.longitude == 0)
+    ? null
+    : o.metersTo(r.latitude, r.longitude);

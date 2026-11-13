@@ -18,8 +18,8 @@ Restaurant spot(String name, double dLat) => Restaurant(
   address: '',
   roadAddress: '',
   phone: '',
-  latitude: 36.7680 + dLat,
-  longitude: 126.9305,
+  latitude: 36.769563 + dLat,
+  longitude: 126.92736,
   distanceMeters: 0,
   placeUrl: null,
 );
@@ -64,12 +64,12 @@ void main() {
       final h = await open(tester);
       await tester.tap(find.text('조건').first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('혼자').last);
+      // Party and needs have no data behind them: not offered.
+      expect(find.text('혼자'), findsNothing);
+      expect(find.text('조용한 대화'), findsNothing);
+      await tester.tap(find.text('8,000원 이하').last);
       await tester.pumpAndSettle();
-      expect(cond(h).party, CompanionType.solo);
-      await tester.tap(find.text('조용한 대화').last);
-      await tester.pumpAndSettle();
-      expect(cond(h).needs, {Need.quietTalk});
+      expect(cond(h).budget, BudgetOption.max8000);
       await tester.tap(find.text('거리순').last);
       await tester.pumpAndSettle();
       expect(cond(h).sort, SortMode.distance);
@@ -85,31 +85,26 @@ void main() {
             .update(
               (c) => c.copyWith(
                 budget: BudgetOption.max10000,
-                party: () => CompanionType.solo,
-                needs: {Need.quietTalk, Need.quickMeal},
+                distance: DistanceOption.walk10,
+                cuisines: {Cuisine.korean},
                 sort: SortMode.distance,
               ),
             );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('applied-filters')), findsOneWidget);
-        expect(find.byType(InputChip), findsNWidgets(5));
+        expect(find.byType(InputChip), findsNWidgets(4));
 
-        await tester.tap(find.byTooltip('혼자 해제'));
+        await tester.tap(find.byTooltip('도보 10분 해제'));
         await tester.pumpAndSettle();
-        expect(cond(h).party, isNull);
+        expect(cond(h).distance, DistanceOption.any);
         expect(cond(h).budget, BudgetOption.max10000); // untouched
-        expect(cond(h).needs, {Need.quietTalk, Need.quickMeal});
-
-        await tester.tap(find.byTooltip('조용한 대화 해제'));
-        await tester.pumpAndSettle();
-        expect(cond(h).needs, {Need.quickMeal});
         expect(find.byType(InputChip), findsNWidgets(3));
 
-        // Home's own empty state has a 모두 풀기 too; this is the chip row's.
+        // Home's own empty state has a 초기화 too; this is the chip row's.
         await tester.tap(
           find.descendant(
             of: find.byKey(const ValueKey('applied-filters')),
-            matching: find.text('모두 풀기'),
+            matching: find.text('초기화'),
           ),
         );
         await tester.pumpAndSettle();
@@ -125,26 +120,26 @@ void main() {
         final h = await open(tester, size: const Size(1440, 1700));
         await tester.tap(find.text('조건').first);
         await tester.pumpAndSettle();
-        await tester.tap(find.text('혼자').last);
+        await tester.tap(find.text('도보 5분').last);
         await tester.pumpAndSettle();
-        expect(find.byTooltip('혼자 해제'), findsOneWidget);
-        await tester.tap(find.byTooltip('혼자 해제'));
+        expect(find.byTooltip('도보 5분 해제'), findsOneWidget);
+        await tester.tap(find.byTooltip('도보 5분 해제'));
         await tester.pumpAndSettle();
-        expect(cond(h).party, isNull);
+        expect(cond(h).distance, DistanceOption.any);
       },
     );
 
     testWidgets(
-      'open-now off and untried-first appear as chips and reset to their defaults',
+      'open-now and untried-first appear as chips and reset to their defaults',
       (tester) async {
         final h = await open(tester);
         h.container
             .read(conditionsProvider.notifier)
-            .update((c) => c.copyWith(openNowOnly: false, untriedFirst: true));
+            .update((c) => c.copyWith(openNowOnly: true, untriedFirst: true));
         await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('주문 마감 후에도 표시 해제'));
+        await tester.tap(find.byTooltip('지금 주문 가능 해제'));
         await tester.pumpAndSettle();
-        expect(cond(h).openNowOnly, isTrue);
+        expect(cond(h).openNowOnly, isFalse);
         await tester.tap(find.byTooltip('안 가 본 식당 먼저 해제'));
         await tester.pumpAndSettle();
         expect(cond(h).untriedFirst, isFalse);

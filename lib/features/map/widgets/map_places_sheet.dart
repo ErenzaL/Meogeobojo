@@ -9,17 +9,19 @@ import '../../../core/widgets/v5_widgets.dart';
 import '../../conditions/models/conditions.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../home/widgets/restaurant_art.dart';
+import '../../home/providers/home_providers.dart';
+import '../../home/widgets/recs_states.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
-import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 
-/// V5 bottom sheet over the map: "조건에 맞는 N곳", the sort, and the places
-/// that pass the shared conditions, nearest-first by default. Walking times are
-/// straight-line estimates and the sheet says so.
+/// V5 bottom sheet over the map: "조건에 맞는 식당 N곳", the sort, the
+/// confirmed matches (the same list and verdicts as Home), then the
+/// "가격·운영정보 미확인" ones apart. Walking times are straight-line
+/// estimates and the sheet says so.
 class MapPlacesSheet extends ConsumerWidget {
   const MapPlacesSheet({super.key});
 
@@ -116,7 +118,9 @@ List<Widget> _placesChildren(
 }) {
   final l10n = context.l10n;
   final p = context.palette;
-  final ranked = ref.watch(rankedRestaurantsProvider);
+  final judged = ref.watch(homePoolRankedProvider);
+  final ranked = judged.whenData((l) => l.confirmed);
+  final unverified = judged.value?.unconfirmed ?? const <RankedRestaurant>[];
   final origin = ref.watch(originProvider);
   final sort = ref.watch(conditionsProvider.select((c) => c.sort));
   return [
@@ -179,19 +183,29 @@ List<Widget> _placesChildren(
         actions: [
           V5SmallButton(
             label: l10n.commonRetry,
-            onPressed: () => ref.invalidate(allNearbyRestaurantsProvider),
+            onPressed: () {
+              ref.invalidate(allNearbyRestaurantsProvider);
+              ref.invalidate(categoryRestaurantsProvider);
+            },
           ),
         ],
       ),
       data: (list) => list.isEmpty
           ? V5EmptyState(
               icon: Icons.filter_alt_off_outlined,
-              title: l10n.homeEmptyTitle,
-              message: l10n.homeEmptyMessage,
+              title: unverified.isEmpty
+                  ? l10n.homeEmptyTitle
+                  : l10n.homeNoConfirmedTitle,
+              message: unverified.isEmpty
+                  ? l10n.homeEmptyMessage
+                  : l10n.homeUnverifiedHint(unverified.length),
               actions: [
                 V5SmallButton(
-                  label: l10n.condResetAll,
-                  onPressed: ref.read(conditionsProvider.notifier).clear,
+                  label: l10n.homeRestart,
+                  onPressed: () {
+                    ref.read(conditionsProvider.notifier).clear();
+                    ref.read(homeCategoryProvider.notifier).clear();
+                  },
                 ),
               ],
             )
@@ -208,6 +222,11 @@ List<Widget> _placesChildren(
               ],
             ),
     ),
+    if (unverified.isNotEmpty) ...[
+      const SizedBox(height: 16),
+      // No pin on the map: a row opens the details.
+      UnverifiedSection(items: unverified),
+    ],
   ];
 }
 

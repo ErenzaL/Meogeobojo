@@ -208,17 +208,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String restaurantTagDistance(String tag, String distance) {
-    return '$tag · $distance from campus';
-  }
-
-  @override
-  String restaurantDistanceFromSchool(String distance) {
-    return '$distance from campus';
+    return '$tag · about $distance straight-line';
   }
 
   @override
   String restaurantDistanceStraight(String distance) {
-    return '$distance from campus (straight line)';
+    return 'About $distance straight-line';
   }
 
   @override
@@ -233,6 +228,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get restaurantOpenKakaoMap => 'View on Kakao Map';
+
+  @override
+  String get restaurantOpenNaverMap => 'View on Naver Map';
 
   @override
   String get restaurantLinkOpenFailed => 'Couldn\'t open that link.';
@@ -520,9 +518,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get legalPrivacy => 'Privacy Policy';
-
-  @override
-  String get legalNotPublished => 'This document hasn\'t been published yet.';
 
   @override
   String get legalOpenFailed => 'Couldn\'t open the link.';
@@ -1301,14 +1296,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeReasonBudget => 'Within your budget';
-
-  @override
-  String get homeReasonClosest => 'Closest to you';
+  String get homeReasonClosest => 'Close to your starting point';
 
   @override
   String homeReasonWalk(int minutes) {
-    return '$minutes min on foot';
+    return 'About $minutes min walk (estimate)';
   }
 
   @override
@@ -1319,7 +1311,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeWalkAbout(int minutes) {
-    return 'About $minutes min walk';
+    return 'Est. $minutes min walk';
   }
 
   @override
@@ -1353,23 +1345,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeAltTitle => 'Not feeling it?';
 
   @override
-  String get homePickForMe => 'Pick one for me';
-
-  @override
-  String get homeNextPick => 'Next pick ›';
-
-  @override
-  String get homePrevPick => '‹ Previous';
-
-  @override
-  String get homeRestart => 'Start over';
+  String get homeRestart => 'Reset conditions';
 
   @override
   String get homePromptTitle => 'Set your conditions to get a pick';
 
   @override
   String get homePromptMessage =>
-      'Choose a budget or distance, or tap “Get today’s pick”.';
+      'Choose a budget or distance, or tap “Recommend by my conditions”.';
 
   @override
   String get homeGameButton => 'Choose with a game';
@@ -1378,7 +1361,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGameTitle => 'What to eat? Play for it!';
 
   @override
-  String get homeGameSub => 'Picks from places that match your conditions.';
+  String get homeGameSub =>
+      'Set the options, then let a game choose. Switching games keeps them.';
 
   @override
   String get homeGameRoulette => 'Roulette';
@@ -1414,7 +1398,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeGameResult => 'Today it\'s…';
 
   @override
-  String get homeGameAgain => 'Play again';
+  String get homeGameAgain => 'Draw again';
 
   @override
   String get homeGameConfirm => 'Go here';
@@ -1448,7 +1432,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCmpLater => 'Open later';
 
   @override
-  String get homeStatusOrderable => 'Ordering open';
+  String get homeStatusOrderable => 'Expected before last order';
 
   @override
   String homeStatusClosesAt(String time) {
@@ -1526,54 +1510,46 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get originSheetDesc =>
-      'Maps and recommendations are re-sorted by walking distance from the spot you pick. Building positions are demo examples.';
+      'Home, the map and search re-measure straight-line distances from here. Points follow OpenStreetMap; buildings use their centre, not the entrance.';
 
   @override
   String get originGroupGates => 'Gates';
 
   @override
-  String get originGroupColleges => 'Colleges';
-
-  @override
   String get originGroupBuildings => 'Main buildings';
 
   @override
-  String get originGroupPins => 'My pins';
+  String get originGroupPins => 'Places you set';
 
   @override
-  String get originNoPins => 'No saved pins yet.';
+  String get originNoPins => 'You haven\'t set a place yet.';
 
   @override
   String originNearest(String name, int minutes) {
-    return 'Nearest: $name · $minutes min walk';
+    return 'Nearest: $name · est. $minutes min walk';
   }
 
   @override
   String get originNearestNone => 'No matching place nearby';
 
   @override
-  String get originPickOnMap => 'Drop a pin on the map';
+  String get originPickOnMap => 'Set a place on the map';
 
   @override
-  String get originPinPickerTitle => 'Choose a starting point';
+  String get originPinPickerTitle => 'Set your start point';
 
   @override
   String get originPinPickerHint =>
       'Move the map to put the pin where you want.';
 
   @override
-  String get originPinConfirm => 'Use this spot';
+  String get originPinConfirm => 'Set this as my start point';
 
   @override
-  String get originPinNameTitle => 'Pin name';
+  String get originPinNameTitle => 'Place name';
 
   @override
-  String get originPinNameHint => 'e.g. In front of the dorm';
-
-  @override
-  String originPinDefaultName(int number) {
-    return 'My pin $number';
-  }
+  String get originPinNameHint => 'e.g. Club room';
 
   @override
   String get originPinDelete => 'Delete pin';
@@ -1595,7 +1571,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get condMissingNote =>
-      'Places with no price or hours info are kept, not hidden.';
+      'Places without the info to check are not hidden: they are listed apart as ‘unconfirmed’.';
 
   @override
   String get condChange => 'Change';
@@ -1605,7 +1581,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get condOpenNowHint =>
-      'Places whose last order isn\'t before your arrival. Turn off only when planning for later.';
+      'Open and before last order at your estimated arrival. It counts as a match only when both opening time and last order are known. Waiting time is not included.';
 
   @override
   String get condCuisine => 'Cuisine';
@@ -1674,10 +1650,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get condSoftNote =>
-      'For now the order is nearest first. Party size and needs will shape it once data exists.';
+      'Recommended order is nearest to your starting point first.';
 
   @override
-  String get condResetAll => 'Clear all';
+  String get condResetAll => 'Reset';
 
   @override
   String get condResetThis => 'Reset this';
@@ -2046,7 +2022,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String mapMatchCount(int count) {
-    return '$count matching places';
+    return '$count places match';
   }
 
   @override
@@ -2085,7 +2061,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSearchFieldHint => 'Search restaurants, menus, categories';
 
   @override
-  String get homeRecommendButton => 'Get today\'s pick';
+  String get homeRecommendButton => 'Recommend by my conditions';
 
   @override
   String get homeTodayPicksTitle => 'Today\'s picks';
@@ -2294,15 +2270,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get footerFeedback => 'Send feedback';
 
   @override
-  String get footerContactNotReady => 'The contact channel is not set up yet.';
-
-  @override
   String get footerServiceTitle => 'Service';
-
-  @override
-  String footerUniversities(int count) {
-    return '$count universities supported';
-  }
 
   @override
   String get footerServiceNote =>
@@ -2346,7 +2314,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String detailOrderOpen(String time) {
-    return 'Taking orders · last order $time';
+    return 'Last order $time · expected to arrive before it';
   }
 
   @override
@@ -2382,7 +2350,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String detailRoute(String origin, int minutes, String distance) {
-    return 'About $minutes min on foot from $origin · about $distance';
+    return 'Est. $minutes min walk from $origin · about $distance straight-line';
   }
 
   @override
@@ -2390,7 +2358,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get detailRouteNote =>
-      'Estimated from the straight-line distance. Check the real route in directions.';
+      'An estimate from the straight-line distance; the real walking route may differ. Check it in a directions app.';
 
   @override
   String get detailAmenitiesNone => 'Nothing confirmed yet';
@@ -2400,7 +2368,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String detailDirectionsWalk(int minutes) {
-    return 'Directions · $minutes min walk';
+    return 'Directions · est. $minutes min walk';
   }
 
   @override
@@ -2474,14 +2442,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeEmptyUnverifiedMessage =>
-      'No place with known price or amenity info fits. Places without that info can be viewed separately.';
-
-  @override
-  String get homeUnverifiedNotice =>
-      'This place\'s price or amenity info isn\'t confirmed';
-
-  @override
   String get homeUnverifiedTag => 'Unconfirmed';
 
   @override
@@ -2499,9 +2459,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeChangeConditions => 'Change conditions and recommend again';
-
-  @override
   String homePromptOrigin(String origin) {
     return 'Recommending from $origin';
   }
@@ -2510,17 +2467,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePromptOriginChange => 'Change';
 
   @override
-  String get mealAteButton => 'I ate here · Rate it';
+  String get mealAteButton => 'I ate here';
 
   @override
   String get mealAteSub => 'Saved to your meal records in MY';
 
   @override
-  String get mealSaved => 'Saved to your meal records';
+  String get mealSaved => 'Saved to MY meal log';
 
   @override
   String get mealSavedReviewLoadFailed =>
-      'Saved to your meal records. Couldn\'t load your review, so the rating form didn\'t open';
+      'Couldn\'t load your review, so the editor didn\'t open. Please try again shortly.';
 
   @override
   String get mealSeeRecords => 'View';
@@ -2532,4 +2489,247 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mealCheckDismiss => 'Not yet';
+
+  @override
+  String homeReasonMeal(String budget) {
+    return 'Has a meal $budget';
+  }
+
+  @override
+  String get homeNoConfirmedTitle => 'No place is confirmed to match';
+
+  @override
+  String homeUnverifiedHint(int count) {
+    return 'You can check $count places with missing info separately.';
+  }
+
+  @override
+  String listMatchTitle(int count) {
+    return '$count places match';
+  }
+
+  @override
+  String listUnverifiedTitle(int count) {
+    return '$count places with unconfirmed price or hours';
+  }
+
+  @override
+  String get listUnverifiedNote =>
+      'None is known to break a condition, but the info to confirm it is missing.';
+
+  @override
+  String get missingPrice => 'Price unconfirmed';
+
+  @override
+  String get missingHours => 'Hours unconfirmed';
+
+  @override
+  String get missingAmenities => 'Amenities unconfirmed';
+
+  @override
+  String get homeHideUnverified => 'Hide unconfirmed places';
+
+  @override
+  String condShowUnverified(int count) {
+    return 'See $count unconfirmed';
+  }
+
+  @override
+  String get detailOrderNotOpen => 'Not open yet at your estimated arrival';
+
+  @override
+  String get homeOtherCandidate => 'See another option';
+
+  @override
+  String get homeEditConditions => 'Edit conditions';
+
+  @override
+  String get homeOnlyOneMatch => 'This is the only place that matches';
+
+  @override
+  String originFromLabel(String origin) {
+    return 'From: $origin';
+  }
+
+  @override
+  String get homeStatusNotOpen => 'Not open yet on arrival';
+
+  @override
+  String get originGroupDorms => 'Residence halls';
+
+  @override
+  String get originPinEdit => 'Edit place';
+
+  @override
+  String get originReselectDorm =>
+      'The residence hall start point is now one per hall. Please choose yours again.';
+
+  @override
+  String get originReselectGone =>
+      'The start point you chose before is no longer available. Please choose again.';
+
+  @override
+  String originUsingNow(String origin) {
+    return 'Until then, distances are from $origin.';
+  }
+
+  @override
+  String get originReselectAction => 'Choose start point';
+
+  @override
+  String get originPinDefault => 'My set place';
+
+  @override
+  String get originPinToCampus => 'Back to campus';
+
+  @override
+  String get profileDefaultOrigin => 'Default start point';
+
+  @override
+  String get mapCardDetails => 'Details';
+
+  @override
+  String get footerAvailableAt =>
+      'Currently available at Soonchunhyang University';
+
+  @override
+  String get universityComingSoon => 'Coming soon';
+
+  @override
+  String get universityOnlySch =>
+      'Only Soonchunhyang University is available for now.';
+
+  @override
+  String get universityAvailableNote => 'Other schools are coming soon.';
+
+  @override
+  String universitySwitched(String school) {
+    return '$school isn\'t available yet, so we switched to Soonchunhyang University, the only school for now.';
+  }
+
+  @override
+  String get mealSaveFailed => 'Couldn\'t save the meal. Please try again.';
+
+  @override
+  String reviewPromptTitle(String name) {
+    return 'Leave a review for $name?';
+  }
+
+  @override
+  String get reviewPromptWrite => 'Write a review';
+
+  @override
+  String get reviewPromptSkip => 'No thanks';
+
+  @override
+  String get detailShare => 'Share';
+
+  @override
+  String get detailLinkCopied =>
+      'Link copied. Anyone can open it without signing in.';
+
+  @override
+  String get linkUnavailableTitle => 'This place can\'t be shown';
+
+  @override
+  String get linkHiddenMessage => 'This place has been made private.';
+
+  @override
+  String get linkMissingMessage =>
+      'This place was removed or can no longer be found.';
+
+  @override
+  String get linkGoHome => 'Go to Home';
+
+  @override
+  String get gameModePlaces => 'From recommended places';
+
+  @override
+  String get gameModeCustom => 'Type my own options';
+
+  @override
+  String gameCandidatesCount(int count, int min, int max) {
+    return '$count options · $min–$max';
+  }
+
+  @override
+  String get gameAddPlacesTitle => 'Places you can add';
+
+  @override
+  String get gameNameHint => 'Option name (e.g. cafeteria)';
+
+  @override
+  String get gameAdd => 'Add';
+
+  @override
+  String get gameEditName => 'Rename';
+
+  @override
+  String get gameRemove => 'Remove';
+
+  @override
+  String get gameErrEmpty => 'Please enter a name';
+
+  @override
+  String gameErrDuplicate(String name) {
+    return 'Already in the list: $name';
+  }
+
+  @override
+  String gameErrFull(int max) {
+    return 'Up to $max options';
+  }
+
+  @override
+  String gameNeedTwo(int min) {
+    return 'Add at least $min options to start';
+  }
+
+  @override
+  String get gameEditCandidates => 'Edit options';
+
+  @override
+  String get supportTitle => 'Support';
+
+  @override
+  String get noticeOpenLink => 'Read more';
+
+  @override
+  String get feedbackCategory => 'Category';
+
+  @override
+  String get feedbackCatQuestion => 'Question';
+
+  @override
+  String get feedbackCatSuggestion => 'Suggestion';
+
+  @override
+  String get feedbackCatBug => 'Bug report';
+
+  @override
+  String get feedbackTitleLabel => 'Title';
+
+  @override
+  String get feedbackBodyLabel => 'Message';
+
+  @override
+  String get feedbackSubmit => 'Send';
+
+  @override
+  String get feedbackNeedTitle => 'Please enter a title.';
+
+  @override
+  String get feedbackNeedBody => 'Please enter a message.';
+
+  @override
+  String get feedbackSent => 'Sent. The team will look at it.';
+
+  @override
+  String get feedbackFailed => 'Couldn\'t send it. Please try again shortly.';
+
+  @override
+  String get authReasonFeedback => 'Sign in to send a question or suggestion.';
+
+  @override
+  String get noticesSeeAll => 'See all';
 }

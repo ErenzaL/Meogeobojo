@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -31,11 +32,30 @@ import '../models/restaurant.dart';
 import '../models/restaurant_override.dart';
 import '../providers/restaurant_providers.dart';
 import '../utils/directions.dart';
+import '../utils/restaurant_link.dart';
 import '../widgets/restaurant_photo_placeholder.dart';
+
+/// A restaurant's page as a route. It carries the page's own address
+/// ([path]), which the website puts in the address bar, so a refresh or a
+/// shared link opens the same place.
+class RestaurantDetailRoute extends MaterialPageRoute<void> {
+  RestaurantDetailRoute({
+    required super.builder,
+    required this.path,
+    this.fromBrowser = false,
+  });
+
+  final String path;
+
+  /// Opened by the browser (a pasted link, Forward): the address bar already
+  /// shows [path], so it is not reported again.
+  final bool fromBrowser;
+}
 
 Future<void> openRestaurantDetail(BuildContext context, Restaurant r) {
   return Navigator.of(context).push(
-    MaterialPageRoute<void>(
+    RestaurantDetailRoute(
+      path: restaurantPath(r),
       builder: (_) => RestaurantDetailScreen(restaurant: r),
     ),
   );
@@ -88,6 +108,17 @@ class _RestaurantDetailScreenState
     }
   }
 
+  /// "공유": the place's own link, which opens these details for anyone,
+  /// signed in or not. It holds nothing about this user (no start point).
+  Future<void> _share() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final copied = context.l10n.detailLinkCopied;
+    await Clipboard.setData(ClipboardData(text: restaurantShareUrl(r)));
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(copied)));
+  }
+
   Future<void> _uploadPhoto() async {
     final ok = await requireAuth(context, ref, reason: AuthReason.contribute);
     if (!ok || !mounted) return;
@@ -98,7 +129,10 @@ class _RestaurantDetailScreenState
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final override = ref.watch(restaurantOverridesProvider).value?[r.kakaoId];
+    // Read for this place itself, so a place from search (outside the nearby
+    // list) shows the same price and hours the lists judged it on.
     final insight =
+        ref.watch(insightsForIdsProvider(r.kakaoId)).value?[r.kakaoId] ??
         ref.watch(restaurantInsightsProvider)[r.kakaoId] ??
         RestaurantInsight.unknown;
     final menus =
@@ -108,17 +142,11 @@ class _RestaurantDetailScreenState
     final reviews =
         ref.watch(restaurantReviewsProvider(r.kakaoId)).value ?? const [];
     final origin = ref.watch(originProvider);
-    final meters = origin == null
-        ? r.distanceMeters
-        : haversineMeters(
-            origin.latitude,
-            origin.longitude,
-            r.latitude,
-            r.longitude,
-          ).round();
+    final meters = metersFromOrigin(origin, r) ?? r.distanceMeters;
     final walk = walkMinutesFor(meters);
     final status = orderStatusAt(
       lastOrderMinutes: insight.lastOrderMinutes,
+      openMinutes: insight.openMinutes,
       walkMinutes: walk,
       nowMinutes: minutesOfDay(ref.watch(seoulNowProvider)),
     );
@@ -168,6 +196,7 @@ class _RestaurantDetailScreenState
       onKakaoMap: r.placeUrl == null
           ? null
           : () => _open(Uri.parse(r.placeUrl!)),
+      onNaverMap: () => _open(naverMapUrl(r)),
     );
     final details = <Widget>[
       // Only say "not provided" when an admin has added nothing.
@@ -327,6 +356,11 @@ class _RestaurantDetailScreenState
       appBar: AppBar(
         title: Text(l10n.detailTitle),
         actions: [
+          IconButton(
+            tooltip: l10n.detailShare,
+            onPressed: _share,
+            icon: const Icon(Icons.ios_share_rounded),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: FavoriteButton(restaurant: r, size: 22),
@@ -552,6 +586,7 @@ class _Head extends StatelessWidget {
     final statusText = last == null
         ? null
         : switch (status.kind) {
+            OrderStatusKind.notOpenYet => l10n.detailOrderNotOpen,
             OrderStatusKind.closedBeforeArrival => l10n.detailOrderTooLate(
               formatMinutesOfDay(last),
             ),
@@ -689,6 +724,7 @@ class _InfoBox extends StatelessWidget {
     required this.walkMinutes,
     required this.onPhone,
     required this.onKakaoMap,
+    required this.onNaverMap,
   });
 
   final Restaurant restaurant;
@@ -698,6 +734,7 @@ class _InfoBox extends StatelessWidget {
   final int walkMinutes;
   final void Function(String phone) onPhone;
   final VoidCallback? onKakaoMap;
+  final VoidCallback onNaverMap;
 
   @override
   Widget build(BuildContext context) {
@@ -768,14 +805,24 @@ class _InfoBox extends StatelessWidget {
                     ),
                   ),
                 Text(l10n.detailRouteNote, style: note),
-                if (onKakaoMap != null) ...[
-                  const SizedBox(height: 8),
-                  V5SmallButton(
-                    icon: Icons.open_in_new_outlined,
-                    label: l10n.restaurantOpenKakaoMap,
-                    onPressed: onKakaoMap!,
-                  ),
-                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onKakaoMap != null)
+                      V5SmallButton(
+                        icon: Icons.open_in_new_outlined,
+                        label: l10n.restaurantOpenKakaoMap,
+                        onPressed: onKakaoMap!,
+                      ),
+                    V5SmallButton(
+                      icon: Icons.open_in_new_outlined,
+                      label: l10n.restaurantOpenNaverMap,
+                      onPressed: onNaverMap,
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

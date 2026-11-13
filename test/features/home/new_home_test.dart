@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/theme/theme_controller.dart';
 import 'package:meogeobojo/core/widgets/pill_chip.dart';
@@ -16,6 +17,7 @@ import 'package:meogeobojo/features/navigation/providers/shell_tab_provider.dart
 import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
 import 'package:meogeobojo/features/navigation/screens/app_shell.dart';
 import 'package:meogeobojo/features/origin/providers/origin_providers.dart';
+import 'package:meogeobojo/features/recommendation/home_ranking.dart';
 import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/recommendation/restaurant_insight.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
@@ -26,7 +28,7 @@ import 'package:meogeobojo/features/home/widgets/alternatives_section.dart';
 import 'package:meogeobojo/features/home/widgets/hero_card.dart';
 import 'package:meogeobojo/features/home/widgets/home_category_bar.dart';
 import 'package:meogeobojo/features/home/games/ladder_game.dart';
-import 'package:meogeobojo/features/home/games/game_sheet.dart';
+import 'package:meogeobojo/features/home/games/game_candidates.dart';
 import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:meogeobojo/features/home/widgets/home_filter_bar.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
@@ -47,7 +49,7 @@ import '../../support/harness.dart';
 
 const univId = '5c0a8f3e-0001-4a6e-9b1d-000000000001';
 
-// 정문 is at (36.7680, 126.9305): these are ~56 m, ~167 m and ~778 m north.
+// 정문 is at (36.769563, 126.92736): these are ~56 m, ~167 m and ~778 m north.
 Restaurant spot(String name, double dLat, {String category = '음식점 > 한식'}) =>
     Restaurant(
       kakaoId: name,
@@ -57,8 +59,8 @@ Restaurant spot(String name, double dLat, {String category = '음식점 > 한식
       address: '',
       roadAddress: '',
       phone: '',
-      latitude: 36.7680 + dLat,
-      longitude: 126.9305,
+      latitude: 36.769563 + dLat,
+      longitude: 126.92736,
       distanceMeters: 0,
       placeUrl: null,
     );
@@ -197,7 +199,7 @@ void main() {
     );
 
     testWidgets(
-      'the budget condition applies on top of the category, with unknown prices kept',
+      'the budget condition applies on top of the category: an unknown price is unconfirmed, a known one over budget goes',
       (tester) async {
         final repo = _PerCategoryRepo({
           FoodCategory.chinese: [
@@ -230,10 +232,12 @@ void main() {
             .read(conditionsProvider.notifier)
             .update((c) => c.copyWith(budget: BudgetOption.max8000));
         await tester.pumpAndSettle();
-        final recs = h.container.read(homeRecsProvider).value!;
-        expect(recs.ranked.map((r) => r.restaurant.kakaoId), [
-          '짜장집',
-        ]); // unknown price stays, the 15,000원 place goes
+        // Nothing is confirmed, so there is no pick ...
+        expect(h.container.read(homeRecsProvider).value, isNull);
+        // ... the unknown price is listed apart, the 15,000원 place is gone.
+        final pool = h.container.read(homePoolRankedProvider).value!;
+        expect(pool.map((r) => r.restaurant.kakaoId), ['짜장집']);
+        expect(pool.single.missing, {MissingInfo.price});
       },
     );
 
@@ -332,76 +336,56 @@ void main() {
     });
   });
 
-  group('다음 추천', () {
+  group('다른 후보 보기', () {
     testWidgets(
-      'steps down the ranking one place at a time and back, stopping at the ends',
+      'walks through the confirmed matches and comes back to the first',
       (tester) async {
         final h = await openHome(tester, size: const Size(390, 1600));
         final ranked = h.container.read(homeRecsProvider).value!.ranked;
         expect(ranked.length, greaterThan(2));
-        final first = ranked[0].restaurant.name;
-        final second = ranked[1].restaurant.name;
-        expect(find.text('1순위', findRichText: true), findsNothing);
         Finder inHeroText(String t) =>
             find.descendant(of: find.byType(HeroCard), matching: find.text(t));
-        expect(inHeroText(first), findsOneWidget);
-        expect(
-          find.descendant(
-            of: find.byType(HeroCard),
-            matching: find.text('‹ 이전'),
-          ),
-          findsNothing,
-        ); // nothing before #1
-        await tester.ensureVisible(find.text('다음 추천 ›'));
-        await tester.tap(find.text('다음 추천 ›'));
-        await tester.pumpAndSettle();
-        expect(inHeroText(second), findsOneWidget);
-        expect(h.container.read(homeRecsProvider).value!.heroRank, 2);
-        expect(find.text('‹ 이전'), findsOneWidget);
-        await tester.tap(find.text('‹ 이전'));
-        await tester.pumpAndSettle();
-        expect(inHeroText(first), findsOneWidget);
-        // walk to the last place: no "next" there
-        for (var i = 1; i < ranked.length; i++) {
-          h.container
-              .read(heroPickProvider.notifier)
-              .step(h.container.read(homeRecsProvider).value!, 1);
+        expect(inHeroText(ranked[0].restaurant.name), findsOneWidget);
+        // The first button turned into "다른 후보 보기" beside "조건 수정".
+        expect(find.text('조건에 맞게 추천받기'), findsNothing);
+        expect(find.text('조건 수정'), findsOneWidget);
+        for (var i = 1; i <= ranked.length; i++) {
+          await tester.tap(find.text('다른 후보 보기'));
+          await tester.pumpAndSettle();
+          final expected = ranked[i % ranked.length].restaurant.name;
+          expect(inHeroText(expected), findsOneWidget, reason: 'step $i');
         }
-        await tester.pumpAndSettle();
-        expect(
-          h.container.read(homeRecsProvider).value!.heroRank,
-          ranked.length,
-        );
-        expect(find.text('다음 추천 ›'), findsNothing);
-        expect(
-          h.container
-              .read(heroPickProvider.notifier)
-              .step(h.container.read(homeRecsProvider).value!, 1),
-          isFalse,
-        );
+        expect(h.container.read(homeRecsProvider).value!.heroRank, 1);
       },
     );
 
-    testWidgets('a single result has no navigation buttons', (tester) async {
+    testWidgets('one match shows again, and the reason is said', (
+      tester,
+    ) async {
       await openHome(
         tester,
         repo: FakeRestaurantRepository(items: [spot('하나뿐', 0.0005)]),
       );
-      expect(find.text('다음 추천 ›'), findsNothing);
-      expect(find.text('‹ 이전'), findsNothing);
+      final button = tester.widget<FilledButton>(
+        find.ancestor(
+          of: find.text('다른 후보 보기'),
+          matching: find.byWidgetPredicate((w) => w is FilledButton),
+        ),
+      );
+      expect(button.onPressed, isNull);
+      expect(find.text('조건에 맞는 식당이 이곳뿐이에요'), findsOneWidget);
     });
 
     testWidgets('changing a condition starts again from the best place', (
       tester,
     ) async {
       final h = await openHome(tester, size: const Size(390, 1600));
-      await tester.ensureVisible(find.text('다음 추천 ›'));
-      await tester.tap(find.text('다음 추천 ›'));
+      await tester.tap(find.text('다른 후보 보기'));
       await tester.pumpAndSettle();
       expect(h.container.read(homeRecsProvider).value!.heroRank, 2);
       h.container
           .read(conditionsProvider.notifier)
-          .update((c) => c.copyWith(budget: BudgetOption.max12000));
+          .update((c) => c.copyWith(distance: DistanceOption.walk15));
       await tester.pumpAndSettle();
       expect(h.container.read(homeRecsProvider).value!.heroRank, 1);
     });
@@ -435,10 +419,15 @@ void main() {
       // the rest scroll in from the right
       await tester.drag(find.byType(HomeFilterBar), const Offset(-700, 0));
       await tester.pumpAndSettle();
-      for (final t in ['인원', '목적', '운영·편의', '정렬']) {
+      for (final t in ['운영·편의', '정렬']) {
         expect(find.text(t), findsOneWidget, reason: t);
       }
-      expect(find.text('오늘의 추천 받기'), findsOneWidget);
+      // Party and purpose have no data behind them: not offered as filters.
+      for (final t in ['인원', '목적']) {
+        expect(find.text(t), findsNothing, reason: t);
+      }
+      // A pick is on screen: the next steps are 다른 후보 보기 / 조건 수정.
+      expect(find.text('다른 후보 보기'), findsOneWidget);
     });
 
     testWidgets('categories can be chosen together; 전체 clears them', (
@@ -483,7 +472,7 @@ void main() {
       await tester.tap(find.widgetWithText(PillChip, '10,000원 이하'));
       await tester.pumpAndSettle();
       // reset clears just this setting
-      await tester.tap(find.text('이 설정만 풀기'));
+      await tester.tap(find.text('이 설정 초기화'));
       await tester.pumpAndSettle();
       expect(
         find.byWidgetPredicate((w) => w is Text && w.data == '상관없어요'),
@@ -550,10 +539,10 @@ void main() {
       await openHome(tester);
       expect(inHero(find.text('가까운집')), findsOneWidget);
       expect(find.text('3곳 중 1순위'), findsOneWidget);
-      expect(find.text('가장 가까워요'), findsOneWidget);
+      expect(find.text('선택한 출발점에서 가까워요'), findsOneWidget);
       // 18:54 + 1 minute walk
       expect(find.text('18:55'), findsOneWidget);
-      expect(find.text('도보 약 1분'), findsOneWidget);
+      expect(find.text('예상 도보 약 1분'), findsOneWidget);
       expect(find.text('길찾기'), findsOneWidget);
       expect(find.text('정보'), findsOneWidget);
     });
@@ -625,19 +614,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(h.container.read(shellTabProvider), ShellTabs.map);
     });
-
-    testWidgets('"하나 골라줘" swaps in another place and shows its rank', (
-      tester,
-    ) async {
-      await openHome(tester);
-      await scrollDown(tester, -300);
-      await tester.tap(find.text('하나 골라줘'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, 600));
-      await tester.pumpAndSettle();
-      expect(find.text('3곳 중 1순위'), findsNothing);
-      expect(find.textContaining('3곳 중'), findsOneWidget);
-    });
   });
 
   group('origin sheet', () {
@@ -648,15 +624,29 @@ void main() {
       await tester.tap(find.text('정문 기준'));
       await tester.pumpAndSettle();
       expect(find.text('어디서 출발하나요?'), findsOneWidget);
-      expect(find.text('출입문'), findsOneWidget);
+      expect(find.text('정문·후문'), findsOneWidget);
       expect(find.text('후문'), findsOneWidget);
-      expect(find.text('단과대학'), findsOneWidget);
-      expect(find.text('공과대학'), findsOneWidget);
       expect(find.byIcon(Icons.check_rounded), findsOneWidget);
-      expect(find.textContaining('가장 가까운 곳: 가까운집 · 도보 1분'), findsWidgets);
-      await revealInSheet(tester, find.text('지도에서 직접 찍기'));
-      expect(find.text('내 핀'), findsOneWidget);
-      expect(find.text('아직 저장한 핀이 없어요.'), findsOneWidget);
+      expect(find.textContaining('가장 가까운 곳: 가까운집 · 예상 도보 약 1분'), findsWidgets);
+      // Seven residence halls, one row each, full names (never cut).
+      await revealInSheet(tester, find.text('학성사 3관'));
+      expect(find.text('기숙사'), findsOneWidget);
+      for (final hall in [
+        '향설생활관 1관',
+        '향설생활관 2관',
+        '향설생활관 3관',
+        '글로벌 빌리지',
+        '학성사 1관',
+        '학성사 2관',
+        '학성사 3관',
+      ]) {
+        expect(find.text(hall), findsOneWidget, reason: hall);
+      }
+      await revealInSheet(tester, find.text('지도에서 직접 지정하기'));
+      expect(find.text('주요 건물'), findsOneWidget);
+      expect(find.text('공과대학'), findsOneWidget);
+      expect(find.text('직접 지정한 위치'), findsOneWidget);
+      expect(find.text('아직 직접 지정한 위치가 없어요.'), findsOneWidget);
       // Back to the top to pick the back gate.
       await tester.drag(
         find
@@ -679,7 +669,7 @@ void main() {
         'gate_back',
         reason: 'persisted',
       );
-      // From the back gate (36.772) 먼집 (36.775) is now nearest.
+      // Distances are measured again from the back gate.
       expect(find.text('먼집'), findsWidgets);
     });
 
@@ -693,12 +683,14 @@ void main() {
             universityId: univId,
             name: '기숙사 앞',
             latitude: 36.7700,
-            longitude: 126.9305,
+            longitude: 126.92736,
           );
       await tester.tap(find.text('정문 기준'));
       await tester.pumpAndSettle();
       await revealInSheet(tester, find.text('기숙사 앞'));
       expect(find.text('기숙사 앞'), findsOneWidget);
+      await tester.ensureVisible(find.text('기숙사 앞'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('기숙사 앞'));
       await tester.pumpAndSettle();
       expect(find.text('기숙사 앞 기준'), findsOneWidget);
@@ -735,14 +727,15 @@ void main() {
         find.byType(Scrollable).last,
         const Offset(0, -200),
       );
-      expect(find.text('몇 명이 먹나요?'), findsOneWidget);
+      // Party and needs change nothing yet: not offered.
+      expect(find.text('몇 명이 먹나요?'), findsNothing);
       await tester.dragUntilVisible(
         find.text('정렬'),
         find.byType(Scrollable).last,
         const Offset(0, -200),
       );
       expect(find.text('추천순'), findsOneWidget);
-      expect(find.text('모두 풀기'), findsOneWidget);
+      expect(find.text('초기화'), findsOneWidget);
       expect(find.text('처음 화면으로 돌아가 다시 설정'), findsOneWidget);
     });
 
@@ -764,7 +757,7 @@ void main() {
       expect(find.text('먼집'), findsNothing);
     });
 
-    testWidgets('no match disables the button; 모두 풀기 restores', (tester) async {
+    testWidgets('no match disables the button; 초기화 restores', (tester) async {
       final h = await openHome(tester);
       await openSheet(tester);
       await tester.tap(find.text('도보 5분'));
@@ -788,7 +781,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('모두 풀기'),
+          matching: find.text('초기화'),
         ),
       );
       await tester.pumpAndSettle();
@@ -848,7 +841,7 @@ void main() {
     ) async {
       await openHome(tester, repo: FakeRestaurantRepository());
       expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
-      expect(find.text('모두 풀기'), findsOneWidget);
+      expect(find.text('조건 초기화'), findsWidgets);
     });
 
     testWidgets('detail opens from 정보 without invented facts', (tester) async {
@@ -1459,7 +1452,7 @@ void main() {
       expect(tester.takeException(), isNull);
       await tester.tapAt(const Offset(160, 20)); // scrim
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.tap(find.byIcon(Icons.tune_rounded).first);
       await tester.pumpAndSettle();
       for (var i = 0; i < 8; i++) {
         await tester.drag(find.byType(Scrollable).last, const Offset(0, -300));
@@ -1480,7 +1473,7 @@ void main() {
 
     testWidgets('오늘의 추천 받기 reveals the pick', (tester) async {
       await openHome(tester, recsRequested: false);
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       expect(find.byType(HeroCard), findsOneWidget);
       expect(find.text('조건을 고르고 추천받아 보세요'), findsNothing);
@@ -1512,7 +1505,7 @@ void main() {
       tester,
     ) async {
       final h = await openHome(tester, recsRequested: false);
-      expect(find.byTooltip('처음부터 다시'), findsNothing); // nothing to undo
+      expect(find.text('조건 초기화'), findsNothing); // nothing to undo
       await tester.tap(
         find.descendant(
           of: find.byType(HomeCategoryBar),
@@ -1523,39 +1516,39 @@ void main() {
           .read(conditionsProvider.notifier)
           .update((c) => c.copyWith(budget: BudgetOption.max10000));
       await tester.pumpAndSettle();
-      // No place has a known price: "조건 충족 후보 없음", with the
-      // unconfirmed places one tap away.
+      // No place has a known meal price: nothing is confirmed. The
+      // unconfirmed ones are a separate list, never the pick.
       expect(find.byType(HeroCard), findsNothing);
+      expect(find.text('조건 충족을 확인한 식당이 없어요'), findsOneWidget);
       final unverified = find.textContaining('미확인 후보');
-      await tester.ensureVisible(unverified);
-      await tester.tap(unverified);
+      await tester.ensureVisible(unverified.first);
+      await tester.tap(unverified.first);
       await tester.pumpAndSettle();
-      expect(find.byType(HeroCard), findsOneWidget);
-      expect(find.text('가격·편의 정보가 확인되지 않은 후보예요'), findsOneWidget);
-      await tester.tap(find.text('오늘의 추천 받기'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(Scrollable).first, const Offset(0, 600));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('처음부터 다시'));
+      expect(find.textContaining('가격·운영정보 미확인'), findsOneWidget);
+      expect(find.text('가격 미확인'), findsWidgets);
+      expect(find.byType(HeroCard), findsNothing);
+      final restart = find.text('조건 초기화').first;
+      await tester.ensureVisible(restart);
+      await tester.tap(restart);
       await tester.pumpAndSettle();
       expect(h.container.read(homeCategoryProvider), isEmpty);
       expect(h.container.read(conditionsProvider).activeCount, 0);
       expect(find.byType(HeroCard), findsNothing);
       expect(find.text('조건을 고르고 추천받아 보세요'), findsOneWidget);
-      expect(find.byTooltip('처음부터 다시'), findsNothing);
+      expect(find.text('조건 초기화'), findsNothing);
     });
 
     testWidgets('after 길찾기 the 다녀오셨어요? card shows both labels whole at 390', (
       tester,
     ) async {
       final h = await openHome(tester, recsRequested: false);
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       final hero = h.container.read(homeRecsProvider).value!.hero.restaurant;
       h.container.read(activeRecommendationProvider.notifier).markWent(hero);
       await tester.pumpAndSettle();
       expect(find.text('${hero.name}에 다녀오셨어요?'), findsOneWidget);
-      for (final label in ['먹었어요 · 평가 남기기', '아직이요']) {
+      for (final label in ['먹었어요', '아직이요']) {
         expect(
           tester
               .renderObject<RenderParagraph>(find.text(label))
@@ -1570,7 +1563,7 @@ void main() {
       tester,
     ) async {
       final h = await openHome(tester, recsRequested: false);
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       // e.g. it closed while they were eating (the open-now filter drops it).
       h.container
@@ -1599,13 +1592,26 @@ void main() {
           ),
         ]),
       );
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       h.container
           .read(activeRecommendationProvider.notifier)
           .markWent(spot('가까운집', 0.0005));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('먹었어요 · 평가 남기기'));
+      await tester.tap(find.text('먹었어요'));
+      await tester.pumpAndSettle();
+      // Saved, said so, and a review is offered, never opened by itself.
+      expect(find.text('MY 식사 기록에 저장했어요'), findsOneWidget);
+      expect(find.text('기록 보기'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '국물이 진해요'), findsNothing);
+      expect(find.text('가까운집, 리뷰도 남길까요?'), findsOneWidget);
+      // The notice closes by itself (about 3 s), even with its action; the
+      // record stays on the device.
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(find.text('MY 식사 기록에 저장했어요'), findsNothing);
+      expect(h.sp.getString('meal_records_user-1'), contains('가까운집'));
+      await tester.tap(find.text('리뷰 쓰기'));
       await tester.pumpAndSettle();
       // Not an empty form that would erase the text when saved.
       expect(find.widgetWithText(TextField, '국물이 진해요'), findsOneWidget);
@@ -1615,7 +1621,7 @@ void main() {
       tester,
     ) async {
       final h = await openHome(tester, recsRequested: false);
-      await tester.tap(find.text('오늘의 추천 받기'));
+      await tester.tap(find.text('조건에 맞게 추천받기'));
       await tester.pumpAndSettle();
       // Asking alone (the ranking itself unchanged) already makes it "in use".
       expect(h.sp.getString(activeRecommendationPrefsKey), isNotNull);
@@ -1641,8 +1647,8 @@ void main() {
         shown.restaurant.kakaoId,
       );
 
-      // 처음부터 다시 ends it.
-      final restart = find.byTooltip('처음부터 다시');
+      // 조건 초기화 ends it.
+      final restart = find.text('조건 초기화');
       await tester.ensureVisible(restart);
       await tester.tap(restart);
       await tester.pumpAndSettle();
@@ -1736,7 +1742,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('?').first);
       await tester.pumpAndSettle(const Duration(seconds: 1));
-      await tester.tap(find.text('다시 하기'));
+      await tester.tap(find.text('다시 뽑기'));
       await tester.pumpAndSettle();
       expect(find.text('카드를 한 장 골라요'), findsOneWidget);
     });
@@ -1781,10 +1787,88 @@ void main() {
       }
     });
 
-    test('games sample a few distinct places', () {
-      expect(gameSize(PickGame.roulette, 20), 6);
-      expect(gameSize(PickGame.ladder, 20), 4);
-      expect(gameSize(PickGame.cards, 3), 3);
+    test('one list for every game: 2-6 names, no blanks, no duplicates', () {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      final setup = c.read(gameSetupProvider.notifier);
+      setup.setMode(GameMode.custom);
+      expect(setup.addName('   '), NameProblem.empty);
+      expect(setup.addName('학식'), isNull);
+      expect(setup.addName(' 학 식 '), NameProblem.duplicate);
+      for (final n in ['편의점', '라면', '김밥', '돈가스', '마라탕']) {
+        expect(setup.addName(n), isNull);
+      }
+      expect(setup.addName('일곱번째'), NameProblem.full);
+      expect(setup.rename(1, '학식'), NameProblem.duplicate);
+      expect(setup.rename(1, 'CU 편의점'), isNull);
+      final items = c.read(gameSetupProvider).candidates(const []);
+      // All six are played, by every game; none is a place.
+      expect(items, hasLength(kGameMax));
+      expect(items.every((x) => x.place == null), isTrue);
+      expect(items[1].name, 'CU 편의점');
+      setup.removeName(0);
+      expect(c.read(gameSetupProvider).names, hasLength(5));
+    });
+
+    test('recommended places: the first matches, then only what still '
+        'matches', () {
+      final c = ProviderContainer();
+      addTearDown(c.dispose);
+      RankedRestaurant ranked(String id) => RankedRestaurant(
+        restaurant: fakeRestaurant(id, name: '식당'),
+        meters: 100,
+        walkMinutes: 2,
+        insight: RestaurantInsight.unknown,
+        reason: const RecommendReason(ReasonKind.walk),
+      );
+      final all = [
+        for (final id in ['1', '2', '3', '4', '5']) ranked(id),
+      ];
+      final setup = c.read(gameSetupProvider.notifier)..syncPlaces(all);
+      expect(c.read(gameSetupProvider).placeIds, ['1', '2', '3', '4']);
+      setup.togglePlace('5');
+      setup.togglePlace('1');
+      expect(c.read(gameSetupProvider).placeIds, ['2', '3', '4', '5']);
+      // A filter change removed place 3: it leaves the list, nothing else.
+      setup.syncPlaces([
+        for (final x in all)
+          if (x.restaurant.kakaoId != '3') x,
+      ]);
+      expect(c.read(gameSetupProvider).placeIds, ['2', '4', '5']);
+      final items = c.read(gameSetupProvider).candidates(all);
+      expect(items.map((x) => x.name), ['식당2', '식당4', '식당5']);
+      expect(items.every((x) => x.place != null), isTrue);
+    });
+
+    testWidgets('typed names: switching games keeps them, and the result is '
+        'only the name', (tester) async {
+      await openGames(tester);
+      await tester.tap(find.text('직접 입력해서 정하기'));
+      await tester.pumpAndSettle();
+      for (final n in ['학식', '편의점 도시락']) {
+        await tester.enterText(find.byType(TextField), n);
+        await tester.tap(find.text('추가'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.text('후보 2개 · 2~6개'), findsOneWidget);
+      await tester.tap(find.text('사다리타기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('다른 게임'));
+      await tester.pumpAndSettle();
+      // Back in the menu: the same two names.
+      expect(find.text('학식'), findsOneWidget);
+      expect(find.text('편의점 도시락'), findsOneWidget);
+      await tester.tap(find.text('카드 뽑기'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('?').first);
+      await tester.pumpAndSettle(const Duration(seconds: 1));
+      expect(find.text('오늘은 여기!'), findsOneWidget);
+      // No invented place facts and no "여기로 정하기" for a typed name.
+      Finder inSheet(Finder f) =>
+          find.descendant(of: find.byType(BottomSheet), matching: f);
+      expect(inSheet(find.textContaining('예상 도보')), findsNothing);
+      expect(inSheet(find.text('여기로 정하기')), findsNothing);
+      expect(find.text('다시 뽑기'), findsOneWidget);
     });
   });
 }

@@ -206,17 +206,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String restaurantTagDistance(String tag, String distance) {
-    return '$tag · 距学校 $distance';
-  }
-
-  @override
-  String restaurantDistanceFromSchool(String distance) {
-    return '距学校 $distance';
+    return '$tag · 直线约$distance';
   }
 
   @override
   String restaurantDistanceStraight(String distance) {
-    return '距学校 $distance（直线距离）';
+    return '直线约$distance';
   }
 
   @override
@@ -230,6 +225,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get restaurantOpenKakaoMap => '在 Kakao 地图中查看';
+
+  @override
+  String get restaurantOpenNaverMap => '在 Naver 地图中查看';
 
   @override
   String get restaurantLinkOpenFailed => '无法打开该链接。';
@@ -482,9 +480,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get legalPrivacy => '隐私政策';
-
-  @override
-  String get legalNotPublished => '该文件尚未发布。';
 
   @override
   String get legalOpenFailed => '无法打开链接。';
@@ -1221,14 +1216,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get homeReasonBudget => '在预算范围内';
-
-  @override
-  String get homeReasonClosest => '离你最近';
+  String get homeReasonClosest => '离所选出发点很近';
 
   @override
   String homeReasonWalk(int minutes) {
-    return '步行$minutes分钟';
+    return '预计步行约$minutes分钟';
   }
 
   @override
@@ -1239,7 +1231,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String homeWalkAbout(int minutes) {
-    return '步行约$minutes分钟';
+    return '预计步行约$minutes分钟';
   }
 
   @override
@@ -1273,22 +1265,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeAltTitle => '不喜欢的话';
 
   @override
-  String get homePickForMe => '帮我选一个';
-
-  @override
-  String get homeNextPick => '下一个 ›';
-
-  @override
-  String get homePrevPick => '‹ 上一个';
-
-  @override
-  String get homeRestart => '重新开始';
+  String get homeRestart => '重置条件';
 
   @override
   String get homePromptTitle => '先选好条件再看推荐';
 
   @override
-  String get homePromptMessage => '选好预算、距离等条件，或点“获取今日推荐”。';
+  String get homePromptMessage => '选好预算、距离等条件，或点“按条件推荐”。';
 
   @override
   String get homeGameButton => '玩游戏来选';
@@ -1297,7 +1280,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGameTitle => '吃什么？玩游戏决定！';
 
   @override
-  String get homeGameSub => '从符合当前条件的餐厅里选。';
+  String get homeGameSub => '先定好候选，再用游戏来选。切换游戏候选不变。';
 
   @override
   String get homeGameRoulette => '转盘';
@@ -1333,7 +1316,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeGameResult => '今天就去这家！';
 
   @override
-  String get homeGameAgain => '再来一次';
+  String get homeGameAgain => '再抽一次';
 
   @override
   String get homeGameConfirm => '就这家';
@@ -1367,7 +1350,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeCmpLater => '营业到更晚';
 
   @override
-  String get homeStatusOrderable => '可点单';
+  String get homeStatusOrderable => '预计截止前到达';
 
   @override
   String homeStatusClosesAt(String time) {
@@ -1442,53 +1425,46 @@ class AppLocalizationsZh extends AppLocalizations {
   String get originSheetTitle => '从哪里出发？';
 
   @override
-  String get originSheetDesc => '地图和推荐会按从所选位置出发的步行距离重新排序。建筑位置仅为演示示例。';
+  String get originSheetDesc =>
+      '首页、地图和搜索会从这里重新按直线距离计算。位置以OpenStreetMap为准，建筑取的是建筑中心而非入口。';
 
   @override
-  String get originGroupGates => '校门';
-
-  @override
-  String get originGroupColleges => '学院';
+  String get originGroupGates => '正门·后门';
 
   @override
   String get originGroupBuildings => '主要建筑';
 
   @override
-  String get originGroupPins => '我的标记';
+  String get originGroupPins => '自定义位置';
 
   @override
-  String get originNoPins => '还没有保存的标记。';
+  String get originNoPins => '还没有自定义位置。';
 
   @override
   String originNearest(String name, int minutes) {
-    return '最近：$name · 步行$minutes分钟';
+    return '最近：$name · 预计步行约$minutes分钟';
   }
 
   @override
   String get originNearestNone => '附近没有符合条件的店';
 
   @override
-  String get originPickOnMap => '在地图上标记';
+  String get originPickOnMap => '在地图上自定义位置';
 
   @override
-  String get originPinPickerTitle => '选择出发位置';
+  String get originPinPickerTitle => '自定义出发位置';
 
   @override
   String get originPinPickerHint => '移动地图，让标记对准想要的位置。';
 
   @override
-  String get originPinConfirm => '就选这里';
+  String get originPinConfirm => '设为出发点';
 
   @override
-  String get originPinNameTitle => '标记名称';
+  String get originPinNameTitle => '位置名称';
 
   @override
-  String get originPinNameHint => '例如：宿舍门口';
-
-  @override
-  String originPinDefaultName(int number) {
-    return '我的标记$number';
-  }
+  String get originPinNameHint => '例：社团活动室前';
 
   @override
   String get originPinDelete => '删除标记';
@@ -1509,7 +1485,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condMustHint => '不符合的店会被排除';
 
   @override
-  String get condMissingNote => '没有价格或营业信息的店不会被排除。';
+  String get condMissingNote => '缺少可确认信息的餐厅不会被排除，而是作为“信息未确认”单独显示。';
 
   @override
   String get condChange => '更改';
@@ -1518,7 +1494,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condOpenNow => '仅显示现在可点单的店';
 
   @override
-  String get condOpenNowHint => '到达时尚未截止点单的店。仅在为之后做计划时关闭。';
+  String get condOpenNowHint =>
+      '预计到达时正在营业且未截止点单的店。营业开始与截止点单时间都确认后才算“符合条件”。不考虑排队时间。';
 
   @override
   String get condCuisine => '菜系';
@@ -1586,13 +1563,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condSortRating => '评分';
 
   @override
-  String get condSoftNote => '目前按距离推荐。人数和需求会在有数据后影响顺序。';
+  String get condSoftNote => '推荐顺序按离所选出发点由近到远排列。';
 
   @override
-  String get condResetAll => '全部清除';
+  String get condResetAll => '重置';
 
   @override
-  String get condResetThis => '清除此项';
+  String get condResetThis => '重置此项';
 
   @override
   String condShowCount(int count) {
@@ -1945,7 +1922,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String mapMatchCount(int count) {
-    return '符合条件的$count家';
+    return '符合条件的餐厅$count家';
   }
 
   @override
@@ -1983,7 +1960,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homeSearchFieldHint => '搜索餐厅、菜单、类别';
 
   @override
-  String get homeRecommendButton => '获取今日推荐';
+  String get homeRecommendButton => '按条件推荐';
 
   @override
   String get homeTodayPicksTitle => '今日推荐';
@@ -2186,15 +2163,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get footerFeedback => '发送意见';
 
   @override
-  String get footerContactNotReady => '咨询渠道尚在准备中。';
-
-  @override
   String get footerServiceTitle => '服务信息';
-
-  @override
-  String footerUniversities(int count) {
-    return '支持 $count 所大学';
-  }
 
   @override
   String get footerServiceNote => '餐厅、学食和任务信息仅显示已核实的资料和运营者发布的内容。';
@@ -2237,7 +2206,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String detailOrderOpen(String time) {
-    return '可点餐 · $time 截止点餐';
+    return '$time截止点单 · 预计在截止前到达';
   }
 
   @override
@@ -2273,14 +2242,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String detailRoute(String origin, int minutes, String distance) {
-    return '从$origin步行约 $minutes 分钟 · 约 $distance';
+    return '从$origin预计步行约$minutes分钟 · 直线约$distance';
   }
 
   @override
   String get detailRouteChange => '更改起点';
 
   @override
-  String get detailRouteNote => '按直线距离估算，实际路线请在导航中确认。';
+  String get detailRouteNote => '这是按直线距离计算的预计时间，可能与实际步行路线不同。实际路线请在导航应用中确认。';
 
   @override
   String get detailAmenitiesNone => '暂无已确认的信息';
@@ -2290,7 +2259,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String detailDirectionsWalk(int minutes) {
-    return '导航 · 步行 $minutes 分钟';
+    return '导航 · 预计步行约$minutes分钟';
   }
 
   @override
@@ -2361,13 +2330,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get homeEmptyUnverifiedMessage =>
-      '在已确认价格或设施信息的餐厅中没有符合的。可以单独查看信息未确认的候选。';
-
-  @override
-  String get homeUnverifiedNotice => '该餐厅的价格或设施信息尚未确认';
-
-  @override
   String get homeUnverifiedTag => '信息未确认';
 
   @override
@@ -2385,9 +2347,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get homeChangeConditions => '更改条件重新推荐';
-
-  @override
   String homePromptOrigin(String origin) {
     return '以$origin为出发点推荐';
   }
@@ -2396,16 +2355,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePromptOriginChange => '更改';
 
   @override
-  String get mealAteButton => '吃过了 · 留下评价';
+  String get mealAteButton => '我吃过了';
 
   @override
   String get mealAteSub => '保存到“我的”用餐记录';
 
   @override
-  String get mealSaved => '已保存到用餐记录';
+  String get mealSaved => '已保存到我的用餐记录';
 
   @override
-  String get mealSavedReviewLoadFailed => '已保存到用餐记录。无法加载你的评价，因此未打开评价窗口';
+  String get mealSavedReviewLoadFailed => '未能加载你的评价，所以没有打开评价窗口。请稍后再试。';
 
   @override
   String get mealSeeRecords => '查看';
@@ -2417,4 +2376,240 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get mealCheckDismiss => '还没有';
+
+  @override
+  String homeReasonMeal(String budget) {
+    return '有$budget的餐点';
+  }
+
+  @override
+  String get homeNoConfirmedTitle => '没有确认符合条件的餐厅';
+
+  @override
+  String homeUnverifiedHint(int count) {
+    return '可以单独查看$count家信息不足的候选。';
+  }
+
+  @override
+  String listMatchTitle(int count) {
+    return '符合条件的餐厅$count家';
+  }
+
+  @override
+  String listUnverifiedTitle(int count) {
+    return '价格·营业信息未确认$count家';
+  }
+
+  @override
+  String get listUnverifiedNote => '并未得知不符合条件，但缺少确认所需的信息。';
+
+  @override
+  String get missingPrice => '价格未确认';
+
+  @override
+  String get missingHours => '营业信息未确认';
+
+  @override
+  String get missingAmenities => '设施信息未确认';
+
+  @override
+  String get homeHideUnverified => '收起未确认的候选';
+
+  @override
+  String condShowUnverified(int count) {
+    return '查看$count家未确认';
+  }
+
+  @override
+  String get detailOrderNotOpen => '预计到达时尚未营业';
+
+  @override
+  String get homeOtherCandidate => '看看其他候选';
+
+  @override
+  String get homeEditConditions => '修改条件';
+
+  @override
+  String get homeOnlyOneMatch => '符合条件的只有这一家';
+
+  @override
+  String originFromLabel(String origin) {
+    return '出发：$origin';
+  }
+
+  @override
+  String get homeStatusNotOpen => '到达时尚未营业';
+
+  @override
+  String get originGroupDorms => '宿舍';
+
+  @override
+  String get originPinEdit => '修改位置';
+
+  @override
+  String get originReselectDorm => '宿舍出发点已按楼栋拆分，请重新选择你住的楼。';
+
+  @override
+  String get originReselectGone => '之前选择的出发点已不可用，请重新选择。';
+
+  @override
+  String originUsingNow(String origin) {
+    return '重新选择前，按$origin计算。';
+  }
+
+  @override
+  String get originReselectAction => '重新选择出发点';
+
+  @override
+  String get originPinDefault => '自定义位置';
+
+  @override
+  String get originPinToCampus => '回到学校';
+
+  @override
+  String get profileDefaultOrigin => '默认出发点';
+
+  @override
+  String get mapCardDetails => '查看详情';
+
+  @override
+  String get footerAvailableAt => '目前可在顺天乡大学使用';
+
+  @override
+  String get universityComingSoon => '准备中';
+
+  @override
+  String get universityOnlySch => '目前仅支持顺天乡大学。';
+
+  @override
+  String get universityAvailableNote => '其他学校正在准备中。';
+
+  @override
+  String universitySwitched(String school) {
+    return '$school尚在准备中，已切换为顺天乡大学。目前仅支持顺天乡大学。';
+  }
+
+  @override
+  String get mealSaveFailed => '未能保存用餐记录，请重试。';
+
+  @override
+  String reviewPromptTitle(String name) {
+    return '要给$name留下评价吗？';
+  }
+
+  @override
+  String get reviewPromptWrite => '写评价';
+
+  @override
+  String get reviewPromptSkip => '不用了';
+
+  @override
+  String get detailShare => '分享';
+
+  @override
+  String get detailLinkCopied => '已复制餐厅链接，对方无需登录即可查看。';
+
+  @override
+  String get linkUnavailableTitle => '无法查看这家餐厅';
+
+  @override
+  String get linkHiddenMessage => '这家餐厅已设为不公开。';
+
+  @override
+  String get linkMissingMessage => '这家餐厅已被删除或无法找到。';
+
+  @override
+  String get linkGoHome => '返回首页';
+
+  @override
+  String get gameModePlaces => '从推荐餐厅中选';
+
+  @override
+  String get gameModeCustom => '自己输入候选';
+
+  @override
+  String gameCandidatesCount(int count, int min, int max) {
+    return '候选$count个 · $min~$max个';
+  }
+
+  @override
+  String get gameAddPlacesTitle => '可添加的餐厅';
+
+  @override
+  String get gameNameHint => '候选名称（例：食堂）';
+
+  @override
+  String get gameAdd => '添加';
+
+  @override
+  String get gameEditName => '修改名称';
+
+  @override
+  String get gameRemove => '移除';
+
+  @override
+  String get gameErrEmpty => '请输入名称';
+
+  @override
+  String gameErrDuplicate(String name) {
+    return '已有该候选：$name';
+  }
+
+  @override
+  String gameErrFull(int max) {
+    return '最多可添加$max个候选';
+  }
+
+  @override
+  String gameNeedTwo(int min) {
+    return '至少$min个候选才能开始';
+  }
+
+  @override
+  String get gameEditCandidates => '修改候选';
+
+  @override
+  String get supportTitle => '客户支持';
+
+  @override
+  String get noticeOpenLink => '查看详情';
+
+  @override
+  String get feedbackCategory => '类别';
+
+  @override
+  String get feedbackCatQuestion => '咨询';
+
+  @override
+  String get feedbackCatSuggestion => '建议';
+
+  @override
+  String get feedbackCatBug => '错误报告';
+
+  @override
+  String get feedbackTitleLabel => '标题';
+
+  @override
+  String get feedbackBodyLabel => '内容';
+
+  @override
+  String get feedbackSubmit => '提交';
+
+  @override
+  String get feedbackNeedTitle => '请输入标题。';
+
+  @override
+  String get feedbackNeedBody => '请输入内容。';
+
+  @override
+  String get feedbackSent => '已发送，运营团队会查看。';
+
+  @override
+  String get feedbackFailed => '发送失败，请稍后再试。';
+
+  @override
+  String get authReasonFeedback => '登录后才能发送咨询和建议。';
+
+  @override
+  String get noticesSeeAll => '查看全部';
 }

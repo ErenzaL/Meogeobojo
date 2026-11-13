@@ -69,21 +69,6 @@ class HomeFilterBar extends ConsumerWidget {
         onTap: () => open(ConditionFocus.distance),
       ),
       _FilterPill(
-        label: c.party == null
-            ? l10n.homeFilterParty
-            : partyLabelOf(l10n, c.party!),
-        active: c.party != null,
-        onTap: () => open(ConditionFocus.party),
-      ),
-      _FilterPill(
-        label: c.needs.isEmpty
-            ? l10n.homeFilterPurpose
-            : needLabelOf(l10n, c.needs.first),
-        count: c.needs.length > 1 ? c.needs.length : 0,
-        active: c.needs.isNotEmpty,
-        onTap: () => open(ConditionFocus.needs),
-      ),
-      _FilterPill(
         label: l10n.condOps,
         count: ops,
         active: ops > 0,

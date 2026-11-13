@@ -17,6 +17,8 @@ import '../../language/widgets/language_sheet.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../preferences/screens/preferences_screen.dart';
 import '../../university/providers/university_providers.dart';
+import '../../origin/providers/origin_providers.dart';
+import '../../origin/widgets/origin_sheet.dart';
 import '../../university/widgets/university_sheet.dart';
 import '../models/profile_avatar.dart';
 import '../widgets/profile_avatar_sheet.dart';
@@ -28,6 +30,7 @@ import 'saved_restaurants_screen.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../settings/screens/appearance_screen.dart';
+import '../../support/support.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -125,6 +128,7 @@ class _GuestView extends ConsumerWidget {
                     _themeRow(context, themeMode),
                   ],
                 ),
+                const SupportSection(),
               ],
             ),
           ),
@@ -241,6 +245,14 @@ class _SignedInView extends ConsumerWidget {
       V5RowGroup(
         elevated: true,
         rows: [
+          // The start point Home, the map and search measure from. It can
+          // also be changed right there; this is where it is kept.
+          V5Row(
+            icon: Icons.place_outlined,
+            title: l10n.profileDefaultOrigin,
+            trailing: ref.watch(originProvider)?.label(l10n),
+            onTap: () => showOriginSheet(context),
+          ),
           V5Row(
             icon: Icons.language_rounded,
             title: l10n.profileLanguage,
@@ -250,6 +262,7 @@ class _SignedInView extends ConsumerWidget {
           _themeRow(context, themeMode),
         ],
       ),
+      const SupportSection(),
     ];
     final logoutW = OutlinedButton(
       onPressed: () => ref.read(authControllerProvider.notifier).signOut(),

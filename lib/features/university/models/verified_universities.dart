@@ -8,6 +8,12 @@ import 'university.dart';
 /// points inside each campus (see the migration for the landmark used).
 const kDefaultUniversityId = '5c0a8f3e-0001-4a6e-9b1d-000000000001';
 
+/// Whether the app has data for [u]. Only 순천향대학교 does for now: the other
+/// schools are listed as "준비 중" and can never become the selected campus
+/// (their name over 순천향대 data would be wrong).
+bool isSupportedUniversity(University u) =>
+    u.id == kDefaultUniversityId || u.nameKo == '순천향대학교';
+
 const kVerifiedUniversities = <University>[
   University(
     id: kDefaultUniversityId,

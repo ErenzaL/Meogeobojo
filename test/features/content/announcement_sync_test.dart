@@ -44,6 +44,7 @@ void main() {
     addTearDown(changes.close);
     repo = FakeAppContentRepository(items);
     final h = await buildHarness(
+      allCampuses: true,
       content: repo,
       extraOverrides: [
         contentChangesProvider.overrideWith((ref) => changes.stream),

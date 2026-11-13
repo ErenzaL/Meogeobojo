@@ -41,6 +41,7 @@ class OriginRow extends StatelessWidget {
     required this.selected,
     required this.nearest,
     required this.onTap,
+    this.onEdit,
     this.onDelete,
   });
 
@@ -48,11 +49,14 @@ class OriginRow extends StatelessWidget {
   final bool selected;
   final RankedRestaurant? nearest;
   final VoidCallback onTap;
+
+  /// Pins only: move or rename it on the map.
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   IconData get _icon => switch (origin.kind) {
     OriginKind.gate => Icons.door_front_door_outlined,
-    OriginKind.college => Icons.school_outlined,
+    OriginKind.dorm => Icons.bed_outlined,
     OriginKind.building => Icons.apartment_rounded,
     OriginKind.pin => Icons.place_outlined,
     OriginKind.campusCenter => Icons.my_location_rounded,
@@ -88,10 +92,11 @@ class OriginRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Two lines, never cut: "향설생활관 1관" must keep "1관".
                       Text(
                         origin.label(l10n),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                        softWrap: true,
                         style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w500,
@@ -113,6 +118,16 @@ class OriginRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (onEdit != null)
+                  IconButton(
+                    tooltip: l10n.originPinEdit,
+                    onPressed: onEdit,
+                    icon: Icon(
+                      Icons.edit_location_alt_outlined,
+                      size: 20,
+                      color: p.textSecondary,
+                    ),
+                  ),
                 if (onDelete != null)
                   IconButton(
                     tooltip: l10n.originPinDelete,

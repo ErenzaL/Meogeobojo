@@ -7,6 +7,7 @@ import '../../../core/widgets/pill_chip.dart';
 import '../../conditions/models/conditions.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../conditions/widgets/conditions_sheet.dart';
+import '../../home/providers/home_providers.dart';
 import '../../home/widgets/home_chip.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
@@ -29,9 +30,10 @@ IconData _amenityIcon(Amenity a) => switch (a) {
   Amenity.openLate => Icons.dark_mode_outlined,
 };
 
-/// Origin chip, "지금 주문 가능 ×", 조건 chip and a scrolling row of quick
-/// facility chips (V5 map header). Everything reads and writes the shared
-/// conditions, so it matches Home and search.
+/// Origin chip, the categories chosen on Home (×), "지금 주문 가능", 조건 chip
+/// and a scrolling row of quick facility chips (V5 map header). Everything
+/// reads and writes the shared conditions and categories, so the map shows
+/// exactly what Home does.
 class MapFilterBar extends ConsumerWidget {
   const MapFilterBar({super.key});
 
@@ -42,6 +44,7 @@ class MapFilterBar extends ConsumerWidget {
     final origin = ref.watch(originProvider);
     final c = ref.watch(conditionsProvider);
     final notifier = ref.read(conditionsProvider.notifier);
+    final categories = ref.watch(homeCategoryProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -75,15 +78,15 @@ class MapFilterBar extends ConsumerWidget {
                 ],
               ),
               const SizedBox(width: 8),
-              if (c.openNowOnly)
+              for (final cat in categories) ...[
                 HomeChip(
                   dense: true,
                   onTap: () =>
-                      notifier.update((x) => x.copyWith(openNowOnly: false)),
+                      ref.read(homeCategoryProvider.notifier).toggle(cat),
                   background: p.fillMuted,
                   children: [
                     Text(
-                      l10n.mapOpenNowChip,
+                      cat.label(l10n),
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -93,7 +96,17 @@ class MapFilterBar extends ConsumerWidget {
                     Icon(Icons.close_rounded, size: 18, color: p.textSecondary),
                   ],
                 ),
-              if (c.openNowOnly) const SizedBox(width: 8),
+                const SizedBox(width: 8),
+              ],
+              PillChip(
+                label: l10n.mapOpenNowChip,
+                icon: Icons.schedule_rounded,
+                selected: c.openNowOnly,
+                onTap: () => notifier.update(
+                  (x) => x.copyWith(openNowOnly: !x.openNowOnly),
+                ),
+              ),
+              const SizedBox(width: 8),
               HomeChip(
                 dense: true,
                 onTap: () => showConditionsSheet(context),

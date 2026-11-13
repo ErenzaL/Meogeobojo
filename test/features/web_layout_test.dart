@@ -17,8 +17,8 @@ Restaurant spot(String name, double dLat) => Restaurant(
   address: '',
   roadAddress: '',
   phone: '',
-  latitude: 36.7680 + dLat,
-  longitude: 126.9305,
+  latitude: 36.769563 + dLat,
+  longitude: 126.92736,
   distanceMeters: 0,
   placeUrl: null,
 );

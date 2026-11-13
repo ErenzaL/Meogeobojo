@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/tappable_card.dart';
 import '../../favorites/widgets/favorite_button.dart';
+import '../../origin/providers/origin_providers.dart';
 import '../models/restaurant.dart';
 import '../screens/restaurant_detail_screen.dart';
 import 'restaurant_photo_placeholder.dart';
@@ -12,8 +14,8 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 
 /// Vertical card for the Home horizontal list. Shows only facts we have:
-/// name, Kakao category, straight-line distance.
-class RestaurantCard extends StatelessWidget {
+/// name, Kakao category, straight-line distance from the chosen origin.
+class RestaurantCard extends ConsumerWidget {
   const RestaurantCard({
     super.key,
     required this.restaurant,
@@ -24,8 +26,9 @@ class RestaurantCard extends StatelessWidget {
   final double width;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final r = restaurant;
+    final meters = metersFromOrigin(ref.watch(originProvider), r);
     return SizedBox(
       width: width,
       child: TappableCard(
@@ -70,9 +73,11 @@ class RestaurantCard extends StatelessWidget {
                       const SizedBox(width: 2),
                       Flexible(
                         child: Text(
-                          context.l10n.restaurantDistanceFromSchool(
-                            formatDistance(r.distanceMeters),
-                          ),
+                          meters == null
+                              ? ''
+                              : context.l10n.restaurantDistanceStraight(
+                                  formatDistance(meters),
+                                ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppText.caption(context),

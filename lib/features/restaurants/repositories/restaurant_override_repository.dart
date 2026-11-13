@@ -9,6 +9,12 @@ abstract interface class RestaurantOverrideRepository {
   Future<Map<String, RestaurantOverride>> forPlaces(List<String> kakaoIds);
   Future<List<RestaurantMenuItem>> menus(String kakaoId);
 
+  /// Menus of several places at once, keyed by Kakao id (places without a
+  /// menu are left out). Used to judge the budget for a whole list.
+  Future<Map<String, List<RestaurantMenuItem>>> menusForPlaces(
+    List<String> kakaoIds,
+  );
+
   /// Published photos (cover first, then the gallery in order).
   Future<List<RestaurantPhoto>> photos(String kakaoId);
 }
@@ -29,10 +35,9 @@ class SupabaseRestaurantOverrideRepository
     try {
       final rows = await _db
           .from('restaurant_overrides')
-          .select(
-            'kakao_place_id,visibility,description,price_min_krw,'
-            'last_order_time,image_url,name_ko,address,phone,featured,display_order',
-          )
+          // Every column, so one added later (open_time) is read once it is
+          // deployed and its absence never fails the query.
+          .select()
           .inFilter('kakao_place_id', kakaoIds)
           .timeout(const Duration(seconds: 10));
       final out = <String, RestaurantOverride>{};
@@ -60,6 +65,31 @@ class SupabaseRestaurantOverrideRepository
     } catch (e) {
       debugPrint('restaurant_menus unavailable: ${e.runtimeType}');
       return const [];
+    }
+  }
+
+  @override
+  Future<Map<String, List<RestaurantMenuItem>>> menusForPlaces(
+    List<String> kakaoIds,
+  ) async {
+    if (kakaoIds.isEmpty) return const {};
+    try {
+      final rows = await _db
+          .from('restaurant_menus')
+          .select()
+          .inFilter('kakao_place_id', kakaoIds)
+          .order('sort_order')
+          .timeout(const Duration(seconds: 10));
+      final out = <String, List<RestaurantMenuItem>>{};
+      for (final r in rows) {
+        final id = r['kakao_place_id'] as String?;
+        final item = RestaurantMenuItem.fromJson(r);
+        if (id != null && item != null) (out[id] ??= []).add(item);
+      }
+      return out;
+    } catch (e) {
+      debugPrint('restaurant_menus unavailable: ${e.runtimeType}');
+      return const {};
     }
   }
 

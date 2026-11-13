@@ -48,6 +48,7 @@ function FormFields({ register, control, errors, unis, existing }: { register: R
         <Field label="최고 가격 (원)" htmlFor="price_max_krw" error={errors.price_max_krw?.message}><Input id="price_max_krw" inputMode="numeric" {...register('price_max_krw')} /></Field>
         <Field label="1인 평균 (원)" htmlFor="avg_cost_krw" error={errors.avg_cost_krw?.message}><Input id="avg_cost_krw" inputMode="numeric" {...register('avg_cost_krw')} /></Field>
         <Field label="브레이크타임" htmlFor="break_time" error={errors.break_time?.message}><Input id="break_time" placeholder="15:00-17:00" {...register('break_time')} /></Field>
+        <Field label="영업 시작 (HH:MM)" htmlFor="open_time" hint="주문 마감과 함께 있어야 앱이 '지금 주문 가능'을 확인할 수 있어요." error={errors.open_time?.message}><Input id="open_time" placeholder="11:00" {...register('open_time')} /></Field>
         <Field label="주문 마감 (HH:MM)" htmlFor="last_order_time" error={errors.last_order_time?.message}><Input id="last_order_time" placeholder="21:30" {...register('last_order_time')} /></Field>
         <Field label="영업 상태" htmlFor="business_status">
           <Select id="business_status" {...register('business_status')}><option value="">알 수 없음</option>{BUSINESS_STATUSES.map((s) => <option key={s} value={s}>{BUSINESS_LABEL[s]}</option>)}</Select>

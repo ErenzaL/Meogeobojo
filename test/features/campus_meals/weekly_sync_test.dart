@@ -62,6 +62,7 @@ Future<Harness> open(
         meals: fullWeek(),
       );
   final h = await buildHarness(
+    allCampuses: true,
     meals: repo,
     extraOverrides: [
       campusMealClockProvider.overrideWithValue(clock),

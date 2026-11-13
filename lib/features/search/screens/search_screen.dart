@@ -11,6 +11,7 @@ import '../../conditions/widgets/conditions_sheet.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
 import '../../recommendation/home_ranking.dart';
+import '../../home/widgets/recs_states.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/widgets/restaurant_async_list.dart';
@@ -73,32 +74,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final state = ref.watch(searchProvider);
     final notifier = ref.read(searchProvider.notifier);
 
-    // Search obeys the same conditions as Home and the map.
+    // Search obeys the same conditions, origin and data as Home and the map.
     final origin = ref.watch(originProvider);
     final conditions = ref.watch(conditionsProvider);
     final hidden = ref.watch(hiddenPlaceIdsProvider);
-    final now = ref.watch(seoulNowProvider);
-    final inside = origin == null
-        ? [
-            for (final r in state.results)
-              if (!hidden.contains(r.kakaoId)) r,
-          ]
-        : [
-            for (final r in rankRestaurants(
-              all: state.results,
-              lat: origin.latitude,
-              lng: origin.longitude,
-              conditions: conditions,
-              insights: ref.watch(restaurantInsightsProvider),
-              hiddenIds: hidden,
-              nowMinutes: now.hour * 60 + now.minute,
-            ))
-              r.restaurant,
-          ];
-    final insideIds = {for (final r in inside) r.kakaoId};
+    final judged = ref.watch(searchRankedProvider);
+    final ranked = judged.value ?? const <RankedRestaurant>[];
+    final inside = [for (final r in ranked.confirmed) r.restaurant];
+    final unverified = ranked.unconfirmed;
+    final keptIds = {for (final r in ranked) r.restaurant.kakaoId};
     final outside = [
       for (final r in state.results)
-        if (!insideIds.contains(r.kakaoId) && !hidden.contains(r.kakaoId)) r,
+        if (!keptIds.contains(r.kakaoId) && !hidden.contains(r.kakaoId)) r,
     ];
 
     final conditionChips = Wrap(
@@ -111,7 +98,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ? '${l10n.homeConditionsChip} ${conditions.activeCount}'
               : l10n.homeConditionsChip,
           selected: conditions.activeCount > 0,
-          onTap: () => showConditionsSheet(context),
+          onTap: () => showConditionsSheet(context, pool: searchRankedProvider),
         ),
         if (origin != null)
           PillChip(
@@ -138,6 +125,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       SearchStatus.idle => _list([conditionChips, ..._idle()]),
       SearchStatus.loading when state.results.isEmpty =>
         const RestaurantListSkeleton(),
+      // The places' admin data is still coming: no verdict yet.
+      SearchStatus.data when judged.isLoading => const RestaurantListSkeleton(),
       SearchStatus.error => RestaurantErrorView(
         error: state.error!,
         onRetry: notifier.retry,
@@ -156,7 +145,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         Text(
           l10n.searchResultsLine(
             state.query,
-            inside.length + outside.length,
+            inside.length + unverified.length + outside.length,
             inside.length,
           ),
           style: TextStyle(fontSize: 14, color: p.textSecondary),
@@ -166,12 +155,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: V5SmallButton(
-              label: l10n.condResetAll,
+              label: l10n.homeRestart,
               onPressed: ref.read(conditionsProvider.notifier).clear,
             ),
           ),
         ],
         ...tiles(inside),
+        if (unverified.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          UnverifiedSection(items: unverified),
+        ],
         if (outside.isNotEmpty) ...[
           const SizedBox(height: 20),
           Text(

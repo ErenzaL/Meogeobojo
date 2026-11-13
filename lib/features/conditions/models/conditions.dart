@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../preferences/models/user_preferences.dart';
 
-/// 운영·편의 chips. Applied only to places whose data says so; a place with
-/// unknown data is never dropped (same rule as the rest of the app).
+/// 운영·편의 chips. A place whose data says no is dropped; a place with no data
+/// is a "정보 미확인" candidate, never a confirmed match.
 enum Amenity {
   noBreakTime,
   parking,
@@ -27,15 +27,16 @@ const kPartyOptions = [
 
 /// The conditions shared by Home, the map and search.
 ///
-/// "Hard" conditions remove places; "soft" ones only influence the order.
-/// Data the app does not have (price, hours, amenities) cannot exclude a
-/// place, so those conditions simply keep unknown places.
+/// "Hard" conditions decide whether a place matches (see `judgeRestaurant`):
+/// known data that fails removes it, missing data makes it "정보 미확인".
+/// Party and needs are kept from the saved preferences but have no data
+/// behind them, so they are not offered as filters and never counted.
 @immutable
 class Conditions {
   const Conditions({
     this.budget = BudgetOption.any,
     this.distance = DistanceOption.any,
-    this.openNowOnly = true,
+    this.openNowOnly = false,
     this.cuisines = const {},
     this.amenities = const {},
     this.party,
@@ -79,15 +80,14 @@ class Conditions {
 
   static const defaults = Conditions();
 
-  /// How many condition groups differ from the defaults (Home badge).
+  /// How many condition groups that change the results differ from the
+  /// defaults (Home badge). Party and needs change nothing, so they never count.
   int get activeCount => [
     budget != BudgetOption.any,
     distance != DistanceOption.any,
     openNowOnly != defaults.openNowOnly,
     cuisines.isNotEmpty,
     amenities.isNotEmpty,
-    party != null,
-    needs.isNotEmpty,
     untriedFirst,
     sort != SortMode.recommended,
   ].where((x) => x).length;

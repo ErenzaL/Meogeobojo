@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../recommendation/home_ranking.dart';
+import 'game_candidates.dart';
 import 'game_slice_colors.dart';
 
 /// Rungs of a ladder with [columns] lines and [rows] levels: rungs[row][gap]
@@ -45,8 +45,8 @@ class LadderGame extends StatefulWidget {
     this.random,
   });
 
-  final List<RankedRestaurant> items;
-  final ValueChanged<RankedRestaurant> onDone;
+  final List<GameCandidate> items;
+  final ValueChanged<GameCandidate> onDone;
   final Random? random;
 
   @override
@@ -138,9 +138,7 @@ class _LadderGameState extends State<LadderGame>
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 3),
                   child: _Slot(
-                    text: _revealed
-                        ? shortName(widget.items[i].restaurant.name, 5)
-                        : '?',
+                    text: _revealed ? shortName(widget.items[i].name, 5) : '?',
                     hit: _revealed && end == i,
                   ),
                 ),

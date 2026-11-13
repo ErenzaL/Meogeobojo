@@ -87,14 +87,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('legal links never invent a URL: unpublished -> says so', (
+    testWidgets('legal links open the documents bundled with the app', (
       tester,
     ) async {
       final h = await buildHarness();
       await pumpApp(tester, h, home: const LoginScreen());
       await tester.tap(find.text('이용약관'));
-      await tester.pump();
-      expect(find.text('문서가 아직 게시되지 않았어요.'), findsOneWidget);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('제1조 (목적)'), findsOneWidget);
     });
 
     testWidgets(
@@ -180,6 +180,7 @@ void main() {
       '"continue without signing in" goes to Home and keeps the university',
       (tester) async {
         final h = await buildHarness(
+          allCampuses: true,
           storage: {
             'app_language': 'ko',
             'selected_university_id': '5c0a8f3e-0003-4a6e-9b1d-000000000003',

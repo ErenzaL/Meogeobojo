@@ -33,7 +33,14 @@ class MeogeobojoApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       // Web: the URL path is read by the shell (shellTabForPath); the Navigator itself always starts at the app, so a
       // direct link such as /#/map can never end in an "unknown route" error. Mobile is untouched.
-      initialRoute: kIsWeb ? '/' : null,
+      onGenerateInitialRoutes: urlSync
+          ? (_) => [
+              MaterialPageRoute<void>(
+                settings: const RouteSettings(name: '/'),
+                builder: (_) => home,
+              ),
+            ]
+          : null,
       // Browser Back / Forward / typed URLs arrive as named pushes; they select the tab (see url_sync.dart).
       onGenerateRoute: urlSync ? generateUrlRoute : null,
       onUnknownRoute: urlSync ? unknownUrlRoute : null,
@@ -60,7 +67,7 @@ class MeogeobojoApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: home,
+      home: urlSync ? null : home,
     );
   }
 }

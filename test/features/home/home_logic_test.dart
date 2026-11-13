@@ -125,11 +125,14 @@ void main() {
     });
 
     test(
-      'known price over budget removes the place; known fit is a reason',
+      'known price over budget removes the place; a fitting meal is a reason',
       () {
         final insights = {
           'A': const RestaurantInsight(minPriceKrw: 9000),
-          'B': const RestaurantInsight(minPriceKrw: 7000),
+          'B': const RestaurantInsight(
+            minPriceKrw: 7000,
+            menus: [MenuLine(priceKrw: 7000, category: '식사')],
+          ),
         };
         final r = rank(
           [a, b],
@@ -148,17 +151,15 @@ void main() {
         'B': const RestaurantInsight(lastOrderMinutes: 21 * 60 + 30),
       };
       expect(
-        rank([a, b], insights: insights).map((e) => e.restaurant.kakaoId),
-        ['B'],
-      );
-      expect(
         rank(
           [a, b],
-          c: const Conditions(openNowOnly: false),
+          c: const Conditions(openNowOnly: true),
           insights: insights,
-        ),
-        hasLength(2),
+        ).map((e) => e.restaurant.kakaoId),
+        ['B'],
       );
+      // Off by default: then the hours are not a condition at all.
+      expect(rank([a, b], insights: insights), hasLength(2));
     });
 
     test('price and rating sorts put unknown values last', () {
@@ -244,9 +245,17 @@ void main() {
         const Conditions(
           budget: BudgetOption.max8000,
           cuisines: {Cuisine.korean, Cuisine.chinese},
-          openNowOnly: false,
+          openNowOnly: true,
         ).activeCount,
         3,
+      );
+      // Party and needs change nothing, so they never look applied.
+      expect(
+        const Conditions(
+          party: CompanionType.solo,
+          needs: {Need.quickMeal},
+        ).activeCount,
+        0,
       );
     });
 

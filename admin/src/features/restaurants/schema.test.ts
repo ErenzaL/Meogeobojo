@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildCsv, parseRestaurantCsv } from './csv'
-import { emptyRestaurantForm, fromRow, restaurantSchema, toRow } from './schema'
+import { emptyRestaurantForm, fromRow, restaurantSchema, snapshotFromForm, toRow } from './schema'
 
 const valid = { ...emptyRestaurantForm, name_ko: '국수집' }
 
@@ -35,6 +35,14 @@ describe('toRow / fromRow', () => {
     expect(f).toMatchObject({ name_ko: 'A', kakao_place_id: 'k1', price_min_krw: '9000', last_order_time: '21:30', dining_purposes: '혼밥', visibility: 'hidden', business_status: 'open', university_ids: ['u1'] })
   })
   it('falls back to draft for unknown visibility', () => expect(fromRow({ name_ko: 'A', visibility: 'weird' }, []).visibility).toBe('draft'))
+  it('keeps the opening time in opening_hours.open, without wiping other keys', () => {
+    expect(restaurantSchema.safeParse({ ...valid, open_time: '24:00' }).success).toBe(false)
+    expect(toRow({ ...valid, open_time: '11:00' }).opening_hours).toEqual({ open: '11:00' })
+    expect(fromRow({ name_ko: 'A', opening_hours: { open: '11:00:00' } }, []).open_time).toBe('11:00')
+    const base = { opening_hours: { note: '일요일 휴무', open: '10:00' } }
+    expect(snapshotFromForm({ ...valid, open_time: '11:30' }, base).opening_hours).toEqual({ note: '일요일 휴무', open: '11:30' })
+    expect(snapshotFromForm({ ...valid, open_time: '' }, base).opening_hours).toEqual({ note: '일요일 휴무' })
+  })
 })
 
 describe('CSV', () => {

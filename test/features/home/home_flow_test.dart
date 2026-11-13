@@ -32,6 +32,7 @@ Future<(ProviderContainer, FakeRestaurantRepository)> pumpApp(
         ],
       );
   final h = await buildHarness(
+    allCampuses: true,
     storage: {'app_language': 'ko', ...prefs},
     restaurants: fake,
   );

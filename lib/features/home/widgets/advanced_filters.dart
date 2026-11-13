@@ -84,34 +84,6 @@ class _PanelBody extends ConsumerWidget {
         ),
       ),
       CondSection(
-        title: l10n.condParty,
-        child: ChipWrap(
-          children: [
-            for (final t in kPartyOptions)
-              PillChip(
-                label: partyLabelOf(l10n, t),
-                selected: c.party == t,
-                onTap: () => set(
-                  (x) => x.copyWith(party: () => x.party == t ? null : t),
-                ),
-              ),
-          ],
-        ),
-      ),
-      CondSection(
-        title: l10n.condNeeds,
-        child: ChipWrap(
-          children: [
-            for (final n in Need.values)
-              PillChip(
-                label: needLabelOf(l10n, n),
-                selected: c.needs.contains(n),
-                onTap: () => set((x) => x.copyWith(needs: toggled(x.needs, n))),
-              ),
-          ],
-        ),
-      ),
-      CondSection(
         title: l10n.condOps,
         child: ChipWrap(
           children: [
@@ -219,7 +191,7 @@ class _PanelBody extends ConsumerWidget {
   }
 }
 
-/// One removable chip per condition that differs from the defaults, then "모두 풀기". Hidden when nothing is applied.
+/// One removable chip per condition that differs from the defaults, then "초기화". Hidden when nothing is applied.
 /// Removing a chip resets only that condition.
 class AppliedFilterChips extends ConsumerWidget {
   const AppliedFilterChips({super.key});
@@ -248,26 +220,13 @@ class AppliedFilterChips extends ConsumerWidget {
           cuisineLabel(l10n, k),
           () => set((x) => x.copyWith(cuisines: {...x.cuisines}..remove(k))),
         ),
-      if (c.party != null)
-        (
-          partyLabelOf(l10n, c.party!),
-          () => set((x) => x.copyWith(party: () => null)),
-        ),
-      for (final n in c.needs)
-        (
-          needLabelOf(l10n, n),
-          () => set((x) => x.copyWith(needs: {...x.needs}..remove(n))),
-        ),
       for (final a in c.amenities)
         (
           amenityLabelOf(l10n, a),
           () => set((x) => x.copyWith(amenities: {...x.amenities}..remove(a))),
         ),
-      if (c.openNowOnly != Conditions.defaults.openNowOnly)
-        (
-          l10n.homeFilterOpenAny,
-          () => set((x) => x.copyWith(openNowOnly: true)),
-        ),
+      if (c.openNowOnly)
+        (l10n.mapOpenNowChip, () => set((x) => x.copyWith(openNowOnly: false))),
       if (c.untriedFirst)
         (l10n.condUntried, () => set((x) => x.copyWith(untriedFirst: false))),
       if (c.sort != SortMode.recommended)

@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/campus_points.dart';
+import '../../../core/utils/geo.dart';
 import '../../../l10n/app_localizations.dart';
 
-enum OriginKind { campusCenter, gate, college, building, pin }
+enum OriginKind { campusCenter, gate, dorm, building, pin }
 
 /// Where the walk starts. Everything distance-related on Home, the map and
 /// the sheets is measured from here (straight line, like the rest of the app).
@@ -15,13 +16,14 @@ class Origin {
     required this.name,
     required this.latitude,
     required this.longitude,
+    this.zoomLevel,
   });
 
   factory Origin.fromPoint(CampusPoint p) => Origin(
     id: p.id,
     kind: switch (p.kind) {
       CampusPointKind.gate => OriginKind.gate,
-      CampusPointKind.college => OriginKind.college,
+      CampusPointKind.dorm => OriginKind.dorm,
       CampusPointKind.building => OriginKind.building,
     },
     name: p.name,
@@ -30,6 +32,7 @@ class Origin {
   );
 
   factory Origin.fromPin(SavedPin p) => Origin(
+    zoomLevel: p.zoomLevel,
     id: p.id,
     kind: OriginKind.pin,
     name: p.name,
@@ -46,8 +49,16 @@ class Origin {
   final double latitude;
   final double longitude;
 
+  /// The map zoom a pin was placed at (pins only), so editing it starts there.
+  final int? zoomLevel;
+
   String label(AppLocalizations l10n) =>
       kind == OriginKind.campusCenter ? l10n.originCampusCenter : name;
+
+  /// Straight-line metres from here to ([lat], [lng]): the one way every
+  /// screen measures a place.
+  int metersTo(double lat, double lng) =>
+      haversineMeters(latitude, longitude, lat, lng).round();
 
   @override
   bool operator ==(Object other) => other is Origin && other.id == id;
@@ -65,6 +76,7 @@ class SavedPin {
     required this.name,
     required this.latitude,
     required this.longitude,
+    this.zoomLevel,
   });
 
   final String id;
@@ -73,12 +85,16 @@ class SavedPin {
   final double latitude;
   final double longitude;
 
+  /// The map zoom it was placed at (null for pins saved before it was kept).
+  final int? zoomLevel;
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'university_id': universityId,
     'name': name,
     'lat': latitude,
     'lng': longitude,
+    'zoom': ?zoomLevel,
   };
 
   static SavedPin? fromJson(Object? j) {
@@ -90,12 +106,14 @@ class SavedPin {
     final lng = j['lng'];
     if (id is! String || uni is! String || name is! String) return null;
     if (lat is! num || lng is! num) return null;
+    final zoom = j['zoom'];
     return SavedPin(
       id: id,
       universityId: uni,
       name: name,
       latitude: lat.toDouble(),
       longitude: lng.toDouble(),
+      zoomLevel: zoom is int ? zoom : null,
     );
   }
 }

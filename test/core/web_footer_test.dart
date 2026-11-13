@@ -59,11 +59,15 @@ void main() {
       ) async {
         await open(tester, tab: e.value);
         await toFooter(tester);
-        expect(find.byKey(const ValueKey('web-footer')), findsOneWidget);
-        expect(find.text('먹어보조 소개'), findsOneWidget);
-        expect(find.text('공지사항'), findsOneWidget);
-        expect(find.text('문의 및 제안'), findsOneWidget);
-        expect(find.text('서비스 정보'), findsOneWidget);
+        final footer = find.byKey(const ValueKey('web-footer'));
+        expect(footer, findsOneWidget);
+        // MY also lists 공지사항 / 문의 및 제안 (고객 지원), so look inside the footer.
+        Finder inFooter(String t) =>
+            find.descendant(of: footer, matching: find.text(t));
+        expect(inFooter('먹어보조 소개'), findsOneWidget);
+        expect(inFooter('공지사항'), findsOneWidget);
+        expect(inFooter('문의 및 제안'), findsOneWidget);
+        expect(inFooter('서비스 정보'), findsOneWidget);
         expect(find.textContaining('© '), findsOneWidget);
       });
 
@@ -146,16 +150,14 @@ void main() {
     );
 
     testWidgets(
-      'no contact channel configured: it says so, there is no invented address or dead button',
+      '의견 보내기 opens the in-app form, which asks a guest to sign in first',
       (tester) async {
         await open(tester, tab: ShellTabs.profile);
         await toFooter(tester);
-        expect(
-          find.byKey(const ValueKey('footer-contact-not-ready')),
-          findsOneWidget,
-        );
-        expect(find.byKey(const ValueKey('footer-feedback')), findsNothing);
         expect(find.textContaining('@'), findsNothing);
+        await tester.tap(find.byKey(const ValueKey('footer-feedback')));
+        await tester.pumpAndSettle();
+        expect(find.text('문의와 제안은 로그인한 뒤에 보낼 수 있어요.'), findsOneWidget);
       },
     );
 

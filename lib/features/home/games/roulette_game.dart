@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
-import '../../recommendation/home_ranking.dart';
+import 'game_candidates.dart';
 import 'game_slice_colors.dart';
 
 /// A wheel with one slice per place. The winner is drawn first, then the wheel
@@ -19,8 +19,8 @@ class RouletteGame extends StatefulWidget {
     this.random,
   });
 
-  final List<RankedRestaurant> items;
-  final ValueChanged<RankedRestaurant> onDone;
+  final List<GameCandidate> items;
+  final ValueChanged<GameCandidate> onDone;
   final Random? random;
 
   @override
@@ -94,9 +94,7 @@ class _RouletteGameState extends State<RouletteGame>
                         child: CustomPaint(
                           size: Size.square(size),
                           painter: _WheelPainter(
-                            names: [
-                              for (final i in widget.items) i.restaurant.name,
-                            ],
+                            names: [for (final i in widget.items) i.name],
                             palette: p,
                             textStyle: TextStyle(
                               fontFamily: AppText.fontFamily,

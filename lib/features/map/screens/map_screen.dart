@@ -10,9 +10,11 @@ import '../../../core/config/env.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/geo.dart';
 import '../../../core/widgets/mascot_message.dart';
+import '../../home/providers/home_providers.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/models/origin.dart';
 import '../../origin/providers/origin_providers.dart';
+import '../../origin/widgets/origin_sheet.dart';
 import '../../search/screens/search_screen.dart';
 import '../../university/widgets/university_sheet.dart';
 import '../../../core/widgets/v5_widgets.dart';
@@ -22,7 +24,9 @@ import '../utils/marker_art.dart';
 import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
 import '../widgets/map_places_sheet.dart';
-import '../../recommendation/providers/ranking_providers.dart';
+import '../../recommendation/home_ranking.dart';
+import '../../restaurants/providers/restaurant_providers.dart';
+import '../../restaurants/utils/directions.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../university/providers/university_providers.dart';
@@ -43,6 +47,14 @@ final kakaoMapInitProvider = FutureProvider<void>((ref) async {
 
 const _campusMarkerId = 'campus';
 
+/// The pins: Home's confirmed matches (same categories, conditions and data),
+/// so the map never shows a place Home would not.
+final mapPlacesProvider = Provider<AsyncValue<List<Restaurant>>>(
+  (ref) => ref
+      .watch(homeMatchesProvider)
+      .whenData((l) => [for (final r in l) r.restaurant]),
+);
+
 class MapScreen extends ConsumerStatefulWidget {
   const MapScreen({super.key});
 
@@ -55,9 +67,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
   KakaoMapController? _controller;
   bool _stylesReady = false;
 
-  /// Marker styles already handed to the map: one per tag text ("t:8,000~",
-  /// "s:8,000~" when selected, "o:정문" for the origin).
+  /// Marker styles already handed to the map: "pin" (every unselected place),
+  /// "s:{id}" (the selected place, under its name) and "o:정문" (the origin).
   final _styles = <String>{};
+
+  /// A tap on the map itself clears the selection, unless a pin reported the
+  /// tap meanwhile (the SDK has no "empty map tapped" event, so a tap that no
+  /// pin claims within this delay is taken as one). Phones only: on the web
+  /// the map's own pointer events never reach Flutter (the card has ×).
+  Timer? _deselectTimer;
+  Offset? _downAt;
 
   /// Web: fit the first results (with the campus) into view once per campus, never again, so later filter changes
   /// and the user's own panning/zooming are left alone.
@@ -117,6 +136,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _relayoutTimer?.cancel();
+    _deselectTimer?.cancel();
     _clickSub?.cancel();
     super.dispose();
   }
@@ -164,25 +184,81 @@ class _MapScreenState extends ConsumerState<MapScreen>
   }
 
   void _onMarkerTapped(LabelClickEvent e) {
-    final items = ref.read(filteredRestaurantsProvider).value ?? const [];
+    _deselectTimer?.cancel();
+    final items = ref.read(mapPlacesProvider).value ?? const [];
     final match = items.where((r) => r.kakaoId == e.labelId);
-    if (match.isNotEmpty && mounted) _select(match.first);
+    if (match.isEmpty || !mounted) return;
+    _select(match.first);
+    unawaited(_revealAboveCard(match.first));
   }
 
-  /// Selects [r] (or nothing) and swaps the two affected pins: the old one back to its tag, the new one to the dark
-  /// chip. Only those two markers change, so the rest of the map does not flicker.
+  void _onMapPointerUp(PointerUpEvent e) {
+    final down = _downAt;
+    _downAt = null;
+    if (down == null || _selected == null) return;
+    if ((e.position - down).distance > 8) return; // a drag, not a tap
+    _deselectTimer?.cancel();
+    _deselectTimer = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) _select(null);
+    });
+  }
+
+  /// The card covers the bottom of the map: when the chosen pin is under it,
+  /// the map moves so the pin sits in the open part. Same zoom.
+  Future<void> _revealAboveCard(Restaurant r) async {
+    final c = _controller;
+    final box = _mapBox;
+    if (c == null || box == null) return;
+    // Screen points come in the same units the marker bitmaps are drawn in.
+    final unit = markerScale(MediaQuery.devicePixelRatioOf(context));
+    try {
+      final at = await c.toScreenPoint(
+        position: LatLng(latitude: r.latitude, longitude: r.longitude),
+      );
+      if (at == null || !mounted) return;
+      final y = at.dy / unit;
+      final open = box.height - _kCardReserve - _bottomInset;
+      if (y > 24 && y < open - 16) return; // already in view
+      final shift = y - open * 0.45;
+      final centre = await c.fromScreenPoint(
+        point: Offset(box.width / 2, box.height / 2 + shift) * unit,
+      );
+      if (centre == null || !mounted) return;
+      await c.moveCamera(
+        cameraUpdate: CameraUpdate(position: centre, type: 0),
+        animation: const CameraAnimation(
+          duration: 300,
+          autoElevation: false,
+          isConsecutive: false,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Map reveal failed: $e');
+    }
+  }
+
+  /// The map's own size (logical px), for [_revealAboveCard].
+  Size? _mapBox;
+
+  /// The pin swap in progress. Swaps run one after another: two quick taps
+  /// never interleave their remove / add calls (which could leave an older
+  /// pin drawn as the chosen one next to the new one).
+  Future<void> _restyling = Future.value();
+
+  /// Selects [r] (or nothing) and swaps the two affected pins: the old one back
+  /// to a plain pin, the new one to the larger pin under its name. Only those
+  /// two markers change, so the rest of the map does not flicker.
   void _select(Restaurant? r) {
     final old = _selected;
     setState(() => _selected = r);
     if (old?.kakaoId == r?.kakaoId) return;
     final look = _tagLook();
-    unawaited(() async {
+    _restyling = _restyling.then((_) async {
       final c = _controller;
-      if (c == null || !_stylesReady) return;
+      if (c == null || !_stylesReady || !mounted) return;
       final shown = {
         for (final x
-            in ref.read(filteredRestaurantsProvider).value ??
-                const <Restaurant>[])
+            in ref.read(mapPlacesProvider).value ?? const <Restaurant>[])
           x.kakaoId: x,
       };
       try {
@@ -196,22 +272,15 @@ class _MapScreenState extends ConsumerState<MapScreen>
       } catch (e) {
         debugPrint('Map marker restyle failed: $e');
       }
-    }());
+    });
   }
 
-  /// What the tags need from the context, read once before any await: the price wording and the bitmap scale.
+  /// What the pins need from the context, read once before any await: the
+  /// wording and the bitmap scale.
   ({AppLocalizations l10n, double scale}) _tagLook() => (
     l10n: context.l10n,
     scale: markerScale(MediaQuery.devicePixelRatioOf(context)),
   );
-
-  /// What a place's tag says: its lowest price when an admin entered one (as on the Home cards), otherwise its kind.
-  String _tagText(Restaurant r, AppLocalizations l10n) {
-    final price = ref.read(restaurantInsightsProvider)[r.kakaoId]?.minPriceKrw;
-    if (price != null) return l10n.homePriceFrom(price);
-    final kind = r.categoryTag;
-    return kind.isEmpty ? '•' : kind;
-  }
 
   /// Hands the map a style for [id] the first time it is needed.
   Future<void> _ensureStyle(
@@ -239,12 +308,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
     ({AppLocalizations l10n, double scale}) look,
   ) async {
     final selected = _selected?.kakaoId == r.kakaoId;
-    final text = _tagText(r, look.l10n);
-    final style = '${selected ? 's' : 't'}:$text';
+    final style = selected ? 's:${r.kakaoId}:${r.name}' : 'pin';
     await _ensureStyle(
       c,
       style,
-      () => renderPlaceTag(text, selected: selected, scale: look.scale),
+      () => renderPlacePin(
+        selected: selected,
+        scale: look.scale,
+        name: r.name,
+        kind: r.categoryTag,
+      ),
     );
     return MarkerOption(
       id: r.kakaoId,
@@ -266,7 +339,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
     if (c == null || !_stylesReady || origin == null || !mounted) return;
     final gen = ++_syncGen;
     bool stale() => !mounted || gen != _syncGen;
-    final items = ref.read(filteredRestaurantsProvider).value ?? const [];
+    final items = ref.read(mapPlacesProvider).value ?? const [];
     final originLabel = origin.label(context.l10n);
     final look = _tagLook();
     try {
@@ -350,10 +423,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
   }
 
+  /// Moves the map only: the selected place stays selected.
   Future<void> _moveTo(double lat, double lng) async {
     final c = _controller;
     if (c == null) return;
-    _select(null);
     try {
       await c.moveCamera(
         cameraUpdate: kIsWeb
@@ -390,7 +463,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
       if (next == ShellTabs.map && prev != next) _scheduleRelayout();
     });
     // Markers follow the shared conditions, not the raw nearby list.
-    ref.listen(filteredRestaurantsProvider, (_, _) => _syncMarkers());
+    ref.listen(mapPlacesProvider, (_, _) => _syncMarkers());
     ref.listen(mapFocusProvider, (_, next) {
       if (next != null) _applyFocusRequest();
     });
@@ -467,7 +540,10 @@ class _MapScreenState extends ConsumerState<MapScreen>
             ),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: gutter),
-              child: const MapFilterBar(),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [OriginReselectBanner(), MapFilterBar()],
+              ),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -508,110 +584,236 @@ class _MapScreenState extends ConsumerState<MapScreen>
     );
   }
 
-  /// The map with its floating cards. On a wide screen the places list is a panel beside it instead of a sheet over it.
+  /// The map with its floating cards. On a wide screen the places list is a
+  /// panel beside it instead of a sheet over it. The chosen place's card sits
+  /// at the bottom (above the navigation bar); on a phone it replaces the
+  /// list sheet while a place is chosen.
   Widget _mapStack(BuildContext context, bool wide) {
     final l10n = context.l10n;
     final p = context.palette;
     final init = ref.watch(kakaoMapInitProvider);
     final univ = ref.watch(selectedUniversityProvider).value;
     final origin = ref.watch(originProvider);
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: init.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) =>
-                _MapError(onRetry: () => ref.invalidate(kakaoMapInitProvider)),
-            data: (_) => univ == null
-                ? const Center(child: CircularProgressIndicator())
-                : KakaoMap(
-                    onMapCreated: _onMapCreated,
-                    initialPosition: LatLng(
-                      latitude: origin?.latitude ?? univ.latitude,
-                      longitude: origin?.longitude ?? univ.longitude,
-                    ),
-                    initialLevel: kIsWeb ? kWebCampusInitialLevel : 14,
-                  ),
-          ),
-        ),
-        if (_selected != null)
-          Positioned(
-            left: AppSpacing.screenH,
-            right: AppSpacing.screenH,
-            top: 12,
-            child: _SelectedCard(
-              restaurant: _selected!,
-              onClose: () => _select(null),
-            ),
-          ),
-        if (origin != null)
-          Positioned(
-            right: 16,
-            top: _selected != null ? 92 : 12,
-            child: Material(
-              color: p.card,
-              elevation: 2,
-              borderRadius: BorderRadius.circular(14),
-              child: IconButton(
-                tooltip: l10n.mapRecenter,
-                onPressed: () => _moveTo(origin.latitude, origin.longitude),
-                icon: const Icon(Icons.my_location_rounded),
+    // The card always shows the place the pin and label show: looked up in the
+    // current results, so a place a filter removed loses its card too.
+    final matches = ref.watch(homeMatchesProvider);
+    final chosenId = _selected?.kakaoId;
+    final chosen = chosenId == null
+        ? null
+        : matches.value
+              ?.where((x) => x.restaurant.kakaoId == chosenId)
+              .firstOrNull;
+    if (chosenId != null && matches.hasValue && chosen == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _selected?.kakaoId == chosenId) _select(null);
+      });
+    }
+    return LayoutBuilder(
+      builder: (context, box) {
+        _mapBox = box.biggest;
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: init.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => _MapError(
+                  onRetry: () => ref.invalidate(kakaoMapInitProvider),
+                ),
+                data: (_) => univ == null
+                    ? const Center(child: CircularProgressIndicator())
+                    : Listener(
+                        onPointerDown: (e) => _downAt = e.position,
+                        onPointerUp: _onMapPointerUp,
+                        child: KakaoMap(
+                          onMapCreated: _onMapCreated,
+                          initialPosition: LatLng(
+                            latitude: origin?.latitude ?? univ.latitude,
+                            longitude: origin?.longitude ?? univ.longitude,
+                          ),
+                          initialLevel: kIsWeb ? kWebCampusInitialLevel : 14,
+                        ),
+                      ),
               ),
             ),
-          ),
-        if (!wide) const MapPlacesSheet(),
-      ],
+            if (origin != null)
+              Positioned(
+                right: 16,
+                top: 12,
+                child: Material(
+                  color: p.card,
+                  elevation: 2,
+                  borderRadius: BorderRadius.circular(14),
+                  child: IconButton(
+                    tooltip: l10n.mapRecenter,
+                    onPressed: () => _moveTo(origin.latitude, origin.longitude),
+                    icon: const Icon(Icons.my_location_rounded),
+                  ),
+                ),
+              ),
+            if (!wide && chosen == null) const MapPlacesSheet(),
+            if (chosen != null)
+              Positioned(
+                left: 12,
+                right: 12,
+                bottom: 12 + MediaQuery.paddingOf(context).bottom,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: MapPlaceCard(
+                      item: chosen,
+                      onClose: () => _select(null),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _SelectedCard extends StatelessWidget {
-  const _SelectedCard({required this.restaurant, required this.onClose});
+/// Room the chosen place's card takes at the bottom of the map (logical px).
+const _kCardReserve = 210.0;
 
-  final Restaurant restaurant;
+/// The chosen place: name and kind, its menu and price, how far it is from
+/// the start point, and the two things to do next. Narrow phones keep both
+/// buttons whole (they stack under 300 px).
+class MapPlaceCard extends ConsumerWidget {
+  const MapPlaceCard({super.key, required this.item, required this.onClose});
+
+  final RankedRestaurant item;
   final VoidCallback onClose;
 
   @override
-  Widget build(BuildContext context) {
-    final r = restaurant;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final r = item.restaurant;
+    final origin = ref.watch(originProvider);
+    final menus =
+        ref.watch(restaurantMenusProvider(r.kakaoId)).value ?? const [];
+    final menu =
+        menus.where((m) => m.representative && m.available).firstOrNull ??
+        menus.where((m) => m.recommended && m.available).firstOrNull ??
+        menus.where((m) => m.available).firstOrNull;
+    final price = menu?.priceKrw ?? item.insight.minPriceKrw;
+    final menuLine = [
+      ?menu?.name,
+      if (price != null)
+        menu?.priceKrw != null
+            ? l10n.restaurantPriceWon(price)
+            : l10n.homePriceFrom(price),
+    ].join(' · ');
+
+    void directions() {
+      final o = origin;
+      if (o == null) return;
+      ref.read(activeRecommendationProvider.notifier).markWent(r);
+      openDirections(
+        context,
+        to: r,
+        fromName: o.label(l10n),
+        fromLat: o.latitude,
+        fromLng: o.longitude,
+      );
+    }
+
+    final details = OutlinedButton.icon(
+      onPressed: () => openRestaurantDetail(context, r),
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        side: BorderSide(color: p.borderStrong),
+      ),
+      icon: const Icon(Icons.info_outline_rounded, size: 19),
+      label: Text(l10n.mapCardDetails),
+    );
+    final route = FilledButton.icon(
+      onPressed: origin == null ? null : directions,
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+      icon: const Icon(Icons.directions_outlined, size: 19),
+      label: Text(l10n.homeDirections),
+    );
+
     return Material(
-      color: context.palette.card,
+      key: ValueKey('map-card-${r.kakaoId}'),
+      color: p.card,
       elevation: 6,
       borderRadius: BorderRadius.circular(AppRadius.card),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        onTap: () => openRestaurantDetail(context, r),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      r.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.title,
-                    ),
-                    Text(
-                      context.l10n.restaurantTagDistance(
-                        r.categoryTag,
-                        formatDistance(r.distanceMeters),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 6, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.title,
                       ),
-                      style: AppText.caption(context),
-                    ),
-                  ],
+                      if (r.categoryTag.isNotEmpty)
+                        Text(r.categoryTag, style: AppText.caption(context)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: onClose,
+                  icon: const Icon(Icons.close_rounded),
+                  tooltip: l10n.commonClose,
+                ),
+              ],
+            ),
+            if (menuLine.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                menuLine,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              IconButton(
-                onPressed: onClose,
-                icon: const Icon(Icons.close_rounded),
-                tooltip: context.l10n.commonClose,
-              ),
             ],
-          ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Text(
+                [
+                  if (origin != null) l10n.originFromLabel(origin.label(l10n)),
+                  l10n.homeWalkAbout(item.walkMinutes),
+                  l10n.restaurantDistanceStraight(formatDistance(item.meters)),
+                ].join(' · '),
+                style: TextStyle(fontSize: 13.5, color: p.textSecondary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: LayoutBuilder(
+                builder: (context, box) => box.maxWidth < 300
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [route, const SizedBox(height: 8), details],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(child: details),
+                          const SizedBox(width: 10),
+                          Expanded(child: route),
+                        ],
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );

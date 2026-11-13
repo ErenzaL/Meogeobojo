@@ -50,7 +50,11 @@ void main() {
       lat: 36.77,
       lng: 126.93,
       conditions: c,
-      insights: {'B': const RestaurantInsight(minPriceKrw: 7000)},
+      insights: {
+        'B': const RestaurantInsight(
+          menus: [MenuLine(priceKrw: 7000, category: '식사')],
+        ),
+      },
       nowMinutes: 12 * 60,
     );
 
@@ -59,7 +63,7 @@ void main() {
       expect(r.every((x) => x.verified), isTrue);
     });
 
-    test('a budget puts the place with a known price first', () {
+    test('a budget puts the place with a known meal price first', () {
       final r = rank(const Conditions(budget: BudgetOption.max8000));
       expect([for (final x in r) x.restaurant.kakaoId], ['B', 'A']);
       expect([for (final x in r) x.verified], [true, false]);
@@ -128,7 +132,10 @@ void main() {
 
   test('먹었어요 is kept per account and survives a restart', () async {
     final c = await containerWith(const {}, signedIn: true);
-    c.read(mealRecordsProvider.notifier).add(fakeRestaurant('A'));
+    expect(
+      await c.read(mealRecordsProvider.notifier).add(fakeRestaurant('A')),
+      isTrue,
+    );
     expect(c.read(mealRecordsProvider).single.kakaoId, 'A');
 
     final sp = c.read(sharedPreferencesProvider);
@@ -149,5 +156,26 @@ void main() {
     );
     addTearDown(guest.dispose);
     expect(guest.read(mealRecordsProvider), isEmpty);
+  });
+
+  test('two 먹었어요 at once are both kept (the second write does not start '
+      'from the list the first one had not saved yet)', () async {
+    final c = await containerWith(const {}, signedIn: true);
+    final notifier = c.read(mealRecordsProvider.notifier);
+    final both = await Future.wait([
+      notifier.add(fakeRestaurant('A')),
+      notifier.add(fakeRestaurant('B')),
+    ]);
+    expect(both, [true, true]);
+    expect(
+      [for (final m in c.read(mealRecordsProvider)) m.kakaoId],
+      ['B', 'A'],
+    );
+    final stored = jsonDecode(
+      c
+          .read(sharedPreferencesProvider)
+          .getString(mealRecordsPrefsKey(fakeUser().id))!,
+    );
+    expect((stored as List).length, 2);
   });
 }

@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../restaurants/screens/restaurant_detail_screen.dart';
+import '../../restaurants/screens/restaurant_link_screen.dart';
+import '../../restaurants/utils/restaurant_link.dart';
 import '../providers/shell_tab_provider.dart';
 
 /// Browser address bar <-> tabs. The five tabs have URLs (`/#/home`, `/#/map`, `/#/community`, `/#/missions`, `/#/profile`);
@@ -46,6 +49,9 @@ class UrlTabRoute extends PageRouteBuilder<void> {
 }
 
 Route<dynamic>? generateUrlRoute(RouteSettings settings) {
+  // A restaurant's own address (a pasted or shared link, Forward).
+  final link = restaurantLinkOf(settings.name);
+  if (link != null) return restaurantLinkRoute(link);
   final tab = shellTabForPath(settings.name);
   return tab == null ? null : UrlTabRoute(tab);
 }
@@ -85,16 +91,45 @@ class UrlHistoryObserver extends NavigatorObserver {
 
   final WidgetRef _ref;
 
+  /// The address each open screen stands at, so closing one puts back the
+  /// address of the screen under it.
+  final _addresses = Expando<Uri>('url');
+
+  Uri _tabAddress() => Uri(path: shellPathFor(_ref.read(shellTabProvider)));
+
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     if (previousRoute == null || route is UrlTabRoute || route is! PageRoute) {
       return;
     }
     if (!_ref.read(urlSyncEnabledProvider)) return;
-    final tab = _ref.read(shellTabProvider);
-    _ref.read(urlReporterProvider)(
-      Uri(path: shellPathFor(tab)),
-      replace: false,
-    );
+    if (route is RestaurantDetailRoute) {
+      // A restaurant has its own address, so a refresh keeps it open.
+      final uri = Uri.parse(route.path);
+      _addresses[route] = uri;
+      if (!route.fromBrowser) {
+        _ref.read(urlReporterProvider)(uri, replace: false);
+      }
+      return;
+    }
+    // Any other screen keeps the address of the one under it: opened over a
+    // restaurant it stays that restaurant's, so a refresh reopens the place.
+    final uri = _addresses[previousRoute] ?? _tabAddress();
+    _addresses[route] = uri;
+    _ref.read(urlReporterProvider)(uri, replace: false);
+  }
+
+  /// Closing a screen with the app's own back button: the address bar goes
+  /// back to the screen now on top (a restaurant must not stay named after it
+  /// is closed, a refresh would reopen it).
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    final was = _addresses[route];
+    if (was == null || !_ref.read(urlSyncEnabledProvider)) return;
+    final now =
+        (previousRoute == null ? null : _addresses[previousRoute]) ??
+        _tabAddress();
+    if (now == was) return;
+    _ref.read(urlReporterProvider)(now, replace: true);
   }
 }

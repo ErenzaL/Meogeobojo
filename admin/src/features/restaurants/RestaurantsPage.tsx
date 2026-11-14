@@ -13,12 +13,14 @@ import BulkVisibilityDialog from './BulkVisibilityDialog'
 import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import KakaoImport from './KakaoImport'
 import { buildCsv, parseRestaurantCsv, toRow, type ParsedRow } from './csv'
+import { KakaoLiveCell } from './KakaoLiveUi'
+import { campusesOf } from './useKakaoRestaurantDetails'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
 
 type Row = {
   id: string; kakao_place_id: string | null; name_ko: string; category: string | null; address: string | null
-  visibility: Visibility; updated_at: string; description: string | null; image_url?: string | null
-  restaurant_university_links?: { universities: { name_ko: string } | null }[]
+  visibility: Visibility; updated_at: string; description: string | null; image_url?: string | null; latitude?: number | null; longitude?: number | null
+  restaurant_university_links?: { university_id?: string; universities: { name_ko: string } | null }[]
 }
 const PAGE = 20
 const tone = { draft: 'neutral', published: 'green', hidden: 'amber', archived: 'red' } as const
@@ -30,7 +32,7 @@ export function useUniversities() {
     queryFn: async () => {
       const { data, error } = await supabase.from('universities').select('id,name_ko,is_active,latitude,longitude,search_radius_m').order('name_ko')
       if (error) throw error
-      return data as { id: string; name_ko: string; is_active: boolean; latitude: number | null; longitude: number | null }[]
+      return data as { id: string; name_ko: string; is_active: boolean; latitude: number | null; longitude: number | null; search_radius_m?: number | null }[]
     },
   })
 }
@@ -61,6 +63,7 @@ export default function RestaurantsPage() {
   const qc = useQueryClient()
   const { can } = useAuth()
   const [page, setPage] = useState(0)
+  const [showKakao, setShowKakao] = useState(false) // live Kakao info per row: off until asked, so a long list never calls Kakao by itself
   const [search, setSearch] = useState('')
   const [visibility, setVisibility] = useState('')
   const [university, setUniversity] = useState('')
@@ -107,7 +110,7 @@ export default function RestaurantsPage() {
     queryFn: async () => {
       const q = applyFilters(supabase
         .from('restaurant_overrides')
-        .select(university ? '*, restaurant_university_links!inner(university_id, universities(name_ko))' : '*, restaurant_university_links(universities(name_ko))', { count: 'exact' }))
+        .select(university ? '*, restaurant_university_links!inner(university_id, universities(name_ko))' : '*, restaurant_university_links(university_id, universities(name_ko))', { count: 'exact' }))
       const { data, error, count } = await q.order(sort.id, { ascending: !sort.desc }).range(page * PAGE, page * PAGE + PAGE - 1)
       if (error) throw error
       return { rows: data as unknown as Row[], total: count ?? 0 }
@@ -182,6 +185,11 @@ export default function RestaurantsPage() {
         <div><Link className="font-semibold hover:underline" to={`/restaurants/${r.id}`}>{r.name_ko}</Link>
           <div className="text-xs text-muted">{r.kakao_place_id ? `Kakao ID ${r.kakao_place_id}` : '직접 등록'}</div></div></div>) },
     { accessorKey: 'category', header: '카테고리', enableSorting: false, cell: ({ getValue }) => (getValue() as string | null) ?? '—' },
+    { id: 'kakao', header: '카카오 실시간', enableSorting: false, cell: ({ row: { original: r } }) => {
+      const byId = new Map((unis.data ?? []).map((u) => [u.id, u]))
+      const campuses = campusesOf((r.restaurant_university_links ?? []).map((l) => (l.university_id ? byId.get(l.university_id) : undefined)))
+      return <KakaoLiveCell placeId={r.kakao_place_id} name={r.name_ko} enabled={showKakao} location={{ campuses, near: r.latitude != null && r.longitude != null ? { latitude: r.latitude, longitude: r.longitude } : null }} />
+    } },
     { id: 'university', header: '대학교', enableSorting: false, cell: ({ row: { original: r } }) => (r.restaurant_university_links?.map((l) => l.universities?.name_ko).filter(Boolean).join(', ') || '—') },
     { accessorKey: 'address', header: '주소', enableSorting: false, cell: ({ getValue }) => <span className="text-sm text-muted">{(getValue() as string | null) ?? '—'}</span> },
     { accessorKey: 'visibility', header: '라이브 상태', enableSorting: false, cell: ({ getValue }) => <Badge tone={tone[getValue() as Visibility]}>{VISIBILITY_LABEL[getValue() as Visibility]}</Badge> },
@@ -207,7 +215,7 @@ export default function RestaurantsPage() {
           : <Button size="sm" variant="outline" onClick={() => setConfirm({ row: r, to: 'hidden' })}>숨기기</Button>}
       </div>) },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [ov, canBulk, canDelete, sel.ids, list.data?.rows, viewKey])
+  ], [ov, canBulk, canDelete, sel.ids, list.data?.rows, viewKey, showKakao, unis.data])
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
@@ -279,6 +287,10 @@ export default function RestaurantsPage() {
         <Select aria-label="메뉴 필터" value={menu} onChange={(e) => { setMenu(e.target.value); setPage(0) }}>
           <option value="">메뉴: 전체</option><option value="none">메뉴 없음</option><option value="has">메뉴 있음</option>
         </Select>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+        <label className="flex items-center gap-2"><input type="checkbox" checked={showKakao} onChange={(e) => setShowKakao(e.target.checked)} />카카오 실시간 정보 보기 (이 페이지 {PAGE}곳까지)</label>
+        <span className="text-xs text-muted">켜면 지금 보이는 식당만 카카오에서 조회해요 (동시에 3건, 10분간 기억). 저장하지 않아요.</span>
       </div>
       {coverage.data && (
         <p role="status" aria-label="사진·메뉴 현황" className="mb-4 flex flex-wrap gap-x-6 gap-y-1 rounded-xl bg-white p-3 text-sm ring-1 ring-line">

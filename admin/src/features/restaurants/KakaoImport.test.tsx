@@ -366,6 +366,6 @@ describe('카카오 실시간 정보', () => {
   it('says so when Kakao no longer returns the place', async () => {
     fake.respond('fn:search_restaurants', { data: { success: true, restaurants: [doc('9', '없는 곳')] } })
     editPage()
-    expect(await screen.findByText(/카카오에서 이 장소를 지금 찾지 못했어요/)).toBeTruthy()
+    expect(await screen.findByText(/카카오에서 이 장소 ID로 등록된 곳을 확인하지 못했어요/)).toBeTruthy()
   })
 })

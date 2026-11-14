@@ -40,7 +40,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 ))
 Select.displayName = 'Select'
 
-export function Field({ label, error, hint, children, htmlFor }: { label: string; error?: string; hint?: string; children: ReactNode; htmlFor?: string }) {
+export function Field({ label, error, hint, children, htmlFor }: { label: string; error?: string; hint?: ReactNode; children: ReactNode; htmlFor?: string }) {
   return (
     <div className="space-y-1.5">
       <label htmlFor={htmlFor} className="text-sm font-medium">{label}</label>

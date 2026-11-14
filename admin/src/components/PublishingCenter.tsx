@@ -3,8 +3,8 @@ import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, ConfirmDialog, ErrorState, Skeleton } from '@/components/ui'
-import { cmsCancelJob, cmsRetryJob, formatKst, KIND_LABEL } from '@/lib/cms'
-import { basicCounts, BUILD, cmsHealth, isMissingFunction, TYPE_LABEL, TYPE_ROUTE, type CmsHealth, type HealthFailed, type HealthJob } from '@/lib/cmsHealth'
+import { cmsCancelJob, cmsPublish, cmsRetryJob, cmsState, formatKst, KIND_LABEL } from '@/lib/cms'
+import { basicCounts, BUILD, cmsHealth, isMissingFunction, TYPE_LABEL, TYPE_ROUTE, type CmsHealth, type HealthDraft, type HealthFailed, type HealthJob } from '@/lib/cmsHealth'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 
@@ -57,12 +57,19 @@ function usePeople(ids: (string | null | undefined)[]) {
   })
 }
 
+const draftKey = (d: Pick<HealthDraft, 'entity_type' | 'entity_id'>) => `${d.entity_type}:${d.entity_id}`
+/** A draft can be published from the list when the live content has not changed under it and it
+ *  really differs from live. Others need a look first (the publish itself would refuse a stale one). */
+export const canBulkPublish = (d: HealthDraft) => !d.stale && d.has_changes
+
 /** Global publishing management: what is waiting, what is scheduled, what ran, and whether the
  *  machinery that publishes is healthy. Every action calls an existing authorized cms_* RPC. */
 export default function PublishingCenter() {
   const qc = useQueryClient()
   const [notice, setNotice] = useState<{ tone: 'ok' | 'bad'; text: string } | null>(null)
   const [cancel, setCancel] = useState<HealthJob | null>(null)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [confirmPublish, setConfirmPublish] = useState(false)
   const health = useQuery({ queryKey: ['cms-health'], queryFn: cmsHealth, refetchInterval: 60_000, retry: false })
   const missing = isMissingFunction(health.error)
   const counts = useQuery({ queryKey: ['cms-basic-counts'], enabled: missing, queryFn: basicCounts, retry: false })
@@ -85,6 +92,36 @@ export default function PublishingCenter() {
     onSuccess: async () => { setNotice({ tone: 'ok', text: '실패한 예약을 취소했어요.' }); await refresh() },
     onError: (e) => setNotice({ tone: 'bad', text: errorMessage(e) }),
   })
+
+  // Publishes one draft at a time with its current revision, so one failure never blocks the rest.
+  const publishDrafts = useMutation({
+    mutationFn: async ({ drafts, reason }: { drafts: HealthDraft[]; reason: string }) => {
+      const failed: { draft: HealthDraft; message: string }[] = []
+      let done = 0
+      for (const d of drafts) {
+        try {
+          const st = await cmsState(d.entity_type, d.entity_id)
+          if (!st.draft) throw new Error('게시할 초안이 없어요')
+          await cmsPublish(d.entity_type, d.entity_id, st.draft.revision, reason)
+          done++
+        } catch (e) { failed.push({ draft: d, message: errorMessage(e) }) }
+      }
+      return { done, failed }
+    },
+    onSuccess: async ({ done, failed }) => {
+      setConfirmPublish(false)
+      setPicked(new Set(failed.map((f) => draftKey(f.draft))))
+      setNotice(failed.length === 0
+        ? { tone: 'ok', text: `초안 ${done}건을 게시했어요. 앱과 웹에 바로 반영돼요.` }
+        : { tone: 'bad', text: `${done}건을 게시했고 ${failed.length}건은 게시하지 못했어요. ${failed.map((f) => `${f.draft.label}: ${f.message}`).join(' / ')}` })
+      await refresh()
+    },
+    onError: (e) => { setConfirmPublish(false); setNotice({ tone: 'bad', text: errorMessage(e) }) },
+  })
+  const publishable = h?.drafts.filter(canBulkPublish) ?? []
+  const chosen = publishable.filter((d) => picked.has(draftKey(d)))
+  const allChosen = publishable.length > 0 && chosen.length === publishable.length
+  const toggle = (d: HealthDraft) => setPicked((p) => { const n = new Set(p); if (n.has(draftKey(d))) n.delete(draftKey(d)); else n.add(draftKey(d)); return n })
 
   return (
     <section aria-label="게시 관리" className="mt-8 space-y-5">
@@ -130,13 +167,33 @@ export default function PublishingCenter() {
           </Card>
 
           <Card aria-label="게시되지 않은 초안" className="space-y-2">
-            <h3 className="font-bold">게시되지 않은 초안 <span className="text-sm font-normal text-muted">{h.drafts.length}건</span></h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-bold">게시되지 않은 초안 <span className="text-sm font-normal text-muted">{h.drafts.length}건</span></h3>
+              {publishable.length > 0 && (
+                <span className="flex flex-wrap items-center gap-2">
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input type="checkbox" className="size-4 accent-brand-strong" checked={allChosen} onChange={() => setPicked(allChosen ? new Set() : new Set(publishable.map(draftKey)))} />
+                    전체 선택
+                  </label>
+                  <Button size="sm" disabled={chosen.length === 0 || publishDrafts.isPending} onClick={() => setConfirmPublish(true)}>
+                    {chosen.length > 0 ? `선택한 ${chosen.length}건 게시` : '선택해서 게시'}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={publishDrafts.isPending} onClick={() => { setPicked(new Set(publishable.map(draftKey))); setConfirmPublish(true) }}>
+                    모두 게시 ({publishable.length}건)
+                  </Button>
+                </span>)}
+            </div>
             {h.drafts.length === 0 && <p className="text-sm text-muted">대기 중인 초안이 없어요.</p>}
+            {h.drafts.length > 0 && <p className="text-xs text-muted">게시하면 앱과 웹에 바로 반영돼요. 라이브가 바뀌었거나 라이브와 같은 초안은 선택할 수 없어요. 열어서 확인해 주세요.</p>}
             <ul className="divide-y divide-line text-sm">
               {h.drafts.map((d) => (
-                <li key={`${d.entity_type}:${d.entity_id}`} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <span><Badge tone="neutral">{TYPE_LABEL[d.entity_type]}</Badge> <b>{d.label}</b> {d.stale && <Badge tone="amber">라이브가 바뀌었어요</Badge>} {!d.has_changes && <Badge tone="neutral">라이브와 같음</Badge>}
-                    <span className="ml-2 text-xs text-muted">{formatKst(d.updated_at)} · {who(d.updated_by)}</span></span>
+                <li key={draftKey(d)} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <span className="flex items-center gap-2">
+                    <input type="checkbox" className="size-4 accent-brand-strong" aria-label={`${d.label} 선택`} disabled={!canBulkPublish(d) || publishDrafts.isPending}
+                      checked={canBulkPublish(d) && picked.has(draftKey(d))} onChange={() => toggle(d)} />
+                    <span><Badge tone="neutral">{TYPE_LABEL[d.entity_type]}</Badge> <b>{d.label}</b> {d.stale && <Badge tone="amber">라이브가 바뀌었어요</Badge>} {!d.has_changes && <Badge tone="neutral">라이브와 같음</Badge>}
+                      <span className="ml-2 text-xs text-muted">{formatKst(d.updated_at)} · {who(d.updated_by)}</span></span>
+                  </span>
                   <Link className="text-sm font-semibold text-brand-strong underline" to={TYPE_ROUTE(d.entity_type, d.entity_id)}>열어서 게시하기</Link>
                 </li>))}
             </ul>
@@ -193,6 +250,10 @@ export default function PublishingCenter() {
           </Card>
         </>)}
 
+      <ConfirmDialog open={confirmPublish} busy={publishDrafts.isPending} title={`초안 ${chosen.length}건을 게시할까요?`}
+        description={`${chosen.slice(0, 5).map((d) => d.label).join(', ')}${chosen.length > 5 ? ` 외 ${chosen.length - 5}건` : ''} — 앱과 웹에 바로 반영돼요. 이전 버전은 각 화면의 게시 이력에서 복원할 수 있어요.`}
+        confirmLabel={`${chosen.length}건 게시`} onCancel={() => setConfirmPublish(false)}
+        onConfirm={() => publishDrafts.mutate({ drafts: chosen, reason: '설정에서 초안 일괄 게시' })} />
       <ConfirmDialog open={!!cancel} busy={cancelJob.isPending} title="예약을 취소할까요?" description={cancel ? `${cancel.label} — ${formatKst(cancel.run_at)} 게시가 취소돼요. 라이브 내용은 바뀌지 않고, 초안은 그대로 남아요.` : undefined}
         confirmLabel="예약 취소" danger onCancel={() => setCancel(null)} onConfirm={() => cancel && cancelJob.mutate(cancel)} />
     </section>

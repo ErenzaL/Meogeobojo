@@ -126,3 +126,62 @@ describe('/settings 게시 관리', () => {
     expect(fake.rpcs.some((r) => r.name === 'cms_health')).toBe(false)
   })
 })
+
+describe('/settings bulk publishing of drafts', () => {
+  const draft = (id: string, label: string, over: Record<string, unknown> = {}) => ({ entity_type: 'restaurant_photos', entity_id: id, label, updated_at: '2026-11-10T01:00:00Z', updated_by: 'u-1', stale: false, has_changes: true, ...over })
+  const withDrafts = (drafts: unknown[]) => fake.respond('rpc:cms_health', { data: HEALTH({ drafts: drafts as CmsHealth['drafts'] }) })
+  const stateOf = (a: unknown) => ({ data: { live: {}, live_version: 1, last_published: null, jobs: [], draft: { revision: Number((a as { p_id: string }).p_id.replace(/\D/g, '')) + 10 } } })
+
+  it('publishes only the ticked drafts, each with its current revision', async () => {
+    withDrafts([draft('a1', '빅토리아'), draft('a2', '삼거리식당'), draft('a3', '스시산')])
+    fake.respond('rpc:cms_state', stateOf); fake.respond('rpc:cms_publish', { data: 2 })
+    openSettings()
+    const card = await screen.findByLabelText('게시되지 않은 초안')
+    await userEvent.click(within(card).getByRole('checkbox', { name: '빅토리아 선택' }))
+    await userEvent.click(within(card).getByRole('checkbox', { name: '스시산 선택' }))
+    await userEvent.click(within(card).getByRole('button', { name: '선택한 2건 게시' }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '2건 게시' }))
+    await waitFor(() => expect(fake.rpcs.filter((r) => r.name === 'cms_publish')).toHaveLength(2))
+    expect(fake.rpcs.filter((r) => r.name === 'cms_publish').map((r) => r.args)).toEqual([
+      { p_type: 'restaurant_photos', p_id: 'a1', p_expected_revision: 11, p_reason: '설정에서 초안 일괄 게시' },
+      { p_type: 'restaurant_photos', p_id: 'a3', p_expected_revision: 13, p_reason: '설정에서 초안 일괄 게시' },
+    ])
+    expect(await screen.findByText(/초안 2건을 게시했어요/)).toBeTruthy()
+  })
+
+  it('does nothing until something is ticked', async () => {
+    withDrafts([draft('a1', '빅토리아')])
+    openSettings()
+    const card = await screen.findByLabelText('게시되지 않은 초안')
+    expect((within(card).getByRole('button', { name: '선택해서 게시' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('"전체 선택" and "모두 게시" skip drafts whose live content changed or that match live', async () => {
+    withDrafts([draft('a1', '빅토리아'), draft('a2', '오래된 초안', { stale: true }), draft('a3', '같은 초안', { has_changes: false }), draft('a4', '스시산')])
+    fake.respond('rpc:cms_state', stateOf); fake.respond('rpc:cms_publish', { data: 2 })
+    openSettings()
+    const card = await screen.findByLabelText('게시되지 않은 초안')
+    expect((within(card).getByRole('checkbox', { name: '오래된 초안 선택' }) as HTMLInputElement).disabled).toBe(true)
+    expect((within(card).getByRole('checkbox', { name: '같은 초안 선택' }) as HTMLInputElement).disabled).toBe(true)
+    await userEvent.click(within(card).getByRole('checkbox', { name: '전체 선택' }))
+    expect(within(card).getByRole('button', { name: '선택한 2건 게시' })).toBeTruthy()
+    await userEvent.click(within(card).getByRole('checkbox', { name: '전체 선택' }))
+    await userEvent.click(within(card).getByRole('button', { name: /모두 게시 \(2건\)/ }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '2건 게시' }))
+    await waitFor(() => expect(fake.rpcs.filter((r) => r.name === 'cms_publish').map((r) => (r.args as { p_id: string }).p_id)).toEqual(['a1', 'a4']))
+  })
+
+  it('keeps going when one draft fails and says which one and why', async () => {
+    withDrafts([draft('a1', '빅토리아'), draft('a2', '삼거리식당')])
+    fake.respond('rpc:cms_state', stateOf)
+    fake.respond('rpc:cms_publish', (a: unknown) => ((a as { p_id: string }).p_id === 'a1' ? { error: { code: '40001', message: '다른 관리자가 이 초안을 먼저 저장했어요' } } : { data: 2 }))
+    openSettings()
+    const card = await screen.findByLabelText('게시되지 않은 초안')
+    await userEvent.click(within(card).getByRole('button', { name: /모두 게시/ }))
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: '2건 게시' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toMatch(/1건을 게시했고 1건은 게시하지 못했어요/)
+    expect(alert.textContent).toMatch(/빅토리아: .*먼저 저장/)
+    expect(fake.rpcs.filter((r) => r.name === 'cms_publish')).toHaveLength(2)
+  })
+})

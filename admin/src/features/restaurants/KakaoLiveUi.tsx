@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, HelpCircle, RefreshCw } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { Badge, Button, Card, Skeleton } from '@/components/ui'
+import { useState, type ReactNode } from 'react'
+import { Badge, Button, Card, Field, Skeleton } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import type { KakaoLive } from './kakaoLookup'
 import { campusesOf, useKakaoRestaurantDetails, type KakaoLocation, type KakaoRestaurantDetails, type KakaoSubject, type UniRow } from './useKakaoRestaurantDetails'
@@ -26,7 +26,7 @@ export function sourceNote(managed: string, live: string | null | undefined, opt
   if (hasManaged) {
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
-        <Badge tone="neutral">Meogeobojo 관리</Badge>
+        <Badge tone="neutral">Meogeobojo Managed</Badge>
         {live && !opts.identifier && !same(managed, live) && <span data-testid="kakao-differs">카카오 실시간 값은 <b>{live}</b> 예요 (이 값이 우선해요)</span>}
       </span>)
   }
@@ -37,6 +37,42 @@ export function sourceNote(managed: string, live: string | null | undefined, opt
       </span>)
   }
   return undefined
+}
+
+/**
+ * One Kakao-derived field of an existing restaurant. [managed] is what is typed in the form right now.
+ *  - managed value  -> the normal input, with a "Meogeobojo Managed" tag (it always wins).
+ *  - no managed value but a live Kakao value -> the Kakao value as readable text with a "Kakao Live" tag and an
+ *    "직접 입력 / 수정 (Edit / Override)" button. No input is shown, so nothing looks half-filled.
+ *  - Edit / Override -> the normal input, still empty. Leaving it empty keeps showing the live value.
+ *  - nothing from Kakao -> the normal input (with a short note when Kakao could not be reached).
+ * The live value is only ever rendered; it never enters the form, a draft, a publish payload or Supabase.
+ * [children] is the registered input (it is not rendered while the live value is shown).
+ */
+export function KakaoField({ label, htmlFor, error, managed, live, existing, unavailable = false, children }: {
+  label: string; htmlFor: string; error?: string; managed: string; live: string | null | undefined; existing: boolean; unavailable?: boolean; children: ReactNode
+}) {
+  const [editing, setEditing] = useState(false)
+  if (!existing) return <Field label={label} htmlFor={htmlFor} error={error}>{children}</Field>
+  const hasManaged = managed.trim() !== ''
+  if (live && !hasManaged && !editing && !error) {
+    return (
+      <div className="space-y-1.5" role="group" aria-label={label} data-testid="kakao-live-note">
+        <span className="text-sm font-medium">{label}</span>
+        <div className="flex min-h-10 flex-wrap items-center gap-2 rounded-xl border border-line bg-page px-3 py-1.5 text-sm">
+          <span data-testid="kakao-live-value" className="font-medium">{live}</span>
+          <Badge tone="amber">Kakao Live</Badge>
+          <Button type="button" size="sm" variant="ghost" className="ml-auto" aria-label={`${label} 직접 입력 / 수정 (Edit / Override)`} onClick={() => setEditing(true)}>직접 입력 / 수정</Button>
+        </div>
+        <p className="text-xs text-muted">카카오에서 실시간으로 가져온 값이에요. 저장되지 않아요. 직접 확인한 정보가 있으면 '직접 입력 / 수정'으로 덮어쓸 수 있어요.</p>
+      </div>)
+  }
+  let hint: ReactNode = sourceNote(managed, live)
+  if (!hint && !hasManaged && unavailable) hint = '비어 있어요. 카카오 정보를 확인하지 못했어요.'
+  if (live && !hasManaged && editing) {
+    hint = <span className="inline-flex flex-wrap items-center gap-1.5">{hint}<Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Kakao 값 그대로 쓰기</Button></span>
+  }
+  return <Field label={label} htmlFor={htmlFor} error={error} hint={hint}>{children}</Field>
 }
 
 export const liveText = (n: number | null | undefined) => (n == null ? null : String(n))
@@ -85,7 +121,7 @@ export function KakaoLiveCard({ subject, details }: { subject: KakaoSubject | un
           {p.mapUrl && <div className="contents"><dt className="text-muted">카카오맵</dt><dd><a className="text-brand-strong underline" href={p.mapUrl} target="_blank" rel="noreferrer">장소 페이지</a></dd></div>}
         </dl>)}
       {p && why === null && details.lastSuccessAt && <p className="text-xs text-muted">마지막으로 확인한 시각 {time(details.lastSuccessAt)} (이 화면에서만 기억해요)</p>}
-      <p className="text-xs text-muted">입력칸 아래에 <b>Kakao Live</b>로 표시된 값은 비어 있는 칸에 대한 참고용이에요. 입력하거나 저장하기 전에는 앱·초안·CSV에 들어가지 않고, 직접 입력한 값(<b>Meogeobojo 관리</b>)이 언제나 우선해요.</p>
+      <p className="text-xs text-muted">비어 있는 칸에는 <b>Kakao Live</b> 값이 그대로 보여요(참고용). 이 값은 저장·초안·CSV·앱에 들어가지 않고, 직접 입력한 값(<b>Meogeobojo Managed</b>)이 언제나 우선해요.</p>
     </Card>
   )
 }

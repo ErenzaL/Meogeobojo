@@ -2,16 +2,18 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Controller, useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import PublishingToolbar from '@/components/PublishingToolbar'
-import { Button, Card, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
+import { Badge, Button, Card, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { cmsSaveDraft, cmsState, isConflict } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
 import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
-import KakaoSourceCard from './KakaoSourceCard'
+import { KakaoIdCheck, KakaoLiveCard, liveText, sourceNote } from './KakaoLiveUi'
+import type { KakaoLive } from './kakaoLookup'
+import { useKakaoRestaurantDetails, useKakaoSubject } from './useKakaoRestaurantDetails'
 import RestaurantPreview from './RestaurantPreview'
 import { useUniversities } from './RestaurantsPage'
 import { BUSINESS_LABEL, BUSINESS_STATUSES, VISIBILITIES, VISIBILITY_LABEL, emptyRestaurantForm, fromRow, restaurantSchema, snapshotFromForm, toRow, type RestaurantForm } from './schema'
@@ -25,18 +27,21 @@ export default function RestaurantFormPage() {
   return isNew ? <NewRestaurant /> : <EditRestaurant id={id} />
 }
 
-function FormFields({ register, control, errors, unis, existing }: { register: ReturnType<typeof useForm<RestaurantForm>>['register']; control: ReturnType<typeof useForm<RestaurantForm>>['control']; errors: ReturnType<typeof useForm<RestaurantForm>>['formState']['errors']; unis: ReturnType<typeof useUniversities>; existing: boolean }) {
+function FormFields({ register, control, errors, unis, existing, live = null }: {  live?: KakaoLive | null; register: ReturnType<typeof useForm<RestaurantForm>>['register']; control: ReturnType<typeof useForm<RestaurantForm>>['control']; errors: ReturnType<typeof useForm<RestaurantForm>>['formState']['errors']; unis: ReturnType<typeof useUniversities>; existing: boolean }) {
+  const v = useWatch({ control }) // what is typed right now: decides whose value a field shows (managed or live)
+  const note = (key: 'name_ko' | 'category' | 'address' | 'phone' | 'latitude' | 'longitude', liveValue: string | null | undefined) => (existing ? sourceNote(String(v[key] ?? ''), liveValue) : undefined)
+  const ph = (key: 'name_ko' | 'category' | 'address' | 'phone' | 'latitude' | 'longitude', liveValue: string | null | undefined) => (existing && liveValue && String(v[key] ?? '').trim() === '' ? liveValue : undefined)
   return (
     <>
       <Card className="grid gap-4 sm:grid-cols-2">
-        <Field label="이름 (한국어)" htmlFor="name_ko" error={errors.name_ko?.message}><Input id="name_ko" {...register('name_ko')} /></Field>
+        <Field label="이름 (한국어)" htmlFor="name_ko" error={errors.name_ko?.message} hint={note('name_ko', live?.name)}><Input id="name_ko" {...register('name_ko')} /></Field>
         <Field label="이름 (영어)" htmlFor="name_en" error={errors.name_en?.message}><Input id="name_en" {...register('name_en')} /></Field>
-        <Field label="카카오 장소 ID" htmlFor="kakao_place_id" hint={existing ? '식당의 식별자라서 바꿀 수 없어요.' : '카카오 식당을 보강할 때 입력해요. 직접 만든 식당은 비워 두세요.'} error={errors.kakao_place_id?.message}><Input id="kakao_place_id" disabled={existing} {...register('kakao_place_id')} /></Field>
-        <Field label="카테고리" htmlFor="category" error={errors.category?.message}><Input id="category" {...register('category')} /></Field>
-        <Field label="주소" htmlFor="address" error={errors.address?.message}><Input id="address" {...register('address')} /></Field>
-        <Field label="전화번호" htmlFor="phone" error={errors.phone?.message}><Input id="phone" {...register('phone')} /></Field>
-        <Field label="위도" htmlFor="latitude" error={errors.latitude?.message}><Input id="latitude" inputMode="decimal" {...register('latitude')} /></Field>
-        <Field label="경도" htmlFor="longitude" error={errors.longitude?.message}><Input id="longitude" inputMode="decimal" {...register('longitude')} /></Field>
+        <Field label="카카오 장소 ID" htmlFor="kakao_place_id" hint={existing ? <span className="inline-flex flex-wrap items-center gap-1.5"><Badge tone="neutral">Meogeobojo 관리</Badge>식당의 식별자라서 바꿀 수 없어요.</span> : '카카오 식당을 보강할 때 입력해요. 직접 만든 식당은 비워 두세요.'} error={errors.kakao_place_id?.message}><Input id="kakao_place_id" disabled={existing} {...register('kakao_place_id')} /></Field>
+        <Field label="카테고리" htmlFor="category" error={errors.category?.message} hint={note('category', live?.category)}><Input id="category" placeholder={ph('category', live?.category)} {...register('category')} /></Field>
+        <Field label="주소" htmlFor="address" error={errors.address?.message} hint={note('address', live?.address)}><Input id="address" placeholder={ph('address', live?.address)} {...register('address')} /></Field>
+        <Field label="전화번호" htmlFor="phone" error={errors.phone?.message} hint={note('phone', live?.phone)}><Input id="phone" placeholder={ph('phone', live?.phone)} {...register('phone')} /></Field>
+        <Field label="위도" htmlFor="latitude" error={errors.latitude?.message} hint={note('latitude', liveText(live?.latitude))}><Input id="latitude" inputMode="decimal" placeholder={ph('latitude', liveText(live?.latitude))} {...register('latitude')} /></Field>
+        <Field label="경도" htmlFor="longitude" error={errors.longitude?.message} hint={note('longitude', liveText(live?.longitude))}><Input id="longitude" inputMode="decimal" placeholder={ph('longitude', liveText(live?.longitude))} {...register('longitude')} /></Field>
       </Card>
       <Card className="space-y-4">
         <Field label="설명" htmlFor="description" error={errors.description?.message}><Textarea id="description" {...register('description')} /></Field>
@@ -89,6 +94,9 @@ function NewRestaurant() {
   const unis = useUniversities()
   const form = useForm<RestaurantForm>({ resolver: zodResolver(restaurantSchema), defaultValues: emptyRestaurantForm })
   const { register, control, handleSubmit, formState: { errors } } = form
+  const [checkedId, setCheckedId] = useState<string | null>(null)
+  const typed = useWatch({ control })
+  const near = typed.latitude && typed.longitude && Number.isFinite(Number(typed.latitude)) && Number.isFinite(Number(typed.longitude)) ? { latitude: Number(typed.latitude), longitude: Number(typed.longitude) } : null
   const create = useMutation({
     mutationFn: async (v: RestaurantForm) => {
       const { data, error } = await supabase.from('restaurant_overrides').insert({ ...toRow(v), visibility: 'draft', featured: false }).select('id').single()
@@ -108,6 +116,8 @@ function NewRestaurant() {
         actions={<Button type="submit" disabled={create.isPending}>초안으로 만들기</Button>} />
       {create.isError && <ErrorState error={new Error(dup(create.error))} />}
       <FormFields register={register} control={control} errors={errors} unis={unis} existing={false} />
+      <KakaoIdCheck placeId={typed.kakao_place_id ?? ''} name={typed.name_ko ?? ''} universityIds={(typed.university_ids ?? []) as string[]} universities={unis.data ?? []} near={near}
+        checkedId={checkedId} onCheck={setCheckedId} />
     </form>
   )
 }
@@ -132,6 +142,9 @@ function EditRestaurant({ id }: { id: string }) {
       return data as { kakao_place_id: string | null; image_url: string | null }
     },
   })
+  // Live Kakao values for display only (never put into the form, a draft or the database).
+  const subject = useKakaoSubject(id)
+  const kakao = useKakaoRestaurantDetails(subject.data?.placeId, subject.data?.name ?? '', subject.data?.location)
   const state = cms.data
   const base = state ? (state.draft?.data ?? state.live) : null
   const serverRev = state ? (state.draft?.revision ?? 0) : 0
@@ -184,8 +197,8 @@ function EditRestaurant({ id }: { id: string }) {
             <Button type="button" size="sm" onClick={() => { setEditBase(serverRev); setMessage({ tone: 'ok', text: '최신 초안을 기준으로 이어서 저장할 수 있어요. 저장하면 내 수정이 최신 초안을 덮어써요.' }) }}>내 수정으로 덮어쓰기</Button>
           </div>
         </div>)}
-      <KakaoSourceCard id={id} />
-      <FormFields register={register} control={control} errors={errors} unis={unis} existing />
+      <KakaoLiveCard subject={subject.data} details={kakao} />
+      <FormFields register={register} control={control} errors={errors} unis={unis} existing live={kakao.place} />
       {can('super_admin') && (
         <Card className="space-y-2 border-red-200" aria-label="위험 구역">
           <h2 className="font-bold text-red-700">식당 삭제</h2>

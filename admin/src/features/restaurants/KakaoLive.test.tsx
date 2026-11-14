@@ -49,27 +49,66 @@ describe('edit page: empty fields show the live Kakao value, labelled, and nothi
     expect(await within(card).findByText('장소 ID로 확인됨')).toBeTruthy()
     const notes = await screen.findAllByTestId('kakao-live-note')
     expect(notes).toHaveLength(5) // category, address, phone, latitude, longitude
-    expect(notes[0].textContent).toMatch(/Kakao Live.*음식점 > 한식/)
-    expect((screen.getByLabelText('카테고리') as HTMLInputElement).placeholder).toBe('음식점 > 한식')
-    expect((screen.getByLabelText('주소') as HTMLInputElement).placeholder).toBe('카카오 도로 1')
-    expect((screen.getByLabelText('위도') as HTMLInputElement).placeholder).toBe('36.771')
-    // the inputs themselves are still empty: nothing was put into the form
-    for (const l of ['카테고리', '주소', '전화번호', '위도', '경도']) expect((screen.getByLabelText(l) as HTMLInputElement).value).toBe('')
+    expect(notes[0].textContent).toMatch(/음식점 > 한식.*Kakao Live/)
+    // the Kakao values are readable text (not gray placeholders), each with its "Kakao Live" tag
+    expect(screen.getAllByTestId('kakao-live-value').map((n) => n.textContent)).toEqual(['음식점 > 한식', '카카오 도로 1', '041-111-2222', '36.771', '126.931'])
+    for (const n of notes) expect(within(n).getByText('Kakao Live')).toBeTruthy()
+    for (const l of ['카테고리', '주소', '전화번호', '위도', '경도']) expect(screen.queryByRole('textbox', { name: l })).toBeNull() // no half-empty input
+    expect(document.querySelectorAll('input[placeholder="음식점 > 한식"], input[placeholder="카카오 도로 1"]')).toHaveLength(0)
     // loading Kakao data must not look like an unsaved edit
     expect(screen.queryByText('저장하지 않은 수정')).toBeNull()
     expect((screen.getByRole('button', { name: '초안 저장' }) as HTMLButtonElement).disabled).toBe(false) // (no draft yet, so saving is allowed)
     nothingStored()
   })
 
-  it('the managed value always wins: it is shown as "Meogeobojo 관리", kept in the field, and the Kakao value is only mentioned', async () => {
+  it('the managed value always wins: it is shown as "Meogeobojo Managed", kept in the field, and the Kakao value is only mentioned', async () => {
     editPage({ live: { category: '내가 쓴 카테고리', address: '내가 쓴 주소' } })
     await screen.findAllByTestId('kakao-live-note')
     expect((screen.getByLabelText('카테고리') as HTMLInputElement).value).toBe('내가 쓴 카테고리')
-    expect((screen.getByLabelText('카테고리') as HTMLInputElement).placeholder).toBe('')
     const differs = await screen.findAllByTestId('kakao-differs')
     expect(differs.map((d) => d.textContent).join(' ')).toMatch(/음식점 > 한식/)
-    expect(screen.getAllByText('Meogeobojo 관리').length).toBeGreaterThanOrEqual(3)
+    expect(screen.getAllByText('Meogeobojo Managed').length).toBeGreaterThanOrEqual(3)
     expect((screen.getByLabelText('주소') as HTMLInputElement).value).toBe('내가 쓴 주소')
+  })
+
+  it('"직접 입력 / 수정 (Edit / Override)": the input appears empty, typing makes it Meogeobojo Managed, and only that value is saved', async () => {
+    fake.respond('rpc:cms_save_draft', { data: { revision: 1, base_version: 0, updated_at: '2026-11-10T00:00:00Z' } })
+    editPage()
+    await screen.findAllByTestId('kakao-live-value')
+    await userEvent.click(screen.getByRole('button', { name: /주소 직접 입력/ }))
+    const input = screen.getByLabelText('주소') as HTMLInputElement
+    expect(input.value).toBe('') // the Kakao value is not copied into the form
+    expect(input.placeholder).toBe('')
+    expect(screen.getAllByTestId('kakao-live-note').some((n) => /카카오 도로 1/.test(n.textContent ?? ''))).toBe(true) // still visible as the reference
+    await userEvent.type(input, '직접 확인한 주소')
+    expect(screen.getAllByText('Meogeobojo Managed').length).toBeGreaterThan(0)
+    expect(screen.getAllByTestId('kakao-differs').some((n) => /카카오 도로 1/.test(n.textContent ?? ''))).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: '초안 저장' }))
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'cms_save_draft')).toBe(true))
+    const data = (fake.rpcs.find((r) => r.name === 'cms_save_draft')!.args as { p_data: Record<string, unknown> }).p_data
+    expect(data.address).toBe('직접 확인한 주소')
+    for (const k of ['category', 'phone', 'latitude', 'longitude']) expect(data[k] ?? null).toBeNull()
+    expect(JSON.stringify(data)).not.toMatch(/음식점 > 한식|041-111-2222|36\.771/)
+  })
+
+  it('"Kakao 값 그대로 쓰기" goes back to showing the live value without having stored anything', async () => {
+    editPage()
+    await screen.findAllByTestId('kakao-live-value')
+    await userEvent.click(screen.getByRole('button', { name: /카테고리 직접 입력/ }))
+    expect(screen.getByLabelText('카테고리') instanceof HTMLInputElement).toBe(true)
+    await userEvent.click(screen.getByRole('button', { name: 'Kakao 값 그대로 쓰기' }))
+    expect(screen.getAllByTestId('kakao-live-value')).toHaveLength(5)
+    expect(screen.queryByText('저장하지 않은 수정')).toBeNull()
+    nothingStored()
+  })
+
+  it('a field emptied again after an override keeps working (the live value is the fallback only for display)', async () => {
+    editPage({ live: { category: '내가 쓴 카테고리' } })
+    await screen.findAllByTestId('kakao-live-value')
+    const input = screen.getByLabelText('카테고리') as HTMLInputElement
+    await userEvent.clear(input)
+    expect(input.value).toBe('') // still an input: the admin is mid-edit, nothing is swapped under their cursor
+    expect(screen.getByText('저장하지 않은 수정')).toBeTruthy()
   })
 
   it('saving a draft does not carry any Kakao value (the empty fields stay empty in the draft)', async () => {
@@ -100,6 +139,7 @@ describe('edit page: refresh while the admin is typing', () => {
   it('"카카오 정보 새로고침" looks the place up again and never touches what was typed', async () => {
     editPage()
     await screen.findAllByTestId('kakao-live-note')
+    await userEvent.click(screen.getByRole('button', { name: /전화번호 직접 입력/ }))
     await userEvent.type(screen.getByLabelText('전화번호'), '010-9999-0000')
     expect(screen.getByText('저장하지 않은 수정')).toBeTruthy()
     const before = lookups().length

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { MenuItem } from '@/lib/cms'
-import { buildPlan, applyPlan, planRestaurant, publishSaved, type MenuState, type PlanOptions, type RestaurantRef } from './menuImport'
+import { buildPlan, applyPlan, checkTarget, planRestaurant, publishSaved, type MenuState, type PlanOptions, type RestaurantRef } from './menuImport'
 import { parseMenuCsv } from './menuCsv'
 
 const HEAD = 'kakao_place_id,restaurant_name,menu_name,price_krw,menu_category,description,is_available,menu_id'
@@ -389,8 +389,8 @@ describe('saving drafts', () => {
 
 describe('publishing what was imported (optional, via the existing publish function only)', () => {
   const saved = [
-    { restaurantId: 'r1', name: '어굿플레이스', added: 1, updated: 0, revision: 5, hadDraft: false },
-    { restaurantId: 'r2', name: '라멘집', added: 2, updated: 1, revision: 2, hadDraft: true },
+    { restaurantId: 'r1', name: '어굿플레이스', added: 1, updated: 0, removed: 0, revision: 5, hadDraft: false },
+    { restaurantId: 'r2', name: '라멘집', added: 2, updated: 1, removed: 0, revision: 2, hadDraft: true },
   ]
   it('publishes each saved draft at the revision this import saved, with the reason', async () => {
     const calls: [string, number, string][] = []
@@ -416,5 +416,72 @@ describe('planRestaurant is deterministic for a given state (what makes a retry 
     const a = planRestaurant(R1, empty, csv, new Map(), opts({ newId: () => 'id' }))
     const b = planRestaurant(R1, empty, csv, new Map(), opts({ newId: () => 'id' }))
     expect(a.items).toEqual(b.items)
+  })
+})
+
+describe('replace mode: the file becomes the restaurant\'s whole active menu list', () => {
+  const state: MenuState = { items: [item(A, '제육 정식', { price_krw: 8000, sort_order: 1, image_url: 'https://x/a.png', representative: true }), item(B, '옛날 메뉴', { sort_order: 2 }), item(C, '보관된 메뉴', { status: 'archived', sort_order: 3 })], revision: 3, hasDraft: true }
+  const sel = { scope: 'selected' as const, selected: R1, mode: 'replace' as const }
+
+  it('keeps a matched line (id, photo, flags), adds new ones, and takes unmentioned ACTIVE lines out of the draft', () => {
+    const p = plan(rows(',,제육 정식,8500,,,,', ',,새 메뉴,6000,,,,'), { r1: state }, sel)
+    const rp = p.restaurants[0]
+    expect(rp.removedItems.map((i) => i.name_ko)).toEqual(['옛날 메뉴'])
+    expect(rp.items.map((i) => i.name_ko).sort()).toEqual(['보관된 메뉴', '새 메뉴', '제육 정식'].sort())
+    const kept = rp.items.find((i) => i.id === A)!
+    expect(kept).toMatchObject({ price_krw: 8500, image_url: 'https://x/a.png', representative: true }) // same line: id and photo survive
+    expect(rp.items.find((i) => i.id === C)?.status).toBe('archived') // an already archived line is not touched
+    expect(p.counts).toMatchObject({ add: 1, update: 1, remove: 1, restaurantsToSave: 1 })
+  })
+
+  it('removes nothing in append / update mode (nothing is ever deleted by those)', () => {
+    for (const mode of ['append', 'update'] as const) {
+      const p = plan(rows(',,새 메뉴,6000,,,,'), { r1: state }, { ...sel, mode })
+      expect(p.restaurants[0].removed).toBe(0)
+      expect(p.restaurants[0].items.map((i) => i.id)).toEqual(expect.arrayContaining([A, B, C]))
+    }
+  })
+
+  it('a row that failed means nothing is removed, and applyPlan refuses a replace while the file has errors', async () => {
+    const p = plan(rows(',,제육 정식,8500,,,,', ',,나쁜 줄,abc,,,,'), { r1: state }, sel)
+    expect(p.counts.invalid).toBe(1)
+    await expect(applyPlan(p, opts(sel), new Map(), { getState: async () => state, saveDraft: async () => ({ revision: 1 }) })).rejects.toThrow(/전체 교체/)
+  })
+
+  it('never touches another restaurant: only the selected one is planned and saved', async () => {
+    const saves: string[] = []
+    const p = plan(rows(',,새 메뉴,6000,,,,'), { r1: state, r2: { items: [item('dddddddd-dddd-4ddd-8ddd-dddddddddddd', '라멘')], revision: 0, hasDraft: false } }, sel)
+    expect(p.restaurants.map((r) => r.restaurant.id)).toEqual(['r1'])
+    await applyPlan(p, opts(sel), new Map(), { getState: async () => state, saveDraft: async (id) => { saves.push(id); return { revision: 4 } } })
+    expect(saves).toEqual(['r1'])
+  })
+
+  it('refuses to save when the restaurant\'s menus changed after the preview (what would be removed is different now)', async () => {
+    const p = plan(rows(',,제육 정식,8500,,,,'), { r1: state }, sel)
+    const changed: MenuState = { ...state, items: [...state.items, item('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', '그 사이 추가된 메뉴', { sort_order: 4 })] }
+    let saved = 0
+    const res = await applyPlan(p, opts(sel), new Map(), { getState: async () => changed, saveDraft: async () => { saved++; return { revision: 9 } } })
+    expect(saved).toBe(0)
+    expect(res.failed[0]).toMatchObject({ code: 'stale' })
+  })
+})
+
+describe('checkTarget: the selected restaurant is the only target', () => {
+  it('blank ids and names are fine', () => { expect(checkTarget(rows(',,국수,5000,,,,'), R1).blockers).toEqual([]) })
+  it('the same place id is fine; a different name next to it is only a note', () => {
+    const c = checkTarget(rows('1001,다른 이름,국수,5000,,,,'), R1)
+    expect(c.blockers).toEqual([])
+    expect(c.notes.join('')).toMatch(/장소 ID가 같아서/)
+  })
+  it('another place id stops the import, with the line number', () => {
+    const c = checkTarget(rows('1001,,국수,5000,,,,', '1002,라멘집,우동,6000,,,,'), R1)
+    expect(c.blockers).toHaveLength(1)
+    expect(c.blockers[0]).toMatchObject({ line: 3 })
+  })
+  it('a blank id with another restaurant\'s name stops the import', () => {
+    expect(checkTarget(rows(',라멘집,국수,5000,,,,'), R1).blockers).toHaveLength(1)
+  })
+  it('a hand-made restaurant (no place id) refuses a file that carries a place id', () => {
+    expect(checkTarget(rows('1001,,국수,5000,,,,'), { id: 'r9', name_ko: '직접', kakao_place_id: null as unknown as string }).blockers).toHaveLength(1)
   })
 })

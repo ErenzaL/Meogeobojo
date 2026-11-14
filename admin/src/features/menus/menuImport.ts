@@ -20,7 +20,8 @@ import { sortItems } from './menu'
  *  - The result is saved as a DRAFT through `cms_save_draft`. Nothing is published, and restaurant visibility is
  *    never touched.
  */
-export type ImportMode = 'append' | 'update'
+/** replace: the file becomes the restaurant's whole active menu list. Lines the file does not mention leave the DRAFT (a publish archives them; nothing is ever deleted). */
+export type ImportMode = 'append' | 'update' | 'replace'
 export type ImportScope = 'file' | 'selected'
 export type RestaurantRef = { id: string; name_ko: string; kakao_place_id: string }
 /** What the editor shows for a restaurant: its draft if it has one, else the live list. */
@@ -45,6 +46,9 @@ export type RestaurantPlan = {
   existing: number
   adds: number
   updates: number
+  /** Active lines of the current list that the file does not mention (replace mode only). They leave the draft. */
+  removed: number
+  removedItems: MenuItem[]
   /** The whole merged menu list to save as the draft (existing lines kept). Only meaningful when adds + updates > 0. */
   items: MenuItem[]
   rows: PlanRow[]
@@ -54,6 +58,7 @@ export type PlanCounts = {
   add: number
   update: number
   unchanged: number
+  remove: number
   duplicate: number
   invalid: number
   unmatched: number
@@ -153,7 +158,16 @@ export function planRestaurant(
     out.push({ ...base, action: 'update', messages: carry, changes })
   }
 
-  return { restaurant, hasDraft: state.hasDraft, baseRevision: state.revision, existing: state.items.length, adds, updates, items: sortItems(items), rows: out }
+  // replace: active lines the file does not mention leave the draft. Only when EVERY row of the file was understood: a row
+  // that failed (bad id, ambiguous name) says nothing about what the admin wants gone.
+  let removedItems: MenuItem[] = []
+  if (opts.mode === 'replace' && !out.some((r) => r.action === 'invalid')) {
+    removedItems = state.items.filter((i) => i.status === 'active' && !touched.has(`id:${i.id}`))
+    const gone = new Set(removedItems.map((i) => i.id))
+    for (let k = items.length - 1; k >= 0; k--) if (gone.has(items[k].id)) items.splice(k, 1)
+  }
+
+  return { restaurant, hasDraft: state.hasDraft, baseRevision: state.revision, existing: state.items.length, adds, updates, removed: removedItems.length, removedItems, items: sortItems(items), rows: out }
 }
 
 /**
@@ -203,8 +217,8 @@ export function buildPlan(rows: CsvRow[], restaurants: Map<string, RestaurantRef
     rows: all, restaurants: plans,
     unmatchedIds: [...unmatched].map(([kakaoPlaceId, lines]) => ({ kakaoPlaceId, lines })),
     counts: {
-      rows: all.length, add: n('add'), update: n('update'), unchanged: n('unchanged'), duplicate: n('duplicate'), invalid: n('invalid'), unmatched: n('unmatched'), nameMismatch: n('name_mismatch'),
-      matchedRestaurants: plans.length, unmatchedRestaurants: unmatched.size, restaurantsToSave: plans.filter((p) => p.adds + p.updates > 0).length,
+      rows: all.length, add: n('add'), update: n('update'), unchanged: n('unchanged'), remove: plans.reduce((t, p) => t + p.removed, 0), duplicate: n('duplicate'), invalid: n('invalid'), unmatched: n('unmatched'), nameMismatch: n('name_mismatch'),
+      matchedRestaurants: plans.length, unmatchedRestaurants: unmatched.size, restaurantsToSave: plans.filter((p) => p.adds + p.updates + p.removed > 0).length,
     },
   }
 }
@@ -219,7 +233,7 @@ export type SaveDeps = {
   saveDraft: (restaurantId: string, items: MenuItem[], expectedRevision: number) => Promise<{ revision: number }>
   sleep?: (ms: number) => Promise<void>
 }
-export type SavedRestaurant = { restaurantId: string; name: string; added: number; updated: number; revision: number; hadDraft: boolean }
+export type SavedRestaurant = { restaurantId: string; name: string; added: number; updated: number; removed: number; revision: number; hadDraft: boolean }
 export type SaveFailure = { restaurantId: string; name: string; message: string; code?: string }
 export type SaveResult = { saved: SavedRestaurant[]; failed: SaveFailure[]; untouched: number; stoppedBy: 'cancelled' | 'forbidden' | null }
 export type SaveProgress = { done: number; total: number; saved: number; failed: number }
@@ -235,6 +249,8 @@ const errMsg = (e: unknown) => (e instanceof Error ? e.message : typeof e === 'o
  */
 export async function applyPlan(plan: Plan, opts: PlanOptions, menuOwners: Map<string, string>, deps: SaveDeps, run: { concurrency?: number; signal?: AbortSignal; onProgress?: (p: SaveProgress) => void; only?: Set<string> } = {}): Promise<SaveResult> {
   const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)))
+  // a replace is only ever applied when every line of the file was understood (a skipped line would otherwise delete a menu)
+  if (opts.mode === 'replace' && (plan.counts.invalid + plan.counts.unmatched + plan.counts.nameMismatch > 0)) throw new Error('파일에 오류가 있어서 “전체 교체”는 할 수 없어요. 오류를 고친 뒤 다시 가져와 주세요.')
   const targets = plan.restaurants.filter((p) => (!run.only || run.only.has(p.restaurant.id)) && p.rows.length > 0)
   const res: SaveResult = { saved: [], failed: [], untouched: 0, stoppedBy: null }
   let next = 0
@@ -249,9 +265,13 @@ export async function applyPlan(plan: Plan, opts: PlanOptions, menuOwners: Map<s
       try {
         const state = await deps.getState(rp.restaurant.id)
         const fresh = planRestaurant(rp.restaurant, state, rows, menuOwners, opts)
-        if (fresh.adds + fresh.updates === 0) { res.untouched++; return }
+        if (opts.mode === 'replace' && (fresh.rows.some((r) => r.action === 'invalid') || fresh.removed !== rp.removed)) {
+          res.failed.push({ restaurantId: rp.restaurant.id, name: rp.restaurant.name_ko, message: '미리보기 이후 이 식당의 메뉴가 바뀌었어요. 아무것도 바꾸지 않았어요. 다시 파일을 열어 확인해 주세요.', code: 'stale' })
+          return
+        }
+        if (fresh.adds + fresh.updates + fresh.removed === 0) { res.untouched++; return }
         const { revision } = await deps.saveDraft(rp.restaurant.id, fresh.items, state.revision)
-        res.saved.push({ restaurantId: rp.restaurant.id, name: rp.restaurant.name_ko, added: fresh.adds, updated: fresh.updates, revision, hadDraft: state.hasDraft })
+        res.saved.push({ restaurantId: rp.restaurant.id, name: rp.restaurant.name_ko, added: fresh.adds, updated: fresh.updates, removed: fresh.removed, revision, hadDraft: state.hasDraft })
         return
       } catch (e) {
         if (errCode(e) === '42501') { fatal = true; res.failed.push({ restaurantId: rp.restaurant.id, name: rp.restaurant.name_ko, message: errMsg(e), code: '42501' }); return }
@@ -307,4 +327,32 @@ export async function publishSaved(saved: SavedRestaurant[], reason: string, dep
   if (fatal) res.stoppedBy = 'forbidden'
   else if (run.signal?.aborted) res.stoppedBy = 'cancelled'
   return res
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// the restaurant chosen on the page is the ONLY target of a restaurant import
+// ---------------------------------------------------------------------------------------------------------------------
+export type TargetCheck = { blockers: { line: number; message: string }[]; notes: string[] }
+
+/**
+ * Does the file talk about a different restaurant than the selected one? Place ids are compared exactly; a blank id is fine
+ * (the selected restaurant is the target) unless the row names another restaurant. A different NAME next to the matching
+ * place id is only a note (the place may have been renamed). Any blocker stops the import before anything is planned.
+ */
+export function checkTarget(rows: CsvRow[], selected: RestaurantRef): TargetCheck {
+  const blockers: TargetCheck['blockers'] = []
+  const notes: string[] = []
+  const own = (selected.kakao_place_id ?? '').trim()
+  let renamed = 0
+  for (const r of rows) {
+    if (r.kakaoPlaceId) {
+      if (!own) blockers.push({ line: r.line, message: `이 식당에는 카카오 장소 ID가 없는데 파일에는 장소 ID(${r.kakaoPlaceId})가 있어요. 다른 식당의 파일일 수 있어요` })
+      else if (r.kakaoPlaceId !== own) blockers.push({ line: r.line, message: `장소 ID ${r.kakaoPlaceId}은(는) 선택한 식당(${selected.name_ko})의 장소 ID ${own}와 달라요` })
+      else if (r.restaurantName && normalizeText(r.restaurantName) !== normalizeText(selected.name_ko)) renamed++
+    } else if (r.restaurantName && normalizeText(r.restaurantName) !== normalizeText(selected.name_ko)) {
+      blockers.push({ line: r.line, message: `식당 이름 “${r.restaurantName}”은(는) 선택한 식당(${selected.name_ko})이 아니에요` })
+    }
+  }
+  if (renamed > 0) notes.push(`${renamed}줄의 식당 이름이 “${selected.name_ko}”와 다르지만 장소 ID가 같아서 이 식당으로 봤어요`)
+  return { blockers, notes }
 }

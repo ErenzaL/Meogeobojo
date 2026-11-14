@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowUp, ImageOff, Pencil, RotateCcw, Star, ThumbsUp, Trash2, Archive } from 'lucide-react'
+import { ArrowDown, ArrowUp, ImageOff, Pencil, RotateCcw, Star, ThumbsUp, Trash2, Archive, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import PublishingToolbar from '@/components/PublishingToolbar'
 import { Badge, Button, Card, EmptyState, ErrorState, Field, Input, PageHeader, Select, Skeleton, Textarea } from '@/components/ui'
@@ -12,6 +12,7 @@ import { fetchMenuCounts, fetchPickerRestaurants } from './restaurants/picker/pi
 import RestaurantPicker, { MENU_ITEM } from './restaurants/picker/RestaurantPicker'
 import type { PickerFilters } from './restaurants/picker/pickerLogic'
 import MenuCsvTools from './menus/MenuCsvTools'
+import RestaurantMenuImport from './menus/RestaurantMenuImport'
 import MenuPreview from './menus/MenuPreview'
 import { draftFromItem, emptyMenuDraft, itemFromDraft, MENU_CATEGORIES, sortItems, validateMenu, type MenuDraft } from './menus/menu'
 
@@ -36,6 +37,7 @@ export default function MenusPage() {
   const [editBase, setEditBase] = useState<number | null>(null)
   const [unsaved, setUnsaved] = useState<Record<string, string>>({}) // item id -> storage path of an upload no draft references yet
   const [previewing, setPreviewing] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   // Every managed restaurant (the same rows as the 식당 page), grouped by school; not a capped search result.
   const restaurants = useQuery({ queryKey: ['menu-picker', 'restaurants'], queryFn: fetchPickerRestaurants, refetchOnMount: 'always' })
@@ -121,6 +123,7 @@ export default function MenusPage() {
   }
   const set = <K extends keyof MenuDraft>(k: K, v: MenuDraft[K]) => setForm((d) => ({ ...d, [k]: v }))
 
+  const restaurantName = restaurants.data?.find((r) => r.id === restaurantId)?.name_ko ?? ''
   const visible = items.filter((m) => showArchived || m.status === 'active')
   const archivedCount = items.filter((m) => m.status === 'archived').length
   const changed = (m: MenuItem) => {
@@ -135,7 +138,7 @@ export default function MenusPage() {
       <RestaurantPicker item={MENU_ITEM} restaurants={restaurants.data} universities={schools} counts={counts} overview={ov}
         loading={restaurants.isLoading} error={restaurants.error} onRetry={() => void restaurants.refetch()}
         filters={filters} onFilters={setFilters} selectedId={restaurantId} onSelect={(id) => { setRestaurantId(id); resetLocal(); setMessage(null) }} />
-      {!restaurantId && <EmptyState>위 목록에서 식당을 선택하면 메뉴가 보여요.</EmptyState>}
+      {!restaurantId && <EmptyState>위 목록에서 식당을 선택하면 메뉴가 보여요. <Button size="sm" variant="outline" disabled className="ml-2" title="식당을 먼저 선택하세요">CSV 가져오기</Button></EmptyState>}
       {restaurantId && cms.isLoading && <Skeleton className="h-40 w-full" />}
       {restaurantId && cms.error && <ErrorState error={cms.error} onRetry={() => void cms.refetch()} />}
       {restaurantId && state && (
@@ -185,7 +188,11 @@ export default function MenusPage() {
                 </Card>))}
             </div>
             <Card className="space-y-3 self-start">
-              <h2 className="font-bold">{editing ? `메뉴 수정 · ${editing.name_ko}` : '새 메뉴'}</h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="font-bold">{editing ? `메뉴 수정 · ${editing.name_ko}` : '새 메뉴'}</h2>
+                <Button size="sm" variant="outline" disabled={dirty} title={dirty ? '수정 중인 내용이 있어요. 먼저 초안을 저장하거나 버려 주세요' : `${restaurantName} 메뉴를 CSV로 가져와요`} onClick={() => setImporting(true)}><Upload className="size-4" />CSV 가져오기</Button>
+              </div>
+              {dirty && <p className="text-xs text-muted">초안을 저장하면 CSV로 가져올 수 있어요 ({restaurantName}).</p>}
               <Field label="메뉴 이름" htmlFor="mn"><Input id="mn" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="제육 정식" /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="가격 (원)" htmlFor="mp" hint="모르면 비워 두세요"><Input id="mp" inputMode="numeric" value={form.price} onChange={(e) => set('price', e.target.value)} /></Field>
@@ -200,6 +207,7 @@ export default function MenusPage() {
               <p className="text-xs text-muted">추가·수정은 먼저 초안에 담겨요. 위의 &lsquo;초안 저장&rsquo; 후 &lsquo;지금 게시&rsquo; 또는 &lsquo;예약 게시&rsquo;로 앱에 반영해요. 메뉴를 추가한 뒤 카드의 &lsquo;사진 추가&rsquo;로 사진을 올려요.</p>
             </Card>
           </div>
+          {importing && <RestaurantMenuImport restaurantId={restaurantId} restaurantName={restaurantName} onClose={(didChange) => { setImporting(false); if (didChange) { resetLocal(); setMessage({ tone: 'ok', text: '가져온 메뉴를 초안으로 저장했어요. 아래 목록을 확인하고 게시해 주세요.' }); void refresh() } }} />}
           <MenuPreview open={previewing} live={state.live} draft={state.draft?.data ?? state.live} onClose={() => setPreviewing(false)} />
         </>)}
     </>

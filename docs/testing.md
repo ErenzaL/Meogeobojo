@@ -2,7 +2,7 @@
 
 | Layer | Command | What it proves |
 |---|---|---|
-| Flutter | `flutter analyze && flutter test` (copy `.env.example` to `.env` first) | UI, ranking, providers, admin-data integration with fake repositories |
+| Flutter | `flutter analyze && flutter test` (create `.env` first; empty is fine) | UI, ranking, providers, admin-data integration with fake repositories |
 | Flutter Web | `bash scripts/render_build.sh` (with env vars) | clean-clone release build |
 | Admin | `cd admin && npm run typecheck && npm run lint && npm test && npm run build` | role gating, forms, CSV, validation, edit flow (fake Supabase client) |
 | Database | `zsh supabase/tests/run_local.sh <scratch-dir>` | migrations apply twice cleanly; RLS and privileged functions, incl. negative cases, on a real local PostgreSQL |

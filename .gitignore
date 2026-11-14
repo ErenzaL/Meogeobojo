@@ -54,3 +54,7 @@ supabase/.temp/
 .env
 .env.*
 !.env.example
+
+# Release snapshots / DB dumps (docs/publishing-deployment.md); keep them local
+/before.json
+*.dump

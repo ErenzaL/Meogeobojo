@@ -25,15 +25,15 @@ compiled into public JavaScript.
 - Web: values are compiled in with `--dart-define`. `pubspec.yaml` still lists
   `.env` as an asset (mobile reads it), so the script creates an **empty**
   `.env` and fails the build if the shipped `assets/.env` is not empty.
-- Mobile/local: copy `.env.example` to `.env` (gitignored). `Env` prefers
+- Mobile/local: create `.env` (gitignored) with the keys listed in the README. `Env` prefers
   `--dart-define` values and falls back to `.env`.
 
 ## Why a clean clone used to fail
 `.env` is gitignored but listed as an asset, so Render's clone lacked it and
 `flutter build web` aborted with "No file or variants found for asset: .env",
 which Flutter reports as "Failed to compile application for the Web".
-The same applies to `flutter test` / `flutter analyze` on a fresh clone: copy
-`.env.example` to `.env` first.
+The same applies to `flutter test` / `flutter analyze` on a fresh clone: create
+`.env` first (an empty file is enough for tests).
 
 ## After deploying, in Supabase / Kakao
 - Add the Render URL to Supabase Auth → URL Configuration (redirect URLs).

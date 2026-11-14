@@ -61,6 +61,6 @@ Run `docs/testing.md` steps against a development project before relying on it.
 ## Known limits
 - Restaurant edits and university links are separate requests (PostgREST has no
   client transaction); links are added before removals so a failure never drops data.
-- The Flutter app does not yet use `universities.is_active` / `search_radius_m`, or
-  `app_content` (announcements, banners, featured), or `restaurant_university_links`.
+- The Flutter app uses `universities.is_active` and `app_content` (announcements,
+  banners, featured), but not yet `search_radius_m` or `restaurant_university_links`.
 - Analytics has no event collection yet (the page says so).

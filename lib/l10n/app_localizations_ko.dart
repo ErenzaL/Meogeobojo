@@ -1362,7 +1362,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String homeSeeOnMap(int count) {
-    return '조건에 맞는 $count곳 지도에서 보기';
+    return '조건에 맞는 $count곳\n지도에서 보기';
   }
 
   @override

@@ -429,7 +429,7 @@
   "homeCmpLater": "营业到更晚",
   "homeStatusOrderable": "预计截止前到达",
   "homeStatusClosesAt": "{time}截止点单",
-  "homeSeeOnMap": "在地图上查看符合条件的{count}家",
+  "homeSeeOnMap": "符合条件的{count}家\n在地图上查看",
   "homeEmptyTitle": "没有符合条件的店",
   "homeEmptyMessage": "放宽一些条件会看到更多。",
   "homeMealTitle": "今日食堂",

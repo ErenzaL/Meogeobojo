@@ -608,11 +608,11 @@ void main() {
       tester,
     ) async {
       final h = await openHome(tester);
-      await reveal(tester, find.text('조건에 맞는 3곳 지도에서 보기'));
+      await reveal(tester, find.text('조건에 맞는 3곳\n지도에서 보기'));
       expect(find.text('마음에 안 들면'), findsOneWidget);
       expect(inAlternatives(find.text('중간집')), findsOneWidget);
       expect(inAlternatives(find.text('먼집')), findsOneWidget);
-      await tester.tap(find.text('조건에 맞는 3곳 지도에서 보기'));
+      await tester.tap(find.text('조건에 맞는 3곳\n지도에서 보기'));
       await tester.pumpAndSettle();
       expect(h.container.read(shellTabProvider), ShellTabs.map);
     });
@@ -785,7 +785,7 @@ void main() {
         reason: 'badge on 조건',
       );
       await scrollDown(tester, -300);
-      expect(find.text('조건에 맞는 2곳 지도에서 보기'), findsOneWidget);
+      expect(find.text('조건에 맞는 2곳\n지도에서 보기'), findsOneWidget);
       expect(find.text('먼집'), findsNothing);
     });
 

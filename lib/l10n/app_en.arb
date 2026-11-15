@@ -429,7 +429,7 @@
   "homeCmpLater": "Open later",
   "homeStatusOrderable": "Expected before last order",
   "homeStatusClosesAt": "Last order {time}",
-  "homeSeeOnMap": "See {count} matching places on the map",
+  "homeSeeOnMap": "See {count} matching places\non the map",
   "homeEmptyTitle": "No place matches",
   "homeEmptyMessage": "Loosen a condition to see more.",
   "homeMealTitle": "Today's cafeteria",

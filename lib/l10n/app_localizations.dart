@@ -2467,7 +2467,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeSeeOnMap.
   ///
   /// In ko, this message translates to:
-  /// **'조건에 맞는 {count}곳 지도에서 보기'**
+  /// **'조건에 맞는 {count}곳\n지도에서 보기'**
   String homeSeeOnMap(int count);
 
   /// No description provided for @homeEmptyTitle.

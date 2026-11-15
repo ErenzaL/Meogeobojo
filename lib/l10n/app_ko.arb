@@ -890,7 +890,7 @@
       }
     }
   },
-  "homeSeeOnMap": "조건에 맞는 {count}곳 지도에서 보기",
+  "homeSeeOnMap": "조건에 맞는 {count}곳\n지도에서 보기",
   "@homeSeeOnMap": {
     "placeholders": {
       "count": {

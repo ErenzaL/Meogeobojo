@@ -1356,7 +1356,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String homeSeeOnMap(int count) {
-    return '在地图上查看符合条件的$count家';
+    return '符合条件的$count家\n在地图上查看';
   }
 
   @override

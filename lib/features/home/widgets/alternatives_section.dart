@@ -88,7 +88,8 @@ class AlternativesSection extends ConsumerWidget {
 }
 
 /// An outlined button that opens another page: icon on top, the label under it
-/// (two lines, so the longer "조건에 맞는 N곳 지도에서 보기" fits half the width).
+/// (up to two lines; the map label breaks where it reads well: "조건에 맞는 N곳" /
+/// "지도에서 보기").
 class _PageButton extends StatelessWidget {
   const _PageButton({
     required this.icon,
@@ -121,7 +122,11 @@ class _PageButton extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+            ),
           ),
         ],
       ),

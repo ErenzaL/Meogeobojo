@@ -1438,7 +1438,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeSeeOnMap(int count) {
-    return 'See $count matching places on the map';
+    return 'See $count matching places\non the map';
   }
 
   @override

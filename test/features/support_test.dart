@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/features/content/models/app_content.dart';
-import 'package:meogeobojo/features/restaurants/utils/restaurant_link.dart';
 import 'package:meogeobojo/features/support/support.dart';
 
 import '../support/fakes.dart';
@@ -82,13 +81,5 @@ void main() {
     await tester.tap(find.text('2차 업데이트'));
     await tester.pumpAndSettle();
     expect(find.text('지도 핀이 커졌어요'), findsOneWidget);
-  });
-
-  test('네이버맵 link searches the place by name near its city', () {
-    final r = fakeRestaurant('1', name: '국수집');
-    final url = naverMapUrl(r);
-    expect(url.host, 'map.naver.com');
-    expect(Uri.decodeComponent(url.path), startsWith('/p/search/'));
-    expect(Uri.decodeComponent(url.path), endsWith(r.name));
   });
 }

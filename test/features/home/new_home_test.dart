@@ -24,6 +24,7 @@ import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 import 'package:meogeobojo/features/restaurants/repositories/restaurant_repository.dart';
 import 'package:meogeobojo/features/search/screens/search_screen.dart';
 import 'package:meogeobojo/features/home/screens/outside_compare_screen.dart';
+import 'package:meogeobojo/features/home/screens/ranking_screen.dart';
 import 'package:meogeobojo/features/home/widgets/alternatives_section.dart';
 import 'package:meogeobojo/features/home/widgets/hero_card.dart';
 import 'package:meogeobojo/features/home/widgets/home_category_bar.dart';
@@ -31,6 +32,7 @@ import 'package:meogeobojo/features/home/games/ladder_game.dart';
 import 'package:meogeobojo/features/home/games/game_candidates.dart';
 import 'package:meogeobojo/features/home/providers/home_providers.dart';
 import 'package:meogeobojo/features/home/widgets/home_filter_bar.dart';
+import 'package:meogeobojo/features/home/widgets/top_three_row.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant_override.dart';
 import 'package:meogeobojo/features/reviews/models/student_review.dart';
@@ -614,6 +616,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(h.container.read(shellTabProvider), ShellTabs.map);
     });
+
+    testWidgets('Top 3 picks a place; 전체 추천 순위 opens its own page', (
+      tester,
+    ) async {
+      await openHome(tester);
+      final top3 = find.byType(TopThreeRow);
+      expect(find.text('Top 3 추천'), findsOneWidget);
+      for (final name in ['가까운집', '중간집', '먼집']) {
+        expect(
+          find.descendant(of: top3, matching: find.text(name)),
+          findsOneWidget,
+        );
+      }
+      await tester.tap(find.descendant(of: top3, matching: find.text('중간집')));
+      await tester.pumpAndSettle();
+      expect(inHero(find.text('중간집')), findsOneWidget);
+
+      await reveal(tester, find.text('전체 추천 순위 보기'));
+      await tester.tap(find.text('전체 추천 순위 보기'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RankingScreen), findsOneWidget);
+      expect(find.byType(BottomSheet), findsNothing);
+    });
   });
 
   group('origin sheet', () {
@@ -751,7 +776,14 @@ void main() {
       await tester.tap(find.text('2곳 보기'));
       await tester.pumpAndSettle();
       expect(find.text('2곳 중 1순위'), findsOneWidget);
-      expect(find.text('1'), findsOneWidget, reason: 'badge on 조건');
+      expect(
+        find.descendant(
+          of: find.byType(HomeFilterBar),
+          matching: find.text('1'),
+        ),
+        findsOneWidget,
+        reason: 'badge on 조건',
+      );
       await scrollDown(tester, -300);
       expect(find.text('조건에 맞는 2곳 지도에서 보기'), findsOneWidget);
       expect(find.text('먼집'), findsNothing);

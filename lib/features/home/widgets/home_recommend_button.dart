@@ -15,6 +15,7 @@ class HomeRecommendButton extends StatelessWidget {
     this.onEdit,
     this.onRestart,
     this.onlyOne = false,
+    this.leading,
   });
 
   /// "조건에 맞게 추천받기" (before a result is shown).
@@ -32,6 +33,10 @@ class HomeRecommendButton extends StatelessWidget {
 
   /// Only one place matches: it shows again, and the reason is said.
   final bool onlyOne;
+
+  /// On the left of the "조건 초기화" row (the "Top 3 추천" title), so the
+  /// row's empty side is used.
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -108,15 +113,24 @@ class HomeRecommendButton extends StatelessWidget {
               style: TextStyle(fontSize: 13.5, color: p.textSecondary),
             ),
           ),
-        if (onRestart != null)
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: onRestart,
-              style: TextButton.styleFrom(foregroundColor: p.textSecondary),
-              icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: Text(l10n.homeRestart),
-            ),
+        if (onRestart != null || leading != null)
+          Row(
+            children: [
+              Expanded(child: leading ?? const SizedBox.shrink()),
+              // Flexible: a long label (English, large text) wraps instead
+              // of pushing the row past the screen.
+              if (onRestart != null)
+                Flexible(
+                  child: TextButton.icon(
+                    onPressed: onRestart,
+                    style: TextButton.styleFrom(
+                      foregroundColor: p.textSecondary,
+                    ),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(l10n.homeRestart),
+                  ),
+                ),
+            ],
           ),
       ],
     );

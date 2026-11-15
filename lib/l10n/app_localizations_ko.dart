@@ -228,9 +228,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get restaurantOpenKakaoMap => '카카오맵에서 보기';
 
   @override
-  String get restaurantOpenNaverMap => '네이버맵에서 보기';
-
-  @override
   String get restaurantLinkOpenFailed => '열 수 없는 링크예요.';
 
   @override
@@ -2350,6 +2347,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get homeRankingLink => '전체 추천 순위 보기';
+
+  @override
+  String get homeTopThreeTitle => 'Top 3 추천';
 
   @override
   String get homeRankingTitle => '전체 추천 순위';

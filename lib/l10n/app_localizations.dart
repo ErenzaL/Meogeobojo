@@ -502,12 +502,6 @@ abstract class AppLocalizations {
   /// **'카카오맵에서 보기'**
   String get restaurantOpenKakaoMap;
 
-  /// No description provided for @restaurantOpenNaverMap.
-  ///
-  /// In ko, this message translates to:
-  /// **'네이버맵에서 보기'**
-  String get restaurantOpenNaverMap;
-
   /// No description provided for @restaurantLinkOpenFailed.
   ///
   /// In ko, this message translates to:
@@ -4263,6 +4257,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'전체 추천 순위 보기'**
   String get homeRankingLink;
+
+  /// No description provided for @homeTopThreeTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'Top 3 추천'**
+  String get homeTopThreeTitle;
 
   /// No description provided for @homeRankingTitle.
   ///

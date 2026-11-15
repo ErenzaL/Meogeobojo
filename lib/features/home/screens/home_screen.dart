@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../../core/sync/content_sync.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/responsive.dart';
@@ -31,6 +32,7 @@ import '../../content/providers/app_content_providers.dart';
 import '../../content/widgets/home_notices.dart';
 import '../widgets/recs_states.dart';
 import '../widgets/today_picks_section.dart';
+import '../widgets/top_three_row.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -169,8 +171,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onEdit: () => showConditionsSheet(context),
                   onlyOne: shown != null && shown.total < 2,
                   onRestart: showRecs ? _restart : null,
+                  leading: shown == null
+                      ? null
+                      : Text(
+                          context.l10n.homeTopThreeTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.sectionTitle,
+                        ),
                 ),
               ),
+              if (shown != null) ...[
+                const SizedBox(height: 4),
+                Padding(
+                  padding: pad,
+                  child: TopThreeRow(recs: shown),
+                ),
+              ],
               const SizedBox(height: 20),
               Padding(
                 padding: pad,

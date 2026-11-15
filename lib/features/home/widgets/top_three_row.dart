@@ -67,7 +67,9 @@ class _TopTile extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
-          child: Row(
+          // The name gets the tile's full width (under the rank), so Korean
+          // names wrap at a space, not mid-word.
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
@@ -82,17 +84,15 @@ class _TopTile extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  item.restaurant.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                    height: 1.3,
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                item.restaurant.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.3,
                 ),
               ),
             ],

@@ -121,13 +121,16 @@ class HomeRecommendButton extends StatelessWidget {
               // of pushing the row past the screen.
               if (onRestart != null)
                 Flexible(
-                  child: TextButton.icon(
-                    onPressed: onRestart,
-                    style: TextButton.styleFrom(
-                      foregroundColor: p.textSecondary,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: onRestart,
+                      style: TextButton.styleFrom(
+                        foregroundColor: p.textSecondary,
+                      ),
+                      icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                      label: Text(l10n.homeRestart),
                     ),
-                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
-                    label: Text(l10n.homeRestart),
                   ),
                 ),
             ],

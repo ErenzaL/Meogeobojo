@@ -109,6 +109,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final unverified =
         ref.watch(homePoolRankedProvider).value?.unconfirmed ?? const [];
     final shown = showRecs ? recs.value : null;
+    // Top 3: only beside a settled result (not old picks next to the loading
+    // skeleton or an error), and only when there is more than the card below.
+    final top3 = showRecs
+        ? recs.when(
+            data: (d) => d != null && d.total > 1 ? d : null,
+            loading: () => null,
+            error: (_, _) => null,
+          )
+        : null;
     final went = ref.watch(activeRecommendationProvider.select((a) => a?.went));
     final reviewFor = ref.watch(reviewPromptProvider);
 
@@ -171,7 +180,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onEdit: () => showConditionsSheet(context),
                   onlyOne: shown != null && shown.total < 2,
                   onRestart: showRecs ? _restart : null,
-                  leading: shown == null
+                  leading: top3 == null
                       ? null
                       : Text(
                           context.l10n.homeTopThreeTitle,
@@ -181,11 +190,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                 ),
               ),
-              if (shown != null) ...[
+              if (top3 != null) ...[
                 const SizedBox(height: 4),
                 Padding(
                   padding: pad,
-                  child: TopThreeRow(recs: shown),
+                  child: TopThreeRow(recs: top3),
                 ),
               ],
               const SizedBox(height: 20),

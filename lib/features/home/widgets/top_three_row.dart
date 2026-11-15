@@ -56,46 +56,51 @@ class _TopTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.palette;
     final radius = BorderRadius.circular(14);
-    return Material(
-      color: selected ? p.accentSoft : p.card,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: BorderSide(color: selected ? p.rustText : p.hairline),
-      ),
-      child: InkWell(
-        borderRadius: radius,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
-          // The name gets the tile's full width (under the rank), so Korean
-          // names wrap at a space, not mid-word.
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 11,
-                backgroundColor: rank == 1 ? p.rustText : p.fillMuted,
-                foregroundColor: rank == 1 ? p.card : p.textPrimary,
-                child: Text(
-                  '$rank',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
+    // Read out as a button, and which one is on the card.
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: selected ? p.accentSoft : p.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: radius,
+          side: BorderSide(color: selected ? p.rustText : p.hairline),
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+            // The name gets the tile's full width (under the rank), so Korean
+            // names wrap at a space, not mid-word.
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 11,
+                  backgroundColor: rank == 1 ? p.rustText : p.fillMuted,
+                  foregroundColor: rank == 1 ? p.card : p.textPrimary,
+                  child: Text(
+                    '$rank',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                item.restaurant.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
+                const SizedBox(height: 8),
+                Text(
+                  item.restaurant.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.3,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

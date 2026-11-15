@@ -376,6 +376,9 @@ void main() {
       );
       expect(button.onPressed, isNull);
       expect(find.text('조건에 맞는 식당이 이곳뿐이에요'), findsOneWidget);
+      // One place is already the card: no Top 3 repeating it.
+      expect(find.byType(TopThreeRow), findsNothing);
+      expect(find.text('Top 3 추천'), findsNothing);
     });
 
     testWidgets('changing a condition starts again from the best place', (

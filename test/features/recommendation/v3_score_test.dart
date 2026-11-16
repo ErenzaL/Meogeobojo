@@ -354,6 +354,41 @@ void main() {
       expect(await empty.read(reviewSignalsProvider.future), isEmpty);
     });
   });
+
+  group('places that cannot be confirmed are not listed', () {
+    test('by default only confirmed places are returned; with no conditions every place is confirmed', () async {
+      final c = ProviderContainer(
+        overrides: [
+          reviewSignalSourceProvider.overrideWithValue(_FakeReviews(const [])),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect(c.read(showUnverifiedCandidatesProvider), isFalse);
+      final r = rank(
+        [place('known', 0.0010), place('unknown', 0.0010)],
+        c: const Conditions(
+          distance: DistanceOption.walk15,
+          budget: BudgetOption.max8000,
+        ),
+        insights: {
+          'known': RestaurantInsight(
+            menus: const [MenuLine(priceKrw: 7000, category: '식사')],
+          ),
+        },
+      );
+      // the ranking still sorts them apart ...
+      expect(r.unconfirmed.map((e) => e.restaurant.kakaoId), ['unknown']);
+      // ... and the default view (confirmed only) is what every screen is given
+      expect(r.confirmed.map((e) => e.restaurant.kakaoId), ['known']);
+      // no conditions: nothing is unconfirmed, nothing disappears
+      final all = rank([
+        place('a', 0.0010),
+        place('b', 0.0020),
+      ], c: const Conditions(distance: DistanceOption.walk15));
+      expect(all.unconfirmed, isEmpty);
+      expect(all.length, 2);
+    });
+  });
 }
 
 class _FakeReviews implements ReviewSignalSource {

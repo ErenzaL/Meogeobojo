@@ -4750,24 +4750,6 @@ abstract class AppLocalizations {
   /// **'전체 보기'**
   String get noticesSeeAll;
 
-  /// No description provided for @demoTag.
-  ///
-  /// In ko, this message translates to:
-  /// **'데모 데이터'**
-  String get demoTag;
-
-  /// No description provided for @demoBannerTitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'데모 모드예요'**
-  String get demoBannerTitle;
-
-  /// No description provided for @demoBannerBody.
-  ///
-  /// In ko, this message translates to:
-  /// **'영업시간·주차·포장 같은 정보는 시연용 가상 데이터라서 실제로 확인된 정보가 아니에요. 가격은 게시된 메뉴로만 판단하고, 위치는 카카오의 실제 좌표를 써요.'**
-  String get demoBannerBody;
-
   /// No description provided for @demoSwitchTitle.
   ///
   /// In ko, this message translates to:
@@ -4777,7 +4759,7 @@ abstract class AppLocalizations {
   /// No description provided for @demoSwitchSubtitle.
   ///
   /// In ko, this message translates to:
-  /// **'가상의 영업시간·편의 정보로 추천을 시연해요. 켜져 있는 동안 화면에 데모 표시가 나와요.'**
+  /// **'가상의 영업시간·편의 정보로 추천을 시연해요.'**
   String get demoSwitchSubtitle;
 
   /// No description provided for @missingAmenityNamed.

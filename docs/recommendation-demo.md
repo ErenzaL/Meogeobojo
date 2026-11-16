@@ -18,13 +18,18 @@ hours and amenities before real data exists. **It is simulated. It is never veri
   The restaurant and menu CSV imports are unchanged.
 * **App**: `lib/features/recommendation/demo/`. `applyDemo` fills only what is missing from the real data and flags the
   insight `demo`. Demo mode is OFF by default and the switch only exists in debug runs and in builds made with
-  `--dart-define=MEOGEOBOJO_DEMO=true` (Settings → 계정). While it is on, Home shows a "데모 모드" banner and every card
-  that rests on demo hours/amenities carries "데모 데이터".
+  `--dart-define=MEOGEOBOJO_DEMO=true` (Settings → 계정). By the owner's decision the app and web show **no "demo" label**:
+  while the switch is on, simulated hours/amenities look like any other data. The ranking still records which results rest
+  on them (`RankedRestaurant.demoBasis`), so a label can be turned back on without changing the logic.
 * **Ranking**: unchanged (V3). A place is a confirmed match only when every chosen condition is known and holds; with
   missing data it is listed apart as "정보 미확인" and the card names what is missing (e.g. "주차 정보 미확인").
 
 ## Demo build
 `flutter build ios --release --dart-define=MEOGEOBOJO_DEMO=true` (and the same for apk). A normal build has no switch.
+
+## Caution
+With no label, a confirmed match that rests on a simulated fact (e.g. parking) reads like a verified one. Keep demo mode
+off in anything students use (a normal build has no switch), and say it is a demo to whoever you show it to.
 
 ## Reading the results honestly
 A budget search confirms a place only when its published menu has a priced meal line whose category is 식사 / 면류 / 분식.

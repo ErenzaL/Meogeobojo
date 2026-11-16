@@ -30,26 +30,17 @@ String missingText(
   AppLocalizations l10n,
   Set<MissingInfo> missing, {
   Set<Amenity> amenities = const {},
-  bool demo = false,
-}) => withDemoTag(
-  l10n,
-  [
-    if (missing.contains(MissingInfo.price)) l10n.missingPrice,
-    if (missing.contains(MissingInfo.hours)) l10n.missingHours,
-    if (missing.contains(MissingInfo.amenities))
-      if (amenities.isEmpty)
-        l10n.missingAmenities
-      else
-        for (final a in Amenity.values)
-          if (amenities.contains(a))
-            l10n.missingAmenityNamed(amenityLabelOf(l10n, a)),
-  ].join(' · '),
-  demo,
-);
-
-/// [text] with the "데모 데이터" label when some of what it rests on is simulated.
-String withDemoTag(AppLocalizations l10n, String text, bool demo) =>
-    !demo ? text : (text.isEmpty ? l10n.demoTag : '$text · ${l10n.demoTag}');
+}) => [
+  if (missing.contains(MissingInfo.price)) l10n.missingPrice,
+  if (missing.contains(MissingInfo.hours)) l10n.missingHours,
+  if (missing.contains(MissingInfo.amenities))
+    if (amenities.isEmpty)
+      l10n.missingAmenities
+    else
+      for (final a in Amenity.values)
+        if (amenities.contains(a))
+          l10n.missingAmenityNamed(amenityLabelOf(l10n, a)),
+].join(' · ');
 
 /// The advantage line of an alternative; its own reason when it has none.
 ///

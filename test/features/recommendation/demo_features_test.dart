@@ -7,7 +7,6 @@ import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
 import 'package:meogeobojo/features/recommendation/demo/demo_features.dart';
 import 'package:meogeobojo/features/recommendation/demo/demo_providers.dart';
 import 'package:meogeobojo/features/recommendation/demo/demo_repository.dart';
-import 'package:meogeobojo/features/recommendation/demo/demo_widgets.dart';
 import 'package:meogeobojo/features/recommendation/home_ranking.dart';
 import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/recommendation/restaurant_insight.dart';
@@ -307,10 +306,6 @@ void main() {
           contains('주차'),
         );
         expect(missingText(l10n, {MissingInfo.price}), l10n.missingPrice);
-        expect(
-          missingText(l10n, {MissingInfo.price}, demo: true),
-          contains(l10n.demoTag),
-        );
       });
     },
   );
@@ -382,34 +377,6 @@ void main() {
           () => throw StateError('no client'),
         );
         expect(await repo.all(), isEmpty);
-      },
-    );
-
-    testWidgets(
-      'the banner appears only in demo mode and says the data is simulated',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({
-          'recommendation_demo_mode': true,
-        });
-        final sp = await SharedPreferences.getInstance();
-        Widget app(bool on) => ProviderScope(
-          key: ValueKey(on),
-          overrides: [
-            sharedPreferencesProvider.overrideWithValue(sp),
-            demoAvailableProvider.overrideWithValue(on),
-          ],
-          child: const MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            locale: Locale('ko'),
-            home: Scaffold(body: DemoModeBanner()),
-          ),
-        );
-        await tester.pumpWidget(app(true));
-        expect(find.byKey(const ValueKey('demo-mode-banner')), findsOneWidget);
-        expect(find.textContaining('실제로 확인된 정보가 아니에요'), findsOneWidget);
-        await tester.pumpWidget(app(false));
-        expect(find.byKey(const ValueKey('demo-mode-banner')), findsNothing);
       },
     );
   });

@@ -301,12 +301,7 @@ class _UnverifiedRow extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              missingText(
-                l10n,
-                item.missing,
-                amenities: item.missingAmenities,
-                demo: item.demoBasis,
-              ),
+              missingText(l10n, item.missing, amenities: item.missingAmenities),
               style: TextStyle(fontSize: 13, color: p.statusWarn),
             ),
           ],

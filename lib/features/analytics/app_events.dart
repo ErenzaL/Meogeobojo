@@ -21,8 +21,11 @@ enum AppEvent {
   final String wire;
 }
 
-typedef AppEventLogger =
-    void Function(AppEvent event, {String? restaurantId, String? query});
+typedef AppEventLogger = void Function(
+  AppEvent event, {
+  String? restaurantId,
+  String? query,
+});
 
 final appEventLoggerProvider = Provider<AppEventLogger>(
   (ref) =>
@@ -51,14 +54,18 @@ void sendAppEvent(
       'client_id': analyticsClientId(prefs()),
       'restaurant_id': ?restaurantId,
       // The table keeps at most 100 characters (runes, so an emoji is never cut in half).
-      if (q != null && q.isNotEmpty) 'query': String.fromCharCodes(q.runes.take(100)),
+      if (q != null && q.isNotEmpty)
+        'query': String.fromCharCodes(q.runes.take(100)),
     };
     unawaited(
       Supabase.instance.client
           .from('app_events')
           .insert(row)
           .timeout(const Duration(seconds: 10))
-          .then<void>((_) {}, onError: (Object e) => debugPrint('app event not sent: $e')),
+          .then<void>(
+            (_) {},
+            onError: (Object e) => debugPrint('app event not sent: $e'),
+          ),
     );
   } catch (e) {
     debugPrint('app event not sent: $e');

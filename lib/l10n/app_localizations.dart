@@ -4815,6 +4815,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'영업시간 정보가 아직 없어서 ‘지금 주문 가능’은 적용하지 못했어요'**
   String get ignoredHours;
+
+  /// No description provided for @homeMatchingMenus.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 메뉴 {count}개'**
+  String homeMatchingMenus(int count);
 }
 
 class _AppLocalizationsDelegate

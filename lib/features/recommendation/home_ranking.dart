@@ -4,6 +4,7 @@ import '../../core/utils/geo.dart';
 import '../conditions/models/conditions.dart';
 import '../preferences/models/user_preferences.dart';
 import '../restaurants/models/restaurant.dart';
+import '../restaurants/models/restaurant_override.dart';
 import 'preference_filter.dart';
 import 'recommendation_score.dart';
 import 'restaurant_insight.dart';
@@ -115,6 +116,51 @@ extension RankedSplit on List<RankedRestaurant> {
 int walkMinutesFor(int meters) =>
     math.max(1, (meters / walkMetersPerMinute).round());
 
+/// A menu line that can be evidence for a budget at [arrivalMinutes]: served then, priced, in stock, and a meal for one.
+/// For a "이상" (at least) budget a shared dish counts too (a 20,000원 chicken is "12,000원 이상"); for an "이하" budget
+/// it never does, because what one person pays for a shared dish is not known.
+bool lineCountsForBudget(
+  MenuLine m, {
+  required bool max,
+  required int arrivalMinutes,
+}) =>
+    m.available &&
+    (m.isMeal || (!max && m.isShareable)) &&
+    m.priceKrw != null &&
+    m.servedAt(arrivalMinutes);
+
+/// The menu lines of ONE place that match [c] for someone arriving at [arrivalMinutes]: with a budget the lines that fit
+/// it (the very lines `judgeRestaurant` confirms the place on), without one the place's meals. Representative dishes
+/// first, then cheapest first. Empty when the place has no such line.
+List<RestaurantMenuItem> menusMatchingConditions(
+  List<RestaurantMenuItem> menus,
+  Conditions c,
+  int arrivalMinutes,
+) {
+  final amount = c.budget.amountKrw;
+  final max = c.budget.type == BudgetType.max;
+  final out = [
+    for (final m in menus)
+      if (amount == null
+          ? m.available &&
+                m.priceKrw != null &&
+                m.line.isMeal &&
+                m.line.servedAt(arrivalMinutes)
+          : lineCountsForBudget(
+                  m.line,
+                  max: max,
+                  arrivalMinutes: arrivalMinutes,
+                ) &&
+                (max ? m.priceKrw! <= amount : m.priceKrw! >= amount))
+        m,
+  ];
+  out.sort((a, b) {
+    if (a.representative != b.representative) return a.representative ? -1 : 1;
+    return a.priceKrw!.compareTo(b.priceKrw!);
+  });
+  return out;
+}
+
 /// Judges one place against [c], for someone arriving at [arrivalMinutes]
 /// (Seoul minute of the day).
 ///
@@ -145,10 +191,7 @@ Judgement judgeRestaurant(
     // budget never does: what one person pays for a shared dish is not known.
     final meals = [
       for (final m in i.menus)
-        if (m.available &&
-            (m.isMeal || (!max && m.isShareable)) &&
-            m.priceKrw != null &&
-            m.servedAt(arrivalMinutes))
+        if (lineCountsForBudget(m, max: max, arrivalMinutes: arrivalMinutes))
           m.priceKrw!,
     ];
     final fitting = meals.where(fits).toList()..sort();

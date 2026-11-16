@@ -902,6 +902,91 @@ void main() {
       },
     );
 
+    testWidgets(
+      'under the pick, the dishes of that place that match the conditions slide sideways',
+      (tester) async {
+        final repo = FakeRestaurantRepository(items: [spot('돈가스집', 0.0010)]);
+        final menus = [
+          for (var i = 1; i <= 8; i++)
+            RestaurantMenuItem(
+              name: '메뉴$i',
+              priceKrw: 5000 + i * 100,
+              category: '식사',
+            ),
+          const RestaurantMenuItem(
+            name: '비싼정식',
+            priceKrw: 15000,
+            category: '식사',
+          ),
+          const RestaurantMenuItem(
+            name: '사이드감자',
+            priceKrw: 3000,
+            category: '사이드',
+          ),
+        ];
+        final h = await buildHarness(
+          restaurants: repo,
+          overridesRepo: FakeRestaurantOverrideRepository(
+            menuItems: {'돈가스집': menus},
+          ),
+          extraOverrides: [
+            campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
+          ],
+        );
+        await pumpApp(tester, h, home: const AppShell());
+        h.container
+            .read(conditionsProvider.notifier)
+            .update((c) => c.copyWith(budget: BudgetOption.max8000));
+        await tester.pumpAndSettle();
+        // only the meals within the budget, counted in the title
+        expect(find.byKey(const ValueKey('hero-menu-strip')), findsOneWidget);
+        expect(find.text('조건에 맞는 메뉴 8개'), findsOneWidget);
+        expect(find.text('비싼정식'), findsNothing);
+        expect(find.text('사이드감자'), findsNothing);
+        // a row that slides sideways, not a list that fills the page
+        final list = tester.widget<ListView>(
+          find.byKey(const ValueKey('hero-menu-list')),
+        );
+        expect(list.scrollDirection, Axis.horizontal);
+        final strip = find.byKey(const ValueKey('hero-menu-strip'));
+        await tester.ensureVisible(strip);
+        await tester.pumpAndSettle();
+        expect(find.text('메뉴8'), findsNothing); // beyond the edge until slid
+        await tester.drag(
+          find.byKey(const ValueKey('hero-menu-list')),
+          const Offset(-1200, 0),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('메뉴8'), findsOneWidget);
+      },
+    );
+
+    testWidgets('no strip when the pick has no dish that matches', (
+      tester,
+    ) async {
+      final repo = FakeRestaurantRepository(items: [spot('음료집', 0.0010)]);
+      final h = await buildHarness(
+        restaurants: repo,
+        overridesRepo: FakeRestaurantOverrideRepository(
+          menuItems: {
+            '음료집': const [
+              RestaurantMenuItem(name: '콜라', priceKrw: 2000, category: '음료'),
+            ],
+          },
+        ),
+        extraOverrides: [
+          campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
+        ],
+      );
+      await pumpApp(tester, h, home: const AppShell());
+      h.container
+          .read(conditionsProvider.notifier)
+          .update((c) => c.copyWith(distance: DistanceOption.walk15));
+      await tester.pumpAndSettle();
+      expect(find.byType(HeroCard), findsOneWidget);
+      expect(find.byKey(const ValueKey('hero-menu-strip')), findsNothing);
+    });
+
     testWidgets('바꾸기 opens the origin sheet', (tester) async {
       await openHome(tester);
       await openSheet(tester);

@@ -879,5 +879,6 @@
   "relaxAmenities": "Without hours & amenities: {count} places",
   "relaxCategory": "Any food type: {count} places",
   "ignoredAmenity": "No place has {amenity} information yet, so this condition was not applied",
-  "ignoredHours": "No place has opening hours yet, so \"open now\" was not applied"
+  "ignoredHours": "No place has opening hours yet, so \"open now\" was not applied",
+  "homeMatchingMenus": "{count} dishes that fit your conditions"
 }

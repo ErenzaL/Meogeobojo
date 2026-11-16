@@ -879,5 +879,6 @@
   "relaxAmenities": "不限营业·设施条件：{count}家",
   "relaxCategory": "所有菜系：{count}家",
   "ignoredAmenity": "目前没有{amenity}信息，所以未应用该条件",
-  "ignoredHours": "目前没有营业时间信息，所以未应用“现在可点餐”"
+  "ignoredHours": "目前没有营业时间信息，所以未应用“现在可点餐”",
+  "homeMatchingMenus": "符合条件的菜品{count}道"
 }

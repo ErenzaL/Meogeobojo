@@ -30,6 +30,7 @@ import '../widgets/home_welcome.dart';
 import '../../../core/widgets/web_footer.dart';
 import '../../content/providers/app_content_providers.dart';
 import '../../content/widgets/home_notices.dart';
+import '../widgets/hero_menu_strip.dart';
 import '../widgets/recs_states.dart';
 import '../widgets/today_picks_section.dart';
 import '../widgets/top_three_row.dart';
@@ -237,6 +238,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                       recs: data,
                                     ),
+                                  ),
+                                  // the dishes of this place that match the conditions, sliding sideways
+                                  HeroMenuStrip(
+                                    key: ValueKey(
+                                      'menus-${data.hero.restaurant.kakaoId}',
+                                    ),
+                                    hero: data.hero,
                                   ),
                                   const SizedBox(height: 28),
                                   AlternativesSection(recs: data),

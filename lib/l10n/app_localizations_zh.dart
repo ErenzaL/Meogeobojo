@@ -2659,4 +2659,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ignoredHours => '目前没有营业时间信息，所以未应用“现在可点餐”';
+
+  @override
+  String homeMatchingMenus(int count) {
+    return '符合条件的菜品$count道';
+  }
 }

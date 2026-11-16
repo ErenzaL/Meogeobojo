@@ -2673,4 +2673,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get ignoredHours => '영업시간 정보가 아직 없어서 ‘지금 주문 가능’은 적용하지 못했어요';
+
+  @override
+  String homeMatchingMenus(int count) {
+    return '조건에 맞는 메뉴 $count개';
+  }
 }

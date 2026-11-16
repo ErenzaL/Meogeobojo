@@ -2782,4 +2782,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ignoredHours =>
       'No place has opening hours yet, so \"open now\" was not applied';
+
+  @override
+  String homeMatchingMenus(int count) {
+    return '$count dishes that fit your conditions';
+  }
 }

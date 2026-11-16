@@ -1736,5 +1736,13 @@
         "type": "String"
       }
     }
+  },
+  "homeMatchingMenus": "조건에 맞는 메뉴 {count}개",
+  "@homeMatchingMenus": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

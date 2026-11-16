@@ -129,7 +129,6 @@
   "restaurantNoPhone": "등록된 전화번호가 없어요",
   "restaurantDataNotice": "사진, 평점, 메뉴·가격, 영업시간은 아직 제공되지 않아요. 자세한 정보는 카카오맵에서 확인해보세요.",
   "restaurantOpenKakaoMap": "카카오맵에서 보기",
-  "restaurantOpenNaverMap": "네이버맵에서 보기",
   "restaurantLinkOpenFailed": "열 수 없는 링크예요.",
   "restaurantErrNetwork": "인터넷 연결을 확인해주세요.",
   "restaurantErrTimeout": "응답이 너무 늦어지고 있어요. 잠시 후 다시 시도해주세요.",
@@ -891,7 +890,7 @@
       }
     }
   },
-  "homeSeeOnMap": "조건에 맞는 {count}곳 지도에서 보기",
+  "homeSeeOnMap": "조건에 맞는 {count}곳\n지도에서 보기",
   "@homeSeeOnMap": {
     "placeholders": {
       "count": {
@@ -1475,6 +1474,7 @@
   "homeUnverifiedTag": "정보 미확인",
   "homeErrorKeepsConditions": "고른 조건은 그대로 남아 있어요.",
   "homeRankingLink": "전체 추천 순위 보기",
+  "homeTopThreeTitle": "Top 3 추천",
   "homeRankingTitle": "전체 추천 순위",
   "homeRankingSub": "조건에 맞는 곳 중 상위 {count}곳",
   "@homeRankingSub": {

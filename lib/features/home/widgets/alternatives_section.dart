@@ -12,10 +12,10 @@ import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../restaurants/utils/directions.dart';
 import '../games/game_sheet.dart';
+import '../screens/ranking_screen.dart';
 import '../providers/home_providers.dart';
 import '../utils/home_text.dart';
 import 'home_card_parts.dart';
-import 'ranking_sheet.dart';
 import 'restaurant_art.dart';
 
 /// "마음에 안 들면": a shuffle button and the next two picks, each compared
@@ -52,14 +52,29 @@ class AlternativesSection extends ConsumerWidget {
             ),
           ),
         const SizedBox(height: 14),
-        _LinkRow(
-          label: l10n.homeRankingLink,
-          onTap: () => showRankingSheet(context, recs),
-        ),
-        _LinkRow(
-          label: l10n.homeSeeOnMap(recs.total),
-          onTap: () =>
-              ref.read(shellTabProvider.notifier).select(ShellTabs.map),
+        // Two buttons side by side, each to its own page: 전체 추천 순위, 지도.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _PageButton(
+                  icon: Icons.format_list_numbered_rounded,
+                  label: l10n.homeRankingLink,
+                  onTap: () => openRankingScreen(context, recs),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PageButton(
+                  icon: Icons.map_outlined,
+                  label: l10n.homeSeeOnMap(recs.total),
+                  onTap: () =>
+                      ref.read(shellTabProvider.notifier).select(ShellTabs.map),
+                ),
+              ),
+            ],
+          ),
         ),
         // A secondary way to decide, under the results.
         const SizedBox(height: 10),
@@ -72,37 +87,51 @@ class AlternativesSection extends ConsumerWidget {
   }
 }
 
-class _LinkRow extends StatelessWidget {
-  const _LinkRow({required this.label, required this.onTap});
+/// An outlined button that opens another page: icon on top, the label under it
+/// (up to two lines; the map label breaks where it reads well: "조건에 맞는 N곳" /
+/// "지도에서 보기").
+class _PageButton extends StatelessWidget {
+  const _PageButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
+  final IconData icon;
   final String label;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    borderRadius: BorderRadius.circular(8),
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-      child: Row(
+  Widget build(BuildContext context) {
+    final p = context.palette;
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: p.textPrimary,
+        side: BorderSide(color: p.borderStrong),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 15.5,
-                fontWeight: FontWeight.w600,
-              ),
+          Icon(icon, size: 22, color: p.rustText),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
             ),
           ),
-          const SizedBox(width: 6),
-          const Icon(Icons.chevron_right_rounded, size: 20),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// Full-width entry to the pick-by-game sheet, in the app's soft accent tone.

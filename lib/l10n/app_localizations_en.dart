@@ -230,9 +230,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restaurantOpenKakaoMap => 'View on Kakao Map';
 
   @override
-  String get restaurantOpenNaverMap => 'View on Naver Map';
-
-  @override
   String get restaurantLinkOpenFailed => 'Couldn\'t open that link.';
 
   @override
@@ -1441,7 +1438,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String homeSeeOnMap(int count) {
-    return 'See $count matching places on the map';
+    return 'See $count matching places\non the map';
   }
 
   @override
@@ -2449,6 +2446,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeRankingLink => 'See the full ranking';
+
+  @override
+  String get homeTopThreeTitle => 'Top 3 picks';
 
   @override
   String get homeRankingTitle => 'Full ranking';

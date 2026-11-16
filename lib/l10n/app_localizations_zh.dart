@@ -227,9 +227,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get restaurantOpenKakaoMap => '在 Kakao 地图中查看';
 
   @override
-  String get restaurantOpenNaverMap => '在 Naver 地图中查看';
-
-  @override
   String get restaurantLinkOpenFailed => '无法打开该链接。';
 
   @override
@@ -1359,7 +1356,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String homeSeeOnMap(int count) {
-    return '在地图上查看符合条件的$count家';
+    return '符合条件的$count家\n在地图上查看';
   }
 
   @override
@@ -2337,6 +2334,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get homeRankingLink => '查看完整推荐排名';
+
+  @override
+  String get homeTopThreeTitle => 'Top 3 推荐';
 
   @override
   String get homeRankingTitle => '完整推荐排名';

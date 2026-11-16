@@ -12,7 +12,7 @@ import { errorMessage, formatDateTime } from '@/lib/utils'
 import BulkVisibilityDialog from './BulkVisibilityDialog'
 import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import KakaoImport from './KakaoImport'
-import { buildCsv, parseRestaurantCsv, toRow, type ParsedRow } from './csv'
+import { buildCsv, ignoredCsvColumns, parseRestaurantCsv, restaurantTemplateCsv, toRow, type ParsedRow } from './csv'
 import { KakaoLiveCell } from './KakaoLiveUi'
 import { campusesOf } from './useKakaoRestaurantDetails'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
@@ -219,6 +219,7 @@ export default function RestaurantsPage() {
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
+  const [ignoredCols, setIgnoredCols] = useState<string[]>([])
 
   const exportCsv = async () => {
     setNotice(null)
@@ -226,8 +227,11 @@ export default function RestaurantsPage() {
     if (visibility) q = q.eq('visibility', visibility)
     const { data, error } = await q
     if (error) return setNotice(errorMessage(error))
-    const url = URL.createObjectURL(new Blob(['﻿' + buildCsv(data)], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a'); a.href = url; a.download = 'restaurants.csv'; a.click(); URL.revokeObjectURL(url)
+    download('restaurants.csv', '﻿' + buildCsv(data))
+  }
+  const download = (name: string, text: string) => {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url)
   }
 
   const runImport = useMutation({
@@ -260,10 +264,11 @@ export default function RestaurantsPage() {
       <PageHeader title="식당" description="카카오에서 가져온 식당에 우리가 추가·수정한 정보를 관리해요."
         actions={<>
           <Button variant="outline" onClick={() => void exportCsv()}><Download className="size-4" />CSV 내보내기</Button>
+          {can('admin') && <Button variant="outline" onClick={() => download('restaurants_template.csv', restaurantTemplateCsv())}><Download className="size-4" />CSV 양식</Button>}
           {can('admin') && <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="size-4" />CSV 가져오기</Button>}
           {can('admin') && <Link to="/restaurants/new"><Button><Plus className="size-4" />식당 추가</Button></Link>}
           <input ref={fileRef} type="file" accept=".csv,text/csv" hidden data-testid="csv-input"
-            onChange={async (e) => { const f = e.target.files?.[0]; if (f) setImportRows(parseRestaurantCsv(await f.text())); e.target.value = '' }} />
+            onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const text = await f.text(); setIgnoredCols(ignoredCsvColumns(text)); setImportRows(parseRestaurantCsv(text)) } e.target.value = '' }} />
         </>} />
       {notice && <p role="status" className="mb-4 rounded-xl bg-brand/30 p-3 text-sm">{notice}</p>}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -351,7 +356,7 @@ export default function RestaurantsPage() {
 
       {importRows && (
         <ConfirmDialog open title="CSV 가져오기 미리보기" confirmLabel="가져오기" busy={runImport.isPending}
-          description={`전체 ${importRows.length}행 · 정상 ${importRows.filter((r) => r.values && !r.duplicateInFile).length}행 · 오류/중복 ${importRows.filter((r) => !r.values || r.duplicateInFile).length}행. 새 식당은 초안으로 추가되고, 이미 있는 Kakao ID는 건너뛰어요. 기존 데이터는 바뀌지 않아요.`}
+          description={`전체 ${importRows.length}행 · 정상 ${importRows.filter((r) => r.values && !r.duplicateInFile).length}행 · 오류/중복 ${importRows.filter((r) => !r.values || r.duplicateInFile).length}행. 새 식당은 초안으로 추가되고, 이미 있는 Kakao ID는 건너뛰어요. 기존 데이터는 바뀌지 않아요.${ignoredCols.length > 0 ? ` 읽지 않은 열: ${ignoredCols.join(', ')}.` : ''}`}
           onConfirm={() => runImport.mutate(importRows)} onCancel={() => setImportRows(null)} />
       )}
       {list.isError && null}

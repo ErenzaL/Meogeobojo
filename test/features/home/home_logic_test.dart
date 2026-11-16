@@ -78,15 +78,16 @@ void main() {
       expect(r.map((e) => e.restaurant.kakaoId), ['A', 'B']);
     });
 
-    test('cuisine filter keeps only matches and explains the pick', () {
+    test('a food preference ranks matching places first (it is not a filter) and explains the pick', () {
       final r = rank([
         a,
         b,
         c,
       ], c: const Conditions(cuisines: {Cuisine.chinese}));
-      expect(r.single.restaurant.kakaoId, 'C');
-      expect(r.single.reason.kind, ReasonKind.cuisine);
-      expect(r.single.reason.cuisine, Cuisine.chinese);
+      // the Chinese place is far (V3 = 0.5 * C + 0.5 * D, D = 0 at the farthest) but its preference point lifts it first
+      expect(r.map((e) => e.restaurant.kakaoId), ['C', 'A', 'B']);
+      expect(r.first.reason.kind, ReasonKind.cuisine);
+      expect(r.first.reason.cuisine, Cuisine.chinese);
     });
 
     test('cafes only appear when 카페 is chosen', () {
@@ -109,7 +110,7 @@ void main() {
           [cafe, a],
           c: const Conditions(cuisines: {Cuisine.cafe}),
         ).map((e) => e.restaurant.kakaoId),
-        ['K'],
+        ['K', 'A'], // the cafe now qualifies and, being preferred, leads
       );
     });
 

@@ -793,13 +793,15 @@ void main() {
     });
 
     testWidgets('no match disables the button; 초기화 restores', (tester) async {
-      final h = await openHome(tester);
+      // The only place is ~778 m away: a 5-minute walk (400 m) leaves nothing.
+      await openHome(
+        tester,
+        repo: FakeRestaurantRepository(
+          items: [spot('먼집', 0.0070, category: '음식점 > 중식 > 마라탕')],
+        ),
+      );
       await openSheet(tester);
       await tester.tap(find.text('도보 5분'));
-      // 중식 is only available far away (the chip itself is below the fold).
-      h.container
-          .read(conditionsProvider.notifier)
-          .update((c) => c.copyWith(cuisines: {Cuisine.chinese}));
       await tester.pumpAndSettle();
       expect(find.text('조건에 맞는 곳이 없어요'), findsWidgets);
       expect(
@@ -820,7 +822,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('3곳 보기'), findsOneWidget);
+      expect(find.text('1곳 보기'), findsOneWidget);
     });
 
     testWidgets('바꾸기 opens the origin sheet', (tester) async {

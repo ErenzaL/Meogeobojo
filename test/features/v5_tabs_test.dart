@@ -107,7 +107,8 @@ void main() {
     testWidgets('sort menu changes the order; no match shows the empty state', (
       tester,
     ) async {
-      final h = await open(tester, ShellTabs.map);
+      // The only place is ~778 m away: a 5-minute walk (400 m) leaves nothing.
+      final h = await open(tester, ShellTabs.map, places: [spot('먼집', 0.0070)]);
       await tester.tap(find.text('추천순'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('가격순').last);
@@ -117,7 +118,7 @@ void main() {
 
       h.container
           .read(conditionsProvider.notifier)
-          .update((c) => c.copyWith(cuisines: {Cuisine.japanese}));
+          .update((c) => c.copyWith(distance: DistanceOption.walk5));
       await tester.pumpAndSettle();
       expect(find.text('조건에 맞는 식당 0곳'), findsOneWidget);
       expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
@@ -125,7 +126,7 @@ void main() {
       expect(find.text('조건 초기화'), findsOneWidget);
       h.container.read(conditionsProvider.notifier).clear();
       await tester.pumpAndSettle();
-      expect(find.text('조건에 맞는 식당 3곳'), findsOneWidget);
+      expect(find.text('조건에 맞는 식당 1곳'), findsOneWidget);
     });
 
     testWidgets('no overflow on a small phone with large text', (tester) async {

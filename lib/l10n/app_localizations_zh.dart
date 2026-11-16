@@ -346,14 +346,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get recommendExplainBaseline =>
-      '目前还没有人气和口味数据，所以先按离学校的距离展示餐厅。个性化推荐正在准备中。';
+      '你还没有保存条件，所以只按离学校的距离由近到远展示。保存条件后，符合口味和预算的餐厅会排在前面。';
 
   @override
-  String get recommendStrategyPreferences => '按我的条件筛选';
+  String get recommendStrategyPreferences => '按口味和距离排序';
 
   @override
   String recommendExplainPreferences(int count, int total) {
-    return '已应用你保存的距离和菜系条件：在 $total 家中显示 $count 家，由近到远。预算、同行人和口味标签暂未生效，距离为直线距离的估算值。个性化推荐正在准备中。';
+    return '在 $total 家候选中，有 $count 家符合你保存的距离和预算。离得越近、越符合口味的排得越靠前，已确认有预算内正餐的优先显示。菜系只影响顺序、不会隐藏餐厅，距离为直线距离的估算值。';
   }
 
   @override

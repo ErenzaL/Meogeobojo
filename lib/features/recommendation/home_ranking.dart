@@ -5,6 +5,7 @@ import '../conditions/models/conditions.dart';
 import '../preferences/models/user_preferences.dart';
 import '../restaurants/models/restaurant.dart';
 import 'preference_filter.dart';
+import 'recommendation_score.dart';
 import 'restaurant_insight.dart';
 
 /// Why a place is shown first. Only facts that were actually checked: the
@@ -58,6 +59,7 @@ class RankedRestaurant {
     required this.insight,
     required this.reason,
     this.missing = const {},
+    this.score,
   });
 
   final Restaurant restaurant;
@@ -70,6 +72,9 @@ class RankedRestaurant {
 
   /// Empty for a confirmed match; otherwise what could not be checked.
   final Set<MissingInfo> missing;
+
+  /// The V3 score (0..1) this place was ranked by (see `recommendation_score.dart`).
+  final double? score;
 
   /// A confirmed match ("조건 충족 확인"), not a "정보 미확인" candidate.
   bool get verified => missing.isEmpty;
@@ -201,6 +206,7 @@ List<RankedRestaurant> rankRestaurants({
   required int nowMinutes,
   Set<String> hiddenIds = const {},
   Set<String> visitedIds = const {},
+  Map<String, double> reviewSignals = const {},
 }) {
   final maxMeters = maxDistanceMeters(conditions.distance);
   final cuisines = conditions.cuisines;
@@ -215,9 +221,8 @@ List<RankedRestaurant> rankRestaurants({
     if (!isFood) continue;
     final meters = haversineMeters(lat, lng, r.latitude, r.longitude).round();
     if (maxMeters != null && meters > maxMeters) continue;
-    if (cuisines.isNotEmpty && !cuisines.any((c) => cuisineMatches(r, c))) {
-      continue;
-    }
+    // A food preference is NOT a filter: it adds to the score (V3), so a preferred place ranks higher without
+    // hiding the others (the team's model: distance and budget decide who qualifies; taste and distance rank them).
     final i = insights[r.kakaoId] ?? RestaurantInsight.unknown;
     final j = judgeRestaurant(
       i,
@@ -233,6 +238,30 @@ List<RankedRestaurant> rankRestaurants({
     return c != 0 ? c : a.r.name.compareTo(b.r.name);
   }
 
+  // V3: the distance is measured against the chosen radius; with "any distance" the farthest candidate is the scale.
+  final scale =
+      maxMeters ??
+      kept.fold<double>(1, (m, k) => math.max(m, k.meters.toDouble()));
+  final preferred = cuisines.isNotEmpty && !cuisines.contains(Cuisine.any);
+  final scores = <String, double>{
+    for (final k in kept)
+      k.r.kakaoId: v3Score(
+        preferenceDistanceScore(
+          matchesPreference: preferred
+              ? cuisines.any((c) => cuisineMatches(k.r, c))
+              : null,
+          distance: distanceScore(k.meters.toDouble(), scale),
+        ),
+        reviewSignals[k.r.kakaoId] ?? 0,
+      ),
+  };
+  int byScore(_Kept a, _Kept b) {
+    final c = scores[b.r.kakaoId]!.compareTo(scores[a.r.kakaoId]!);
+    if (c != 0) return c;
+    final d = a.meters.compareTo(b.meters);
+    return d != 0 ? d : a.r.kakaoId.compareTo(b.r.kakaoId);
+  }
+
   int unknownLast<T extends num>(T? a, T? b, {bool desc = false}) {
     if (a == null && b == null) return 0;
     if (a == null) return 1;
@@ -241,7 +270,8 @@ List<RankedRestaurant> rankRestaurants({
   }
 
   final int Function(_Kept, _Kept) base = switch (conditions.sort) {
-    SortMode.recommended || SortMode.distance => byDistance,
+    SortMode.recommended => byScore,
+    SortMode.distance => byDistance,
     SortMode.price => (a, b) {
       final c = unknownLast(
         a.j.mealPriceKrw ?? a.i.minPriceKrw,
@@ -279,6 +309,7 @@ List<RankedRestaurant> rankRestaurants({
         insight: e.i,
         reason: _reasonFor(e, conditions, closest),
         missing: e.j.missing,
+        score: scores[e.r.kakaoId],
       ),
   ];
 }

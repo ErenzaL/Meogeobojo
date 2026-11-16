@@ -9,8 +9,12 @@ import '../../records/meal_records.dart';
 import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/models/restaurant_override.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../home_ranking.dart';
 import '../restaurant_insight.dart';
+import '../review_signal_repository.dart';
 
 /// Emits "now" immediately and again at every minute boundary, so times on
 /// screen (arrival, time left to order) stay correct. Overridable in tests.
@@ -85,6 +89,16 @@ final insightsForIdsProvider = FutureProvider.autoDispose
       );
     });
 
+final reviewSignalSourceProvider = Provider<ReviewSignalSource>(
+  (ref) => SupabaseReviewSignalSource(() => Supabase.instance.client),
+);
+
+/// R (the review signal of the V3 score) per place, from the visible student reviews. Empty when there are none.
+final reviewSignalsProvider = FutureProvider<Map<String, double>>((ref) async {
+  final reviews = await ref.watch(reviewSignalSourceProvider).visibleReviews();
+  return reviewSignalsFrom(reviews, DateTime.now());
+});
+
 /// Places with a meal record ("안 가 본 곳 먼저").
 final visitedPlaceIdsProvider = Provider<Set<String>>(
   (ref) => {for (final m in ref.watch(mealRecordsProvider)) m.kakaoId},
@@ -112,6 +126,8 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
   final now = ref.watch(seoulNowProvider);
   final hidden = ref.watch(hiddenPlaceIdsProvider);
   final visited = ref.watch(visitedPlaceIdsProvider);
+  final reviews =
+      ref.watch(reviewSignalsProvider).value ?? const <String, double>{};
   if (origin == null) {
     // No origin yet: either the campus is still loading, or it failed.
     return places.hasError
@@ -127,6 +143,7 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
       insights: insights,
       hiddenIds: hidden,
       visitedIds: visited,
+      reviewSignals: reviews,
       nowMinutes: minutesOfDay(now),
     ),
   );

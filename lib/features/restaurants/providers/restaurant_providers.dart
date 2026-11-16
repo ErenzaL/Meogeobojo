@@ -5,16 +5,23 @@ import '../../university/providers/university_providers.dart';
 import '../models/food_category.dart';
 import '../models/restaurant.dart';
 import '../models/restaurant_override.dart';
+import '../repositories/managed_restaurant_repository.dart';
 import '../repositories/merged_restaurant_repository.dart';
 import '../repositories/restaurant_override_repository.dart';
 import '../repositories/restaurant_repository.dart';
 
 final restaurantRepositoryProvider = Provider<RestaurantRepository>((ref) {
   final client = Supabase.instance.client;
-  // Kakao (live) + published admin data, merged in one place.
-  return OverrideAwareRestaurantRepository(
-    KakaoRestaurantRepository((body) => supabaseSearchGateway(client, body)),
-    ref.watch(restaurantOverrideRepositoryProvider),
+  // The restaurants an admin published are the list; Kakao supplies the live details (position, category path)
+  // for them. A campus with nothing published yet keeps Kakao discovery + admin data (the fallback).
+  return ManagedRestaurantRepository(
+    inventory: SupabaseManagedInventory(client),
+    resolver: (university, places) =>
+        supabaseResolvePlaces(client, university, places),
+    fallback: OverrideAwareRestaurantRepository(
+      KakaoRestaurantRepository((body) => supabaseSearchGateway(client, body)),
+      ref.watch(restaurantOverrideRepositoryProvider),
+    ),
   );
 });
 

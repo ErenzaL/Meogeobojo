@@ -14,12 +14,26 @@ class RestaurantOverride {
     this.name,
     this.address,
     this.phone,
+    this.id,
+    this.category,
+    this.latitude,
+    this.longitude,
     this.featured = false,
     this.displayOrder,
     this.insight = RestaurantInsight.unknown,
   });
 
+  /// The restaurant's key everywhere in the app: its Kakao place id, or, for a restaurant added by hand
+  /// without one, its own database id (a uuid).
   final String kakaoId;
+
+  /// The database row id (`restaurant_overrides.id`), when the row was read in full.
+  final String? id;
+
+  /// Admin-managed category path ("음식점 > 한식") and coordinates. When present they win over Kakao's.
+  final String? category;
+  final double? latitude;
+  final double? longitude;
 
   /// published | hidden | archived (drafts are never readable by the app).
   final String visibility;
@@ -41,15 +55,30 @@ class RestaurantOverride {
   /// favorites, markers, filtering and ranking keep working on the same place.
   Restaurant applyTo(Restaurant r) {
     if (visibility != 'published') return r;
-    return r.copyWith(name: name, roadAddress: address, phone: phone);
+    final hasCoords = latitude != null && longitude != null;
+    return r.copyWith(
+      name: name,
+      roadAddress: address,
+      phone: phone,
+      categoryName: category,
+      latitude: hasCoords ? latitude : null,
+      longitude: hasCoords ? longitude : null,
+    );
   }
 
   /// Hidden or archived places must not be shown in lists.
   bool get isHidden => visibility == 'hidden' || visibility == 'archived';
 
   static RestaurantOverride? fromJson(Map<String, dynamic> j) {
-    final id = j['kakao_place_id'] as String?;
-    if (id == null || id.isEmpty) return null;
+    String? text(Object? v) {
+      final t = (v as String?)?.trim();
+      return (t == null || t.isEmpty) ? null : t;
+    }
+
+    final rowId = text(j['id']);
+    // A restaurant added by hand has no Kakao id: its own database id is its key.
+    final id = text(j['kakao_place_id']) ?? rowId;
+    if (id == null) return null;
     final status = j['business_status'] as String?;
     final hours = j['opening_hours'];
     // The admin enters it as opening_hours.open ("11:00").
@@ -64,11 +93,6 @@ class RestaurantOverride {
             (open != null && lastOrder <= open))) {
       lastOrder += 1440;
     }
-    String? text(Object? v) {
-      final t = (v as String?)?.trim();
-      return (t == null || t.isEmpty) ? null : t;
-    }
-
     return RestaurantOverride(
       kakaoId: id,
       visibility: (j['visibility'] as String?) ?? 'published',
@@ -76,6 +100,10 @@ class RestaurantOverride {
       name: text(j['name_ko']),
       address: text(j['address']),
       phone: text(j['phone']),
+      id: rowId,
+      category: text(j['category']),
+      latitude: (j['latitude'] as num?)?.toDouble(),
+      longitude: (j['longitude'] as num?)?.toDouble(),
       featured: (j['featured'] as bool?) ?? false,
       displayOrder: (j['display_order'] as num?)?.toInt(),
       insight: RestaurantInsight(

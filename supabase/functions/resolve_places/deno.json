@@ -1,0 +1,4 @@
+{
+  "tasks": { "test": "deno test --no-check=false core_test.ts", "check": "deno check index.ts core.ts" },
+  "compilerOptions": { "strict": true }
+}

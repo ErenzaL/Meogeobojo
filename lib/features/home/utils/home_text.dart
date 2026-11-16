@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../conditions/models/conditions.dart';
+import '../../conditions/widgets/condition_labels.dart';
 import '../../preferences/screens/preference_labels.dart';
 import '../../recommendation/home_ranking.dart';
 
@@ -23,12 +25,31 @@ String reasonText(AppLocalizations l10n, RecommendReason r, int walkMinutes) =>
       ReasonKind.walk => l10n.homeReasonWalk(walkMinutes),
     };
 
-/// "가격 미확인 · 운영정보 미확인" for a "정보 미확인" candidate.
-String missingText(AppLocalizations l10n, Set<MissingInfo> missing) => [
-  if (missing.contains(MissingInfo.price)) l10n.missingPrice,
-  if (missing.contains(MissingInfo.hours)) l10n.missingHours,
-  if (missing.contains(MissingInfo.amenities)) l10n.missingAmenities,
-].join(' · ');
+/// "가격 미확인 · 운영정보 미확인 · 주차 정보 미확인" for a "정보 미확인" candidate: what exactly could not be checked.
+String missingText(
+  AppLocalizations l10n,
+  Set<MissingInfo> missing, {
+  Set<Amenity> amenities = const {},
+  bool demo = false,
+}) => withDemoTag(
+  l10n,
+  [
+    if (missing.contains(MissingInfo.price)) l10n.missingPrice,
+    if (missing.contains(MissingInfo.hours)) l10n.missingHours,
+    if (missing.contains(MissingInfo.amenities))
+      if (amenities.isEmpty)
+        l10n.missingAmenities
+      else
+        for (final a in Amenity.values)
+          if (amenities.contains(a))
+            l10n.missingAmenityNamed(amenityLabelOf(l10n, a)),
+  ].join(' · '),
+  demo,
+);
+
+/// [text] with the "데모 데이터" label when some of what it rests on is simulated.
+String withDemoTag(AppLocalizations l10n, String text, bool demo) =>
+    !demo ? text : (text.isEmpty ? l10n.demoTag : '$text · ${l10n.demoTag}');
 
 /// The advantage line of an alternative; its own reason when it has none.
 ///

@@ -12,6 +12,8 @@ import '../../restaurants/providers/restaurant_providers.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../demo/demo_features.dart';
+import '../demo/demo_providers.dart';
 import '../home_ranking.dart';
 import '../restaurant_insight.dart';
 import '../review_signal_repository.dart';
@@ -48,6 +50,10 @@ final restaurantInsightsProvider = Provider<Map<String, RestaurantInsight>>(
   (ref) => insightsFrom(
     ref.watch(restaurantOverridesProvider).value ?? const {},
     ref.watch(nearbyMenusProvider).value ?? const {},
+    // read the switch itself, not only the loaded rows: turning demo off must take effect at once
+    demo: ref.watch(demoModeProvider)
+        ? ref.watch(demoFeaturesProvider).value ?? const {}
+        : const {},
   ),
 );
 
@@ -61,14 +67,21 @@ final nearbyMenusProvider =
     });
 
 /// Overrides and menus combined into one insight per place.
+///
+/// [demo] (simulated hours and amenities, only while demo mode is on) fills what the database does not have, never
+/// what an administrator entered, and marks the insight as demo.
 Map<String, RestaurantInsight> insightsFrom(
   Map<String, RestaurantOverride> overrides,
-  Map<String, List<RestaurantMenuItem>> menus,
-) => {
-  for (final id in {...overrides.keys, ...menus.keys})
-    id: (overrides[id]?.insight ?? RestaurantInsight.unknown).withMenus([
-      for (final m in menus[id] ?? const <RestaurantMenuItem>[]) m.line,
-    ]),
+  Map<String, List<RestaurantMenuItem>> menus, {
+  Map<String, DemoFeature> demo = const {},
+}) => {
+  for (final id in {...overrides.keys, ...menus.keys, ...demo.keys})
+    id: applyDemo(
+      (overrides[id]?.insight ?? RestaurantInsight.unknown).withMenus([
+        for (final m in menus[id] ?? const <RestaurantMenuItem>[]) m.line,
+      ]),
+      demo[id],
+    ),
 };
 
 /// The same, for an arbitrary list of places (a chosen category, search
@@ -83,9 +96,13 @@ final insightsForIdsProvider = FutureProvider.autoDispose
         repo.forPlaces(ids),
         repo.menusForPlaces(ids),
       ]);
+      final demo = ref.watch(demoModeProvider)
+          ? await ref.watch(demoFeaturesProvider.future)
+          : const <String, DemoFeature>{};
       return insightsFrom(
         both[0] as Map<String, RestaurantOverride>,
         both[1] as Map<String, List<RestaurantMenuItem>>,
+        demo: demo,
       );
     });
 

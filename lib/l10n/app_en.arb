@@ -868,5 +868,11 @@
   "feedbackSent": "Sent. The team will look at it.",
   "feedbackFailed": "Couldn't send it. Please try again shortly.",
   "authReasonFeedback": "Sign in to send a question or suggestion.",
-  "noticesSeeAll": "See all"
+  "noticesSeeAll": "See all",
+  "demoTag": "Demo data",
+  "demoBannerTitle": "Demo mode",
+  "demoBannerBody": "Hours, parking, takeout and similar details are simulated for the demo and are not verified. Prices are judged only on published menus, and positions use Kakao's real coordinates.",
+  "demoSwitchTitle": "Use recommendation demo data",
+  "demoSwitchSubtitle": "Demonstrates recommendations with simulated hours and amenities. A demo label is shown while it is on.",
+  "missingAmenityNamed": "{amenity} unconfirmed"
 }

@@ -137,7 +137,11 @@ class HeroCard extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  reasonText(l10n, hero.reason, hero.walkMinutes),
+                  withDemoTag(
+                    l10n,
+                    reasonText(l10n, hero.reason, hero.walkMinutes),
+                    hero.demoBasis,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

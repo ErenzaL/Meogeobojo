@@ -33,6 +33,7 @@ import '../../content/widgets/home_notices.dart';
 import '../widgets/recs_states.dart';
 import '../widgets/today_picks_section.dart';
 import '../widgets/top_three_row.dart';
+import '../../recommendation/demo/demo_widgets.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -151,6 +152,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ] else
                 Padding(padding: pad, child: HomeWelcome()),
               Padding(padding: pad, child: HomeNotices()),
+              Padding(padding: pad, child: const DemoModeBanner()),
               // The saved start point is gone (the old "기숙사"): say which
               // one is used meanwhile and offer to choose.
               Padding(padding: pad, child: const OriginReselectBanner()),

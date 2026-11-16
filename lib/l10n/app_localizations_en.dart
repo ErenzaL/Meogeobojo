@@ -2733,4 +2733,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noticesSeeAll => 'See all';
+
+  @override
+  String get demoTag => 'Demo data';
+
+  @override
+  String get demoBannerTitle => 'Demo mode';
+
+  @override
+  String get demoBannerBody =>
+      'Hours, parking, takeout and similar details are simulated for the demo and are not verified. Prices are judged only on published menus, and positions use Kakao\'s real coordinates.';
+
+  @override
+  String get demoSwitchTitle => 'Use recommendation demo data';
+
+  @override
+  String get demoSwitchSubtitle =>
+      'Demonstrates recommendations with simulated hours and amenities. A demo label is shown while it is on.';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity unconfirmed';
+  }
 }

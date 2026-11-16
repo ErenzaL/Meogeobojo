@@ -62,6 +62,7 @@ class RankingScreen extends StatelessWidget {
                       if (items[i].insight.minPriceKrw != null)
                         l10n.homePriceFrom(items[i].insight.minPriceKrw!),
                       if (!items[i].verified) l10n.homeUnverifiedTag,
+                      if (items[i].demoBasis) l10n.demoTag,
                     ].join(' · '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

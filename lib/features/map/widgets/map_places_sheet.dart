@@ -14,6 +14,7 @@ import '../../home/widgets/recs_states.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../restaurants/models/restaurant.dart';
+import '../../home/utils/home_text.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
@@ -277,7 +278,11 @@ class _PlaceRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${r.categoryTag} · ${l10n.homeWalkAbout(item.walkMinutes)}',
+                      withDemoTag(
+                        l10n,
+                        '${r.categoryTag} · ${l10n.homeWalkAbout(item.walkMinutes)}',
+                        item.demoBasis,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 14, color: p.textMuted),

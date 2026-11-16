@@ -868,5 +868,11 @@
   "feedbackSent": "已发送，运营团队会查看。",
   "feedbackFailed": "发送失败，请稍后再试。",
   "authReasonFeedback": "登录后才能发送咨询和建议。",
-  "noticesSeeAll": "查看全部"
+  "noticesSeeAll": "查看全部",
+  "demoTag": "演示数据",
+  "demoBannerTitle": "演示模式",
+  "demoBannerBody": "营业时间、停车、外带等信息为演示用的模拟数据，并未经核实。价格仅依据已发布的菜单判断，位置使用Kakao的真实坐标。",
+  "demoSwitchTitle": "使用推荐演示数据",
+  "demoSwitchSubtitle": "用模拟的营业时间和设施信息演示推荐。开启期间界面会显示演示标记。",
+  "missingAmenityNamed": "{amenity}未确认"
 }

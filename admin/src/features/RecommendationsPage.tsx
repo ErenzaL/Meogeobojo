@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Card, ErrorState, PageHeader, Skeleton } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth'
 import { formatDateTime } from '@/lib/utils'
+import DemoFeaturesImport from './recommendation/DemoFeaturesImport'
 
 type Stats = { total: number; errors: number; mock_requests: number; avg_latency_ms: number | null; last_success_at: string | null; latest_model_version: string | null; latest_is_mock: boolean | null }
 
 /** Real telemetry only (public.recommendation_requests, written by the server). */
 export default function RecommendationsPage() {
+  const { can } = useAuth()
   const q = useQuery({
     queryKey: ['recommendation-stats'],
     queryFn: async () => {
@@ -21,6 +24,7 @@ export default function RecommendationsPage() {
   return (
     <>
       <PageHeader title="추천" description="최근 7일 동안 서버가 기록한 추천 API 호출만 보여줘요." />
+      {can('admin') && <DemoFeaturesImport />}
       {q.isLoading && <Skeleton className="h-40 w-full" />}
       {q.error && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
       {none && (

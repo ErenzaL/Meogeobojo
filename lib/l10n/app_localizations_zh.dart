@@ -2612,4 +2612,25 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noticesSeeAll => '查看全部';
+
+  @override
+  String get demoTag => '演示数据';
+
+  @override
+  String get demoBannerTitle => '演示模式';
+
+  @override
+  String get demoBannerBody =>
+      '营业时间、停车、外带等信息为演示用的模拟数据，并未经核实。价格仅依据已发布的菜单判断，位置使用Kakao的真实坐标。';
+
+  @override
+  String get demoSwitchTitle => '使用推荐演示数据';
+
+  @override
+  String get demoSwitchSubtitle => '用模拟的营业时间和设施信息演示推荐。开启期间界面会显示演示标记。';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity未确认';
+  }
 }

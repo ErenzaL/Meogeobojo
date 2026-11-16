@@ -2626,4 +2626,26 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noticesSeeAll => '전체 보기';
+
+  @override
+  String get demoTag => '데모 데이터';
+
+  @override
+  String get demoBannerTitle => '데모 모드예요';
+
+  @override
+  String get demoBannerBody =>
+      '영업시간·주차·포장 같은 정보는 시연용 가상 데이터라서 실제로 확인된 정보가 아니에요. 가격은 게시된 메뉴로만 판단하고, 위치는 카카오의 실제 좌표를 써요.';
+
+  @override
+  String get demoSwitchTitle => '추천 데모 데이터 사용';
+
+  @override
+  String get demoSwitchSubtitle =>
+      '가상의 영업시간·편의 정보로 추천을 시연해요. 켜져 있는 동안 화면에 데모 표시가 나와요.';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity 정보 미확인';
+  }
 }

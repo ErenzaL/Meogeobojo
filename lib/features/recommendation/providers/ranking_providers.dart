@@ -116,6 +116,11 @@ final reviewSignalsProvider = FutureProvider<Map<String, double>>((ref) async {
   return reviewSignalsFrom(reviews, DateTime.now());
 });
 
+/// Whether places that CANNOT be confirmed against the chosen conditions ("정보 미확인": no price, hours or amenity data)
+/// are listed. Off: only places whose every chosen condition is confirmed are shown anywhere (Home, map, search,
+/// the recommendation screen). With no conditions chosen every place is confirmed, so nothing disappears.
+final showUnverifiedCandidatesProvider = Provider<bool>((ref) => false);
+
 /// Places with a meal record ("안 가 본 곳 먼저").
 final visitedPlaceIdsProvider = Provider<Set<String>>(
   (ref) => {for (final m in ref.watch(mealRecordsProvider)) m.kakaoId},
@@ -145,14 +150,15 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
   final visited = ref.watch(visitedPlaceIdsProvider);
   final reviews =
       ref.watch(reviewSignalsProvider).value ?? const <String, double>{};
+  final showUnverified = ref.watch(showUnverifiedCandidatesProvider);
   if (origin == null) {
     // No origin yet: either the campus is still loading, or it failed.
     return places.hasError
         ? AsyncError(places.error!, places.stackTrace ?? StackTrace.empty)
         : const AsyncLoading();
   }
-  return places.whenData(
-    (all) => rankRestaurants(
+  return places.whenData((all) {
+    final ranked = rankRestaurants(
       all: all,
       lat: origin.latitude,
       lng: origin.longitude,
@@ -162,8 +168,9 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
       visitedIds: visited,
       reviewSignals: reviews,
       nowMinutes: minutesOfDay(now),
-    ),
-  );
+    );
+    return showUnverified ? ranked : ranked.confirmed;
+  });
 }
 
 /// [rankWithSharedConditions] for a list that is not the nearby pool: its

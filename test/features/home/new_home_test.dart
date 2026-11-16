@@ -223,6 +223,8 @@ void main() {
           overridesRepo: prices,
           extraOverrides: [
             campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
+            // the ranking itself still sorts unconfirmed places apart: listing them is switched on here
+            showUnverifiedCandidatesProvider.overrideWithValue(true),
           ],
         );
         await pumpApp(tester, h, home: const AppShell());
@@ -1553,16 +1555,11 @@ void main() {
           .read(conditionsProvider.notifier)
           .update((c) => c.copyWith(budget: BudgetOption.max10000));
       await tester.pumpAndSettle();
-      // No place has a known meal price: nothing is confirmed. The
-      // unconfirmed ones are a separate list, never the pick.
+      // No place has a known meal price: nothing is confirmed.
       expect(find.byType(HeroCard), findsNothing);
-      expect(find.text('조건 충족을 확인한 식당이 없어요'), findsOneWidget);
-      final unverified = find.textContaining('미확인 후보');
-      await tester.ensureVisible(unverified.first);
-      await tester.tap(unverified.first);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('가격·운영정보 미확인'), findsOneWidget);
-      expect(find.text('가격 미확인'), findsWidgets);
+      expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
+      // Places that cannot be confirmed are not listed at all.
+      expect(find.textContaining('미확인'), findsNothing);
       expect(find.byType(HeroCard), findsNothing);
       final restart = find.text('조건 초기화').first;
       await tester.ensureVisible(restart);

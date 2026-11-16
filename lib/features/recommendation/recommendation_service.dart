@@ -78,7 +78,14 @@ class V3RecommendationService implements RecommendationService {
           ? RecommendationStrategy.proximityBaseline
           : RecommendationStrategy.proximityWithPreferences,
       university: university,
-      restaurants: [for (final r in ranked) r.restaurant],
+      // only places whose chosen conditions are confirmed (see showUnverifiedCandidatesProvider)
+      restaurants: [
+        for (final r
+            in _ref.read(showUnverifiedCandidatesProvider)
+                ? ranked
+                : ranked.confirmed)
+          r.restaurant,
+      ],
       candidateCount: food,
     );
   }

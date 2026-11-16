@@ -871,5 +871,14 @@
   "noticesSeeAll": "查看全部",
   "demoSwitchTitle": "使用推荐演示数据",
   "demoSwitchSubtitle": "用模拟的营业时间和设施信息演示推荐。",
-  "missingAmenityNamed": "{amenity}未确认"
+  "missingAmenityNamed": "{amenity}未确认",
+  "relaxTitle": "这样调整就能找到",
+  "relaxDistance": "放宽到{label}：{count}家",
+  "relaxBudget": "不限预算：{count}家",
+  "relaxHours": "不限“现在可点餐”：{count}家",
+  "relaxAmenities": "不限营业·设施条件：{count}家",
+  "relaxCategory": "所有菜系：{count}家",
+  "ignoredAmenity": "目前没有{amenity}信息，所以未应用该条件",
+  "ignoredHours": "目前没有营业时间信息，所以未应用“现在可点餐”",
+  "homeMatchingMenus": "符合条件的菜品{count}道"
 }

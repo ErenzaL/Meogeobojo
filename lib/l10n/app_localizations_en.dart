@@ -2745,4 +2745,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String missingAmenityNamed(String amenity) {
     return '$amenity unconfirmed';
   }
+
+  @override
+  String get relaxTitle => 'Try changing this';
+
+  @override
+  String relaxDistance(String label, int count) {
+    return 'Widen to $label: $count places';
+  }
+
+  @override
+  String relaxBudget(int count) {
+    return 'Without the budget: $count places';
+  }
+
+  @override
+  String relaxHours(int count) {
+    return 'Without \"open now\": $count places';
+  }
+
+  @override
+  String relaxAmenities(int count) {
+    return 'Without hours & amenities: $count places';
+  }
+
+  @override
+  String relaxCategory(int count) {
+    return 'Any food type: $count places';
+  }
+
+  @override
+  String ignoredAmenity(String amenity) {
+    return 'No place has $amenity information yet, so this condition was not applied';
+  }
+
+  @override
+  String get ignoredHours =>
+      'No place has opening hours yet, so \"open now\" was not applied';
+
+  @override
+  String homeMatchingMenus(int count) {
+    return '$count dishes that fit your conditions';
+  }
 }

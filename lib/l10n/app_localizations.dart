@@ -4767,6 +4767,60 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'{amenity} 정보 미확인'**
   String missingAmenityNamed(String amenity);
+
+  /// No description provided for @relaxTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'이렇게 바꾸면 찾을 수 있어요'**
+  String get relaxTitle;
+
+  /// No description provided for @relaxDistance.
+  ///
+  /// In ko, this message translates to:
+  /// **'{label} 안으로 늘리면 {count}곳'**
+  String relaxDistance(String label, int count);
+
+  /// No description provided for @relaxBudget.
+  ///
+  /// In ko, this message translates to:
+  /// **'예산 조건 없이 보면 {count}곳'**
+  String relaxBudget(int count);
+
+  /// No description provided for @relaxHours.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 주문 가능 조건 없이 보면 {count}곳'**
+  String relaxHours(int count);
+
+  /// No description provided for @relaxAmenities.
+  ///
+  /// In ko, this message translates to:
+  /// **'운영·편의 조건 없이 보면 {count}곳'**
+  String relaxAmenities(int count);
+
+  /// No description provided for @relaxCategory.
+  ///
+  /// In ko, this message translates to:
+  /// **'모든 음식 종류에서 보면 {count}곳'**
+  String relaxCategory(int count);
+
+  /// No description provided for @ignoredAmenity.
+  ///
+  /// In ko, this message translates to:
+  /// **'{amenity} 정보가 아직 없어서 이 조건은 적용하지 못했어요'**
+  String ignoredAmenity(String amenity);
+
+  /// No description provided for @ignoredHours.
+  ///
+  /// In ko, this message translates to:
+  /// **'영업시간 정보가 아직 없어서 ‘지금 주문 가능’은 적용하지 못했어요'**
+  String get ignoredHours;
+
+  /// No description provided for @homeMatchingMenus.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 메뉴 {count}개'**
+  String homeMatchingMenus(int count);
 }
 
 class _AppLocalizationsDelegate

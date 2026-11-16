@@ -158,11 +158,12 @@ AsyncValue<List<RankedRestaurant>> rankWithSharedConditions(
         : const AsyncLoading();
   }
   return places.whenData((all) {
+    // a 운영·편의 condition nobody has data for is not applied (see usableConditions)
     final ranked = rankRestaurants(
       all: all,
       lat: origin.latitude,
       lng: origin.longitude,
-      conditions: conditions,
+      conditions: usableConditions(conditions, all, insights).conditions,
       insights: insights,
       hiddenIds: hidden,
       visitedIds: visited,

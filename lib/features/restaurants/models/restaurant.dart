@@ -38,22 +38,30 @@ class Restaurant {
   final int distanceMeters;
   final String? placeUrl;
 
-  /// A copy with the admin-managed display fields replaced; everything else
-  /// (id, Kakao category path, coordinates, distance) stays as Kakao gave it.
-  Restaurant copyWith({String? name, String? roadAddress, String? phone}) =>
-      Restaurant(
-        kakaoId: kakaoId,
-        name: name ?? this.name,
-        categoryName: categoryName,
-        categoryGroupCode: categoryGroupCode,
-        address: address,
-        roadAddress: roadAddress ?? this.roadAddress,
-        phone: phone ?? this.phone,
-        latitude: latitude,
-        longitude: longitude,
-        distanceMeters: distanceMeters,
-        placeUrl: placeUrl,
-      );
+  /// A copy with the admin-managed display fields replaced; the id never changes (favorites, reviews and
+  /// ranking are keyed by it). Coordinates and distance change only together, and only when the admin
+  /// entered coordinates of their own.
+  Restaurant copyWith({
+    String? name,
+    String? roadAddress,
+    String? phone,
+    String? categoryName,
+    double? latitude,
+    double? longitude,
+    int? distanceMeters,
+  }) => Restaurant(
+    kakaoId: kakaoId,
+    name: name ?? this.name,
+    categoryName: categoryName ?? this.categoryName,
+    categoryGroupCode: categoryGroupCode,
+    address: address,
+    roadAddress: roadAddress ?? this.roadAddress,
+    phone: phone ?? this.phone,
+    latitude: latitude ?? this.latitude,
+    longitude: longitude ?? this.longitude,
+    distanceMeters: distanceMeters ?? this.distanceMeters,
+    placeUrl: placeUrl,
+  );
 
   /// Short tag for cards: the second path segment ("한식", "카페").
   String get categoryTag {

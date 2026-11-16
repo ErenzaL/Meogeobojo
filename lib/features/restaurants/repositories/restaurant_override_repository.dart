@@ -19,6 +19,14 @@ abstract interface class RestaurantOverrideRepository {
   Future<List<RestaurantPhoto>> photos(String kakaoId);
 }
 
+final _uuid = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  caseSensitive: false,
+);
+
+/// A restaurant added by hand has no Kakao id; its key is its own database id (a uuid).
+bool isDatabaseKey(String key) => _uuid.hasMatch(key);
+
 class SupabaseRestaurantOverrideRepository
     implements RestaurantOverrideRepository {
   SupabaseRestaurantOverrideRepository(this._db);
@@ -33,13 +41,30 @@ class SupabaseRestaurantOverrideRepository
   ) async {
     if (kakaoIds.isEmpty) return const {};
     try {
-      final rows = await _db
-          .from('restaurant_overrides')
-          // Every column, so one added later (open_time) is read once it is
-          // deployed and its absence never fails the query.
-          .select()
-          .inFilter('kakao_place_id', kakaoIds)
-          .timeout(const Duration(seconds: 10));
+      final byDb = [
+        for (final k in kakaoIds)
+          if (isDatabaseKey(k)) k,
+      ];
+      final byKakao = [
+        for (final k in kakaoIds)
+          if (!isDatabaseKey(k)) k,
+      ];
+      final rows = [
+        if (byKakao.isNotEmpty)
+          ...await _db
+              .from('restaurant_overrides')
+              // Every column, so one added later (open_time) is read once it is
+              // deployed and its absence never fails the query.
+              .select()
+              .inFilter('kakao_place_id', byKakao)
+              .timeout(const Duration(seconds: 10)),
+        if (byDb.isNotEmpty)
+          ...await _db
+              .from('restaurant_overrides')
+              .select()
+              .inFilter('id', byDb)
+              .timeout(const Duration(seconds: 10)),
+      ];
       final out = <String, RestaurantOverride>{};
       for (final r in rows) {
         final o = RestaurantOverride.fromJson(r);
@@ -58,7 +83,10 @@ class SupabaseRestaurantOverrideRepository
       final rows = await _db
           .from('restaurant_menus')
           .select()
-          .eq('kakao_place_id', kakaoId)
+          .eq(
+            isDatabaseKey(kakaoId) ? 'restaurant_id' : 'kakao_place_id',
+            kakaoId,
+          )
           .order('sort_order')
           .timeout(const Duration(seconds: 10));
       return [for (final r in rows) ?RestaurantMenuItem.fromJson(r)];
@@ -74,15 +102,34 @@ class SupabaseRestaurantOverrideRepository
   ) async {
     if (kakaoIds.isEmpty) return const {};
     try {
-      final rows = await _db
-          .from('restaurant_menus')
-          .select()
-          .inFilter('kakao_place_id', kakaoIds)
-          .order('sort_order')
-          .timeout(const Duration(seconds: 10));
+      final byDb = [
+        for (final k in kakaoIds)
+          if (isDatabaseKey(k)) k,
+      ];
+      final byKakao = [
+        for (final k in kakaoIds)
+          if (!isDatabaseKey(k)) k,
+      ];
+      final rows = [
+        if (byKakao.isNotEmpty)
+          ...await _db
+              .from('restaurant_menus')
+              .select()
+              .inFilter('kakao_place_id', byKakao)
+              .order('sort_order')
+              .timeout(const Duration(seconds: 10)),
+        if (byDb.isNotEmpty)
+          ...await _db
+              .from('restaurant_menus')
+              .select()
+              .inFilter('restaurant_id', byDb)
+              .order('sort_order')
+              .timeout(const Duration(seconds: 10)),
+      ];
       final out = <String, List<RestaurantMenuItem>>{};
       for (final r in rows) {
-        final id = r['kakao_place_id'] as String?;
+        final id =
+            (r['kakao_place_id'] as String?) ?? r['restaurant_id'] as String?;
         final item = RestaurantMenuItem.fromJson(r);
         if (id != null && item != null) (out[id] ??= []).add(item);
       }
@@ -105,7 +152,12 @@ class SupabaseRestaurantOverrideRepository
             'url,caption,kind,sort_order,'
             'restaurant_overrides!inner(kakao_place_id)',
           )
-          .eq('restaurant_overrides.kakao_place_id', kakaoId)
+          .eq(
+            isDatabaseKey(kakaoId)
+                ? 'restaurant_overrides.id'
+                : 'restaurant_overrides.kakao_place_id',
+            kakaoId,
+          )
           .eq('status', 'published')
           .order('sort_order')
           .timeout(const Duration(seconds: 10));

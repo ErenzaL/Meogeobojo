@@ -1,10 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
 import { Download, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DataTable } from '@/components/DataTable'
-import { Badge, Button, ConfirmDialog, ErrorState, Input, PageHeader, Select } from '@/components/ui'
+import { Badge, Button, ConfirmDialog, Input, PageHeader, Select } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
 import { cmsOverview, cmsSetVisibility, formatKst, type OverviewRow } from '@/lib/cms'
 import { supabase } from '@/lib/supabase'
@@ -12,7 +12,8 @@ import { errorMessage, formatDateTime } from '@/lib/utils'
 import BulkVisibilityDialog from './BulkVisibilityDialog'
 import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import KakaoImport from './KakaoImport'
-import { buildCsv, ignoredCsvColumns, parseRestaurantCsv, restaurantTemplateCsv, toRow, type ParsedRow } from './csv'
+import { buildCsv, restaurantTemplateCsv } from './csv'
+import RestaurantCsvImport from './RestaurantCsvImport'
 import { KakaoLiveCell } from './KakaoLiveUi'
 import { campusesOf } from './useKakaoRestaurantDetails'
 import { VISIBILITIES, VISIBILITY_LABEL, type Visibility } from './schema'
@@ -217,9 +218,7 @@ export default function RestaurantsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [ov, canBulk, canDelete, sel.ids, list.data?.rows, viewKey, showKakao, unis.data])
 
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [importRows, setImportRows] = useState<ParsedRow[] | null>(null)
-  const [ignoredCols, setIgnoredCols] = useState<string[]>([])
+  const [importOpen, setImportOpen] = useState(false)
 
   const exportCsv = async () => {
     setNotice(null)
@@ -234,41 +233,14 @@ export default function RestaurantsPage() {
     const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url)
   }
 
-  const runImport = useMutation({
-    mutationFn: async (rows: ParsedRow[]) => {
-      const valid = rows.filter((r) => r.values && !r.duplicateInFile)
-      const ids = valid.map((r) => r.values!.kakao_place_id).filter(Boolean)
-      const existing = new Set<string>()
-      for (let i = 0; i < ids.length; i += 200) {
-        const { data, error } = await supabase.from('restaurant_overrides').select('kakao_place_id').in('kakao_place_id', ids.slice(i, i + 200))
-        if (error) throw error
-        data.forEach((d) => d.kakao_place_id && existing.add(d.kakao_place_id as string))
-      }
-      const fresh = valid.filter((r) => !existing.has(r.values!.kakao_place_id))
-      for (let i = 0; i < fresh.length; i += 200) {
-        const { error } = await supabase.from('restaurant_overrides').insert(fresh.slice(i, i + 200).map((r) => ({ ...toRow(r.values!), visibility: 'draft', featured: false })))  // imported places always start as drafts
-        if (error) throw error
-      }
-      return { added: fresh.length, skippedDuplicates: valid.length - fresh.length, invalid: rows.length - valid.length }
-    },
-    onSuccess: async (r) => {
-      setImportRows(null)
-      setNotice(`${r.added}개를 초안으로 추가했어요. 이미 있는 ${r.skippedDuplicates}개는 건너뛰었고, 오류 ${r.invalid}개는 제외했어요.`)
-      await qc.invalidateQueries({ queryKey: ['restaurants'] })
-    },
-    onError: (e) => setNotice(errorMessage(e)),
-  })
-
   return (
     <>
       <PageHeader title="식당" description="카카오에서 가져온 식당에 우리가 추가·수정한 정보를 관리해요."
         actions={<>
           <Button variant="outline" onClick={() => void exportCsv()}><Download className="size-4" />CSV 내보내기</Button>
           {can('admin') && <Button variant="outline" onClick={() => download('restaurants_template.csv', restaurantTemplateCsv())}><Download className="size-4" />CSV 양식</Button>}
-          {can('admin') && <Button variant="outline" onClick={() => fileRef.current?.click()}><Upload className="size-4" />CSV 가져오기</Button>}
+          {can('admin') && <Button variant="outline" onClick={() => setImportOpen(true)}><Upload className="size-4" />CSV 가져오기</Button>}
           {can('admin') && <Link to="/restaurants/new"><Button><Plus className="size-4" />식당 추가</Button></Link>}
-          <input ref={fileRef} type="file" accept=".csv,text/csv" hidden data-testid="csv-input"
-            onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const text = await f.text(); setIgnoredCols(ignoredCsvColumns(text)); setImportRows(parseRestaurantCsv(text)) } e.target.value = '' }} />
         </>} />
       {notice && <p role="status" className="mb-4 rounded-xl bg-brand/30 p-3 text-sm">{notice}</p>}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -354,13 +326,7 @@ export default function RestaurantsPage() {
         confirmLabel={confirm?.to === 'published' ? '공개' : '숨기기'} danger={confirm?.to !== 'published'}
         onConfirm={(reason) => confirm && setVis.mutate({ id: confirm.row.id, to: confirm.to, reason })} onCancel={() => setConfirm(null)} />
 
-      {importRows && (
-        <ConfirmDialog open title="CSV 가져오기 미리보기" confirmLabel="가져오기" busy={runImport.isPending}
-          description={`전체 ${importRows.length}행 · 정상 ${importRows.filter((r) => r.values && !r.duplicateInFile).length}행 · 오류/중복 ${importRows.filter((r) => !r.values || r.duplicateInFile).length}행. 새 식당은 초안으로 추가되고, 이미 있는 Kakao ID는 건너뛰어요. 기존 데이터는 바뀌지 않아요.${ignoredCols.length > 0 ? ` 읽지 않은 열: ${ignoredCols.join(', ')}.` : ''}`}
-          onConfirm={() => runImport.mutate(importRows)} onCancel={() => setImportRows(null)} />
-      )}
-      {list.isError && null}
-      {runImport.isError && <ErrorState error={runImport.error} />}
+      {importOpen && <RestaurantCsvImport onClose={(didChange) => { setImportOpen(false); if (didChange) { setNotice('가져온 내용을 초안으로 저장했어요. 게시하기 전에는 앱에 보이지 않아요.'); void qc.invalidateQueries({ queryKey: ['restaurants'] }); void qc.invalidateQueries({ queryKey: ['cms-overview'] }) } }} />}
     </>
   )
 }

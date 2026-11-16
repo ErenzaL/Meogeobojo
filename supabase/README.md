@@ -137,6 +137,12 @@ Kakao Local API results may not be permanently stored, and their current retenti
 Favorites need a signed-in user. Enable the Email provider in Auth settings; if "Confirm email" is on, sign-up shows a "check your inbox" message.
 
 
+## Usage analytics: `20261122000100_app_events.sql` (NOT applied)
+
+The app records four anonymous events in `app_events`: `app_open` (app or website opened), `restaurant_view`, `directions_click` and `search` (a finished search: submitted or a chip). No account id is stored, only a random id the app keeps on the device (`analytics_client_id` in shared_preferences / localStorage), which is enough to count distinct visitors and returning visitors (used on 2+ different Seoul days). Guests can send events, so `anon` and `authenticated` may INSERT the four content columns only (the time and id cannot be forged); nobody can read rows. The admin 분석 page (moderator and up) reads aggregates through `admin_event_stats(p_days)`, `admin_event_daily(p_days)` and `admin_top_search_queries(p_days, p_limit)`.
+
+Until the migration is applied the app's inserts fail silently (nothing breaks, nothing is counted) and the 분석 page shows an error. Apply it in the SQL editor after `20261109000100`; it is additive and idempotent. Anyone holding the publishable key could insert fake events; if that ever matters, add a per-device daily cap or move inserts behind an Edge Function with a rate limit. Tested by `tests/app_events_test.sql`.
+
 ## Admin backend (`20261109000100_admin_foundation.sql`)
 
 Requires migrations 1, 3 (phase2), 8 and the profiles migration first. Idempotent.

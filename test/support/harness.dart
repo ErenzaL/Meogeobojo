@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/app.dart';
+import 'package:meogeobojo/features/analytics/app_events.dart';
 import 'package:meogeobojo/core/l10n/language_controller.dart';
 import 'package:meogeobojo/features/auth/providers/auth_providers.dart';
 import 'package:meogeobojo/features/campus_meals/providers/campus_meal_providers.dart';
@@ -33,6 +34,7 @@ class Harness {
     required this.favorites,
     required this.missions,
     required this.sp,
+    required this.events,
   });
 
   final ProviderContainer container;
@@ -43,6 +45,9 @@ class Harness {
   final FakeFavoritesRepository favorites;
   final FakeMissionRepository missions;
   final SharedPreferences sp;
+
+  /// 사용 지표 events the app recorded, as `event:restaurantId|query`.
+  final List<String> events;
 }
 
 /// Builds a fully faked dependency graph. Nothing touches Supabase, Kakao or
@@ -90,6 +95,7 @@ Future<Harness> buildHarness({
       );
   final fav = favorites ?? FakeFavoritesRepository();
   final mission = missions ?? FakeMissionRepository();
+  final events = <String>[];
   final container = ProviderContainer(
     overrides: [
       if (recsRequested)
@@ -130,6 +136,10 @@ Future<Harness> buildHarness({
       kakaoCallbackGraceProvider.overrideWithValue(
         const Duration(milliseconds: 50),
       ),
+      appEventLoggerProvider.overrideWithValue(
+        (event, {restaurantId, query}) =>
+            events.add('${event.wire}:${restaurantId ?? query ?? ''}'),
+      ),
       ...extraOverrides,
     ],
     retry: (_, _) => null,
@@ -147,6 +157,7 @@ Future<Harness> buildHarness({
     favorites: fav,
     missions: mission,
     sp: sp,
+    events: events,
   );
 }
 

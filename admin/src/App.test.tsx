@@ -124,6 +124,37 @@ describe('restaurant editing (draft, not live)', () => {
   })
 })
 
+describe('analytics (사용 지표)', () => {
+  it('shows the recorded usage: visitors, returning share, clicks, daily rows and top search words', async () => {
+    fake.signInAs('moderator')
+    fake.respond('rpc:admin_event_stats', { data: [{ visitors: 40, returning_visitors: 10, app_opens: 90, restaurant_views: 120, directions_clicks: 30, searches: 55 }] })
+    fake.respond('rpc:admin_event_daily', { data: [{ day: '2026-11-16', visitors: 12, restaurant_views: 30, directions_clicks: 8, searches: 14 }] })
+    fake.respond('rpc:admin_top_search_queries', { data: [{ term: '국밥', searches: 9 }] })
+    open('/analytics')
+    expect(await screen.findByText('재방문자')).toBeInTheDocument()
+    expect(screen.getByText('40')).toBeInTheDocument()
+    expect(screen.getByText('방문자의 25% · 서로 다른 2일 이상 사용')).toBeInTheDocument()
+    expect(screen.getByText('상세 조회의 25%')).toBeInTheDocument()
+    expect(screen.getByText('2026-11-16')).toBeInTheDocument()
+    expect(screen.getByText('1. 국밥')).toBeInTheDocument()
+    expect(fake.rpcs.find((r) => r.name === 'admin_event_stats')?.args).toEqual({ p_days: 7 })
+  })
+
+  it('says plainly when nothing was recorded (no invented numbers)', async () => {
+    fake.signInAs('admin')
+    fake.respond('rpc:admin_event_stats', { data: [{ visitors: 0, returning_visitors: 0, app_opens: 0, restaurant_views: 0, directions_clicks: 0, searches: 0 }] })
+    open('/analytics')
+    expect(await screen.findByText('이 기간에 기록된 사용 이벤트가 없어요.')).toBeInTheDocument()
+  })
+
+  it('switching to 30 days asks the database for 30 days', async () => {
+    fake.signInAs('admin')
+    open('/analytics')
+    await userEvent.selectOptions(await screen.findByLabelText('기간'), '30')
+    await waitFor(() => expect(fake.rpcs.some((r) => r.name === 'admin_event_daily' && (r.args as { p_days: number }).p_days === 30)).toBe(true))
+  })
+})
+
 describe('recommendation monitoring', () => {
   it('says plainly when no telemetry exists (no invented numbers)', async () => {
     fake.signInAs('admin')

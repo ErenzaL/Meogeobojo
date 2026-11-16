@@ -6,6 +6,7 @@ import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pill_chip.dart';
 import '../../../core/widgets/v5_widgets.dart';
+import '../../analytics/app_events.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../conditions/widgets/conditions_sheet.dart';
 import '../../origin/providers/origin_providers.dart';
@@ -64,7 +65,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
     setState(() {});
     ref.read(searchProvider.notifier).onQueryChanged(t, immediate: true);
-    if (t.isNotEmpty) ref.read(recentSearchesProvider.notifier).add(t);
+    if (t.isNotEmpty) {
+      ref.read(recentSearchesProvider.notifier).add(t);
+      ref.read(appEventLoggerProvider)(AppEvent.search, query: t);
+    }
   }
 
   @override

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/l10n/l10n.dart';
+import '../../analytics/app_events.dart';
 import '../models/restaurant.dart';
 
 /// Opens Kakao Map walking directions from ([fromName], [fromLat], [fromLng])
@@ -16,6 +18,9 @@ Future<void> openDirections(
 }) async {
   final messenger = ScaffoldMessenger.of(context);
   final failed = context.l10n.restaurantLinkOpenFailed;
+  ProviderScope.containerOf(context, listen: false).read(
+    appEventLoggerProvider,
+  )(AppEvent.directionsClick, restaurantId: to.kakaoId);
   String enc(String s) => Uri.encodeComponent(s.replaceAll(',', ' '));
   final uri = Uri.parse(
     'https://map.kakao.com/link/by/walk/'

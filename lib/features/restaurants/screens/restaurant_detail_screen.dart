@@ -10,6 +10,7 @@ import '../../../core/utils/geo.dart';
 import '../../../core/utils/seoul_clock.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/v5_widgets.dart';
+import '../../analytics/app_events.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/widgets/auth_prompt.dart';
 import '../../contributions/screens/my_contributions_screen.dart';
@@ -79,6 +80,15 @@ class _RestaurantDetailScreenState
   final _reviewsKey = GlobalKey();
 
   Restaurant get r => widget.restaurant;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(appEventLoggerProvider)(
+      AppEvent.restaurantView,
+      restaurantId: r.kakaoId,
+    );
+  }
 
   Future<void> _open(Uri uri) async {
     final messenger = ScaffoldMessenger.of(context);

@@ -92,13 +92,13 @@ const csv = (...lines: string[]) => [HEAD, ...lines].join('\n')
 const saves = () => fake.rpcs.filter((r) => r.name === 'cms_save_draft').map((r) => r.args as { p_type: string; p_id: string; p_data: { items: MenuItem[] }; p_expected_revision: number })
 
 function open() { return render(<MemoryRouter initialEntries={['/menus']}><App client={makeQueryClient()} /></MemoryRouter>) }
-async function ready() { open(); await screen.findByRole('button', { name: /CSV 가져오기/ }) }
+async function ready() { open(); await screen.findByRole('button', { name: /여러 식당 CSV 가져오기/ }) }
 async function pickRestaurant(name: string) {
   await userEvent.click(await screen.findByRole('button', { name: new RegExp(name) }))
   await screen.findByRole('heading', { name: '새 메뉴' }) // the menu editor of that restaurant has loaded
 }
 async function openImport(text: string) {
-  await userEvent.click(screen.getByRole('button', { name: /CSV 가져오기/ }))
+  await userEvent.click(screen.getByRole('button', { name: /여러 식당 CSV 가져오기/ }))
   const d = await screen.findByRole('dialog', { hidden: true })
   await userEvent.upload(within(d).getByLabelText('CSV 파일 선택'), file(text))
   return d
@@ -119,7 +119,7 @@ beforeEach(() => {
 describe('buttons and template', () => {
   it('the three buttons are at the top of 메뉴·가격', async () => {
     await ready()
-    for (const n of ['CSV 양식 다운로드', 'CSV 가져오기', 'CSV 내보내기']) expect(screen.getByRole('button', { name: new RegExp(n) })).toBeTruthy()
+    for (const n of ['CSV 양식 다운로드', '여러 식당 CSV 가져오기', 'CSV 내보내기']) expect(screen.getByRole('button', { name: new RegExp(n) })).toBeTruthy()
   })
   it('the template download is the seven columns and nothing else (no invented menus or prices)', async () => {
     await ready()
@@ -229,7 +229,7 @@ describe('importing', () => {
 
   const refuse = async (f: File, expected: string) => {
     await ready()
-    await userEvent.click(screen.getByRole('button', { name: /CSV 가져오기/ }))
+    await userEvent.click(screen.getByRole('button', { name: /여러 식당 CSV 가져오기/ }))
     const d = await screen.findByRole('dialog', { hidden: true })
     await userEvent.upload(within(d).getByLabelText('CSV 파일 선택'), f)
     expect((await within(d).findByRole('alert')).textContent).toContain(expected)
@@ -241,7 +241,7 @@ describe('importing', () => {
   it('refuses a file that is not UTF-8 instead of importing garbage', () => refuse(file(csv('1001,,\uFFFD\uFFFD,1,,,,')), 'UTF-8'))
   it('refuses a file over the size limit', async () => {
     await ready()
-    await userEvent.click(screen.getByRole('button', { name: /CSV 가져오기/ }))
+    await userEvent.click(screen.getByRole('button', { name: /여러 식당 CSV 가져오기/ }))
     const d = await screen.findByRole('dialog', { hidden: true })
     const big = new File(['x'], 'big.csv', { type: 'text/csv' })
     Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 })
@@ -420,7 +420,7 @@ describe('exporting', () => {
     await exportWith(/선택한 식당/)
     const exported = await lastCsv()
     await userEvent.click(screen.getByRole('button', { name: '닫기' }))
-    await userEvent.click(screen.getByRole('button', { name: /CSV 가져오기/ }))
+    await userEvent.click(screen.getByRole('button', { name: /여러 식당 CSV 가져오기/ }))
     const d = await screen.findByRole('dialog', { hidden: true })
     await userEvent.upload(within(d).getByLabelText('CSV 파일 선택'), file(exported))
     await userEvent.click(await within(d).findByRole('radio', { name: /갱신/ }))

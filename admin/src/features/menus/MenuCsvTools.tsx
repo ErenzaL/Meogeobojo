@@ -15,7 +15,7 @@ export function downloadText(name: string, text: string) {
   a.href = url; a.download = name; a.click()
   URL.revokeObjectURL(url)
 }
-const today = () => new Date().toISOString().slice(0, 10).replace(/-/g, '')
+export const today = () => new Date().toISOString().slice(0, 10).replace(/-/g, '')
 
 type Selected = { id: string; name_ko: string } | null
 
@@ -29,7 +29,7 @@ export default function MenuCsvTools({ selected, search, university = null }: { 
   return (
     <>
       <Button variant="outline" onClick={() => downloadText('meogeobojo_menu_import_template.csv', templateCsv())}><FileDown className="size-4" />CSV 양식 다운로드</Button>
-      <Button variant="outline" onClick={() => setDialog('import')}><Upload className="size-4" />CSV 가져오기</Button>
+      <Button variant="outline" onClick={() => setDialog('import')}><Upload className="size-4" />여러 식당 CSV 가져오기</Button>
       <Button variant="outline" onClick={() => setDialog('export')}><Download className="size-4" />CSV 내보내기</Button>
       {dialog === 'import' && <ImportDialog selected={selected} onClose={(changed) => { setDialog(null); if (changed) refresh() }} />}
       {dialog === 'export' && <ExportDialog selected={selected} search={search} university={university} onClose={() => setDialog(null)} />}
@@ -48,12 +48,12 @@ type Step =
   | { s: 'saving'; done: number; total: number }
   | { s: 'done' }
 
-const ACTION_LABEL: Record<RowAction, { text: string; tone: 'green' | 'brand' | 'neutral' | 'amber' | 'red' }> = {
+export const ACTION_LABEL: Record<RowAction, { text: string; tone: 'green' | 'brand' | 'neutral' | 'amber' | 'red' }> = {
   add: { text: '추가', tone: 'green' }, update: { text: '갱신', tone: 'brand' }, unchanged: { text: '변경 없음', tone: 'neutral' }, duplicate: { text: '중복', tone: 'amber' },
   invalid: { text: '오류', tone: 'red' }, unmatched: { text: '식당 없음', tone: 'red' }, name_mismatch: { text: '이름 불일치', tone: 'amber' },
 }
 const MAX_SHOWN = 200
-const won = (n: number | null) => (n == null ? '미정' : `${n.toLocaleString('ko-KR')}원`)
+export const won = (n: number | null) => (n == null ? '미정' : `${n.toLocaleString('ko-KR')}원`)
 
 function ImportDialog({ selected, onClose }: { selected: Selected; onClose: (changed: boolean) => void }) {
   const ref = useRef<HTMLDialogElement>(null)

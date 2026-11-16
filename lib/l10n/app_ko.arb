@@ -1683,5 +1683,58 @@
         "type": "String"
       }
     }
+  },
+  "relaxTitle": "이렇게 바꾸면 찾을 수 있어요",
+  "relaxDistance": "{label} 안으로 늘리면 {count}곳",
+  "relaxBudget": "예산 조건 없이 보면 {count}곳",
+  "relaxHours": "지금 주문 가능 조건 없이 보면 {count}곳",
+  "relaxAmenities": "운영·편의 조건 없이 보면 {count}곳",
+  "relaxCategory": "모든 음식 종류에서 보면 {count}곳",
+  "ignoredAmenity": "{amenity} 정보가 아직 없어서 이 조건은 적용하지 못했어요",
+  "ignoredHours": "영업시간 정보가 아직 없어서 ‘지금 주문 가능’은 적용하지 못했어요",
+  "@relaxDistance": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@relaxBudget": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@relaxHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@relaxAmenities": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@relaxCategory": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@ignoredAmenity": {
+    "placeholders": {
+      "amenity": {
+        "type": "String"
+      }
+    }
   }
 }

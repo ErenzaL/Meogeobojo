@@ -871,5 +871,13 @@
   "noticesSeeAll": "See all",
   "demoSwitchTitle": "Use recommendation demo data",
   "demoSwitchSubtitle": "Demonstrates recommendations with simulated hours and amenities.",
-  "missingAmenityNamed": "{amenity} unconfirmed"
+  "missingAmenityNamed": "{amenity} unconfirmed",
+  "relaxTitle": "Try changing this",
+  "relaxDistance": "Widen to {label}: {count} places",
+  "relaxBudget": "Without the budget: {count} places",
+  "relaxHours": "Without \"open now\": {count} places",
+  "relaxAmenities": "Without hours & amenities: {count} places",
+  "relaxCategory": "Any food type: {count} places",
+  "ignoredAmenity": "No place has {amenity} information yet, so this condition was not applied",
+  "ignoredHours": "No place has opening hours yet, so \"open now\" was not applied"
 }

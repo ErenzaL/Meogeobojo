@@ -141,10 +141,12 @@ Judgement judgeRestaurant(
   if (amount != null) {
     final max = c.budget.type == BudgetType.max;
     bool fits(int price) => max ? price <= amount : price >= amount;
+    // A "이상" (at least) budget also accepts a shared dish: a 20,000원 chicken is "12,000원 이상". A "이하" (at most)
+    // budget never does: what one person pays for a shared dish is not known.
     final meals = [
       for (final m in i.menus)
         if (m.available &&
-            m.isMeal &&
+            (m.isMeal || (!max && m.isShareable)) &&
             m.priceKrw != null &&
             m.servedAt(arrivalMinutes))
           m.priceKrw!,
@@ -454,4 +456,166 @@ OrderStatus orderStatusAt({
             ? OrderStatusKind.closesSoon
             : OrderStatusKind.available);
   return OrderStatus(kind, lastOrderMinutes: last, slackMinutes: slack);
+}
+
+// ---- Conditions nobody can check, and what to relax --------------------------------------------------------------
+
+/// [c] without the 운영·편의 conditions that NO place of [pool] has any data for. Ranking on them would drop every
+/// place for lack of data and show an empty list that says nothing about the places. They are named in
+/// [UsableConditions.ignoredAmenities] / [UsableConditions.ignoredHours] so the screen can say they were not applied.
+/// As soon as some places have the data (an administrator entered it) the condition applies in full again.
+class UsableConditions {
+  const UsableConditions(
+    this.conditions, {
+    this.ignoredAmenities = const {},
+    this.ignoredHours = false,
+  });
+
+  final Conditions conditions;
+  final Set<Amenity> ignoredAmenities;
+
+  /// 지금 주문 가능 was chosen but no place has opening hours and a last order.
+  final bool ignoredHours;
+
+  bool get any => ignoredAmenities.isNotEmpty || ignoredHours;
+}
+
+UsableConditions usableConditions(
+  Conditions c,
+  Iterable<Restaurant> pool,
+  Map<String, RestaurantInsight> insights,
+) {
+  if (c.amenities.isEmpty && !c.openNowOnly) return UsableConditions(c);
+  final infos = [
+    for (final r in pool) insights[r.kakaoId] ?? RestaurantInsight.unknown,
+  ];
+  bool known(Amenity a, RestaurantInsight i) => switch (a) {
+    Amenity.noBreakTime => i.hasBreakTime != null,
+    Amenity.parking => i.parking != null,
+    Amenity.localCurrency => i.localCurrency != null,
+    Amenity.fastTurnover => i.fastTurnover != null,
+    Amenity.takeout => i.takeout != null,
+    Amenity.openLate => i.openLate != null,
+  };
+  final ignored = {
+    for (final a in c.amenities)
+      if (!infos.any((i) => known(a, i))) a,
+  };
+  final noHours =
+      c.openNowOnly &&
+      !infos.any((i) => i.openMinutes != null && i.lastOrderMinutes != null);
+  if (ignored.isEmpty && !noHours) return UsableConditions(c);
+  return UsableConditions(
+    c.copyWith(
+      amenities: {...c.amenities}..removeAll(ignored),
+      openNowOnly: noHours ? false : c.openNowOnly,
+    ),
+    ignoredAmenities: ignored,
+    ignoredHours: noHours,
+  );
+}
+
+enum RelaxKind { distance, budget, hours, amenities, category }
+
+/// One change to the conditions that would turn an empty result into [count] confirmed places.
+class RelaxSuggestion {
+  const RelaxSuggestion(
+    this.kind,
+    this.conditions,
+    this.count, {
+    this.distance,
+    this.clearCategory = false,
+  });
+
+  final RelaxKind kind;
+
+  /// The conditions after the change.
+  final Conditions conditions;
+  final int count;
+
+  /// For [RelaxKind.distance]: the wider distance.
+  final DistanceOption? distance;
+
+  /// For [RelaxKind.category]: the food-type chips are cleared too.
+  final bool clearCategory;
+}
+
+const _widerDistances = [
+  DistanceOption.walk5,
+  DistanceOption.walk10,
+  DistanceOption.walk15,
+  DistanceOption.drive10,
+  DistanceOption.drive15,
+  DistanceOption.any,
+];
+
+/// For an empty result: each single condition that, relaxed on its own, would give confirmed places (a wider distance
+/// the nearest step that does, no budget, no 지금 주문 가능, no 운영·편의, any food type). Only changes with at least
+/// one result are returned; nothing is invented.
+List<RelaxSuggestion> relaxSuggestions({
+  required List<Restaurant> pool,
+  required List<Restaurant> poolAnyCategory,
+  required bool categoryChosen,
+  required double lat,
+  required double lng,
+  required Conditions conditions,
+  required Map<String, RestaurantInsight> insights,
+  required int nowMinutes,
+  Set<String> hiddenIds = const {},
+}) {
+  int count(Conditions c, List<Restaurant> places) {
+    final u = usableConditions(c, places, insights);
+    return rankRestaurants(
+      all: places,
+      lat: lat,
+      lng: lng,
+      conditions: u.conditions,
+      insights: insights,
+      hiddenIds: hiddenIds,
+      nowMinutes: nowMinutes,
+    ).confirmed.length;
+  }
+
+  final out = <RelaxSuggestion>[];
+  if (conditions.distance != DistanceOption.any) {
+    final from = _widerDistances.indexOf(conditions.distance);
+    for (var k = from + 1; k < _widerDistances.length; k++) {
+      final c = conditions.copyWith(distance: _widerDistances[k]);
+      final n = count(c, pool);
+      if (n > 0) {
+        out.add(
+          RelaxSuggestion(
+            RelaxKind.distance,
+            c,
+            n,
+            distance: _widerDistances[k],
+          ),
+        );
+        break;
+      }
+    }
+  }
+  void tryOne(RelaxKind kind, Conditions c) {
+    final n = count(c, pool);
+    if (n > 0) out.add(RelaxSuggestion(kind, c, n));
+  }
+
+  if (conditions.budget != BudgetOption.any) {
+    tryOne(RelaxKind.budget, conditions.copyWith(budget: BudgetOption.any));
+  }
+  if (conditions.openNowOnly) {
+    tryOne(RelaxKind.hours, conditions.copyWith(openNowOnly: false));
+  }
+  if (conditions.amenities.isNotEmpty) {
+    tryOne(RelaxKind.amenities, conditions.copyWith(amenities: const {}));
+  }
+  if (categoryChosen) {
+    final n = count(conditions, poolAnyCategory);
+    if (n > 0) {
+      out.add(
+        RelaxSuggestion(RelaxKind.category, conditions, n, clearCategory: true),
+      );
+    }
+  }
+  return out;
 }

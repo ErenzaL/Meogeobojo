@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/seoul_clock.dart';
 import '../../conditions/providers/conditions_providers.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../recommendation/home_ranking.dart';
@@ -450,3 +451,36 @@ class RestoreHeroNotifier extends Notifier<ActiveRecommendation?> {
 
   void consume() => state = null;
 }
+
+/// The 운영·편의 conditions Home could not apply because no place has data for them (see `usableConditions`). Home says so.
+final homeIgnoredConditionsProvider = Provider<UsableConditions>((ref) {
+  final pool = ref.watch(homePoolProvider).value ?? const <Restaurant>[];
+  return usableConditions(
+    ref.watch(conditionsProvider),
+    pool,
+    ref.watch(homePoolInsightsProvider),
+  );
+});
+
+/// What to relax when Home has nothing confirmed: the single changes that would give results.
+final homeRelaxProvider = Provider<List<RelaxSuggestion>>((ref) {
+  final origin = ref.watch(originProvider);
+  if (origin == null) return const [];
+  final pool = ref.watch(homePoolProvider).value ?? const <Restaurant>[];
+  final categoryChosen = ref.watch(homeCategoryProvider).isNotEmpty;
+  final all = categoryChosen
+      ? ref.watch(allNearbyRestaurantsProvider).value ?? const <Restaurant>[]
+      : pool;
+  final now = ref.watch(seoulNowProvider);
+  return relaxSuggestions(
+    pool: pool,
+    poolAnyCategory: all,
+    categoryChosen: categoryChosen,
+    lat: origin.latitude,
+    lng: origin.longitude,
+    conditions: ref.watch(conditionsProvider),
+    insights: ref.watch(homePoolInsightsProvider),
+    nowMinutes: minutesOfDay(now),
+    hiddenIds: ref.watch(hiddenPlaceIdsProvider),
+  );
+});

@@ -2637,4 +2637,40 @@ class AppLocalizationsKo extends AppLocalizations {
   String missingAmenityNamed(String amenity) {
     return '$amenity 정보 미확인';
   }
+
+  @override
+  String get relaxTitle => '이렇게 바꾸면 찾을 수 있어요';
+
+  @override
+  String relaxDistance(String label, int count) {
+    return '$label 안으로 늘리면 $count곳';
+  }
+
+  @override
+  String relaxBudget(int count) {
+    return '예산 조건 없이 보면 $count곳';
+  }
+
+  @override
+  String relaxHours(int count) {
+    return '지금 주문 가능 조건 없이 보면 $count곳';
+  }
+
+  @override
+  String relaxAmenities(int count) {
+    return '운영·편의 조건 없이 보면 $count곳';
+  }
+
+  @override
+  String relaxCategory(int count) {
+    return '모든 음식 종류에서 보면 $count곳';
+  }
+
+  @override
+  String ignoredAmenity(String amenity) {
+    return '$amenity 정보가 아직 없어서 이 조건은 적용하지 못했어요';
+  }
+
+  @override
+  String get ignoredHours => '영업시간 정보가 아직 없어서 ‘지금 주문 가능’은 적용하지 못했어요';
 }

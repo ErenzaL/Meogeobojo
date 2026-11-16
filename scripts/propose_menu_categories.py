@@ -38,7 +38,7 @@ SNACK=re.compile(r'떡볶이|김밥|라볶이|토스트|쫄면')
 NOODLE=re.compile(r'면$|국수|라면|라멘|우동|짜장|짬뽕|칼국수|냉면|밀면|파스타|쌀국수|막국수|수제비|소바|스파게티|볶음면|비빔면|메밀|짜파|잔치|누들|자장|짬짜|우육면')
 MEAL=re.compile(r'밥$|덮밥|비빔밥|볶음밥|국밥|정식|백반|찌개|탕$|돈가스|돈까스|돈카츠|돈가츠|카레|버거|도시락|죽$|오므라이스|카레라이스|순두부|육개장|제육덮|해장국|곰탕|설렁탕|갈비탕|삼계탕|감자탕|리조또|필라프|샌드위치|타코|부리또|쌈밥|보리밥|돌솥|뚝배기|케밥|포케|비빔')
 SHARED=re.compile(r'닭갈비|낙지|쭈꾸미|오징어|치킨|피자|족발|보쌈|삼겹|갈비|양꼬치|꼬치|회$|모듬|전골|전$|파전|안주|골뱅이|닭발|막창|곱창|대창|육회|탕수육|깐풍|양장피|마라샹궈|훠궈|샤브|무한|한판|통닭|닭강정|수육|야끼|오뎅탕|나가사키|스테이크|바베큐|바비큐')
-def classify(m):
+def classify(m, rname=''):
     n=re.sub(r'\s+','',m['name_ko'] or '')
     desc=(m.get('description_ko') or '')
     if not n or m['price_krw'] is None: return None,''
@@ -64,13 +64,18 @@ def classify(m):
         return h,'이름 키워드: '+h
     if hits==['분식','면류'] and re.search(r'쫄면|라볶이|라면$',n): return '분식','분식 면'
     if set(hits)=={'식사','면류'} and re.search(r'칼국수|짜장|짬뽕|냉면|국수|우동|라멘|파스타|면$',n) and not re.search(r'밥|덮|탕',n): return '면류','면 요리'
+    # a dish whose own name says nothing (brand names like 골드킹 / 레드킹) at a chicken / pizza / 족발 shop is a shared dish
+    sn=re.sub(r'\s+','',rname)
+    if p>=10000 and re.search(r'치킨|통닭|닭강정',sn): return '안주','치킨집의 메뉴 (이름만으로는 알 수 없는 1만원 이상 메뉴)'
+    if p>=10000 and re.search(r'피자',sn): return '기타','피자집의 메뉴 (1만원 이상)'
+    if p>=15000 and re.search(r'족발|보쌈',sn): return '안주','족발·보쌈집의 메뉴'
     return None,''
 out=[]; cnt=collections.Counter()
 eff={}  # menu id -> the category the app will see after the import (existing known one, else the proposal)
 for m in menus:
     if m['status']!='active': continue
     cur=(m['category'] or '').strip()
-    cat,why=classify(m)
+    cat,why=classify(m, (rests.get(m['restaurant_id']) or {}).get('name_ko',''))
     cnt[cat]+=1
     # an earlier proposal may have filed a meal as 기타 / 사이드 / 안주 (for example a one-person burger set): upgrade only to a meal
     upgrade = cat in ('식사','면류','분식') and cur in ('기타','사이드','안주')

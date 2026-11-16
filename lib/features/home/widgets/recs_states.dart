@@ -6,7 +6,11 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/widgets/mascot_message.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../conditions/models/conditions.dart';
+import '../../conditions/providers/conditions_providers.dart';
+import '../../conditions/widgets/condition_labels.dart';
 import '../../conditions/widgets/conditions_sheet.dart';
+import '../../preferences/screens/preference_labels.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
 import '../../records/meal_records.dart';
@@ -167,6 +171,7 @@ class RecsEmpty extends ConsumerWidget {
             actionLabel: l10n.homeEditConditions,
             onAction: () => showConditionsSheet(context),
           ),
+          const RelaxSuggestions(),
           if (unverified > 0)
             OutlinedButton.icon(
               onPressed: ref.read(homeShowUnverifiedProvider.notifier).toggle,
@@ -183,6 +188,87 @@ class RecsEmpty extends ConsumerWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// "이렇게 바꾸면 찾을 수 있어요": the single changes that would turn an empty result into confirmed places. A tap applies it.
+class RelaxSuggestions extends ConsumerWidget {
+  const RelaxSuggestions({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(homeRelaxProvider);
+    if (items.isEmpty) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    String label(RelaxSuggestion s) => switch (s.kind) {
+      RelaxKind.distance => l10n.relaxDistance(
+        distanceLabel(l10n, s.distance!),
+        s.count,
+      ),
+      RelaxKind.budget => l10n.relaxBudget(s.count),
+      RelaxKind.hours => l10n.relaxHours(s.count),
+      RelaxKind.amenities => l10n.relaxAmenities(s.count),
+      RelaxKind.category => l10n.relaxCategory(s.count),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: Column(
+        key: const ValueKey('relax-suggestions'),
+        children: [
+          Text(
+            l10n.relaxTitle,
+            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final s in items)
+                ActionChip(
+                  label: Text(label(s)),
+                  onPressed: () {
+                    ref
+                        .read(conditionsProvider.notifier)
+                        .update((_) => s.conditions);
+                    if (s.clearCategory) {
+                      ref.read(homeCategoryProvider.notifier).clear();
+                    }
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Says which 운영·편의 conditions were not applied because no place has data for them yet.
+class IgnoredConditionsNote extends ConsumerWidget {
+  const IgnoredConditionsNote({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final u = ref.watch(homeIgnoredConditionsProvider);
+    if (!u.any) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final p = context.palette;
+    final lines = [
+      for (final a in Amenity.values)
+        if (u.ignoredAmenities.contains(a))
+          l10n.ignoredAmenity(amenityLabelOf(l10n, a)),
+      if (u.ignoredHours) l10n.ignoredHours,
+    ];
+    return Padding(
+      key: const ValueKey('ignored-conditions-note'),
+      padding: const EdgeInsets.only(top: 10),
+      child: Text(
+        lines.join('\n'),
+        style: TextStyle(fontSize: 13, color: p.textMuted),
       ),
     );
   }

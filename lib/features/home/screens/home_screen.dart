@@ -169,6 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     children: [AdvancedFilterPanel(), AppliedFilterChips()],
                   ),
                 ),
+              Padding(padding: pad, child: const IgnoredConditionsNote()),
               const SizedBox(height: 14),
               Padding(
                 padding: pad,

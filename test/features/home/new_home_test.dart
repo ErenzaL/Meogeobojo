@@ -827,6 +827,81 @@ void main() {
       expect(find.text('1곳 보기'), findsOneWidget);
     });
 
+    testWidgets(
+      'an empty result offers the changes that would give results, and a tap applies one',
+      (tester) async {
+        // The only chicken place is ~778 m away; its menu has a shared 18,000원 dish.
+        final repo = FakeRestaurantRepository(
+          items: [spot('치킨집', 0.0070, category: '음식점 > 치킨')],
+        );
+        final h = await buildHarness(
+          restaurants: repo,
+          overridesRepo: FakeRestaurantOverrideRepository(
+            menuItems: {
+              '치킨집': const [
+                RestaurantMenuItem(
+                  name: '후라이드',
+                  priceKrw: 18000,
+                  category: '안주',
+                ),
+              ],
+            },
+          ),
+          extraOverrides: [
+            campusMealCacheDurationProvider.overrideWithValue(Duration.zero),
+          ],
+        );
+        await pumpApp(tester, h, home: const AppShell());
+        h.container
+            .read(conditionsProvider.notifier)
+            .update(
+              (c) => c.copyWith(
+                budget: BudgetOption.min12000,
+                distance: DistanceOption.walk5,
+              ),
+            );
+        await tester.pumpAndSettle();
+        expect(find.text('조건에 맞는 곳이 없어요'), findsOneWidget);
+        expect(find.text('이렇게 바꾸면 찾을 수 있어요'), findsOneWidget);
+        // 5 minutes finds nothing; 10 minutes does (the dish counts for a "이상" budget)
+        final chip = find.text('도보 10분 안으로 늘리면 1곳');
+        expect(chip, findsOneWidget);
+        // dropping the budget alone does not help (still too far)
+        expect(find.textContaining('예산 조건 없이'), findsNothing);
+        await tester.ensureVisible(chip);
+        await tester.tap(chip);
+        await tester.pumpAndSettle();
+        expect(
+          h.container.read(conditionsProvider).distance,
+          DistanceOption.walk10,
+        );
+        expect(
+          h.container.read(conditionsProvider).budget,
+          BudgetOption.min12000,
+        );
+        expect(find.byType(HeroCard), findsOneWidget);
+        expect(find.text('조건에 맞는 곳이 없어요'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'a 운영·편의 condition nobody has data for is not applied, and Home says so',
+      (tester) async {
+        final h = await openHome(tester);
+        h.container
+            .read(conditionsProvider.notifier)
+            .update((c) => c.copyWith(amenities: {Amenity.parking}));
+        await tester.pumpAndSettle();
+        // no place has parking information at all: the list is not emptied by it ...
+        expect(find.byType(HeroCard), findsOneWidget);
+        // ... and the screen says the condition was not applied
+        expect(
+          find.textContaining('정보가 아직 없어서 이 조건은 적용하지 못했어요'),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('바꾸기 opens the origin sheet', (tester) async {
       await openHome(tester);
       await openSheet(tester);

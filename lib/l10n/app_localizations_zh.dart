@@ -2623,4 +2623,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String missingAmenityNamed(String amenity) {
     return '$amenity未确认';
   }
+
+  @override
+  String get relaxTitle => '这样调整就能找到';
+
+  @override
+  String relaxDistance(String label, int count) {
+    return '放宽到$label：$count家';
+  }
+
+  @override
+  String relaxBudget(int count) {
+    return '不限预算：$count家';
+  }
+
+  @override
+  String relaxHours(int count) {
+    return '不限“现在可点餐”：$count家';
+  }
+
+  @override
+  String relaxAmenities(int count) {
+    return '不限营业·设施条件：$count家';
+  }
+
+  @override
+  String relaxCategory(int count) {
+    return '所有菜系：$count家';
+  }
+
+  @override
+  String ignoredAmenity(String amenity) {
+    return '目前没有$amenity信息，所以未应用该条件';
+  }
+
+  @override
+  String get ignoredHours => '目前没有营业时间信息，所以未应用“现在可点餐”';
 }

@@ -2733,4 +2733,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noticesSeeAll => 'See all';
+
+  @override
+  String get demoSwitchTitle => 'Use recommendation demo data';
+
+  @override
+  String get demoSwitchSubtitle =>
+      'Demonstrates recommendations with simulated hours and amenities.';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity unconfirmed';
+  }
 }

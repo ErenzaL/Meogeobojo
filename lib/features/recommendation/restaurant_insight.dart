@@ -68,6 +68,7 @@ class RestaurantInsight {
     this.fastTurnover,
     this.takeout,
     this.openLate,
+    this.demo = false,
   });
 
   static const unknown = RestaurantInsight();
@@ -103,6 +104,10 @@ class RestaurantInsight {
   /// Open until at least 22:00.
   final bool? openLate;
 
+  /// Some of the hours / amenity facts above come from the simulated DEMO dataset, not from an administrator. They
+  /// must never be shown as verified information (see `recommendation/demo`).
+  final bool demo;
+
   RestaurantInsight withMenus(List<MenuLine> lines) => RestaurantInsight(
     minPriceKrw: minPriceKrw,
     rating: rating,
@@ -120,5 +125,6 @@ class RestaurantInsight {
     fastTurnover: fastTurnover,
     takeout: takeout,
     openLate: openLate,
+    demo: demo,
   );
 }

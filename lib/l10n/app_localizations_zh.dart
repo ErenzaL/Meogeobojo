@@ -2612,4 +2612,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noticesSeeAll => '查看全部';
+
+  @override
+  String get demoSwitchTitle => '使用推荐演示数据';
+
+  @override
+  String get demoSwitchSubtitle => '用模拟的营业时间和设施信息演示推荐。';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity未确认';
+  }
 }

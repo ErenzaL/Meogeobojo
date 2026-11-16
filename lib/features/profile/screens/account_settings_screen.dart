@@ -9,6 +9,7 @@ import '../../auth/widgets/auth_fields.dart';
 import '../models/nickname.dart';
 import '../widgets/nickname_field.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../recommendation/demo/demo_widgets.dart';
 
 /// The nickname dialog, shared by 계정 설정 and the MY header's pencil.
 Future<void> showNicknameEditor(
@@ -124,6 +125,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               ],
             ),
           ),
+          const DemoModeSwitchTile(),
           const SizedBox(height: 20),
           OutlinedButton(
             onPressed: () async {

@@ -83,16 +83,10 @@ class RestaurantOverride {
     final hours = j['opening_hours'];
     // The admin enters it as opening_hours.open ("11:00").
     final open = clockMinutes(hours is Map ? hours['open'] : null);
-    var lastOrder = clockMinutes(j['last_order_time']);
-    // Stored as a time of day: a last order after midnight ("01:00") belongs
-    // to the evening before, so it goes past 1440 (01:00 = 1500). That is any
-    // last order before 05:00, or one not after the opening time. The first
-    // rule matters for places saved before the opening time existed.
-    if (lastOrder != null &&
-        (lastOrder < kOvernightLastOrderBefore ||
-            (open != null && lastOrder <= open))) {
-      lastOrder += 1440;
-    }
+    final lastOrder = normalizeLastOrder(
+      clockMinutes(j['last_order_time']),
+      open,
+    );
     return RestaurantOverride(
       kakaoId: id,
       visibility: (j['visibility'] as String?) ?? 'published',
@@ -116,6 +110,17 @@ class RestaurantOverride {
       ),
     );
   }
+}
+
+/// Stored as a time of day: a last order after midnight ("01:00") belongs to the evening before, so it goes past 1440
+/// (01:00 = 1500). That is any last order before 05:00, or one not after the opening time. The first rule matters for
+/// places saved before the opening time existed.
+int? normalizeLastOrder(int? lastOrder, int? open) {
+  if (lastOrder == null) return null;
+  return (lastOrder < kOvernightLastOrderBefore ||
+          (open != null && lastOrder <= open))
+      ? lastOrder + 1440
+      : lastOrder;
 }
 
 /// "21:30" / "21:30:00" → minutes since 00:00; null when it is not a time.

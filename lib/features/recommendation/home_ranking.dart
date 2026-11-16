@@ -42,10 +42,18 @@ enum Verdict {
 enum MissingInfo { price, hours, amenities }
 
 class Judgement {
-  const Judgement(this.verdict, {this.missing = const {}, this.mealPriceKrw});
+  const Judgement(
+    this.verdict, {
+    this.missing = const {},
+    this.missingAmenities = const {},
+    this.mealPriceKrw,
+  });
 
   final Verdict verdict;
   final Set<MissingInfo> missing;
+
+  /// Which of the chosen 운영·편의 conditions could not be checked (part of [MissingInfo.amenities]).
+  final Set<Amenity> missingAmenities;
 
   /// The cheapest meal for one that fits the budget then (budget chosen only).
   final int? mealPriceKrw;
@@ -59,6 +67,8 @@ class RankedRestaurant {
     required this.insight,
     required this.reason,
     this.missing = const {},
+    this.missingAmenities = const {},
+    this.demoBasis = false,
     this.score,
   });
 
@@ -72,6 +82,13 @@ class RankedRestaurant {
 
   /// Empty for a confirmed match; otherwise what could not be checked.
   final Set<MissingInfo> missing;
+
+  /// The chosen amenities that could not be checked for this place.
+  final Set<Amenity> missingAmenities;
+
+  /// A condition of this ranking (opening hours, an amenity) was judged on simulated DEMO data: never present it as
+  /// verified.
+  final bool demoBasis;
 
   /// The V3 score (0..1) this place was ranked by (see `recommendation_score.dart`).
   final double? score;
@@ -117,6 +134,7 @@ Judgement judgeRestaurant(
   int arrivalMinutes,
 ) {
   final missing = <MissingInfo>{};
+  final missingAmenities = <Amenity>{};
   int? mealPrice;
 
   final amount = c.budget.amountKrw;
@@ -181,12 +199,16 @@ Judgement judgeRestaurant(
       Amenity.openLate => i.openLate,
     };
     if (known == false) return const Judgement(Verdict.excluded);
-    if (known == null) missing.add(MissingInfo.amenities);
+    if (known == null) {
+      missing.add(MissingInfo.amenities);
+      missingAmenities.add(a);
+    }
   }
 
   return Judgement(
     missing.isEmpty ? Verdict.match : Verdict.unverified,
     missing: missing,
+    missingAmenities: missingAmenities,
     mealPriceKrw: mealPrice,
   );
 }
@@ -309,6 +331,10 @@ List<RankedRestaurant> rankRestaurants({
         insight: e.i,
         reason: _reasonFor(e, conditions, closest),
         missing: e.j.missing,
+        missingAmenities: e.j.missingAmenities,
+        demoBasis:
+            e.i.demo &&
+            (conditions.openNowOnly || conditions.amenities.isNotEmpty),
         score: scores[e.r.kakaoId],
       ),
   ];

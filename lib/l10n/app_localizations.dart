@@ -4749,6 +4749,24 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'전체 보기'**
   String get noticesSeeAll;
+
+  /// No description provided for @demoSwitchTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 데모 데이터 사용'**
+  String get demoSwitchTitle;
+
+  /// No description provided for @demoSwitchSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'가상의 영업시간·편의 정보로 추천을 시연해요.'**
+  String get demoSwitchSubtitle;
+
+  /// No description provided for @missingAmenityNamed.
+  ///
+  /// In ko, this message translates to:
+  /// **'{amenity} 정보 미확인'**
+  String missingAmenityNamed(String amenity);
 }
 
 class _AppLocalizationsDelegate

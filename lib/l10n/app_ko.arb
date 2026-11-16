@@ -1673,5 +1673,15 @@
   "feedbackSent": "보냈어요. 운영자가 확인할게요.",
   "feedbackFailed": "보내지 못했어요. 잠시 후 다시 시도해 주세요.",
   "authReasonFeedback": "문의와 제안은 로그인한 뒤에 보낼 수 있어요.",
-  "noticesSeeAll": "전체 보기"
+  "noticesSeeAll": "전체 보기",
+  "demoSwitchTitle": "추천 데모 데이터 사용",
+  "demoSwitchSubtitle": "가상의 영업시간·편의 정보로 추천을 시연해요.",
+  "missingAmenityNamed": "{amenity} 정보 미확인",
+  "@missingAmenityNamed": {
+    "placeholders": {
+      "amenity": {
+        "type": "String"
+      }
+    }
+  }
 }

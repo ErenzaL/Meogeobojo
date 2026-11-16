@@ -2626,4 +2626,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get noticesSeeAll => '전체 보기';
+
+  @override
+  String get demoSwitchTitle => '추천 데모 데이터 사용';
+
+  @override
+  String get demoSwitchSubtitle => '가상의 영업시간·편의 정보로 추천을 시연해요.';
+
+  @override
+  String missingAmenityNamed(String amenity) {
+    return '$amenity 정보 미확인';
+  }
 }

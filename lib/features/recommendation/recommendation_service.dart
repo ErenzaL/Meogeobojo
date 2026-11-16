@@ -6,7 +6,10 @@ import '../restaurants/models/restaurant.dart';
 import '../restaurants/providers/restaurant_providers.dart';
 import '../university/models/university.dart';
 import '../university/providers/university_providers.dart';
-import 'preference_filter.dart';
+import '../../core/utils/seoul_clock.dart';
+import '../conditions/models/conditions.dart';
+import 'home_ranking.dart';
+import 'providers/ranking_providers.dart';
 
 /// What ranking was used. The UI turns this into (localized) text, so the
 /// basis of the order is never misrepresented in any language.
@@ -37,43 +40,52 @@ abstract interface class RecommendationService {
   });
 }
 
-/// Baseline: no popularity / preference-learning signal exists yet, so rank
-/// purely by straight-line distance from the university. Saved distance and
-/// cuisine conditions are applied when given (see [applyPreferences]).
-class ProximityBaselineService implements RecommendationService {
-  ProximityBaselineService(this._load);
+/// The V3 recommendation (see `recommendation_score.dart`), the same ranking Home, the map and search use:
+/// distance and budget decide who qualifies, then food taste and distance (and reviews, when there are any) order them.
+/// Without saved conditions that is simply "nearest first".
+class V3RecommendationService implements RecommendationService {
+  V3RecommendationService(this._ref);
 
-  final Future<List<Restaurant>> Function() _load;
+  final Ref _ref;
 
   @override
   Future<RecommendationResult> recommend({
     required University university,
     UserPreferences? preferences,
   }) async {
-    final all = await _load();
-    final food = all.where((r) => r.categoryGroupCode == 'FD6').toList()
-      ..sort((a, b) => a.distanceMeters.compareTo(b.distanceMeters));
-    if (preferences == null) {
-      return RecommendationResult(
-        strategy: RecommendationStrategy.proximityBaseline,
-        university: university,
-        restaurants: food,
-        candidateCount: food.length,
-      );
-    }
+    final all = await _ref.read(allNearbyRestaurantsProvider.future);
+    // Prices decide the budget: wait for the menus (a failure just leaves prices unchecked), then judge on them.
+    try {
+      await _ref.read(nearbyMenusProvider.future);
+    } catch (_) {}
+    final reviews = await _ref.read(reviewSignalsProvider.future);
+    final conditions = preferences == null
+        ? const Conditions()
+        : Conditions.fromPreferences(preferences);
+    final ranked = rankRestaurants(
+      all: all,
+      lat: university.latitude,
+      lng: university.longitude,
+      conditions: conditions,
+      insights: _ref.read(restaurantInsightsProvider),
+      hiddenIds: _ref.read(hiddenPlaceIdsProvider),
+      reviewSignals: reviews,
+      nowMinutes: minutesOfDay(seoulWall(DateTime.now())),
+    );
+    final food = all.where((r) => r.categoryGroupCode == 'FD6').length;
     return RecommendationResult(
-      strategy: RecommendationStrategy.proximityWithPreferences,
+      strategy: preferences == null
+          ? RecommendationStrategy.proximityBaseline
+          : RecommendationStrategy.proximityWithPreferences,
       university: university,
-      restaurants: applyPreferences(all, preferences),
-      candidateCount: food.length,
+      restaurants: [for (final r in ranked) r.restaurant],
+      candidateCount: food,
     );
   }
 }
 
 final recommendationServiceProvider = Provider<RecommendationService>(
-  (ref) => ProximityBaselineService(
-    () => ref.read(allNearbyRestaurantsProvider.future),
-  ),
+  V3RecommendationService.new,
 );
 
 /// Argument: whether to apply the signed-in user's saved preferences.

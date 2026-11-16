@@ -369,14 +369,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recommendExplainBaseline =>
-      'There\'s no popularity or taste data yet, so we show restaurants closest to campus first. Personalized picks are coming soon.';
+      'You have no saved conditions, so restaurants are shown closest to campus first. Save your conditions and places that match your taste and budget move up.';
 
   @override
-  String get recommendStrategyPreferences => 'Filtered by your conditions';
+  String get recommendStrategyPreferences =>
+      'Ranked by your taste and distance';
 
   @override
   String recommendExplainPreferences(int count, int total) {
-    return 'We applied your saved distance and cuisine conditions: $count of $total places, nearest first. Budget, companions and taste tags aren\'t applied yet, and distance is a straight-line estimate. Personalized picks are coming soon.';
+    return 'Of $total candidates, $count fit your saved distance and budget. The closer a place is and the better it matches your taste, the higher it ranks, and places with a confirmed meal within budget come first. Food types only affect the order, they don\'t hide places, and distance is a straight-line estimate.';
   }
 
   @override

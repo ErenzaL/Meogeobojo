@@ -225,9 +225,9 @@
       }
     }
   },
-  "recommendExplainBaseline": "아직 인기·취향 데이터가 없어서 학교에서 가까운 음식점부터 보여드려요. 맞춤 추천은 준비 중이에요.",
-  "recommendStrategyPreferences": "내 조건으로 거른 결과",
-  "recommendExplainPreferences": "저장한 거리·음식 종류 조건을 적용해 {total}곳 중 {count}곳을 가까운 순으로 보여드려요. 예산·함께 먹는 사람·취향 태그는 아직 반영되지 않고, 거리는 직선거리 기준 근사치예요. 맞춤 추천은 준비 중이에요.",
+  "recommendExplainBaseline": "저장한 조건이 없어서 학교에서 가까운 순서로만 보여드려요. 조건을 저장하면 음식 취향과 예산에 맞는 곳이 위로 올라와요.",
+  "recommendStrategyPreferences": "취향과 거리로 정렬한 결과",
+  "recommendExplainPreferences": "후보 {total}곳 중 저장한 거리·예산 조건에 맞는 {count}곳을 보여드려요. 음식 취향에 맞고 가까울수록 위에 있고, 예산에 맞는 식사가 확인된 곳이 먼저예요. 음식 종류는 걸러내지 않고 순서에만 반영하며, 거리는 직선거리 기준 근사치예요.",
   "@recommendExplainPreferences": {
     "placeholders": {
       "count": {

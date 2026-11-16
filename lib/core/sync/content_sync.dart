@@ -327,6 +327,9 @@ void refreshAllContent(ProviderContainer ref) {
   ]) {
     invalidateForTable(ref, t);
   }
+  ref.invalidate(
+    reviewSignalsProvider,
+  ); // student reviews change the V3 ranking
 }
 
 /// The cheap part, for the periodic safety net: plain table reads, no restaurant

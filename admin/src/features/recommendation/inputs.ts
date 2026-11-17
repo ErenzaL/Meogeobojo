@@ -5,7 +5,7 @@
 export type FeatureRow = {
   kakao_place_id: string; name_ko: string | null; open_time: string | null; last_order_time: string | null; break_time: string | null
   no_break_time: boolean | null; parking: boolean | null; local_currency: boolean | null; fast_turnover: boolean | null
-  takeout: boolean | null; open_late: boolean | null; source: string | null
+  takeout: boolean | null; open_late: boolean | null; source: string | null; demo_data?: boolean | null
 }
 export type RestaurantLite = { id: string; kakao_place_id: string | null; name_ko: string; visibility: string; category?: string | null }
 export type MenuLite = { restaurant_id: string; category: string | null; price_krw: number | null; status: string; available: boolean | null }

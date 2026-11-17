@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart';
 import '../../restaurants/models/restaurant_override.dart';
 import '../restaurant_insight.dart';
 
-/// One row of `recommendation_demo_features`: SIMULATED hours and amenities for a restaurant, keyed by its Kakao place
-/// id. It exists so the recommendation can be demonstrated before real data is entered. It is never verified
-/// information, never replaces what an administrator entered, and says nothing about prices (the budget is judged
-/// on the published menus only) or position (Kakao's live coordinates are used).
+/// One row of `recommendation_demo_features`: hours and amenities for a restaurant, keyed by its Kakao place id. A row
+/// is either SIMULATED ([demo] true: only read while demo mode is on, always labelled) or REAL ([demo] false: entered by
+/// an administrator, read by every build and shown like any other restaurant information). Neither replaces what an
+/// administrator entered on the restaurant itself, and neither says anything about prices (the budget is judged on the
+/// published menus only) or position (Kakao's live coordinates are used).
 @immutable
 class DemoFeature {
   const DemoFeature({
@@ -20,6 +21,7 @@ class DemoFeature {
     this.fastTurnover,
     this.takeout,
     this.openLate,
+    this.demo = true,
   });
 
   final String kakaoId;
@@ -33,11 +35,13 @@ class DemoFeature {
   final bool? takeout;
   final bool? openLate;
 
+  /// Simulated (true) or real, admin-entered (false).
+  final bool demo;
+
   static DemoFeature? fromJson(Map<String, dynamic> j) {
     final id = (j['kakao_place_id'] as String?)?.trim();
     if (id == null || id.isEmpty) return null;
-    // Rows that do not say they are demo data are not demo data: never read them as such.
-    if (j['demo_data'] != true) return null;
+    // Only an explicit demo_data = true is demo data; a row that says false (or says nothing) is real.
     final open = clockMinutes(j['open_time']);
     return DemoFeature(
       kakaoId: id,
@@ -53,11 +57,12 @@ class DemoFeature {
       fastTurnover: j['fast_turnover'] as bool?,
       takeout: j['takeout'] as bool?,
       openLate: j['open_late'] as bool?,
+      demo: j['demo_data'] == true,
     );
   }
 }
 
-/// [base] (what the database and the administrators say) with the DEMO values filling ONLY what is missing.
+/// [base] (what the database and the administrators say) with the stored values filling ONLY what is missing.
 ///
 ///  * An administrator's value always wins; the demo never overwrites or mixes with it (opening time and last order
 ///    come from the demo only when the place has neither of its own).
@@ -103,7 +108,8 @@ RestaurantInsight applyDemo(RestaurantInsight base, DemoFeature? f) {
     fastTurnover: pick(base.fastTurnover, f.fastTurnover),
     takeout: pick(base.takeout, f.takeout),
     openLate: pick(base.openLate, f.openLate),
-    demo: base.demo || used,
+    // only simulated values make the result "demo"; a real row fills the gaps like any other information
+    demo: base.demo || (used && f.demo),
   );
   return out;
 }

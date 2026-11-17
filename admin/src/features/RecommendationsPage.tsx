@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Badge, Card, ErrorState, PageHeader, Skeleton } from '@/components/ui'
+import { useRef } from 'react'
+import { Badge, Button, Card, ErrorState, PageHeader, Skeleton } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { formatDateTime } from '@/lib/utils'
@@ -10,6 +11,7 @@ type Stats = { total: number; errors: number; mock_requests: number; avg_latency
 
 /** Real telemetry only (public.recommendation_requests, written by the server). */
 export default function RecommendationsPage() {
+  const pick = useRef<(() => void) | null>(null)
   const { can } = useAuth()
   const q = useQuery({
     queryKey: ['recommendation-stats'],
@@ -24,9 +26,9 @@ export default function RecommendationsPage() {
   const none = !q.isLoading && !q.error && (!s || s.total === 0)
   return (
     <>
-      <PageHeader title="추천" description="최근 7일 동안 서버가 기록한 추천 API 호출만 보여줘요." />
+      <PageHeader title="추천" description="최근 7일 동안 서버가 기록한 추천 API 호출만 보여줘요." actions={can('admin') ? <Button onClick={() => { document.getElementById('recommendation-csv-import')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); pick.current?.() }}>CSV 가져오기</Button> : undefined} />
+      {can('admin') && <DemoFeaturesImport registerPicker={(open) => { pick.current = open }} />}
       <RecommendationInputs />
-      {can('admin') && <DemoFeaturesImport />}
       {q.isLoading && <Skeleton className="h-40 w-full" />}
       {q.error && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
       {none && (

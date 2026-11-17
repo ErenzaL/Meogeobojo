@@ -44,10 +44,17 @@ final demoFeatureRepositoryProvider = Provider<DemoFeatureRepository>(
   (ref) => SupabaseDemoFeatureRepository(() => Supabase.instance.client),
 );
 
-/// The simulated features by Kakao place id. Empty unless demo mode is on, so nothing reads or applies them otherwise.
-final demoFeaturesProvider = FutureProvider<Map<String, DemoFeature>>((
-  ref,
-) async {
-  if (!ref.watch(demoModeProvider)) return const {};
-  return ref.watch(demoFeatureRepositoryProvider).all();
-});
+/// Every stored feature row by Kakao place id (real and simulated). Consumers keep only what applies with
+/// [featuresForMode]; the simulated rows must never reach the recommendation while demo mode is off.
+final demoFeaturesProvider = FutureProvider<Map<String, DemoFeature>>(
+  (ref) => ref.watch(demoFeatureRepositoryProvider).all(),
+);
+
+/// The rows that apply: the REAL ones always, the simulated ones only while demo mode is on.
+Map<String, DemoFeature> featuresForMode(
+  Map<String, DemoFeature> stored,
+  bool demoOn,
+) => {
+  for (final e in stored.entries)
+    if (!e.value.demo || demoOn) e.key: e.value,
+};

@@ -196,7 +196,7 @@ export default function MenusPage() {
               <Field label="메뉴 이름" htmlFor="mn"><Input id="mn" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="제육 정식" /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="가격 (원)" htmlFor="mp" hint="모르면 비워 두세요"><Input id="mp" inputMode="numeric" value={form.price} onChange={(e) => set('price', e.target.value)} /></Field>
-                <Field label="분류" htmlFor="mc"><Select id="mc" value={form.category} onChange={(e) => set('category', e.target.value)}><option value="">선택 안 함</option>{MENU_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+                <Field label="분류" htmlFor="mc"><Select id="mc" value={form.category} onChange={(e) => set('category', e.target.value)}><option value="">선택 안 함</option>{(form.category && !MENU_CATEGORIES.includes(form.category) ? [...MENU_CATEGORIES, form.category] : MENU_CATEGORIES).map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
               </div>
               <Field label="가격 확인일" htmlFor="mv" hint="가격을 직접 확인한 날"><Input id="mv" type="date" value={form.verified} onChange={(e) => set('verified', e.target.value)} /></Field>
               <Field label="설명" htmlFor="md"><Textarea id="md" className="min-h-16" value={form.description} onChange={(e) => set('description', e.target.value)} /></Field>

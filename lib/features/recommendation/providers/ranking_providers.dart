@@ -51,9 +51,10 @@ final restaurantInsightsProvider = Provider<Map<String, RestaurantInsight>>(
     ref.watch(restaurantOverridesProvider).value ?? const {},
     ref.watch(nearbyMenusProvider).value ?? const {},
     // read the switch itself, not only the loaded rows: turning demo off must take effect at once
-    demo: ref.watch(demoModeProvider)
-        ? ref.watch(demoFeaturesProvider).value ?? const {}
-        : const {},
+    demo: featuresForMode(
+      ref.watch(demoFeaturesProvider).value ?? const {},
+      ref.watch(demoModeProvider),
+    ),
   ),
 );
 
@@ -68,8 +69,9 @@ final nearbyMenusProvider =
 
 /// Overrides and menus combined into one insight per place.
 ///
-/// [demo] (simulated hours and amenities, only while demo mode is on) fills what the database does not have, never
-/// what an administrator entered, and marks the insight as demo.
+/// [demo] (stored hours and amenities: real rows always, simulated ones only while demo mode is on) fills what the
+/// restaurant record does not have, never what an administrator entered on it; only simulated values mark the insight
+/// as demo.
 Map<String, RestaurantInsight> insightsFrom(
   Map<String, RestaurantOverride> overrides,
   Map<String, List<RestaurantMenuItem>> menus, {
@@ -96,9 +98,10 @@ final insightsForIdsProvider = FutureProvider.autoDispose
         repo.forPlaces(ids),
         repo.menusForPlaces(ids),
       ]);
-      final demo = ref.watch(demoModeProvider)
-          ? await ref.watch(demoFeaturesProvider.future)
-          : const <String, DemoFeature>{};
+      final demo = featuresForMode(
+        await ref.watch(demoFeaturesProvider.future),
+        ref.watch(demoModeProvider),
+      );
       return insightsFrom(
         both[0] as Map<String, RestaurantOverride>,
         both[1] as Map<String, List<RestaurantMenuItem>>,

@@ -26,7 +26,7 @@ export default function RecommendationInputs() {
     queryKey: ['recommendation-inputs'],
     queryFn: async () => {
       const [features, restaurants, menus] = await Promise.all([
-        fetchAll<FeatureRow>('recommendation_demo_features', 'kakao_place_id,name_ko,open_time,last_order_time,break_time,no_break_time,parking,local_currency,fast_turnover,takeout,open_late,source', 'kakao_place_id').catch(() => [] as FeatureRow[]),
+        fetchAll<FeatureRow>('recommendation_demo_features', 'kakao_place_id,name_ko,open_time,last_order_time,break_time,no_break_time,parking,local_currency,fast_turnover,takeout,open_late,source,demo_data', 'kakao_place_id').catch(() => [] as FeatureRow[]),
         fetchAll<RestaurantLite>('restaurant_overrides', 'id,kakao_place_id,name_ko,visibility,category', 'name_ko'),
         fetchAll<MenuLite>('restaurant_menus', 'restaurant_id,category,price_krw,status,available', 'id'),
       ])
@@ -107,7 +107,7 @@ function Row({ r }: { r: InputRow }) {
       <td className="px-3 py-2 tabular-nums">{r.menus.active}개{r.menus.active > r.menus.categorized ? <span className="text-muted"> (분류 {r.menus.categorized})</span> : null}</td>
       <td className="px-3 py-2 tabular-nums">{r.menus.offered > 0 ? `${r.menus.offered}개` : <span className="text-amber-900">{r.menus.active === 0 ? '메뉴 미등록' : '없음'}</span>}</td>
       <td className="px-3 py-2 tabular-nums">{r.menus.cheapest != null ? `${r.menus.cheapest.toLocaleString('ko-KR')}원` : '—'}</td>
-      <td className="px-3 py-2 text-muted">{f?.source ?? '—'}</td>
+      <td className="px-3 py-2 text-muted">{f ? <><Badge tone={f.demo_data === false ? 'green' : 'neutral'}>{f.demo_data === false ? '실제' : '데모'}</Badge> <span>{f.source ?? ''}</span></> : '—'}</td>
     </tr>
   )
 }

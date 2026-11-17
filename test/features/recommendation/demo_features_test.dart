@@ -105,10 +105,37 @@ void main() {
       expect(i.lastOrderMinutes, 25 * 60);
     });
 
-    test('a row that does not say demo_data = true is ignored; a row without an id too', () {
-      expect(DemoFeature.fromJson({...row('1'), 'demo_data': false}), isNull);
-      expect(DemoFeature.fromJson({...row('1')}..remove('demo_data')), isNull);
+    test('only an explicit demo_data = true is demo; false or missing is a real row; a row without an id is ignored', () {
+      expect(DemoFeature.fromJson({...row('1')})!.demo, isTrue);
+      expect(
+        DemoFeature.fromJson({...row('1'), 'demo_data': false})!.demo,
+        isFalse,
+      );
+      expect(
+        DemoFeature.fromJson({...row('1')}..remove('demo_data'))!.demo,
+        isFalse,
+      );
       expect(DemoFeature.fromJson({...row('')}), isNull);
+    });
+
+    test('a REAL row fills the gaps like any information and never marks the result as demo; a simulated one does', () {
+      final real = DemoFeature.fromJson({
+        ...row('1', parking: true),
+        'demo_data': false,
+      })!;
+      final sim = DemoFeature.fromJson(row('1', parking: true))!;
+      expect(applyDemo(RestaurantInsight.unknown, real).parking, isTrue);
+      expect(applyDemo(RestaurantInsight.unknown, real).demo, isFalse);
+      expect(applyDemo(RestaurantInsight.unknown, sim).demo, isTrue);
+    });
+
+    test('featuresForMode: real rows always, simulated rows only while demo mode is on', () {
+      final stored = {
+        '1': DemoFeature.fromJson({...row('1'), 'demo_data': false})!,
+        '2': DemoFeature.fromJson(row('2'))!,
+      };
+      expect(featuresForMode(stored, false).keys, ['1']);
+      expect(featuresForMode(stored, true).keys, ['1', '2']);
     });
 
     test('an administrator\'s own values always win; the demo only fills the gaps, and never mixes hours', () {
@@ -331,17 +358,19 @@ void main() {
       return c;
     }
 
-    test(
-      'it is OFF by default; while off no demo data is read at all',
-      () async {
-        final repo = _FakeDemo([row('1', parking: true)]);
-        final c = await container(repo: repo);
-        expect(c.read(demoModeProvider), isFalse);
-        expect(await c.read(demoFeaturesProvider.future), isEmpty);
-        expect(repo.reads, 0);
-        expect(c.read(restaurantInsightsProvider).containsKey('1'), isFalse);
-      },
-    );
+    test('it is OFF by default; while off a simulated row is never applied, a real one always is', () async {
+      final repo = _FakeDemo([
+        row('1', parking: true),
+        {...row('2', parking: true), 'demo_data': false},
+      ]);
+      final c = await container(repo: repo);
+      expect(c.read(demoModeProvider), isFalse);
+      await c.read(demoFeaturesProvider.future);
+      expect(c.read(restaurantInsightsProvider).containsKey('1'), isFalse);
+      final real = c.read(restaurantInsightsProvider)['2'];
+      expect(real?.parking, isTrue);
+      expect(real?.demo, isFalse);
+    });
 
     test('turning it on loads the demo features into the insights and is remembered', () async {
       final repo = _FakeDemo([row('1', parking: true)]);
@@ -350,6 +379,7 @@ void main() {
       expect(c.read(demoModeProvider), isTrue);
       expect((await c.read(demoFeaturesProvider.future)).keys, ['1']);
       expect(c.read(restaurantInsightsProvider)['1']?.parking, isTrue);
+      expect(c.read(restaurantInsightsProvider)['1']?.demo, isTrue);
       expect(
         (await SharedPreferences.getInstance()).getBool(
           'recommendation_demo_mode',

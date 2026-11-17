@@ -44,14 +44,28 @@ describe('validation', () => {
     expect(parseDemoCsv('kakao_place_id,name_ko\n1,A\n').fatal).toMatch(/demo_data/)
     expect(parseDemoCsv('name_ko\nA\n').fatal).toMatch(/kakao_place_id/)
   })
-  it('a row that is not marked TRUE as demo data, a bad id, time or flag are errors with the reason', () => {
-    const p = parseDemoCsv(csv('1,A,,09:00,21:00,,TRUE,TRUE,FALSE,FALSE,TRUE,FALSE,FALSE,', 'abc,B,,09:00,21:00,,TRUE,,,,,,TRUE,', '3,C,,25:00,21:00,,TRUE,,,,,,TRUE,', '4,D,,09:00,21:00,,maybe,,,,,,TRUE,', '5,E,,09:00,21:00,lunch,TRUE,,,,,,TRUE,'))
+  it('a demo_data cell that is neither TRUE nor FALSE, a bad id, time or flag are errors with the reason', () => {
+    const p = parseDemoCsv(csv('1,A,,09:00,21:00,,TRUE,TRUE,FALSE,FALSE,TRUE,FALSE,sometimes,', 'abc,B,,09:00,21:00,,TRUE,,,,,,TRUE,', '3,C,,25:00,21:00,,TRUE,,,,,,TRUE,', '4,D,,09:00,21:00,,maybe,,,,,,TRUE,', '5,E,,09:00,21:00,lunch,TRUE,,,,,,TRUE,'))
     expect(p.rows.map((r) => r.row === null)).toEqual([true, true, true, true, true])
-    expect(p.rows[0].errors.join()).toMatch(/demo_data가 TRUE가 아니에요/)
+    expect(p.rows[0].errors.join()).toMatch(/demo_data 값을 알 수 없어요/)
     expect(p.rows[1].errors.join()).toMatch(/kakao_place_id 형식/)
     expect(p.rows[2].errors.join()).toMatch(/open_time_demo/)
     expect(p.rows[3].errors.join()).toMatch(/no_break_time_demo/)
     expect(p.rows[4].errors.join()).toMatch(/break_time_demo/)
+  })
+  it('demo_data FALSE is a REAL row, TRUE a simulated one; "real" / "demo" decide for the whole file; the "_demo" ending is optional', () => {
+    const two = csv('1,A,,09:00,21:00,,TRUE,,,,,,FALSE,', '2,B,,09:00,21:00,,TRUE,,,,,,TRUE,')
+    expect(parseDemoCsv(two).rows.map((r) => r.row!.demo_data)).toEqual([false, true])
+    expect(parseDemoCsv(two).rows[0].row!.source).toBe('관리자 입력 (실제 데이터)')
+    expect(parseDemoCsv(two, 'real').rows.map((r) => r.row!.demo_data)).toEqual([false, false])
+    expect(parseDemoCsv(two, 'demo').rows.map((r) => r.row!.demo_data)).toEqual([true, true])
+    // no demo_data column at all: refused unless the whole file is declared real or demo
+    const plain = 'kakao_place_id,name_ko,open_time,last_order_time,parking,takeout\n7,A,9:00,21:00,TRUE,FALSE\n'
+    expect(parseDemoCsv(plain).fatal).toMatch(/demo_data/)
+    const real = parseDemoCsv(plain, 'real')
+    expect(real.fatal).toBeNull()
+    expect(real.unknown).toEqual([])
+    expect(real.rows[0].row).toMatchObject({ kakao_place_id: '7', open_time: '09:00', last_order_time: '21:00', parking: true, takeout: false, demo_data: false })
   })
   it('a repeated id is flagged, blank flags stay unknown (null), never false', () => {
     const p = parseDemoCsv(csv('7,A,,,,,,,,,,,TRUE,', '7,B,,,,,,,,,,,TRUE,'))
@@ -62,14 +76,15 @@ describe('validation', () => {
     expect(demoTemplateCsv().replace('\uFEFF', '').trim()).toBe(HEAD)
     expect(parseDemoCsv(demoTemplateCsv()).rows).toEqual([])
     const stored: StoredDemoRow[] = [
-      { kakao_place_id: '1', name_ko: '식당, 하나', category_demo: '음식점 > 한식', open_time: '09:00:00', last_order_time: '21:30:00', break_time: '15:00-17:00', no_break_time: false, parking: true, local_currency: null, fast_turnover: false, takeout: true, open_late: null, source: 'synthetic demo dataset' },
-      { kakao_place_id: '2', name_ko: null, category_demo: null, open_time: null, last_order_time: null, break_time: null, no_break_time: null, parking: null, local_currency: null, fast_turnover: null, takeout: null, open_late: null, source: null },
+      { kakao_place_id: '1', name_ko: '식당, 하나', category_demo: '음식점 > 한식', open_time: '09:00:00', last_order_time: '21:30:00', break_time: '15:00-17:00', no_break_time: false, parking: true, local_currency: null, fast_turnover: false, takeout: true, open_late: null, source: 'synthetic demo dataset', demo_data: false },
+      { kakao_place_id: '2', name_ko: null, category_demo: null, open_time: null, last_order_time: null, break_time: null, no_break_time: null, parking: null, local_currency: null, fast_turnover: null, takeout: null, open_late: null, source: null, demo_data: true },
     ]
     const back = parseDemoCsv(demoExportCsv(stored))
     expect(back.fatal).toBeNull()
     expect(back.rows.every((r) => r.row)).toBe(true)
     expect(back.rows[0].row).toMatchObject({ kakao_place_id: '1', name_ko: '식당, 하나', open_time: '09:00', last_order_time: '21:30', break_time: '15:00-17:00', no_break_time: false, parking: true, local_currency: null, takeout: true })
-    expect(back.rows[1].row).toMatchObject({ kakao_place_id: '2', open_time: null, parking: null })
+    expect(back.rows[1].row).toMatchObject({ kakao_place_id: '2', open_time: null, parking: null, demo_data: true })
+    expect(back.rows[0].row!.demo_data).toBe(false) // a real row stays real through export and re-import
   })
   it('normalizeTime', () => {
     const e: string[] = []
@@ -105,8 +120,8 @@ describe('the admin import', () => {
   it('saves ONLY into the demo table (upsert on the Kakao id) and never touches restaurants, menus, photos or visibility', async () => {
     renderIt()
     await userEvent.upload(screen.getByTestId('demo-csv-input'), file(FIXTURE))
-    await userEvent.click(await screen.findByRole('button', { name: /데모 데이터 168곳 저장/ }))
-    await waitFor(() => expect(screen.getByText(/데모 데이터 168곳을 저장했어요/)).toBeTruthy())
+    await userEvent.click(await screen.findByRole('button', { name: /168곳 저장/ }))
+    await waitFor(() => expect(screen.getByText(/168곳을 저장했어요/)).toBeTruthy())
     const writes = fake.calls.filter((c) => c.op !== 'select')
     expect(writes.map((c) => c.table)).toEqual(['recommendation_demo_features'])
     expect(writes[0].op).toBe('upsert')
@@ -125,9 +140,16 @@ describe('the admin import', () => {
     await within(document.body).findByText('데모 데이터를 모두 지웠어요.')
   })
 
-  it('a file that is not demo data is refused with an explanation', async () => {
+  it('a file without a demo_data column is refused until the whole file is declared real or demo; then it saves real rows', async () => {
     renderIt()
-    await userEvent.upload(screen.getByTestId('demo-csv-input'), file('kakao_place_id,name_ko\n1,A\n'))
-    expect((await screen.findByRole('alert')).textContent).toMatch(/데모\) 데이터 전용/)
+    await userEvent.upload(screen.getByTestId('demo-csv-input'), file('kakao_place_id,name_ko,open_time,parking\n1046337753,A,9:00,TRUE\n'))
+    expect((await screen.findByRole('alert')).textContent).toMatch(/모두 실제 데이터/)
+    await userEvent.click(screen.getByLabelText('모두 실제 데이터'))
+    const s = await screen.findByLabelText('데모 가져오기 미리보기')
+    expect(s.textContent).toMatch(/실제 1 · 데모 0/)
+    await userEvent.click(screen.getByRole('button', { name: /1곳 저장 \(실제 1 · 데모 0\)/ }))
+    await waitFor(() => expect(fake.calls.some((c) => c.op === 'upsert')).toBe(true))
+    const row = (fake.calls.find((c) => c.op === 'upsert')!.payload as { demo_data: boolean; open_time: string }[])[0]
+    expect(row).toMatchObject({ demo_data: false, open_time: '09:00' })
   })
 })

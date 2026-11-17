@@ -53,12 +53,17 @@ class HeroCard extends ConsumerWidget {
         children: [
           Stack(
             children: [
-              RestaurantArt(
-                restaurant: r,
-                insight: i,
-                radius: 16,
-                height: 184,
-                width: double.infinity,
+              // 16:9 of the card's width, between 184 (phone) and 320 (wide
+              // web), and the whole photo is shown: no strip-cropping.
+              LayoutBuilder(
+                builder: (context, box) => RestaurantArt(
+                  restaurant: r,
+                  insight: i,
+                  radius: 16,
+                  height: (box.maxWidth * 9 / 16).clamp(184.0, 320.0),
+                  width: double.infinity,
+                  wholePhoto: true,
+                ),
               ),
               Positioned(
                 left: 12,

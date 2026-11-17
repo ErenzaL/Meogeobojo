@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/config/app_assets.dart';
@@ -28,6 +30,7 @@ class RestaurantArt extends StatelessWidget {
     this.width,
     this.height,
     this.compact = false,
+    this.wholePhoto = false,
   });
 
   final Restaurant restaurant;
@@ -38,6 +41,11 @@ class RestaurantArt extends StatelessWidget {
 
   /// Thumbnail: lighter backdrop and a tighter illustration.
   final bool compact;
+
+  /// Show the whole photo (no cropping) over a blurred copy of itself that
+  /// fills the rest of the box. For a wide box such as the home #1 card,
+  /// where `BoxFit.cover` would keep only a thin strip of the photo.
+  final bool wholePhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -53,16 +61,31 @@ class RestaurantArt extends StatelessWidget {
       child: SizedBox(
         width: width,
         height: height,
-        child: url != null
-            ? Image.network(
-                url,
-                fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _illustration(p, art),
+        child: url == null
+            ? _illustration(p, art)
+            : wholePhoto
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  ColoredBox(color: p.artBackdrop),
+                  ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                    child: _photo(url, BoxFit.cover, p, art),
+                  ),
+                  _photo(url, BoxFit.contain, p, art),
+                ],
               )
-            : _illustration(p, art),
+            : _photo(url, BoxFit.cover, p, art),
       ),
     );
   }
+
+  Widget _photo(String url, BoxFit fit, AppPalette p, Widget art) =>
+      Image.network(
+        url,
+        fit: fit,
+        errorBuilder: (_, _, _) => _illustration(p, art),
+      );
 
   Widget _illustration(AppPalette p, Widget art) => ColoredBox(
     color: compact ? p.fillMuted : p.artBackdrop,

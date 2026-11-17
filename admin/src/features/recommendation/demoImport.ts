@@ -87,3 +87,25 @@ export function parseDemoCsv(text: string): DemoParse {
   })
   return { fatal: null, rows, ignored, unknown }
 }
+
+const BOM = '\uFEFF'
+const cell = (v: string | number | boolean | null | undefined) => (v == null ? '' : String(v))
+const hhmmss = (t: string | null) => (t ? t.slice(0, 5) : '')
+const flag = (b: boolean | null) => (b == null ? '' : b ? 'TRUE' : 'FALSE')
+
+/** The header line of the import file, with nothing in it (the columns, in the order the import reads them). */
+export const demoTemplateCsv = () => BOM + DEMO_COLUMNS.join(',') + '\r\n'
+
+export type StoredDemoRow = {
+  kakao_place_id: string; name_ko: string | null; category_demo: string | null; open_time: string | null; last_order_time: string | null
+  break_time: string | null; no_break_time: boolean | null; parking: boolean | null; local_currency: boolean | null; fast_turnover: boolean | null
+  takeout: boolean | null; open_late: boolean | null; source: string | null
+}
+/** The stored rows as a file this import can read again (edit it, import it back). */
+export function demoExportCsv(rows: StoredDemoRow[]): string {
+  const line = (r: StoredDemoRow) => [
+    r.kakao_place_id, r.name_ko, r.category_demo, hhmmss(r.open_time), hhmmss(r.last_order_time), r.break_time, flag(r.no_break_time), flag(r.parking),
+    flag(r.local_currency), flag(r.fast_turnover), flag(r.takeout), flag(r.open_late), 'TRUE', r.source ?? 'synthetic demo dataset',
+  ]
+  return BOM + Papa.unparse({ fields: [...DEMO_COLUMNS], data: rows.map((r) => line(r).map(cell)) }, { newline: '\r\n' })
+}

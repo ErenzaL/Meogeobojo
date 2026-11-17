@@ -6,7 +6,7 @@ import { makeQueryClient } from '@/App'
 import { fake } from '@/test/fakeSupabase'
 import DemoFeaturesImport from './DemoFeaturesImport'
 import FIXTURE from './__fixtures__/demo_features.csv?raw'
-import { normalizeTime, parseDemoCsv } from './demoImport'
+import { demoExportCsv, demoTemplateCsv, normalizeTime, parseDemoCsv, type StoredDemoRow } from './demoImport'
 
 vi.mock('@/lib/supabase', async () => {
   const m = await import('@/test/fakeSupabase')
@@ -57,6 +57,19 @@ describe('validation', () => {
     const p = parseDemoCsv(csv('7,A,,,,,,,,,,,TRUE,', '7,B,,,,,,,,,,,TRUE,'))
     expect(p.rows[0].row).toMatchObject({ parking: null, takeout: null, open_time: null })
     expect(p.rows[1].duplicate).toBe(true)
+  })
+  it('the template is just the header; an export of stored rows is read back by this very import (edit and re-import)', () => {
+    expect(demoTemplateCsv().replace('\uFEFF', '').trim()).toBe(HEAD)
+    expect(parseDemoCsv(demoTemplateCsv()).rows).toEqual([])
+    const stored: StoredDemoRow[] = [
+      { kakao_place_id: '1', name_ko: '식당, 하나', category_demo: '음식점 > 한식', open_time: '09:00:00', last_order_time: '21:30:00', break_time: '15:00-17:00', no_break_time: false, parking: true, local_currency: null, fast_turnover: false, takeout: true, open_late: null, source: 'synthetic demo dataset' },
+      { kakao_place_id: '2', name_ko: null, category_demo: null, open_time: null, last_order_time: null, break_time: null, no_break_time: null, parking: null, local_currency: null, fast_turnover: null, takeout: null, open_late: null, source: null },
+    ]
+    const back = parseDemoCsv(demoExportCsv(stored))
+    expect(back.fatal).toBeNull()
+    expect(back.rows.every((r) => r.row)).toBe(true)
+    expect(back.rows[0].row).toMatchObject({ kakao_place_id: '1', name_ko: '식당, 하나', open_time: '09:00', last_order_time: '21:30', break_time: '15:00-17:00', no_break_time: false, parking: true, local_currency: null, takeout: true })
+    expect(back.rows[1].row).toMatchObject({ kakao_place_id: '2', open_time: null, parking: null })
   })
   it('normalizeTime', () => {
     const e: string[] = []

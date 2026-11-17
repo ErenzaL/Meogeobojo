@@ -3,14 +3,22 @@ import { restaurantSchema, emptyRestaurantForm, toRow, type RestaurantForm } fro
 
 /**
  * The ONE column list of the restaurant CSV: the export, the template and the import all use it, so a file exported from
- * here imports again. It follows the current 식당 정보 fields. Older columns (break_time, last_order_time, business_status,
- * price_min_krw, price_max_krw, avg_cost_krw, dining_purposes) are not exported; a file that still has them imports fine
- * (they are ignored), and nothing in the database is removed.
+ * here imports again. It follows the current 식당 정보 fields, including the hours the app checks "지금 주문 가능" with
+ * (open_time = opening_hours.open, last_order_time, break_time). Older columns (business_status, price_min_krw,
+ * price_max_krw, avg_cost_krw, dining_purposes) are not exported; a file that still has them imports fine (they are
+ * ignored), and nothing in the database is removed.
  */
 export const CSV_COLUMNS = [
   'kakao_place_id', 'name_ko', 'name_en', 'category', 'address', 'phone', 'latitude', 'longitude', 'description',
-  'image_url', 'visibility',
+  'open_time', 'last_order_time', 'break_time', 'image_url', 'visibility',
 ] as const
+
+/** A restaurant_overrides row as the CSV shows it: the opening time lives in opening_hours.open, times as HH:MM. */
+function csvValue(r: Record<string, unknown>, c: (typeof CSV_COLUMNS)[number]): unknown {
+  if (c === 'open_time') return r.open_time ?? (r.opening_hours as Record<string, unknown> | null | undefined)?.open
+  if (c === 'last_order_time' && typeof r[c] === 'string') return (r[c] as string).slice(0, 5)
+  return r[c]
+}
 
 const stripBom = (t: string) => (t.charCodeAt(0) === 0xfeff ? t.slice(1) : t)
 
@@ -46,7 +54,7 @@ export function buildCsv(rows: Record<string, unknown>[]): string {
     fields: [...CSV_COLUMNS],
     data: rows.map((r) =>
       CSV_COLUMNS.map((c) => {
-        const v = r[c]
+        const v = csvValue(r, c)
         return Array.isArray(v) ? v.join(', ') : v == null ? '' : String(v)
       }),
     ),

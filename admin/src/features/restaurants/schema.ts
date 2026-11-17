@@ -25,7 +25,8 @@ export const restaurantSchema = z
     latitude: coord(-90, 90, '위도'),
     longitude: coord(-180, 180, '경도'),
     description: z.string().trim().max(2000, '2000자 이하로 입력해 주세요'),
-    break_time: z.string().trim().max(60),
+    // The app reads only "HH:MM-HH:MM" (also ~ or –); anything else would be silently ignored there.
+    break_time: z.string().trim().refine((v) => v === '' || /^\d{1,2}:\d{2}\s*[-~–]\s*\d{1,2}:\d{2}$/.test(v), '15:00-17:00 형식으로 입력해 주세요'),
     // Kept in opening_hours.open: the app needs it with the last order to say a place is still taking orders.
     open_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),
     last_order_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),

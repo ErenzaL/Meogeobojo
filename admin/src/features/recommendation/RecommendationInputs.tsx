@@ -27,7 +27,7 @@ export default function RecommendationInputs() {
     queryFn: async () => {
       const [features, restaurants, menus] = await Promise.all([
         fetchAll<FeatureRow>('recommendation_demo_features', 'kakao_place_id,name_ko,open_time,last_order_time,break_time,no_break_time,parking,local_currency,fast_turnover,takeout,open_late,source', 'kakao_place_id').catch(() => [] as FeatureRow[]),
-        fetchAll<RestaurantLite>('restaurant_overrides', 'id,kakao_place_id,name_ko,visibility,category', 'name_ko'),
+        fetchAll<RestaurantLite>('restaurant_overrides', 'id,kakao_place_id,name_ko,visibility,category,opening_hours,last_order_time,break_time', 'name_ko'),
         fetchAll<MenuLite>('restaurant_menus', 'restaurant_id,category,price_krw,status,available', 'id'),
       ])
       return buildInputRows(features, restaurants, menus)
@@ -49,15 +49,16 @@ export default function RecommendationInputs() {
   return (
     <section aria-label="추천에 쓰이는 식당 정보" className="mb-6 space-y-3">
       <h2 className="text-lg font-bold">추천에 쓰이는 식당 정보</h2>
-      <p className="max-w-3xl text-sm text-muted">식당마다 앱의 추천이 지금 쓰는 영업시간·편의 정보와, 예산을 판정하는 게시된 메뉴를 보여줘요. 식당은 음료·곁들임(사이드)을 뺀 모든 메뉴가, 카페는 음료까지 최저 가격에 쓰여요. 읽기 전용이에요. 위치와 거리는 저장하지 않고 카카오의 실시간 좌표로 계산해요.</p>
+      <p className="max-w-3xl text-sm text-muted">식당마다 앱의 추천이 지금 쓰는 영업시간과, 예산을 판정하는 게시된 메뉴를 보여줘요. 영업시간은 식당 정보에 입력해 게시한 값이에요(식당 CSV의 open_time·last_order_time·break_time 열로 한꺼번에 넣을 수 있어요). 식당은 음료·곁들임(사이드)을 뺀 모든 메뉴가, 카페는 음료까지 최저 가격에 쓰여요. 읽기 전용이에요. 위치와 거리는 저장하지 않고 카카오의 실시간 좌표로 계산해요.</p>
+      <p className="max-w-3xl text-sm text-amber-900">‘데모’로 표시된 값과 주차·포장·지역화폐·빠른 회전·늦게까지는 추천 시연용 가상 데이터예요. 데모 모드를 켠 빌드에서만 쓰이고, 배포된 앱은 읽지 않아요.</p>
       {q.isLoading && <Skeleton className="h-40 w-full" />}
       {q.error && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
       {sum && (
         <>
           <div role="status" aria-label="추천 정보 요약" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Card><div className="text-xs text-muted">공개 식당</div><div className="text-xl font-bold">{sum.published}곳</div></Card>
-            <Card><div className="text-xs text-muted">영업시간·편의 정보가 있는 곳</div><div className="text-xl font-bold">{sum.withFeatures}곳</div></Card>
-            <Card><div className="text-xs text-muted">영업시간(시작·마지막 주문)이 있는 곳</div><div className="text-xl font-bold">{sum.withHours}곳</div></Card>
+            <Card><div className="text-xs text-muted">영업시간(시작·주문 마감)이 있는 곳</div><div className="text-xl font-bold">{sum.withHours}곳</div><div className="text-[11px] text-muted">앱이 ‘지금 주문 가능’을 확인할 수 있어요</div></Card>
+            <Card><div className="text-xs text-muted">데모 영업시간만 있는 곳</div><div className="text-xl font-bold">{sum.withDemoHours}곳</div><div className="text-[11px] text-muted">배포된 앱에서는 영업시간 미확인이에요</div></Card>
             <Card><div className="text-xs text-muted">게시된 메뉴가 있는 곳</div><div className="text-xl font-bold">{sum.withMenus}곳</div></Card>
             <Card><div className="text-xs text-muted">예산을 판정할 수 있는 곳</div><div className="text-xl font-bold">{sum.budgetReady}곳</div><div className="text-[11px] text-muted">음료·곁들임을 뺀 메뉴와 가격이 있어요 (카페는 음료 포함)</div></Card>
           </div>
@@ -73,7 +74,7 @@ export default function RecommendationInputs() {
           <div className="overflow-auto rounded-2xl border border-line bg-white">
             <table aria-label="추천 입력 정보" className="w-full text-xs">
               <thead className="sticky top-0 border-b border-line bg-page text-left text-muted">
-                <tr>{['식당', '공개', '영업', '브레이크', '주차', '포장', '지역화폐', '빠른 회전', '늦게까지', '메뉴', '추천에 쓰는 메뉴', '최저 가격', '출처'].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr>
+                <tr>{['식당', '공개', '영업', '브레이크', '주차 (데모)', '포장 (데모)', '지역화폐 (데모)', '빠른 회전 (데모)', '늦게까지 (데모)', '메뉴', '추천에 쓰는 메뉴', '최저 가격', '데모 출처'].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {shown.slice(0, limit).map((r) => <Row key={r.kakaoPlaceId || r.name} r={r} />)}
@@ -92,13 +93,17 @@ export default function RecommendationInputs() {
 
 function Row({ r }: { r: InputRow }) {
   const f = r.features
-  const hours = f?.open_time && f.last_order_time ? `${hhmm(f.open_time)} ~ ${hhmm(f.last_order_time)}` : '미확인'
+  const h = r.hours
+  const real = h.open && h.lastOrder ? `${h.open} ~ ${h.lastOrder}` : h.open ? `${h.open} ~ (주문 마감 미입력)` : h.lastOrder ? `(시작 미입력) ~ ${h.lastOrder}` : null
+  const demoHours = f?.open_time && f.last_order_time ? `${hhmm(f.open_time)} ~ ${hhmm(f.last_order_time)}` : null
+  const demoBreak = f ? f.break_time ?? (f.no_break_time === true ? '없음' : null) : null
+  const demo = (v: string | null) => (v ? <div className="text-amber-900">데모 {v}</div> : null)
   return (
     <tr className="border-b border-line align-top last:border-0">
       <td className="px-3 py-2"><div className="font-medium">{r.name}</div><div className="text-muted">{r.kakaoPlaceId ? `ID ${r.kakaoPlaceId}` : '장소 ID 없음'}</div></td>
       <td className="px-3 py-2">{r.visibility ? <Badge tone={r.visibility === 'published' ? 'green' : 'neutral'}>{visLabel[r.visibility] ?? r.visibility}</Badge> : '—'}</td>
-      <td className="whitespace-nowrap px-3 py-2">{hours}</td>
-      <td className="whitespace-nowrap px-3 py-2">{!f ? '미확인' : f.break_time ?? (f.no_break_time === true ? '없음' : '미확인')}</td>
+      <td className="whitespace-nowrap px-3 py-2">{real ?? '미확인'}{!real && demo(demoHours)}</td>
+      <td className="whitespace-nowrap px-3 py-2">{h.breakTime ?? '미확인'}{!h.breakTime && demo(demoBreak)}</td>
       <td className="px-3 py-2">{yesNo(f?.parking)}</td>
       <td className="px-3 py-2">{yesNo(f?.takeout)}</td>
       <td className="px-3 py-2">{yesNo(f?.local_currency)}</td>

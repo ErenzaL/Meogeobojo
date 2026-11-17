@@ -63,8 +63,8 @@ describe('CSV', () => {
     expect(out).toContain('"혼밥, 회식"')
   })
 
-  const CURRENT = ['kakao_place_id', 'name_ko', 'name_en', 'category', 'address', 'phone', 'latitude', 'longitude', 'description', 'image_url', 'visibility']
-  const OLD = ['break_time', 'last_order_time', 'business_status', 'price_min_krw', 'price_max_krw', 'avg_cost_krw', 'dining_purposes']
+  const CURRENT = ['kakao_place_id', 'name_ko', 'name_en', 'category', 'address', 'phone', 'latitude', 'longitude', 'description', 'open_time', 'last_order_time', 'break_time', 'image_url', 'visibility']
+  const OLD = ['business_status', 'price_min_krw', 'price_max_krw', 'avg_cost_krw', 'dining_purposes']
   const dbRow = { id: 'x', kakao_place_id: 'k1', name_ko: '국수집', name_en: 'Noodle', category: '음식점 > 한식', address: '충남 아산시 1', phone: '041-111-2222', latitude: 36.77, longitude: 126.93, description: '설명, 쉼표 포함', image_url: 'https://x/a.png', visibility: 'published', featured: true, display_order: 3,
     break_time: '15:00-17:00', last_order_time: '21:30:00', business_status: 'open', price_min_krw: 5000, price_max_krw: 9000, avg_cost_krw: 7000, dining_purposes: ['혼밥'], opening_hours: { open: '11:00' } }
   it('the export, the template and the import share one column list: exactly the current fields', () => {
@@ -77,9 +77,11 @@ describe('CSV', () => {
   it('the old columns never appear in a download, even though the database rows still carry them', () => {
     const out = buildCsv([dbRow])
     for (const c of OLD) expect(out).not.toContain(c)
-    expect(out).not.toContain('15:00-17:00')
-    expect(out).not.toContain('21:30')
     expect(out).not.toContain('혼밥')
+  })
+  it('the hours are exported as the form shows them: opening_hours.open and the last order as HH:MM', () => {
+    const line = buildCsv([dbRow]).split(/\r?\n/)[1]
+    expect(line).toContain(',11:00,21:30,15:00-17:00,')
   })
   it('an exported file imports again: every row valid, same values, drafts unless the file says otherwise', () => {
     const rows = parseRestaurantCsv('\uFEFF' + buildCsv([dbRow, { ...dbRow, kakao_place_id: 'k2', name_ko: '직접 등록', category: null, phone: null, latitude: null, longitude: null, visibility: 'draft' }]))
@@ -90,11 +92,13 @@ describe('CSV', () => {
   })
   it('the template is a valid empty import', () => { expect(parseRestaurantCsv(restaurantTemplateCsv())).toEqual([]) })
   it('an older export (with the removed columns) still imports; those columns are ignored and reported', () => {
-    const old = [...CURRENT.slice(0, 9), ...OLD, ...CURRENT.slice(9)].join(',') + '\nk9,옛 파일 식당,,,,,,,,,,,,,,,https://x/b.png,draft\n'
+    const head = [...CURRENT.slice(0, 9), ...OLD, ...CURRENT.slice(9)]
+    const old = head.join(',') + '\n' + head.map((h) => ({ kakao_place_id: 'k9', name_ko: '옛 파일 식당', business_status: 'open', price_min_krw: '5000', image_url: 'https://x/b.png', visibility: 'draft' } as Record<string, string>)[h] ?? '').join(',') + '\n'
     const rows = parseRestaurantCsv(old)
     expect(rows[0].errors).toEqual([])
     expect(rows[0].values).toMatchObject({ kakao_place_id: 'k9', name_ko: '옛 파일 식당', image_url: 'https://x/b.png' })
-    expect(rows[0].values?.break_time).toBe('')
+    expect(rows[0].values?.business_status).toBe('')
+    expect(rows[0].values?.price_min_krw).toBe('')
     expect(ignoredCsvColumns(old)).toEqual(OLD)
     expect(ignoredCsvColumns(restaurantTemplateCsv())).toEqual([])
   })

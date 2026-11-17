@@ -43,8 +43,14 @@ describe('what the recommendation runs on', () => {
   })
 
   it('the summary counts published restaurants only, and "budget ready" means a priced meal line exists', () => {
-    const rows = buildInputRows([feat('1'), feat('2', { open_time: null }), feat('3')], [rest(1), rest(2), rest(3, 'draft'), rest(4)], [menu('r1', '식사', 8000), menu('r2', null, 5000), menu('r3', '식사', 8000)])
-    expect(summarize(rows)).toEqual({ total: 4, published: 3, withFeatures: 2, withHours: 1, withMenus: 2, budgetReady: 1 })
+    const rows = buildInputRows([feat('1'), feat('2', { open_time: null }), feat('3'), feat('4')], [rest(1), rest(2), rest(3, 'draft'), { ...rest(4), opening_hours: { open: '10:00' }, last_order_time: '21:00:00' }], [menu('r1', '식사', 8000), menu('r2', null, 5000), menu('r3', '식사', 8000)])
+    // hours: only 식당4 has real (식당 정보) hours; 식당1 has demo hours only, and those are counted apart
+    expect(summarize(rows)).toEqual({ total: 4, published: 3, withHours: 1, withDemoHours: 1, withMenus: 2, budgetReady: 1 })
+  })
+
+  it('the hours are the ones entered in 식당 정보 (what the deployed app reads), never the demo values', () => {
+    const rows = buildInputRows([feat('1')], [{ ...rest(1), opening_hours: { open: '10:00' }, last_order_time: '21:30:00', break_time: '15:00-16:00' }, rest(2)], [])
+    expect(rows.map((r) => r.hours)).toEqual([{ open: '10:00', lastOrder: '21:30', breakTime: '15:00-16:00' }, { open: null, lastOrder: null, breakTime: null }])
   })
 
   it('unknown is shown as 미확인, never as 없음', () => {
@@ -56,7 +62,7 @@ describe('the 추천 page table', () => {
   beforeEach(() => {
     fake.reset(); fake.signInAs('admin')
     fake.respond('recommendation_demo_features:select', { data: [feat('1', { parking: true }), feat('2', { parking: false, break_time: '15:00-17:00', no_break_time: false })] })
-    fake.respond('restaurant_overrides:select', { data: [rest(1), rest(2), rest(3), rest(4, 'draft')] })
+    fake.respond('restaurant_overrides:select', { data: [{ ...rest(1), opening_hours: { open: '10:00' }, last_order_time: '21:00:00' }, rest(2), rest(3), rest(4, 'draft')] })
     fake.respond('restaurant_menus:select', { data: [menu('r1', '식사', 8500), menu('r1', '사이드', 1500), menu('r2', null, 6000)] })
   })
   const renderIt = () => render(<QueryClientProvider client={makeQueryClient()}><RecommendationInputs /></QueryClientProvider>)
@@ -65,15 +71,18 @@ describe('the 추천 page table', () => {
     renderIt()
     const sum = await screen.findByLabelText('추천 정보 요약')
     expect(sum.textContent).toMatch(/공개 식당3곳/)
-    expect(sum.textContent).toMatch(/영업시간·편의 정보가 있는 곳2곳/)
+    expect(sum.textContent).toMatch(/영업시간\(시작·주문 마감\)이 있는 곳1곳/)
+    expect(sum.textContent).toMatch(/데모 영업시간만 있는 곳1곳/)
     expect(sum.textContent).toMatch(/예산을 판정할 수 있는 곳1곳/)
     const table = screen.getByRole('table', { name: '추천 입력 정보' })
     const row1 = within(table).getByText('식당1').closest('tr')!
-    expect(row1.textContent).toMatch(/11:00 ~ 20:30/)
+    expect(row1.textContent).toMatch(/10:00 ~ 21:00/) // the 식당 정보 hours the app uses
+    expect(row1.textContent).not.toMatch(/11:00 ~ 20:30/) // its demo hours are not shown as if they were real
     expect(row1.textContent).toMatch(/8,500원/)
     expect(row1.textContent).toMatch(/2개/)
     const row2 = within(table).getByText('식당2').closest('tr')!
-    expect(row2.textContent).toMatch(/15:00-17:00/)
+    expect(row2.textContent).toMatch(/미확인데모 11:00 ~ 20:30/) // unknown to the app; the demo value is labelled
+    expect(row2.textContent).toMatch(/데모 15:00-17:00/)
     expect(row2.textContent).toMatch(/없음/) // no parking
     const row3 = within(table).getByText('식당3').closest('tr')!
     expect(row3.textContent).toMatch(/미확인/) // no stored hours: unknown, not "none"
@@ -121,6 +130,7 @@ describe('the 추천 page table', () => {
     renderIt()
     const sum = await screen.findByLabelText('추천 정보 요약')
     expect(sum.textContent).toMatch(/공개 식당3곳/)
-    expect(sum.textContent).toMatch(/영업시간·편의 정보가 있는 곳0곳/)
+    expect(sum.textContent).toMatch(/영업시간\(시작·주문 마감\)이 있는 곳1곳/)
+    expect(sum.textContent).toMatch(/데모 영업시간만 있는 곳0곳/)
   })
 })

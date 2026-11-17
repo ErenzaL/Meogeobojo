@@ -29,14 +29,19 @@ export const MODE_LABEL: Record<ImportMode, string> = {
 /** Columns of the current 식당 정보 that this import writes (the id, the visibility and the photo are handled separately). */
 const TEXT_FIELDS = ['name_ko', 'name_en', 'category', 'address', 'phone', 'description'] as const
 type TextField = (typeof TEXT_FIELDS)[number]
+/** The hours the app checks "지금 주문 가능" with, each with how a stored snapshot holds it (open time: opening_hours.open). */
+const HOURS_FIELDS = {
+  open_time: (s: Snapshot) => (s.opening_hours as Record<string, unknown> | null | undefined)?.open,
+  last_order_time: (s: Snapshot) => s.last_order_time,
+  break_time: (s: Snapshot) => s.break_time,
+} as const
 const LABEL: Record<string, string> = {
   name_ko: '이름', name_en: '영어 이름', category: '카테고리', address: '주소', phone: '전화번호', description: '설명', coords: '위도·경도', image: '대표 사진',
+  open_time: '영업 시작', last_order_time: '주문 마감', break_time: '브레이크타임',
 }
 
 /** Columns an older file may still have: read nowhere, reported in the preview with the reason. */
 export const LEGACY_COLUMNS: Record<string, string> = {
-  break_time: '식당 정보 화면에서 더 이상 관리하지 않는 항목이에요',
-  last_order_time: '식당 정보 화면에서 더 이상 관리하지 않는 항목이에요',
   business_status: '식당 정보 화면에서 더 이상 관리하지 않는 항목이에요',
   avg_cost_krw: '식당 정보 화면에서 더 이상 관리하지 않는 항목이에요',
   dining_purposes: '식당 정보 화면에서 더 이상 관리하지 않는 항목이에요',
@@ -142,6 +147,16 @@ export function planExisting(v: RestaurantForm, ex: Existing, mode: Exclude<Impo
     if (mode === 'fill' && stored !== '') continue // fill keeps what is there
     changes.push({ field: f, label: LABEL[f], from: stored || '비어 있음', to: incoming })
     set[f] = incoming
+  }
+  for (const [f, read] of Object.entries(HOURS_FIELDS)) {
+    const incoming = norm(v[f as keyof typeof HOURS_FIELDS])
+    if (incoming === '') continue
+    const raw = norm(read(ex.base))
+    const stored = f === 'break_time' ? raw : raw.slice(0, 5) // a time column comes back as "21:30:00"
+    if (stored === incoming || (mode === 'fill' && stored !== '')) continue
+    changes.push({ field: f, label: LABEL[f], from: stored || '비어 있음', to: incoming })
+    if (f === 'open_time') set.opening_hours = { ...((ex.base.opening_hours as Record<string, unknown> | null | undefined) ?? {}), open: incoming }
+    else set[f] = incoming
   }
   // coordinates change together or not at all
   const inLat = num(v.latitude), inLng = num(v.longitude)

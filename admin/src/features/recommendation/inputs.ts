@@ -1,13 +1,19 @@
 /**
- * What the recommendation actually runs on, per restaurant, as the admin can see it: the stored hours and amenities
- * (`recommendation_demo_features`) next to the published menus that decide the budget. Read-only.
+ * What the recommendation actually runs on, per restaurant, as the admin can see it: the hours entered in 식당 정보
+ * (`restaurant_overrides`) and the published menus that decide the budget. The simulated hours and amenities
+ * (`recommendation_demo_features`) are shown next to them, marked as demo: only a demo build reads them. Read-only.
  */
 export type FeatureRow = {
   kakao_place_id: string; name_ko: string | null; open_time: string | null; last_order_time: string | null; break_time: string | null
   no_break_time: boolean | null; parking: boolean | null; local_currency: boolean | null; fast_turnover: boolean | null
   takeout: boolean | null; open_late: boolean | null; source: string | null
 }
-export type RestaurantLite = { id: string; kakao_place_id: string | null; name_ko: string; visibility: string; category?: string | null }
+export type RestaurantLite = {
+  id: string; kakao_place_id: string | null; name_ko: string; visibility: string; category?: string | null
+  opening_hours?: Record<string, unknown> | null; last_order_time?: string | null; break_time?: string | null
+}
+/** The hours the deployed app uses (식당 정보). `open`/`lastOrder` as HH:MM, or null when not entered. */
+export type RealHours = { open: string | null; lastOrder: string | null; breakTime: string | null }
 export type MenuLite = { restaurant_id: string; category: string | null; price_krw: number | null; status: string; available: boolean | null }
 
 /** The menu categories that are a full meal for one (식사 / 면류 / 분식). */
@@ -47,8 +53,17 @@ export type InputRow = {
   name: string
   /** null when the stored row matches no restaurant in the list. */
   visibility: string | null
+  hours: RealHours
+  /** Demo data only (never read by the deployed app). */
   features: FeatureRow | null
   menus: MenuStats
+}
+
+const noHours: RealHours = { open: null, lastOrder: null, breakTime: null }
+function realHours(r: RestaurantLite): RealHours {
+  const t = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, 5) : null)
+  const b = typeof r.break_time === 'string' && r.break_time.trim() !== '' ? r.break_time.trim() : null
+  return { open: t(r.opening_hours?.open), lastOrder: t(r.last_order_time), breakTime: b }
 }
 
 const empty: MenuStats = { active: 0, categorized: 0, offered: 0, meals: 0, cheapest: null, cafe: false }
@@ -81,20 +96,23 @@ export function buildInputRows(features: FeatureRow[], restaurants: RestaurantLi
   for (const r of restaurants) {
     const key = r.kakao_place_id ?? `id:${r.id}`
     seen.add(key)
-    rows.push({ kakaoPlaceId: r.kakao_place_id ?? '', name: r.name_ko, visibility: r.visibility, features: r.kakao_place_id ? byKakao.get(r.kakao_place_id) ?? null : null, menus: stats.get(r.id) ?? { ...empty } })
+    rows.push({ kakaoPlaceId: r.kakao_place_id ?? '', name: r.name_ko, visibility: r.visibility, hours: realHours(r), features: r.kakao_place_id ? byKakao.get(r.kakao_place_id) ?? null : null, menus: stats.get(r.id) ?? { ...empty } })
   }
-  for (const f of features) if (!seen.has(f.kakao_place_id)) rows.push({ kakaoPlaceId: f.kakao_place_id, name: f.name_ko ?? f.kakao_place_id, visibility: null, features: f, menus: { ...empty } })
+  for (const f of features) if (!seen.has(f.kakao_place_id)) rows.push({ kakaoPlaceId: f.kakao_place_id, name: f.name_ko ?? f.kakao_place_id, visibility: null, hours: noHours, features: f, menus: { ...empty } })
   return rows.sort((a, b) => a.name.localeCompare(b.name, 'ko'))
 }
 
-export type InputSummary = { total: number; published: number; withFeatures: number; withHours: number; withMenus: number; budgetReady: number }
+/** `withHours`: published places with BOTH an opening time and a last order entered in 식당 정보 (what the app checks
+ *  "지금 주문 가능" with). `withDemoHours`: places that have hours only in the demo data. */
+export type InputSummary = { total: number; published: number; withHours: number; withDemoHours: number; withMenus: number; budgetReady: number }
 export function summarize(rows: InputRow[]): InputSummary {
   const published = rows.filter((r) => r.visibility === 'published')
+  const real = (r: InputRow) => !!(r.hours.open && r.hours.lastOrder)
   return {
     total: rows.length,
     published: published.length,
-    withFeatures: published.filter((r) => r.features).length,
-    withHours: published.filter((r) => r.features?.open_time && r.features.last_order_time).length,
+    withHours: published.filter(real).length,
+    withDemoHours: published.filter((r) => !real(r) && r.features?.open_time && r.features.last_order_time).length,
     withMenus: published.filter((r) => r.menus.active > 0).length,
     budgetReady: published.filter((r) => r.menus.offered > 0).length,
   }

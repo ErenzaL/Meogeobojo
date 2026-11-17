@@ -69,11 +69,11 @@ describe('the uploaded 168-row file', () => {
     expect(new Set(rows.map((r) => r.values!.kakao_place_id)).size).toBe(168)
     expect(rows.filter((r) => r.values!.image_url).length).toBe(123)
   })
-  it('reports its columns: current ones are read, visibility is read-but-not-applied, 7 old ones are listed with the reason', () => {
+  it('reports its columns: current ones (hours included) are read, visibility is read-but-not-applied, 5 old ones are listed with the reason', () => {
     const c = reportColumns(FIXTURE)
-    expect(c.used).toEqual(['kakao_place_id', 'name_ko', 'name_en', 'category', 'address', 'phone', 'latitude', 'longitude', 'description', 'image_url'])
+    expect(c.used).toEqual(['kakao_place_id', 'name_ko', 'name_en', 'category', 'address', 'phone', 'latitude', 'longitude', 'description', 'break_time', 'last_order_time', 'image_url'])
     expect(c.notApplied.map((x) => x.column)).toEqual(['visibility'])
-    expect(c.legacy.map((x) => x.column).sort()).toEqual(['avg_cost_krw', 'break_time', 'business_status', 'dining_purposes', 'last_order_time', 'price_max_krw', 'price_min_krw'])
+    expect(c.legacy.map((x) => x.column).sort()).toEqual(['avg_cost_krw', 'business_status', 'dining_purposes', 'price_max_krw', 'price_min_krw'])
     expect(c.legacy.find((x) => x.column === 'price_min_krw')!.reason).toMatch(/메뉴별 가격이 아니라/)
     expect(c.unknown).toEqual([])
   })
@@ -189,6 +189,39 @@ describe('update mode: non-empty CSV values replace stored ones, with a preview 
     const r = rec('1', 'A', { hasDraft: true, revision: 4, fields: { address: '초안 주소' } })
     const p = plan(csv(`1,A,,,초안 주소,,,,,,`), world([r]).existing(), 'update')
     expect(p.rows[0].kind).toBe('unchanged')
+  })
+})
+
+describe('opening hours (what the app checks "지금 주문 가능" with)', () => {
+  const HOURS = 'kakao_place_id,name_ko,open_time,last_order_time,break_time'
+  it('fill mode writes the hours into the draft: the opening time in opening_hours.open, other opening_hours keys kept', async () => {
+    const w = world([rec('1', 'A', { fields: { opening_hours: { note: '일요일 휴무' } } })])
+    const p = buildImportPlan(parseRestaurantCsv([HOURS, '1,A,10:30,21:00,15:00-17:00'].join('\n')), w.existing(), { mode: 'fill', ownHost: HOST })
+    expect(p.rows[0].changes.map((c) => c.label)).toEqual(['영업 시작', '주문 마감', '브레이크타임'])
+    await applyImportPlan(p, { mode: 'fill', ownHost: HOST }, w.deps)
+    expect(w.log.restaurantDrafts[0].snapshot).toMatchObject({ opening_hours: { note: '일요일 휴무', open: '10:30' }, last_order_time: '21:00', break_time: '15:00-17:00', name_ko: 'A' })
+    expect(w.log.publishes).toBe(0) // a draft only
+  })
+  it('fill keeps stored hours (a time column read back as "20:30:00" is the same as "20:30"); update replaces them', () => {
+    const stored = { opening_hours: { open: '11:00' }, last_order_time: '20:30:00', break_time: null }
+    const w = world([rec('1', 'A', { fields: stored })])
+    const text = [HOURS, '1,A,11:00,21:00,15:00-16:00'].join('\n')
+    const fill = buildImportPlan(parseRestaurantCsv(text), w.existing(), { mode: 'fill', ownHost: HOST })
+    expect(fill.rows[0].changes.map((c) => c.field)).toEqual(['break_time'])
+    const same = buildImportPlan(parseRestaurantCsv([HOURS, '1,A,11:00,20:30,'].join('\n')), w.existing(), { mode: 'update', ownHost: HOST })
+    expect(same.rows[0].kind).toBe('unchanged')
+    const upd = buildImportPlan(parseRestaurantCsv(text), w.existing(), { mode: 'update', ownHost: HOST })
+    expect(upd.rows[0].changes.map((c) => [c.field, c.from, c.to])).toEqual([['last_order_time', '20:30', '21:00'], ['break_time', '비어 있음', '15:00-16:00']])
+  })
+  it('a time the app could not read is an error with the reason, not a silent blank', () => {
+    const rows = parseRestaurantCsv([HOURS, '1,A,9시,21:00,', '2,B,10:00,21:00,점심 이후'].join('\n'))
+    expect(rows[0].errors.join()).toMatch(/open_time: HH:MM/)
+    expect(rows[1].errors.join()).toMatch(/break_time: 15:00-17:00 형식/)
+  })
+  it('a new restaurant from the file keeps its hours too', async () => {
+    const w = world([])
+    await applyImportPlan(buildImportPlan(parseRestaurantCsv([HOURS, '7,새 식당,11:00,20:00,'].join('\n')), w.existing(), { mode: 'fill', ownHost: HOST }), { mode: 'fill', ownHost: HOST }, w.deps)
+    expect(w.log.inserts[0]).toMatchObject({ opening_hours: { open: '11:00' }, last_order_time: '20:00', break_time: null, visibility: 'draft' })
   })
 })
 

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meogeobojo/core/sync/content_sync.dart';
 import 'package:meogeobojo/features/recommendation/providers/ranking_providers.dart';
 import 'package:meogeobojo/features/recommendation/review_signal_repository.dart';
 
@@ -7,7 +8,7 @@ import '../home/new_home_test.dart' show inHero, openHome;
 class _Insights implements ReviewInsightSource {
   _Insights(this.byId);
 
-  final Map<String, ReviewInsight> byId;
+  Map<String, ReviewInsight> byId;
 
   @override
   Future<Map<String, ReviewInsight>> visibleInsights() async => byId;
@@ -76,4 +77,32 @@ void main() {
     );
     expect(inHero(find.text('중간집')), findsWidgets);
   });
+
+  testWidgets(
+    'a content refresh re-reads the insights (first read failed, or an admin hid one)',
+    (tester) async {
+      final source = _Insights({});
+      final h = await openHome(
+        tester,
+        overrides: [reviewInsightSourceProvider.overrideWithValue(source)],
+      );
+      expect(find.text('AI 리뷰 요약'), findsNothing);
+
+      source.byId = {
+        '가까운집': const ReviewInsight(
+          reviewCount: 12,
+          signal: 0,
+          summary: _summary,
+        ),
+      };
+      refreshAllContent(h.container);
+      await tester.pumpAndSettle();
+      expect(inHero(find.text(_summary)), findsOneWidget);
+
+      source.byId = {};
+      refreshAllContent(h.container);
+      await tester.pumpAndSettle();
+      expect(find.text('AI 리뷰 요약'), findsNothing);
+    },
+  );
 }

@@ -104,6 +104,8 @@ class SupabaseReviewInsightSource implements ReviewInsightSource {
           .select(
             'kakao_place_id,review_count,review_signal,summary_ko,highlights',
           )
+          // RLS lets moderators read hidden rows too; the app never shows or ranks with them.
+          .eq('visible', true)
           .timeout(const Duration(seconds: 10));
       return {
         for (final r in rows)

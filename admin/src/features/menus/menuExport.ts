@@ -22,3 +22,14 @@ export function exportRows(restaurants: ExportRestaurant[], itemsByRestaurant: M
   }
   return out
 }
+
+/** Restaurants that have no menu line yet (archived lines do not count): the ones the app cannot judge a budget for. */
+export const withoutMenus = (restaurants: ExportRestaurant[], itemsByRestaurant: Map<string, MenuItem[]>) =>
+  restaurants.filter((r) => !(itemsByRestaurant.get(r.id) ?? []).some((i) => i.status !== 'archived'))
+
+/**
+ * A blank template to fill in: one line per restaurant with only its place id and name. Nothing is invented; the
+ * importer skips a line that is still blank, so a partly filled file can be imported as it is.
+ */
+export const blankRows = (restaurants: ExportRestaurant[]) =>
+  restaurants.map((r) => ({ kakao_place_id: r.kakao_place_id ?? '', restaurant_name: r.name_ko }))

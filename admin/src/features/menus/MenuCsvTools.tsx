@@ -5,7 +5,7 @@ import { Badge, Button, Field, Textarea } from '@/components/ui'
 import { errorMessage } from '@/lib/utils'
 import { fetchExportItems, fetchExportRestaurants, fetchMenuOwners, fetchMenuState, fetchRestaurantById, fetchRestaurantsByPlaceIds, publishDeps, saveDeps } from './menuData'
 import { buildMenuCsv, EXPORT_COLUMNS, MAX_FILE_BYTES, parseMenuCsv, TEMPLATE_COLUMNS, templateCsv, type ParsedMenuCsv } from './menuCsv'
-import { exportRows, type ExportSource } from './menuExport'
+import { blankRows, exportRows, withoutMenus, type ExportSource } from './menuExport'
 import { applyPlan, buildPlan, publishSaved, type ImportMode, type ImportScope, type MenuState, type Plan, type PlanOptions, type PlanRow, type PublishResult, type RestaurantRef, type RowAction, type SavedRestaurant, type SaveFailure } from './menuImport'
 
 /** Starts a browser download of [text] (UTF-8 with a BOM, so Excel shows Korean correctly). */
@@ -202,6 +202,7 @@ function ImportDialog({ selected, onClose }: { selected: Selected; onClose: (cha
                 <div>찾은 식당 <b>{c.matchedRestaurants}곳</b> · 찾지 못한 식당 <b>{c.unmatchedRestaurants}곳</b>{plan.unmatchedIds.length > 0 && <span className="text-xs text-muted"> ({plan.unmatchedIds.slice(0, 8).map((u) => u.kakaoPlaceId).join(', ')}{plan.unmatchedIds.length > 8 ? ' …' : ''})</span>} · 초안으로 저장할 식당 {c.restaurantsToSave}곳</div>
                 {plan.restaurants.some((r) => r.hasDraft && r.adds + r.updates > 0) && <div className="text-xs text-amber-900">{plan.restaurants.filter((r) => r.hasDraft && r.adds + r.updates > 0).length}곳은 이미 저장된 초안이 있어요. 그 초안 위에 합쳐지고, 기존 내용은 지워지지 않아요.</div>}
                 {parsed.ignoredColumns.length > 0 && <div className="text-xs text-muted">무시한 열: {parsed.ignoredColumns.join(', ')}</div>}
+                {(parsed.blankRows ?? 0) > 0 && <div className="text-xs text-muted">식당만 적혀 있고 메뉴를 채우지 않은 줄 {parsed.blankRows}개는 건너뛰었어요.</div>}
               </div>
 
               <label className="flex items-center gap-2 text-xs text-muted"><input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} />문제 있는 줄만 보기</label>
@@ -287,7 +288,7 @@ function PreviewRow({ r }: { r: PlanRow }) {
 // ---------------------------------------------------------------------------------------------------------------------
 // export
 // ---------------------------------------------------------------------------------------------------------------------
-type ExportScope = 'selected' | 'university' | 'search' | 'all'
+type ExportScope = 'selected' | 'university' | 'search' | 'all' | 'empty'
 
 function ExportDialog({ selected, search, university, onClose }: { selected: Selected; search: string; university: School; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -303,6 +304,12 @@ function ExportDialog({ selected, search, university, onClose }: { selected: Sel
     try {
       const restaurants = await fetchExportRestaurants(scope === 'selected' && selected ? { restaurantId: selected.id } : scope === 'university' && university ? { universityId: university.id } : scope === 'search' ? { search } : 'all')
       const items = await fetchExportItems(restaurants.map((r) => r.id), source)
+      if (scope === 'empty') {
+        const empty = withoutMenus(restaurants, items)
+        downloadText(`menus-empty-${today()}.csv`, buildMenuCsv(blankRows(empty), TEMPLATE_COLUMNS))
+        setResult({ ok: true, text: empty.length === 0 ? '메뉴가 없는 식당이 없어요. (빈 양식에 머리글만 있어요)' : `메뉴가 없는 식당 ${empty.length}곳을 한 줄씩 내보냈어요. menu_name과 price_krw를 채우고(메뉴가 여러 개면 줄을 복사해서) “여러 식당 CSV 가져오기”로 올리면 돼요. 채우지 않은 줄은 가져올 때 건너뛰어요.` })
+        return
+      }
       const rows = exportRows(restaurants, items, archived)
       downloadText(`menus-${scope}-${today()}.csv`, buildMenuCsv(rows, EXPORT_COLUMNS))
       const noId = restaurants.filter((r) => !r.kakao_place_id && (items.get(r.id)?.length ?? 0) > 0).length
@@ -319,6 +326,7 @@ function ExportDialog({ selected, search, university, onClose }: { selected: Sel
           <label className={`flex items-center gap-2 ${university ? '' : 'opacity-50'}`}><input type="radio" name="escope" disabled={!university} checked={scope === 'university'} onChange={() => setScope('university')} />선택한 대학교의 식당{university ? ` (${university.name})` : ' (위에서 대학교를 먼저 고르세요)'}</label>
           <label className="flex items-center gap-2"><input type="radio" name="escope" checked={scope === 'search'} onChange={() => setScope('search')} />검색한 식당{search.trim() ? ` (“${search.trim()}”)` : ' (검색어가 없으면 전체)'}</label>
           <label className="flex items-center gap-2"><input type="radio" name="escope" checked={scope === 'all'} onChange={() => setScope('all')} />모든 식당</label>
+          <label className="flex items-start gap-2"><input type="radio" name="escope" checked={scope === 'empty'} onChange={() => setScope('empty')} /><span>메뉴가 없는 식당만 (빈 양식) <span className="text-xs text-muted">식당마다 장소 ID·이름만 적힌 한 줄 · 채워서 다시 가져오기용</span></span></label>
         </fieldset>
         <fieldset className="space-y-1 text-sm"><legend className="mb-1 text-xs font-semibold text-muted">어떤 메뉴를</legend>
           <label className="flex items-start gap-2"><input type="radio" name="esource" checked={source === 'editing'} onChange={() => setSource('editing')} /><span>편집 중인 내용 <span className="text-xs text-muted">(초안이 있으면 초안, 없으면 게시된 메뉴 · 다시 가져오기에 알맞아요)</span></span></label>

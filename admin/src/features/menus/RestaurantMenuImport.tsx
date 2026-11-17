@@ -146,6 +146,7 @@ export default function RestaurantMenuImport({ restaurantId, restaurantName, onC
                 {ctx.state.hasDraft && <div className="text-xs text-amber-900">이미 저장된 초안이 있어요. 그 초안 위에 합쳐져요.</div>}
                 {ctx.notes.map((n) => <div key={n} className="text-xs text-muted">{n}</div>)}
                 {parsed.ignoredColumns.length > 0 && <div className="text-xs text-muted">무시한 열: {parsed.ignoredColumns.join(', ')}</div>}
+                {(parsed.blankRows ?? 0) > 0 && <div className="text-xs text-muted">식당만 적혀 있고 메뉴를 채우지 않은 줄 {parsed.blankRows}개는 건너뛰었어요.</div>}
               </div>
 
               {bad > 0 && <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-900"><b>오류가 {bad}줄 있어서 가져올 수 없어요.</b> 아래 오류를 고친 뒤 파일을 다시 고르세요. 오류가 있는 채로 일부만 가져오지 않아요.</p>}

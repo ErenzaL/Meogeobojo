@@ -413,6 +413,25 @@ describe('exporting', () => {
     expect((await lines()).slice(1).map((l) => l.split(',')[1])).toEqual(['라멘집'])
   })
 
+  it('"메뉴가 없는 식당만": one blank line per restaurant without a (non-archived) menu; filled lines import, untouched ones are skipped', async () => {
+    live.r4 = [item(B, '단종 메뉴', { status: 'archived' })] // only an archived line: still "no menu"
+    await ready()
+    await exportWith(/메뉴가 없는 식당만/)
+    const out = await lines()
+    expect(out[0]).toBe('kakao_place_id,restaurant_name,menu_name,price_krw,menu_category,description,is_available')
+    expect(out.slice(1)).toEqual(['1002,라멘집,,,,,', '1003,메뉴없는집,,,,,', ',직접등록집,,,,,'])
+    expect(blobs[0].name).toMatch(/^menus-empty-\d{8}\.csv$/)
+    expect((await screen.findByRole('dialog', { hidden: true })).textContent).toContain('메뉴가 없는 식당 3곳')
+
+    await userEvent.click(screen.getByRole('button', { name: '닫기' }))
+    const filled = (await lastCsv()).replace('1003,메뉴없는집,,,,,', '1003,메뉴없는집,김치볶음밥,7000,,,')
+    const d = await openImport(filled)
+    const s = await summary(d)
+    expect(s.textContent).toContain('전체 1줄')
+    expect(s.textContent).toContain('추가 1')
+    expect(s.textContent).toContain('채우지 않은 줄 2개는 건너뛰었어요')
+  })
+
   it('an exported file imports again as "갱신" without any change (round trip by menu id)', async () => {
     live.r1 = [item(A, '제육 정식', { price_krw: 8000, category: '식사', description_ko: '밥, 국', sort_order: 1 }), item(B, '김치찌개', { price_krw: null, available: false, sort_order: 2 })]
     await ready()

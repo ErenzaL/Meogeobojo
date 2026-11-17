@@ -19,7 +19,22 @@ const menu = (rid: string, category: string | null, price: number | null, over: 
 describe('what the recommendation runs on', () => {
   it('menu stats count only active lines; a meal needs a meal category AND a price; the cheapest meal is the minimum', () => {
     const s = menuStats([menu('r1', '식사', 9000), menu('r1', '면류', 7000), menu('r1', '사이드', 1000), menu('r1', null, 5000), menu('r1', '식사', null), menu('r1', '식사', 4000, { status: 'archived' }), menu('r1', '분식', 3000, { available: false })])
-    expect(s.get('r1')).toEqual({ active: 6, categorized: 5, meals: 2, cheapestMeal: 7000 })
+    expect(s.get('r1')).toEqual({ active: 6, categorized: 5, offered: 2, meals: 2, cheapest: 7000, cafe: false })
+  })
+
+  it('other dishes count at a restaurant (안주, 기타, 디저트) but a drink or an add-on side never sets the price', () => {
+    const s = menuStats([menu('r1', '음료', 2000), menu('r1', '사이드', 1000), menu('r1', '안주', 12900), menu('r1', '기타', 9000), menu('r1', '디저트', 4500), menu('r1', null, 500)])
+    expect(s.get('r1')).toMatchObject({ offered: 3, meals: 0, cheapest: 4500 })
+  })
+
+  it('a cafe (its category says 카페, or drinks are most of its menu, and it is no bar) uses its drinks and desserts, but never an add-on', () => {
+    const rests = [{ ...rest(1), category: '음식점 > 카페 > 커피전문점' }, rest(2), rest(3), { ...rest(4), category: '음식점 > 주점' }]
+    const menus = [menu('r1', '음료', 4500), menu('r1', '디저트', 6000), menu('r1', '사이드', 500), menu('r2', '음료', 3000), menu('r2', '음료', 3500), menu('r2', '음료', 4000), menu('r2', '디저트', 3200), menu('r3', '음료', 3000), menu('r3', '식사', 9000), menu('r4', '음료', 5000), menu('r4', '음료', 5500), menu('r4', '음료', 6000), menu('r4', '안주', 12000)]
+    const rows = Object.fromEntries(buildInputRows([], rests, menus).map((r) => [r.name, r.menus]))
+    expect(rows['식당1']).toMatchObject({ cafe: true, offered: 2, cheapest: 4500 })
+    expect(rows['식당2']).toMatchObject({ cafe: true, offered: 4, cheapest: 3000 }) // 3 of 4 lines are drinks
+    expect(rows['식당3']).toMatchObject({ cafe: false, offered: 1, cheapest: 9000 }) // half drinks: a restaurant, the drink is ignored
+    expect(rows['식당4']).toMatchObject({ cafe: false, offered: 1, cheapest: 12000 }) // a bar's drinks never set the price
   })
 
   it('joins features, restaurants and menus by Kakao id; a stored row with no restaurant is still listed (visibility unknown)', () => {

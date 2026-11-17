@@ -7,13 +7,41 @@ export type FeatureRow = {
   no_break_time: boolean | null; parking: boolean | null; local_currency: boolean | null; fast_turnover: boolean | null
   takeout: boolean | null; open_late: boolean | null; source: string | null
 }
-export type RestaurantLite = { id: string; kakao_place_id: string | null; name_ko: string; visibility: string }
+export type RestaurantLite = { id: string; kakao_place_id: string | null; name_ko: string; visibility: string; category?: string | null }
 export type MenuLite = { restaurant_id: string; category: string | null; price_krw: number | null; status: string; available: boolean | null }
 
-/** The menu categories the recommendation counts as a full meal for one (식사 / 면류 / 분식). */
+/** The menu categories that are a full meal for one (식사 / 면류 / 분식). */
 export const MEAL_CATEGORIES = ['식사', '면류', '분식']
 
-export type MenuStats = { active: number; categorized: number; meals: number; cheapestMeal: number | null }
+/**
+ * What the app offers as a dish at a place (the same rule as the app's `MenuLine.isOffered`): at a restaurant every
+ * category except drinks (음료) and add-on sides (사이드), so a 안주, a 기타 platter or a dessert counts and a drink never
+ * sets the price; at a cafe the drinks count too (they are what a cafe sells). A line with no category counts as nothing.
+ */
+export function isOffered(category: string | null | undefined, cafe: boolean): boolean {
+  const c = (category ?? '').trim()
+  return c !== '' && c !== '사이드' && (cafe || c !== '음료')
+}
+
+/** A cafe: its category says 카페, or drinks are at least 70% of its menu and it is not a bar (주점·호프·포차). */
+export function cafeIds(restaurants: RestaurantLite[], menus: MenuLite[]): Set<string> {
+  const total = new Map<string, number>(); const drinks = new Map<string, number>()
+  for (const m of menus) {
+    if (m.status !== 'active') continue
+    total.set(m.restaurant_id, (total.get(m.restaurant_id) ?? 0) + 1)
+    if ((m.category ?? '').trim() === '음료') drinks.set(m.restaurant_id, (drinks.get(m.restaurant_id) ?? 0) + 1)
+  }
+  const out = new Set<string>()
+  for (const r of restaurants) {
+    const n = total.get(r.id) ?? 0
+    const cat = r.category ?? ''
+    if (cat.includes('카페') || (n > 0 && (drinks.get(r.id) ?? 0) / n >= 0.7 && !/주점|술집|호프|포차|바\(/.test(cat))) out.add(r.id)
+  }
+  return out
+}
+
+/** `offered` = dishes the recommendation can use for a budget (priced, in stock, per [isOffered]); `meals` of them are full meals. */
+export type MenuStats = { active: number; categorized: number; offered: number; meals: number; cheapest: number | null; cafe: boolean }
 export type InputRow = {
   kakaoPlaceId: string
   name: string
@@ -23,18 +51,22 @@ export type InputRow = {
   menus: MenuStats
 }
 
-const empty: MenuStats = { active: 0, categorized: 0, meals: 0, cheapestMeal: null }
+const empty: MenuStats = { active: 0, categorized: 0, offered: 0, meals: 0, cheapest: null, cafe: false }
 
-export function menuStats(menus: MenuLite[]): Map<string, MenuStats> {
+export function menuStats(menus: MenuLite[], cafes: Set<string> = new Set()): Map<string, MenuStats> {
   const out = new Map<string, MenuStats>()
   for (const m of menus) {
     if (m.status !== 'active') continue
-    const s = out.get(m.restaurant_id) ?? { ...empty }
+    const cafe = cafes.has(m.restaurant_id)
+    const s = out.get(m.restaurant_id) ?? { ...empty, cafe }
     s.active++
     if ((m.category ?? '').trim() !== '') s.categorized++
-    if (MEAL_CATEGORIES.includes(m.category ?? '') && m.price_krw != null && m.available !== false) {
-      s.meals++
-      s.cheapestMeal = s.cheapestMeal == null ? m.price_krw : Math.min(s.cheapestMeal, m.price_krw)
+    if (m.price_krw != null && m.available !== false) {
+      if (MEAL_CATEGORIES.includes(m.category ?? '')) s.meals++
+      if (isOffered(m.category, cafe)) {
+        s.offered++
+        s.cheapest = s.cheapest == null ? m.price_krw : Math.min(s.cheapest, m.price_krw)
+      }
     }
     out.set(m.restaurant_id, s)
   }
@@ -42,7 +74,7 @@ export function menuStats(menus: MenuLite[]): Map<string, MenuStats> {
 }
 
 export function buildInputRows(features: FeatureRow[], restaurants: RestaurantLite[], menus: MenuLite[]): InputRow[] {
-  const stats = menuStats(menus)
+  const stats = menuStats(menus, cafeIds(restaurants, menus))
   const byKakao = new Map(features.map((f) => [f.kakao_place_id, f]))
   const rows: InputRow[] = []
   const seen = new Set<string>()
@@ -64,7 +96,7 @@ export function summarize(rows: InputRow[]): InputSummary {
     withFeatures: published.filter((r) => r.features).length,
     withHours: published.filter((r) => r.features?.open_time && r.features.last_order_time).length,
     withMenus: published.filter((r) => r.menus.active > 0).length,
-    budgetReady: published.filter((r) => r.menus.meals > 0).length,
+    budgetReady: published.filter((r) => r.menus.offered > 0).length,
   }
 }
 

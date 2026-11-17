@@ -6,8 +6,13 @@ import { supabase } from '@/lib/supabase'
 type Stats = { visitors: number; returning_visitors: number; app_opens: number; restaurant_views: number; directions_clicks: number; searches: number }
 type Day = { day: string; visitors: number; restaurant_views: number; directions_clicks: number; searches: number }
 type Term = { term: string; searches: number }
+type Choice = { visits: number; decided_visits: number; median_seconds: number | null; p75_seconds: number | null }
 
 const n = (v: number) => Number(v).toLocaleString('ko-KR')
+const secs = (v: number) => {
+  const t = Math.round(Number(v))
+  return t < 60 ? `${t}초` : `${Math.floor(t / 60)}분${t % 60 ? ` ${t % 60}초` : ''}`
+}
 
 async function rpc<T>(name: string, args: Record<string, number>): Promise<T[]> {
   const { data, error } = await supabase.rpc(name, args)
@@ -26,7 +31,9 @@ export default function AnalyticsPage() {
         rpc<Day>('admin_event_daily', { p_days: days }),
         rpc<Term>('admin_top_search_queries', { p_days: days, p_limit: 20 }),
       ])
-      return { stats: stats[0] ?? null, daily, terms }
+      // Separate so the page still works before migration 20261125000100 is applied.
+      const choice = await rpc<Choice>('admin_choice_time', { p_days: days }).then((r) => r[0] ?? null, () => null)
+      return { stats: stats[0] ?? null, daily, terms, choice }
     },
   })
   const data = q.data
@@ -65,6 +72,7 @@ export default function AnalyticsPage() {
             <Stat label="식당 상세 조회" value={n(s.restaurant_views)} />
             <Stat label="길찾기" value={n(s.directions_clicks)} hint={s.restaurant_views > 0 ? `상세 조회의 ${((s.directions_clicks / s.restaurant_views) * 100).toFixed(0)}%` : undefined} />
             <Stat label="검색" value={n(s.searches)} />
+            <ChoiceStat c={data.choice} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
@@ -95,6 +103,18 @@ export default function AnalyticsPage() {
       )}
     </>
   )
+}
+
+/** 실사용 선택 시간: from opening the app to the first 길찾기 of that visit (within 30 minutes), median. */
+function ChoiceStat({ c }: { c: Choice | null }) {
+  const label = '선택 시간 (중앙값)'
+  if (!c) return <Stat label={label} value="—" hint="아직 집계할 수 없어요 (DB 마이그레이션 20261125000100 적용 필요)" />
+  if (c.decided_visits === 0 || c.median_seconds == null) {
+    return <Stat label={label} value="—" hint={`앱 실행 ${n(c.visits)}번 중 30분 안에 길찾기까지 간 방문이 아직 없어요`} />
+  }
+  const share = c.visits > 0 ? ` (${((c.decided_visits / c.visits) * 100).toFixed(0)}%)` : ''
+  const p75 = c.p75_seconds != null ? ` · 75%는 ${secs(c.p75_seconds)} 안에` : ''
+  return <Stat label={label} value={secs(c.median_seconds)} hint={`앱 실행 → 첫 길찾기 · ${n(c.decided_visits)}/${n(c.visits)}번 방문${share}${p75}`} />
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {

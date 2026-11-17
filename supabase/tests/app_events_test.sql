@@ -64,3 +64,45 @@ do $$ begin
   raise notice 'OK moderator: reads the aggregates (the 분석 menu is open to moderators)';
 end $$;
 reset role;
+
+-- 실사용 선택 시간 (migration 20261125000100): app_open → first 길찾기 within the same visit and 30 minutes.
+-- So far c001 has two visits in 7 days (opened and clicked in the same instant: 0 s; two days ago: no click).
+insert into public.app_events (created_at, event, client_id, restaurant_id) values
+  -- c004 visit 1: first click after 90 s counts, the second click does not
+  (now() - interval '3 hours',                      'app_open',         'ae000000-0000-4000-8000-00000000c004', null),
+  (now() - interval '3 hours' + interval '90 seconds',  'directions_click', 'ae000000-0000-4000-8000-00000000c004', 'k1'),
+  (now() - interval '3 hours' + interval '200 seconds', 'directions_click', 'ae000000-0000-4000-8000-00000000c004', 'k2'),
+  -- c004 visit 2: the click comes after 40 minutes, so the visit made no choice
+  (now() - interval '2 hours',                      'app_open',         'ae000000-0000-4000-8000-00000000c004', null),
+  (now() - interval '2 hours' + interval '40 minutes',  'directions_click', 'ae000000-0000-4000-8000-00000000c004', 'k1'),
+  -- c004 visits 3 and 4: a reload after 60 s starts a new visit, which owns the click 30 s later
+  (now() - interval '1 hour',                       'app_open',         'ae000000-0000-4000-8000-00000000c004', null),
+  (now() - interval '1 hour' + interval '60 seconds',   'app_open',         'ae000000-0000-4000-8000-00000000c004', null),
+  (now() - interval '1 hour' + interval '90 seconds',   'directions_click', 'ae000000-0000-4000-8000-00000000c004', 'k3'),
+  -- c005: a click before any open is ignored; its visit chooses after 300 s
+  (now() - interval '5 hours',                      'directions_click', 'ae000000-0000-4000-8000-00000000c005', 'k1'),
+  (now() - interval '4 hours',                      'app_open',         'ae000000-0000-4000-8000-00000000c005', null),
+  (now() - interval '4 hours' + interval '300 seconds', 'directions_click', 'ae000000-0000-4000-8000-00000000c005', 'k4');
+
+set role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', false);
+do $$ begin
+  begin perform public.admin_choice_time(7); raise exception 'accepted#choice-time-guest'; exception when insufficient_privilege then null; end;
+  raise notice 'OK guest: cannot read the choice time';
+end $$;
+reset role;
+set role authenticated;
+select set_config('request.jwt.claims', '{"sub":"ae000000-0000-4000-8000-0000000000a1","role":"authenticated"}', false);
+do $$ begin
+  begin perform public.admin_choice_time(7); raise exception 'accepted#choice-time-user'; exception when insufficient_privilege then null; end;
+  raise notice 'OK user: cannot read the choice time';
+end $$;
+select set_config('request.jwt.claims', '{"sub":"ae000000-0000-4000-8000-0000000000b1","role":"authenticated"}', false);
+do $$ declare c record; begin
+  select * into c from public.admin_choice_time(7);
+  -- visits: c001 ×2, c004 ×4, c005 ×1; chosen in 0, 30, 90 and 300 s
+  assert c.visits = 7 and c.decided_visits = 4, format('visits %s', c);
+  assert c.median_seconds = 60.0 and c.p75_seconds = 142.5, format('median / p75 %s', c);
+  raise notice 'OK moderator: choice time counts a visit''s first 길찾기 within 30 minutes (median 60 s, p75 142.5 s)';
+end $$;
+reset role;

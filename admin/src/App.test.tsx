@@ -140,6 +140,26 @@ describe('analytics (사용 지표)', () => {
     expect(fake.rpcs.find((r) => r.name === 'admin_event_stats')?.args).toEqual({ p_days: 7 })
   })
 
+  it('shows the real-use choice time: median from opening the app to the first 길찾기', async () => {
+    fake.signInAs('moderator')
+    fake.respond('rpc:admin_event_stats', { data: [{ visitors: 4, returning_visitors: 1, app_opens: 7, restaurant_views: 9, directions_clicks: 5, searches: 0 }] })
+    fake.respond('rpc:admin_choice_time', { data: [{ visits: 7, decided_visits: 4, median_seconds: 65, p75_seconds: 142.5 }] })
+    open('/analytics')
+    expect(await screen.findByText('선택 시간 (중앙값)')).toBeInTheDocument()
+    expect(screen.getByText('1분 5초')).toBeInTheDocument()
+    expect(screen.getByText('앱 실행 → 첫 길찾기 · 4/7번 방문 (57%) · 75%는 2분 23초 안에')).toBeInTheDocument()
+    expect(fake.rpcs.find((r) => r.name === 'admin_choice_time')?.args).toEqual({ p_days: 7 })
+  })
+
+  it('keeps the page working when the choice-time function is not deployed yet', async () => {
+    fake.signInAs('admin')
+    fake.respond('rpc:admin_event_stats', { data: [{ visitors: 2, returning_visitors: 0, app_opens: 3, restaurant_views: 1, directions_clicks: 0, searches: 0 }] })
+    fake.respond('rpc:admin_choice_time', { error: { message: 'function public.admin_choice_time does not exist' } })
+    open('/analytics')
+    expect(await screen.findByText('아직 집계할 수 없어요 (DB 마이그레이션 20261125000100 적용 필요)')).toBeInTheDocument()
+    expect(screen.getByText('재방문자')).toBeInTheDocument()
+  })
+
   it('says plainly when nothing was recorded (no invented numbers)', async () => {
     fake.signInAs('admin')
     fake.respond('rpc:admin_event_stats', { data: [{ visitors: 0, returning_visitors: 0, app_opens: 0, restaurant_views: 0, directions_clicks: 0, searches: 0 }] })

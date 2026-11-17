@@ -80,6 +80,20 @@ describe('the 추천 page table', () => {
     expect(t).toContain('식당3'); expect(t).not.toContain('식당1')
   })
 
+  it('tells "no menu registered" apart from "menus, but no meal line", in the cell and in the filter', async () => {
+    renderIt()
+    await screen.findByLabelText('추천 정보 요약')
+    const table = () => screen.getByRole('table', { name: '추천 입력 정보' })
+    expect(within(table()).getByText('식당3').closest('tr')!.textContent).toMatch(/메뉴 미등록/)
+    expect(within(table()).getByText('식당2').closest('tr')!.textContent).not.toMatch(/메뉴 미등록/)
+    await userEvent.selectOptions(screen.getByLabelText('예산 판정 보기'), 'nomenu')
+    expect(table().textContent).toContain('식당3'); expect(table().textContent).not.toContain('식당2')
+    await userEvent.selectOptions(screen.getByLabelText('예산 판정 보기'), 'nomeal')
+    expect(table().textContent).toContain('식당2'); expect(table().textContent).not.toContain('식당3'); expect(table().textContent).not.toContain('식당1')
+    await userEvent.selectOptions(screen.getByLabelText('예산 판정 보기'), 'no')
+    expect(table().textContent).toContain('식당2'); expect(table().textContent).toContain('식당3')
+  })
+
   it('is read-only: it writes nothing', async () => {
     renderIt()
     await screen.findByLabelText('추천 정보 요약')

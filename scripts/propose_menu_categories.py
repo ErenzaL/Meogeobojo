@@ -45,6 +45,10 @@ def classify(m, rname=''):
     if DRINK.search(n) and not MEAL.search(n): return '음료','음료/주류'
     # a one-person burger set is a meal for one (a 2+ person set is not)
     if re.search(r'버거',n) and re.search(r'세트',n) and not re.search(r'\d\s*인|패밀리|파티',n) and 5000<=m['price_krw']<=15000: return '식사','버거 세트 (1인)'
+    # an explicit one-person portion of a stew / soup / rice / noodle dish is a meal for one (a plain 2+ person dish is not)
+    if re.search(r'(?<![\d~\-])1\s*인',n) and not re.search(r'[2-9]\s*인|\+|세트|패밀리|탕수육|전골',n) and 5000<=m['price_krw']<=15000:
+        if re.search(r'면|국수',n): return '면류','1인분 표시가 있는 면 메뉴'
+        if re.search(r'찌개|탕|국밥|밥',n): return '식사','1인분 표시가 있는 식사 메뉴'
     if MULTI.search(n) or MULTI.search(desc[:60]): return '기타','다인/세트/대용량 표시'
     if SIDE.search(n): return '사이드','사이드/추가/기타 곁들임'
     if DESSERT.search(n): return '디저트','디저트'

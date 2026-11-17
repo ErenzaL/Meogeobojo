@@ -42,7 +42,7 @@ export default function RecommendationInputs() {
   const shown = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (rows ?? []).filter((r) => (vis === '' || r.visibility === vis)
-      && (budget === '' || (budget === 'ready' ? r.menus.meals > 0 : r.menus.meals === 0))
+      && (budget === '' || (budget === 'ready' ? r.menus.meals > 0 : budget === 'nomenu' ? r.menus.active === 0 : budget === 'nomeal' ? r.menus.active > 0 && r.menus.meals === 0 : r.menus.meals === 0))
       && (term === '' || r.name.toLowerCase().includes(term) || r.kakaoPlaceId.includes(term)))
   }, [rows, search, vis, budget])
 
@@ -67,7 +67,7 @@ export default function RecommendationInputs() {
               <option value="">모든 상태</option><option value="published">공개</option><option value="draft">초안</option><option value="hidden">숨김</option><option value="archived">보관</option>
             </Select>
             <Select aria-label="예산 판정 보기" value={budget} onChange={(e) => { setBudget(e.target.value); setLimit(SHOWN) }}>
-              <option value="">예산 판정: 전체</option><option value="ready">예산 판정 가능</option><option value="no">예산 판정 불가 (식사 메뉴·가격 없음)</option>
+              <option value="">예산 판정: 전체</option><option value="ready">예산 판정 가능</option><option value="no">예산 판정 불가 (전체)</option><option value="nomenu">└ 메뉴가 등록되지 않았어요</option><option value="nomeal">└ 메뉴는 있지만 식사·면류·분식이 없어요</option>
             </Select>
           </div>
           <div className="overflow-auto rounded-2xl border border-line bg-white">
@@ -105,7 +105,7 @@ function Row({ r }: { r: InputRow }) {
       <td className="px-3 py-2">{yesNo(f?.fast_turnover)}</td>
       <td className="px-3 py-2">{yesNo(f?.open_late)}</td>
       <td className="px-3 py-2 tabular-nums">{r.menus.active}개{r.menus.active > r.menus.categorized ? <span className="text-muted"> (분류 {r.menus.categorized})</span> : null}</td>
-      <td className="px-3 py-2 tabular-nums">{r.menus.meals > 0 ? `${r.menus.meals}개` : <span className="text-amber-900">없음</span>}</td>
+      <td className="px-3 py-2 tabular-nums">{r.menus.meals > 0 ? `${r.menus.meals}개` : <span className="text-amber-900">{r.menus.active === 0 ? '메뉴 미등록' : '없음'}</span>}</td>
       <td className="px-3 py-2 tabular-nums">{r.menus.cheapestMeal != null ? `${r.menus.cheapestMeal.toLocaleString('ko-KR')}원` : '—'}</td>
       <td className="px-3 py-2 text-muted">{f?.source ?? '—'}</td>
     </tr>

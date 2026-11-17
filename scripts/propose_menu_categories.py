@@ -35,13 +35,18 @@ DRINK=re.compile(r'커피|아메리카노|라떼|카푸치노|에스프레소|�
 DESSERT=re.compile(r'케이크|빙수|아이스크림|와플|마카롱|쿠키|디저트|푸딩|크로플|도넛|도너츠|타르트|브라우니|젤라또|스콘|빵$|호떡|꽈배기|찹쌀|파르페|츄러스|아포카토|아포가토|바움쿠헨')
 SIDE=re.compile(r'후식|쥐포|공기밥|밥\s*추가|추가|사리|비조리|큰컵|컵라면|슬라이스|셀프|토핑|소스|리필|감자튀김|프렌치|치즈볼|콘샐러드|^계란(찜|말이|후라이|프라이)$|^달걀|김치$|단무지|샐러드|스프|수프|양파링|어니언링|너겟|치즈스틱|공기$|옵션|곱빼기\s*추가')
 SNACK=re.compile(r'떡볶이|김밥|라볶이|토스트|쫄면')
-NOODLE=re.compile(r'면$|국수|라면|라멘|우동|짜장|짬뽕|칼국수|냉면|밀면|파스타|쌀국수|막국수|수제비|소바|스파게티|볶음면|비빔면|메밀|짜파|잔치|누들|자장|짬짜|우육면')
-MEAL=re.compile(r'밥$|덮밥|비빔밥|볶음밥|국밥|정식|백반|찌개|탕$|돈가스|돈까스|돈카츠|돈가츠|카레|버거|도시락|죽$|오므라이스|카레라이스|순두부|육개장|제육덮|해장국|곰탕|설렁탕|갈비탕|삼계탕|감자탕|리조또|필라프|샌드위치|타코|부리또|쌈밥|보리밥|돌솥|뚝배기|케밥|포케|비빔')
+NOODLE=re.compile(r'면$|국수|라면|라멘|우동|짜장|짬뽕|칼국수|냉면|밀면|파스타|쌀국수|막국수|수제비|소바|스파게티|볶음면|비빔면|메밀|짜파|짜빠|잔치|누들|자장|짬짜|우육면|멘$|소바|모밀')
+MEAL=re.compile(r'밥$|덮밥|비빔밥|볶음밥|국밥|정식|백반|찌개|탕$|돈가스|돈까스|돈카츠|돈가츠|카레|버거|도시락|죽$|오므라이스|카레라이스|순두부|육개장|제육덮|해장국|곰탕|설렁탕|갈비탕|삼계탕|감자탕|리조또|필라프|샌드위치|타코|부리또|쌈밥|보리밥|돌솥|뚝배기|케밥|포케|비빔|규동|가츠동|라이스')
 SHARED=re.compile(r'닭갈비|낙지|쭈꾸미|오징어|치킨|피자|족발|보쌈|삼겹|갈비|양꼬치|꼬치|회$|모듬|전골|전$|파전|안주|골뱅이|닭발|막창|곱창|대창|육회|탕수육|깐풍|양장피|마라샹궈|훠궈|샤브|무한|한판|통닭|닭강정|수육|야끼|오뎅탕|나가사키|스테이크|바베큐|바비큐')
 def classify(m, rname=''):
     n=re.sub(r'\s+','',m['name_ko'] or '')
     desc=(m.get('description_ko') or '')
     if not n or m['price_krw'] is None: return None,''
+    one=re.search(r'(?<![\d~\-])1\s*인',n) and not re.search(r'[2-9]\s*인|탕수육|전골',n) and 5000<=m['price_krw']<=15000
+    if one and re.search(r'세트',n) and not re.search(r'\+.*\+',n):
+        if re.search(r'면|국수',n): return '면류','1인 세트 (면)'
+        if re.search(r'밥|탕|찌개',n): return '식사','1인 세트 (식사)'
+    if DRINK.search(n) and re.search(r'세트|\+',n): return '기타','세트/묶음 (음료가 곁들여진 구성)'
     if DRINK.search(n) and not MEAL.search(n): return '음료','음료/주류'
     # a one-person burger set is a meal for one (a 2+ person set is not)
     if re.search(r'버거',n) and re.search(r'세트',n) and not re.search(r'\d\s*인|패밀리|파티',n) and 5000<=m['price_krw']<=15000: return '식사','버거 세트 (1인)'
@@ -54,6 +59,9 @@ def classify(m, rname=''):
     if DESSERT.search(n): return '디저트','디저트'
     p0=m['price_krw']
     if re.search(r'짬뽕밥|짜장밥|볶음밥|잡채밥',n) and 5000<=p0<=15000: return '식사','밥 요리 (짬뽕밥·짜장밥·볶음밥)'
+    if re.search(r'밥|라이스|포케|정식|도시락|뚝배기|규동|가츠동|찌개|국밥',n) and 5000<=p0<=15000 and not re.search(r'추가|사리|공기',n): return '식사','한 그릇 식사 이름 (밥·덮밥·포케·정식·뚝배기·찌개…)'
+    # meat sold by weight is a shared dish
+    if re.search(r'\d+\s*g\)?$',n) and p0>=9000 and not re.search(r'밥|면|국|탕',n): return '안주','무게 단위로 파는 고기'
     hits=[]
     if SNACK.search(n): hits.append('분식')
     if NOODLE.search(n): hits.append('면류')

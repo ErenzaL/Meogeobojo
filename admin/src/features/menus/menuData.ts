@@ -74,9 +74,14 @@ export async function fetchExportItems(restaurantIds: string[], source: ExportSo
   const live = new Map<string, MenuItem[]>()
   const drafts = new Map<string, MenuItem[]>()
   for (const part of chunk(restaurantIds, 200)) {
-    const m = await supabase.from('restaurant_menus').select('id,restaurant_id,name_ko,description_ko,price_krw,category,price_verified_on,available,representative,recommended,status,sort_order,image_url').in('restaurant_id', part)
-    if (m.error) throw m.error
-    for (const r of m.data as (MenuItem & { restaurant_id: string })[]) live.set(r.restaurant_id, [...(live.get(r.restaurant_id) ?? []), r])
+    // The database returns at most 1000 rows per request, and 200 restaurants hold far more menus than that: read page by page
+    // (a stable order, so no line is skipped or repeated between pages), otherwise the export silently stops at 1000 lines.
+    for (let from = 0; from < 100000; from += 1000) {
+      const m = await supabase.from('restaurant_menus').select('id,restaurant_id,name_ko,description_ko,price_krw,category,price_verified_on,available,representative,recommended,status,sort_order,image_url').in('restaurant_id', part).order('id').range(from, from + 999)
+      if (m.error) throw m.error
+      for (const r of m.data as (MenuItem & { restaurant_id: string })[]) live.set(r.restaurant_id, [...(live.get(r.restaurant_id) ?? []), r])
+      if (m.data.length < 1000) break
+    }
     if (source === 'editing') {
       const d = await supabase.from('content_drafts').select('entity_id,data').eq('entity_type', TYPE).in('entity_id', part)
       if (d.error) throw d.error

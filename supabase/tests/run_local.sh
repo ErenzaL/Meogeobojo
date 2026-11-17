@@ -31,6 +31,7 @@ echo "--- menu CSV import (cms_save_draft / cms_publish for restaurant_menus)"; 
 echo "--- notifications (app_content kind notification)"; P -f $HERE/notification_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- 문의 및 제안 (reports of type feedback)"; P -f $HERE/feedback_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- 사용 지표 (app_events)"; P -f $HERE/app_events_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+echo "--- review insights (R + AI review summary)"; P -f $HERE/review_insights_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- restaurant delete (super admin only)"; P -f $HERE/restaurant_delete_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- weekly cafeteria management"; P -f $HERE/cafeteria_weekly_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300 || true
 echo "--- cafeteria CSV import (server side)"; P -f $HERE/cafeteria_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320 || true

@@ -880,5 +880,7 @@
   "relaxCategory": "所有菜系：{count}家",
   "ignoredAmenity": "目前没有{amenity}信息，所以未应用该条件",
   "ignoredHours": "目前没有营业时间信息，所以未应用“现在可点餐”",
-  "homeMatchingMenus": "符合条件的菜品{count}道"
+  "homeMatchingMenus": "符合条件的菜品{count}道",
+  "aiReviewTitle": "AI评价摘要",
+  "aiReviewSource": "由AI根据{count}条评价总结（韩语原文）"
 }

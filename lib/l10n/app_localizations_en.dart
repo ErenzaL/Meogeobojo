@@ -2787,4 +2787,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '$count dishes that fit your conditions';
   }
+
+  @override
+  String get aiReviewTitle => 'AI review summary';
+
+  @override
+  String aiReviewSource(int count) {
+    return 'Summarized by AI from $count reviews (written in Korean)';
+  }
 }

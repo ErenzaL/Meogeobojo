@@ -64,3 +64,77 @@ Map<String, double> reviewSignalsFrom(
       e.key: reviewSignal(reviews: e.value, now: now, overallRating: overall),
   };
 }
+
+/// One place's stored review insight (`restaurant_review_insights`): R and the AI review summary, generated offline
+/// by scripts/review_insights from the collected reviews.
+class ReviewInsight {
+  const ReviewInsight({
+    required this.reviewCount,
+    required this.signal,
+    this.summary,
+    this.highlights = const [],
+  });
+
+  final int reviewCount;
+
+  /// R, -1..1.
+  final double signal;
+
+  /// The AI-written summary (Korean). Null when the place has a signal but no summary.
+  final String? summary;
+  final List<String> highlights;
+}
+
+/// The visible review insights per Kakao place id.
+abstract interface class ReviewInsightSource {
+  Future<Map<String, ReviewInsight>> visibleInsights();
+}
+
+class SupabaseReviewInsightSource implements ReviewInsightSource {
+  SupabaseReviewInsightSource(this._db);
+
+  final SupabaseClient Function() _db;
+
+  /// A failure (offline, table not migrated yet) means "no insights": nothing is shown and R falls back to 0.
+  @override
+  Future<Map<String, ReviewInsight>> visibleInsights() async {
+    try {
+      final rows = await _db()
+          .from('restaurant_review_insights')
+          .select(
+            'kakao_place_id,review_count,review_signal,summary_ko,highlights',
+          )
+          .timeout(const Duration(seconds: 10));
+      return {
+        for (final r in rows)
+          if (r['kakao_place_id'] is String)
+            r['kakao_place_id'] as String: ReviewInsight(
+              reviewCount: (r['review_count'] as num?)?.toInt() ?? 0,
+              signal: ((r['review_signal'] as num?)?.toDouble() ?? 0).clamp(
+                -1.0,
+                1.0,
+              ),
+              summary: (r['summary_ko'] as String?)?.trim().isEmpty ?? true
+                  ? null
+                  : (r['summary_ko'] as String).trim(),
+              highlights: [
+                for (final h in (r['highlights'] as List?) ?? const [])
+                  if (h is String && h.trim().isNotEmpty) h.trim(),
+              ],
+            ),
+      };
+    } catch (e) {
+      debugPrint('review insights unavailable: ${e.runtimeType}');
+      return const {};
+    }
+  }
+}
+
+/// R per place: the app's own student reviews when a place has any, otherwise the stored insight's R.
+Map<String, double> mergeReviewSignals(
+  Map<String, double> fromStudentReviews,
+  Map<String, ReviewInsight> insights,
+) => {
+  for (final e in insights.entries) e.key: e.value.signal,
+  ...fromStudentReviews,
+};

@@ -2664,4 +2664,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '符合条件的菜品$count道';
   }
+
+  @override
+  String get aiReviewTitle => 'AI评价摘要';
+
+  @override
+  String aiReviewSource(int count) {
+    return '由AI根据$count条评价总结（韩语原文）';
+  }
 }

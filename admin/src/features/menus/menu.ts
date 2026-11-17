@@ -1,6 +1,13 @@
 import type { MenuItem } from '@/lib/cms'
 
-export const MENU_CATEGORIES = ['식사', '면류', '분식', '안주', '사이드', '음료', '디저트', '기타']
+/**
+ * The four categories a menu line is filed under. 식사 = a dish one person eats as a meal (noodles, rice, soup, burger, toast,
+ * tteokbokki …); 사이드 = add-ons and small side dishes (공기밥, 사리, fries, a small salad); 음료 = every drink, alcohol
+ * included; 기타 = everything else (shared dishes and 안주, pizza and whole chicken, sets for several people, desserts, bakery).
+ * The app offers 식사 and 기타 at a restaurant, and 음료 too at a cafe; 사이드 is never offered on its own.
+ * Lines filed under an older category (면류, 분식, 안주, 디저트) keep working until they are moved.
+ */
+export const MENU_CATEGORIES = ['식사', '사이드', '음료', '기타']
 export type MenuDraft = { name: string; price: string; description: string; category: string; verified: string }
 export const emptyMenuDraft: MenuDraft = { name: '', price: '', description: '', category: '', verified: '' }
 

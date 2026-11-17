@@ -27,7 +27,7 @@ export default function RecommendationInputs() {
     queryFn: async () => {
       const [features, restaurants, menus] = await Promise.all([
         fetchAll<FeatureRow>('recommendation_demo_features', 'kakao_place_id,name_ko,open_time,last_order_time,break_time,no_break_time,parking,local_currency,fast_turnover,takeout,open_late,source', 'kakao_place_id').catch(() => [] as FeatureRow[]),
-        fetchAll<RestaurantLite>('restaurant_overrides', 'id,kakao_place_id,name_ko,visibility', 'name_ko'),
+        fetchAll<RestaurantLite>('restaurant_overrides', 'id,kakao_place_id,name_ko,visibility,category', 'name_ko'),
         fetchAll<MenuLite>('restaurant_menus', 'restaurant_id,category,price_krw,status,available', 'id'),
       ])
       return buildInputRows(features, restaurants, menus)
@@ -42,14 +42,14 @@ export default function RecommendationInputs() {
   const shown = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (rows ?? []).filter((r) => (vis === '' || r.visibility === vis)
-      && (budget === '' || (budget === 'ready' ? r.menus.meals > 0 : r.menus.meals === 0))
+      && (budget === '' || (budget === 'ready' ? r.menus.offered > 0 : budget === 'nomenu' ? r.menus.active === 0 : budget === 'nomeal' ? r.menus.active > 0 && r.menus.offered === 0 : r.menus.offered === 0))
       && (term === '' || r.name.toLowerCase().includes(term) || r.kakaoPlaceId.includes(term)))
   }, [rows, search, vis, budget])
 
   return (
     <section aria-label="추천에 쓰이는 식당 정보" className="mb-6 space-y-3">
       <h2 className="text-lg font-bold">추천에 쓰이는 식당 정보</h2>
-      <p className="max-w-3xl text-sm text-muted">식당마다 앱의 추천이 지금 쓰는 영업시간·편의 정보와, 예산을 판정하는 게시된 메뉴를 보여줘요. 읽기 전용이에요. 위치와 거리는 저장하지 않고 카카오의 실시간 좌표로 계산해요.</p>
+      <p className="max-w-3xl text-sm text-muted">식당마다 앱의 추천이 지금 쓰는 영업시간·편의 정보와, 예산을 판정하는 게시된 메뉴를 보여줘요. 식당은 음료·곁들임(사이드)을 뺀 모든 메뉴가, 카페는 음료까지 최저 가격에 쓰여요. 읽기 전용이에요. 위치와 거리는 저장하지 않고 카카오의 실시간 좌표로 계산해요.</p>
       {q.isLoading && <Skeleton className="h-40 w-full" />}
       {q.error && <ErrorState error={q.error} onRetry={() => void q.refetch()} />}
       {sum && (
@@ -59,7 +59,7 @@ export default function RecommendationInputs() {
             <Card><div className="text-xs text-muted">영업시간·편의 정보가 있는 곳</div><div className="text-xl font-bold">{sum.withFeatures}곳</div></Card>
             <Card><div className="text-xs text-muted">영업시간(시작·마지막 주문)이 있는 곳</div><div className="text-xl font-bold">{sum.withHours}곳</div></Card>
             <Card><div className="text-xs text-muted">게시된 메뉴가 있는 곳</div><div className="text-xl font-bold">{sum.withMenus}곳</div></Card>
-            <Card><div className="text-xs text-muted">예산을 판정할 수 있는 곳</div><div className="text-xl font-bold">{sum.budgetReady}곳</div><div className="text-[11px] text-muted">식사·면류·분식 메뉴와 가격이 있어요</div></Card>
+            <Card><div className="text-xs text-muted">예산을 판정할 수 있는 곳</div><div className="text-xl font-bold">{sum.budgetReady}곳</div><div className="text-[11px] text-muted">음료·곁들임을 뺀 메뉴와 가격이 있어요 (카페는 음료 포함)</div></Card>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Input aria-label="추천 정보 검색" placeholder="식당 이름 또는 장소 ID" value={search} onChange={(e) => { setSearch(e.target.value); setLimit(SHOWN) }} />
@@ -67,13 +67,13 @@ export default function RecommendationInputs() {
               <option value="">모든 상태</option><option value="published">공개</option><option value="draft">초안</option><option value="hidden">숨김</option><option value="archived">보관</option>
             </Select>
             <Select aria-label="예산 판정 보기" value={budget} onChange={(e) => { setBudget(e.target.value); setLimit(SHOWN) }}>
-              <option value="">예산 판정: 전체</option><option value="ready">예산 판정 가능</option><option value="no">예산 판정 불가 (식사 메뉴·가격 없음)</option>
+              <option value="">예산 판정: 전체</option><option value="ready">예산 판정 가능</option><option value="no">예산 판정 불가 (전체)</option><option value="nomenu">└ 메뉴가 등록되지 않았어요</option><option value="nomeal">└ 메뉴는 있지만 추천에 쓸 메뉴가 없어요 (음료·곁들임뿐)</option>
             </Select>
           </div>
           <div className="overflow-auto rounded-2xl border border-line bg-white">
             <table aria-label="추천 입력 정보" className="w-full text-xs">
               <thead className="sticky top-0 border-b border-line bg-page text-left text-muted">
-                <tr>{['식당', '공개', '영업', '브레이크', '주차', '포장', '지역화폐', '빠른 회전', '늦게까지', '메뉴', '식사 메뉴', '최저 식사 가격', '출처'].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr>
+                <tr>{['식당', '공개', '영업', '브레이크', '주차', '포장', '지역화폐', '빠른 회전', '늦게까지', '메뉴', '추천에 쓰는 메뉴', '최저 가격', '출처'].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody>
                 {shown.slice(0, limit).map((r) => <Row key={r.kakaoPlaceId || r.name} r={r} />)}
@@ -105,8 +105,8 @@ function Row({ r }: { r: InputRow }) {
       <td className="px-3 py-2">{yesNo(f?.fast_turnover)}</td>
       <td className="px-3 py-2">{yesNo(f?.open_late)}</td>
       <td className="px-3 py-2 tabular-nums">{r.menus.active}개{r.menus.active > r.menus.categorized ? <span className="text-muted"> (분류 {r.menus.categorized})</span> : null}</td>
-      <td className="px-3 py-2 tabular-nums">{r.menus.meals > 0 ? `${r.menus.meals}개` : <span className="text-amber-900">없음</span>}</td>
-      <td className="px-3 py-2 tabular-nums">{r.menus.cheapestMeal != null ? `${r.menus.cheapestMeal.toLocaleString('ko-KR')}원` : '—'}</td>
+      <td className="px-3 py-2 tabular-nums">{r.menus.offered > 0 ? `${r.menus.offered}개` : <span className="text-amber-900">{r.menus.active === 0 ? '메뉴 미등록' : '없음'}</span>}</td>
+      <td className="px-3 py-2 tabular-nums">{r.menus.cheapest != null ? `${r.menus.cheapest.toLocaleString('ko-KR')}원` : '—'}</td>
       <td className="px-3 py-2 text-muted">{f?.source ?? '—'}</td>
     </tr>
   )

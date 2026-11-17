@@ -116,27 +116,30 @@ extension RankedSplit on List<RankedRestaurant> {
 int walkMinutesFor(int meters) =>
     math.max(1, (meters / walkMetersPerMinute).round());
 
-/// A menu line that can be evidence for a budget at [arrivalMinutes]: served then, priced, in stock, and a meal for one.
-/// For a "이상" (at least) budget a shared dish counts too (a 20,000원 chicken is "12,000원 이상"); for an "이하" budget
-/// it never does, because what one person pays for a shared dish is not known.
+/// A menu line that can be evidence for a budget at [arrivalMinutes]: served then, priced, in stock, and something the place
+/// offers ([MenuLine.isOffered]): at a restaurant every dish except drinks and add-on sides (a 안주 or a platter counts
+/// too), at a [cafe] the drinks and desserts as well.
 bool lineCountsForBudget(
   MenuLine m, {
   required bool max,
   required int arrivalMinutes,
+  bool cafe = false,
 }) =>
     m.available &&
-    (m.isMeal || (!max && m.isShareable)) &&
+    m.isOffered(cafe: cafe) &&
     m.priceKrw != null &&
     m.servedAt(arrivalMinutes);
 
 /// The menu lines of ONE place that match [c] for someone arriving at [arrivalMinutes]: with a budget the lines that fit
-/// it (the very lines `judgeRestaurant` confirms the place on), without one the place's meals. Representative dishes
-/// first, then cheapest first. Empty when the place has no such line.
+/// it (the very lines `judgeRestaurant` confirms the place on), without one every dish the place offers. At a restaurant
+/// that is everything but drinks and add-on sides; at a [cafe] the drinks too. Representative dishes first, then meals
+/// before other dishes, then cheapest first. Empty when the place has no such line.
 List<RestaurantMenuItem> menusMatchingConditions(
   List<RestaurantMenuItem> menus,
   Conditions c,
-  int arrivalMinutes,
-) {
+  int arrivalMinutes, {
+  bool cafe = false,
+}) {
   final amount = c.budget.amountKrw;
   final max = c.budget.type == BudgetType.max;
   final out = [
@@ -144,18 +147,20 @@ List<RestaurantMenuItem> menusMatchingConditions(
       if (amount == null
           ? m.available &&
                 m.priceKrw != null &&
-                m.line.isMeal &&
+                m.line.isOffered(cafe: cafe) &&
                 m.line.servedAt(arrivalMinutes)
           : lineCountsForBudget(
                   m.line,
                   max: max,
                   arrivalMinutes: arrivalMinutes,
+                  cafe: cafe,
                 ) &&
                 (max ? m.priceKrw! <= amount : m.priceKrw! >= amount))
         m,
   ];
   out.sort((a, b) {
     if (a.representative != b.representative) return a.representative ? -1 : 1;
+    if (a.line.isMeal != b.line.isMeal) return a.line.isMeal ? -1 : 1;
     return a.priceKrw!.compareTo(b.priceKrw!);
   });
   return out;
@@ -177,8 +182,9 @@ List<RestaurantMenuItem> menusMatchingConditions(
 Judgement judgeRestaurant(
   RestaurantInsight i,
   Conditions c,
-  int arrivalMinutes,
-) {
+  int arrivalMinutes, {
+  bool cafe = false,
+}) {
   final missing = <MissingInfo>{};
   final missingAmenities = <Amenity>{};
   int? mealPrice;
@@ -187,11 +193,16 @@ Judgement judgeRestaurant(
   if (amount != null) {
     final max = c.budget.type == BudgetType.max;
     bool fits(int price) => max ? price <= amount : price >= amount;
-    // A "이상" (at least) budget also accepts a shared dish: a 20,000원 chicken is "12,000원 이상". A "이하" (at most)
-    // budget never does: what one person pays for a shared dish is not known.
+    // The evidence is every dish the place offers (see [lineCountsForBudget]): a 안주 or a platter counts as well as a
+    // meal, and a cafe's drinks and desserts count at a cafe.
     final meals = [
       for (final m in i.menus)
-        if (lineCountsForBudget(m, max: max, arrivalMinutes: arrivalMinutes))
+        if (lineCountsForBudget(
+          m,
+          max: max,
+          arrivalMinutes: arrivalMinutes,
+          cafe: cafe,
+        ))
           m.priceKrw!,
     ];
     final fitting = meals.where(fits).toList()..sort();
@@ -295,6 +306,7 @@ List<RankedRestaurant> rankRestaurants({
       i,
       conditions,
       nowMinutes + walkMinutesFor(meters),
+      cafe: r.categoryGroupCode == 'CE7',
     );
     if (j.verdict == Verdict.excluded) continue;
     kept.add((r: r, meters: meters, i: i, j: j));

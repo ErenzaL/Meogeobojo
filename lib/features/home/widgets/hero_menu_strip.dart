@@ -32,6 +32,7 @@ class HeroMenuStrip extends ConsumerWidget {
       menus.value ?? const <RestaurantMenuItem>[],
       conditions,
       now + hero.walkMinutes,
+      cafe: hero.restaurant.categoryGroupCode == 'CE7',
     );
     if (items.isEmpty) return const SizedBox.shrink();
     final l10n = context.l10n;

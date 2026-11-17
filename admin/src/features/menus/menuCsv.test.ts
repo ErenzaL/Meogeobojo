@@ -43,6 +43,13 @@ describe('parsing: encoding and quoting', () => {
     expect(parseMenuCsv(csv(`1001,,${nfd},,,,`)).rows[0].menuName).toBe('제육 정식')
   })
 
+  it('skips a blank-template line (only the place id and name) but still flags a line that has anything else without a name', () => {
+    const p = parseMenuCsv(csv('1002,라멘집,,,,,', '1003,메뉴없는집,돈코츠,9000,,,', '1004,빈집,,8000,,,', ',직접등록집,,,,,'))
+    expect(p.blankRows).toBe(2)
+    expect(p.rows.map((r) => [r.line, r.menuName])).toEqual([[3, '돈코츠'], [4, '']])
+    expect(p.rows[1].errors.join()).toContain('menu_name')
+  })
+
   it('accepts CRLF line endings and ignores blank lines but keeps the file\'s own line numbers', () => {
     const p = parseMenuCsv(`${HEAD}\r\n1001,,국수,5000,,,\r\n\r\n1001,,우동,6000,,,\r\n`)
     expect(p.rows.map((r) => [r.line, r.menuName])).toEqual([[2, '국수'], [4, '우동']])

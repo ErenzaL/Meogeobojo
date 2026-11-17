@@ -60,6 +60,8 @@ export type ParsedMenuCsv = {
   /** Columns that are not part of the template: ignored. */
   ignoredColumns: string[]
   rows: CsvRow[]
+  /** Lines where only the restaurant was filled in (a blank-template line nobody completed): skipped, not errors. */
+  blankRows?: number
 }
 
 const TRUE = new Set(['true', '1', 'yes', 'y', 't', 'o', '예', '네', '판매', '판매중', '판매 중', '있음'])
@@ -94,12 +96,17 @@ export function parseMenuCsv(text: string): ParsedMenuCsv {
   // blank lines are dropped AFTER numbering, so a row keeps the line number the person sees in the file
   const firstIdx = res.data.findIndex((r) => r.some((c) => c.trim() !== ''))
   const headerRow = firstIdx < 0 ? [] : res.data[firstIdx]
-  const body = firstIdx < 0 ? [] : res.data.slice(firstIdx + 1).map((cells, k) => ({ cells, idx: firstIdx + 1 + k })).filter((r) => r.cells.some((c) => c.trim() !== ''))
+  const lines = firstIdx < 0 ? [] : res.data.slice(firstIdx + 1).map((cells, k) => ({ cells, idx: firstIdx + 1 + k })).filter((r) => r.cells.some((c) => c.trim() !== ''))
   const header = (headerRow ?? []).map((h) => h.replace(/^\uFEFF/, '').trim().toLowerCase())
   const missing = TEMPLATE_COLUMNS.filter((c) => !header.includes(c))
   if (missing.length > 0) {
     return { fatal: `머리글(첫 줄)에 다음 열이 없어요: ${missing.join(', ')}. 양식의 열 이름을 그대로 써 주세요. (쉼표(,)로 구분된 UTF-8 CSV여야 해요)`, ignoredColumns: [], rows: [] }
   }
+  // The blank template of "메뉴가 없는 식당만" has one line per restaurant with only its id and name: a line left like that
+  // was not filled in, so it is skipped instead of being reported as a missing menu name.
+  const placeCells = [header.indexOf('kakao_place_id'), header.indexOf('restaurant_name')]
+  const body = lines.filter((r) => !r.cells.every((c, i) => placeCells.includes(i) || c.trim() === ''))
+  const blankRows = lines.length - body.length
   const dup = header.filter((h, i) => h !== '' && header.indexOf(h) !== i)
   if (dup.length > 0) return { fatal: `같은 열 이름이 여러 번 나와요: ${[...new Set(dup)].join(', ')}`, ignoredColumns: [], rows: [] }
   if (body.length > MAX_ROWS) return { fatal: `한 번에 ${MAX_ROWS.toLocaleString('ko-KR')}행까지 가져올 수 있어요 (지금 ${body.length.toLocaleString('ko-KR')}행). 파일을 나눠 주세요.`, ignoredColumns: [], rows: [] }
@@ -146,7 +153,7 @@ export function parseMenuCsv(text: string): ParsedMenuCsv {
       available: avail.value, priceRaw: get('price_krw'), availableRaw: get('is_available'), menuId: menuId.toLowerCase(), errors,
     }
   })
-  return { fatal: null, ignoredColumns, rows }
+  return { fatal: null, ignoredColumns, rows, blankRows }
 }
 
 /** CSV text for download: the columns in order, text guarded against spreadsheet formulas, prices as plain integers, blank price = empty cell. */

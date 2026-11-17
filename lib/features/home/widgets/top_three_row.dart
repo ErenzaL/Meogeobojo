@@ -99,6 +99,17 @@ class _TopTile extends StatelessWidget {
                     height: 1.3,
                   ),
                 ),
+                // The category tells a place literally named "학식" (a Japanese
+                // restaurant) apart from the campus cafeteria card next to it.
+                if (item.restaurant.categoryTag.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    item.restaurant.categoryTag,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12.5, color: p.textSecondary),
+                  ),
+                ],
               ],
             ),
           ),

@@ -634,6 +634,13 @@ void main() {
           findsOneWidget,
         );
       }
+      // each tile says what kind of place it is (a place named "학식" is not the campus cafeteria)
+      for (final tag in ['한식', '일식', '중식']) {
+        expect(
+          find.descendant(of: top3, matching: find.text(tag)),
+          findsOneWidget,
+        );
+      }
       await tester.tap(find.descendant(of: top3, matching: find.text('중간집')));
       await tester.pumpAndSettle();
       expect(inHero(find.text('중간집')), findsOneWidget);

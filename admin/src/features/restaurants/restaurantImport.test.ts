@@ -216,7 +216,13 @@ describe('opening hours (what the app checks "지금 주문 가능" with)', () =
   it('a time the app could not read is an error with the reason, not a silent blank', () => {
     const rows = parseRestaurantCsv([HOURS, '1,A,9시,21:00,', '2,B,10:00,21:00,점심 이후'].join('\n'))
     expect(rows[0].errors.join()).toMatch(/open_time: HH:MM/)
-    expect(rows[1].errors.join()).toMatch(/break_time: 15:00-17:00 형식/)
+    expect(rows[1].errors.join()).toMatch(/break_time: 15:00-17:00처럼/)
+  })
+  it('a break the app would ignore (minute out of range, end not after start, hour past 23) is rejected; a readable one passes', () => {
+    const bad = ['15:00-17:60', '17:00-15:00', '15:00-15:00', '24:00-25:00']
+    const ok = ['15:00-17:00', '9:30~11:00', '14:00 – 16:30']
+    const rows = parseRestaurantCsv([HOURS, ...[...bad, ...ok].map((b, i) => `${i + 1},A${i},,,"${b}"`)].join('\n'))
+    expect(rows.map((r) => r.errors.length > 0)).toEqual([...bad.map(() => true), ...ok.map(() => false)])
   })
   it('a new restaurant from the file keeps its hours too', async () => {
     const w = world([])

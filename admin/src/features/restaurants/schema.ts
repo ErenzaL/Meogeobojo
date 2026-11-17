@@ -10,6 +10,16 @@ export const BUSINESS_LABEL: Record<(typeof BUSINESS_STATUSES)[number], string> 
   open: '영업 중', temporarily_closed: '임시 휴업', closed: '폐업',
 }
 
+/** A break as minutes of the day [start, end), or null when the app could not read it (same rules as its breakWindow()). */
+export function breakMinutes(v: string): [number, number] | null {
+  const m = /^\s*(\d{1,2}):(\d{2})\s*[-~–]\s*(\d{1,2}):(\d{2})\s*$/.exec(v)
+  if (!m) return null
+  const [h1, m1, h2, m2] = m.slice(1).map(Number)
+  if (h1 > 23 || h2 > 23 || m1 > 59 || m2 > 59) return null
+  const a = h1 * 60 + m1, b = h2 * 60 + m2
+  return b > a ? [a, b] : null
+}
+
 const digits = z.string().trim().regex(/^\d*$/, '숫자만 입력해 주세요')
 const coord = (min: number, max: number, label: string) =>
   z.string().trim().refine((v) => v === '' || (!Number.isNaN(Number(v)) && Number(v) >= min && Number(v) <= max), `${label} 범위가 올바르지 않아요`)
@@ -25,8 +35,9 @@ export const restaurantSchema = z
     latitude: coord(-90, 90, '위도'),
     longitude: coord(-180, 180, '경도'),
     description: z.string().trim().max(2000, '2000자 이하로 입력해 주세요'),
-    // The app reads only "HH:MM-HH:MM" (also ~ or –); anything else would be silently ignored there.
-    break_time: z.string().trim().refine((v) => v === '' || /^\d{1,2}:\d{2}\s*[-~–]\s*\d{1,2}:\d{2}$/.test(v), '15:00-17:00 형식으로 입력해 주세요'),
+    // Only what the app's breakWindow() reads: "HH:MM-HH:MM" (also ~ or –), real clock times, the end after the start.
+    // Anything else would show here but be silently ignored by the app.
+    break_time: z.string().trim().refine((v) => v === '' || breakMinutes(v) != null, '15:00-17:00처럼 시작보다 늦은 끝 시각으로 입력해 주세요'),
     // Kept in opening_hours.open: the app needs it with the last order to say a place is still taking orders.
     open_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),
     last_order_time: z.string().trim().refine((v) => v === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'HH:MM 형식으로 입력해 주세요'),

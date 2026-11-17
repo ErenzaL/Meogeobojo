@@ -38,34 +38,41 @@ void main() {
       );
       expect(judge(cheap, BudgetOption.min12000).verdict, Verdict.excluded);
     });
-    test(
-      '"8,000원 이하": a shared dish proves nothing about what one person pays',
-      () {
-        const shared = RestaurantInsight(
-          menus: [MenuLine(priceKrw: 5000, category: '안주')],
-        );
-        expect(judge(shared, BudgetOption.max8000).verdict, Verdict.unverified);
-        expect(
-          judge(chicken, BudgetOption.max8000).verdict,
-          Verdict.unverified,
-        );
-      },
-    );
-    test(
-      'drinks, desserts and sides never count for either kind of budget',
-      () {
-        const drinks = RestaurantInsight(
-          menus: [
-            MenuLine(priceKrw: 15000, category: '음료'),
-            MenuLine(priceKrw: 20000, category: '디저트'),
-          ],
-        );
-        expect(
-          judge(drinks, BudgetOption.min12000).verdict,
-          isNot(Verdict.match),
-        );
-      },
-    );
+    test('"8,000원 이하": a shared dish or a platter counts like any other dish the place offers', () {
+      const shared = RestaurantInsight(
+        menus: [MenuLine(priceKrw: 5000, category: '안주')],
+      );
+      expect(judge(shared, BudgetOption.max8000).verdict, Verdict.match);
+      // a 20,000원 chicken is still over 8,000원
+      expect(judge(chicken, BudgetOption.max8000).verdict, Verdict.excluded);
+    });
+    test('at a restaurant drinks and add-on sides never count; at a cafe the drinks and desserts do', () {
+      const drinks = RestaurantInsight(
+        menus: [
+          MenuLine(priceKrw: 15000, category: '음료'),
+          MenuLine(priceKrw: 3000, category: '사이드'),
+        ],
+      );
+      expect(
+        judge(drinks, BudgetOption.min12000).verdict,
+        isNot(Verdict.match),
+      );
+      expect(judge(drinks, BudgetOption.max8000).verdict, isNot(Verdict.match));
+      const cafe = RestaurantInsight(
+        menus: [MenuLine(priceKrw: 4500, category: '음료')],
+      );
+      expect(
+        judgeRestaurant(
+          cafe,
+          const Conditions(budget: BudgetOption.max8000),
+          12 * 60,
+          cafe: true,
+        ).verdict,
+        Verdict.match,
+      );
+      // the same lines are no evidence at a restaurant
+      expect(judge(cafe, BudgetOption.max8000).verdict, isNot(Verdict.match));
+    });
   });
 
   group('conditions nobody can check are not applied', () {

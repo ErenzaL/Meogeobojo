@@ -20,14 +20,17 @@ void main() {
     ...over,
   };
 
-  test('an imported menu with a price reads as that price, not verified, active', () {
-    final m = RestaurantMenuItem.fromJson(row({}))!;
-    expect(m.name, '우동');
-    expect(m.priceKrw, 6000);
-    expect(m.category, '면류');
-    expect(m.available, isTrue);
-    expect(m.imageUrl, isNull);
-  });
+  test(
+    'an imported menu with a price reads as that price, not verified, active',
+    () {
+      final m = RestaurantMenuItem.fromJson(row({}))!;
+      expect(m.name, '우동');
+      expect(m.priceKrw, 6000);
+      expect(m.category, '면류');
+      expect(m.available, isTrue);
+      expect(m.imageUrl, isNull);
+    },
+  );
 
   test('an unknown price stays null in the app (never 0 won)', () {
     final m = RestaurantMenuItem.fromJson(row({'price_krw': null}))!;
@@ -35,9 +38,12 @@ void main() {
     expect(m.name, '우동');
   });
 
-  test('an explicit price of 0 is kept as 0 (a free item), distinct from unknown', () {
-    expect(RestaurantMenuItem.fromJson(row({'price_krw': 0}))!.priceKrw, 0);
-  });
+  test(
+    'an explicit price of 0 is kept as 0 (a free item), distinct from unknown',
+    () {
+      expect(RestaurantMenuItem.fromJson(row({'price_krw': 0}))!.priceKrw, 0);
+    },
+  );
 
   test('a description with commas and Korean text survives, a sold-out flag is read', () {
     final m = RestaurantMenuItem.fromJson(
@@ -47,7 +53,10 @@ void main() {
     expect(m.available, isFalse);
   });
 
-  test('an archived line (a menu taken off the list) never reaches the screen', () {
-    expect(RestaurantMenuItem.fromJson(row({'status': 'archived'})), isNull);
-  });
+  test(
+    'an archived line (a menu taken off the list) never reaches the screen',
+    () {
+      expect(RestaurantMenuItem.fromJson(row({'status': 'archived'})), isNull);
+    },
+  );
 }

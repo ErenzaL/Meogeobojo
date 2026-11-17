@@ -24,16 +24,21 @@ class MenuLine {
   final int? servedFrom;
   final int? servedUntil;
 
-  /// A dish one person eats as a meal. Sides, drinks, desserts and bar
-  /// snacks never make a place "within budget".
+  /// A dish one person eats as a meal (식사, 면류, 분식).
   bool get isMeal => const {'식사', '면류', '분식'}.contains(category);
 
   /// A dish meant to be shared (안주, or a bucket like 기타 that holds sets and platters): a whole chicken, a platter of
   /// 족발. It is no evidence that one person eats within a MAX budget, but it is a fair answer to "12,000원 이상".
   bool get isShareable => const {'안주', '기타'}.contains(category);
 
-  /// Whether we know what kind of dish this is at all.
-  bool get kindKnown => category != null && category != '기타';
+  /// A dish the recommendation may offer at this place: everything but drinks and add-on sides at a restaurant (meals,
+  /// 안주, 기타 platters and sets, desserts), and at a [cafe] everything but add-ons too (the drinks are what a cafe
+  /// sells). A line with no category is not known to be any of these.
+  bool isOffered({bool cafe = false}) =>
+      category != null && category != '사이드' && (cafe || category != '음료');
+
+  /// Whether we know what kind of dish this is at all (a line with a category is known, 기타 included).
+  bool get kindKnown => (category?.trim().isNotEmpty ?? false);
 
   /// Served at minute-of-day [m] (a window may run past midnight).
   bool servedAt(int m) {

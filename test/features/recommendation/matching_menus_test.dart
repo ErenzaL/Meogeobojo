@@ -64,11 +64,30 @@ void main() {
       );
     });
 
-    test('no budget: the place\'s meals (a dish priced and in stock), cheapest first', () {
+    test('no budget: every dish the place offers (meals first, then other dishes, cheapest first)', () {
       expect(names(menusMatchingConditions(menus, const Conditions(), noon)), [
         '제육 정식',
         '돈가스',
+        '후라이드',
       ]);
+    });
+
+    test('drinks and add-on sides are not offered at a restaurant, but a cafe offers its drinks', () {
+      final m = [
+        const RestaurantMenuItem(name: '밥', priceKrw: 1000, category: '사이드'),
+        const RestaurantMenuItem(name: '콜라', priceKrw: 2000, category: '음료'),
+        const RestaurantMenuItem(name: '라떼', priceKrw: 4500, category: '음료'),
+        const RestaurantMenuItem(name: '케이크', priceKrw: 6000, category: '디저트'),
+        const RestaurantMenuItem(name: '소금빵', priceKrw: 3500, category: '디저트'),
+      ];
+      expect(names(menusMatchingConditions(m, const Conditions(), noon)), [
+        '소금빵',
+        '케이크',
+      ]);
+      expect(
+        names(menusMatchingConditions(m, const Conditions(), noon, cafe: true)),
+        ['콜라', '소금빵', '라떼', '케이크'],
+      );
     });
 
     test('a representative dish comes first', () {

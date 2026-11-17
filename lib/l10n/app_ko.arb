@@ -1744,5 +1744,14 @@
         "type": "int"
       }
     }
+  },
+  "aiReviewTitle": "AI 리뷰 요약",
+  "aiReviewSource": "리뷰 {count}건을 AI가 요약했어요",
+  "@aiReviewSource": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

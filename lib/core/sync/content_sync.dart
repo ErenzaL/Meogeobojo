@@ -327,9 +327,10 @@ void refreshAllContent(ProviderContainer ref) {
   ]) {
     invalidateForTable(ref, t);
   }
-  ref.invalidate(
-    reviewSignalsProvider,
-  ); // student reviews change the V3 ranking
+  // Student reviews and the stored review insights (R + AI summary) change the V3 ranking and the summary box; a
+  // failed first read (offline, table not migrated yet) or a summary an admin hid is picked up here.
+  ref.invalidate(reviewInsightsProvider);
+  ref.invalidate(reviewSignalsProvider);
 }
 
 /// The cheap part, for the periodic safety net: plain table reads, no restaurant

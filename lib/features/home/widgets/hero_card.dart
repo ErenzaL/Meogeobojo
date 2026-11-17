@@ -6,6 +6,7 @@ import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/seoul_clock.dart';
 import '../../origin/providers/origin_providers.dart';
+import '../../recommendation/ai_review_summary.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
@@ -153,6 +154,7 @@ class HeroCard extends ConsumerWidget {
               ),
             ],
           ),
+          AiReviewSummary(kakaoId: r.kakaoId, topGap: 14),
           const SizedBox(height: 16),
           const DashedDivider(),
           const SizedBox(height: 16),

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, Button, Card } from '@/components/ui'
 import { supabase } from '@/lib/supabase'
 import { errorMessage } from '@/lib/utils'
@@ -19,7 +19,10 @@ export default function DemoFeaturesImport({ registerPicker }: { registerPicker?
   const [text, setText] = useState('')
   const [known, setKnown] = useState<Set<string>>(new Set())
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
-  registerPicker?.(() => fileRef.current?.click())
+  // handed to the page header's button; the ref is only read when that button is clicked, never during render
+  useEffect(() => {
+    registerPicker?.(() => fileRef.current?.click())
+  }, [registerPicker])
 
   const count = useQuery({
     queryKey: ['demo-features-count'],

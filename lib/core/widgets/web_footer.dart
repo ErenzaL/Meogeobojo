@@ -8,13 +8,23 @@ import '../../features/content/models/app_content.dart';
 import '../../features/content/providers/app_content_providers.dart';
 import '../../features/support/support.dart';
 import '../../features/university/providers/university_providers.dart';
+import '../embed/embed_mode.dart';
 import '../l10n/l10n.dart';
 import '../theme/app_palette.dart';
 import 'responsive.dart';
 
-/// The footer exists on the public website only. A provider (not a bare kIsWeb check) so tests can switch it on;
-/// the native Android / iOS apps never show it.
-final webFooterEnabledProvider = Provider<bool>((_) => kIsWeb);
+/// The footer exists on the public website only: not in the native Android / iOS apps, and not in the website's phone
+/// preview either, which shows the phone app as it is (the phone app has no such footer).
+bool webFooterEnabledFor({required bool web, required bool embedded}) =>
+    web && !embedded;
+
+/// A provider (not a bare kIsWeb check) so tests can switch it on.
+final webFooterEnabledProvider = Provider<bool>(
+  (ref) => webFooterEnabledFor(
+    web: kIsWeb,
+    embedded: ref.watch(embeddedPreviewProvider),
+  ),
+);
 
 /// Sits at the end of a page's scroll content (the shared page shell places it once, pages do not repeat it).
 class WebFooterSlot extends ConsumerWidget {

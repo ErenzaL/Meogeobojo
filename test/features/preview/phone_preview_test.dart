@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:meogeobojo/core/embed/embed_mode.dart';
 import 'package:meogeobojo/core/l10n/language_controller.dart';
+import 'package:meogeobojo/core/widgets/web_footer.dart';
 import 'package:meogeobojo/features/auth/models/auth_snapshot.dart';
 import 'package:meogeobojo/features/auth/providers/auth_providers.dart';
 import 'package:meogeobojo/features/auth/services/sign_in_popup.dart';
@@ -57,16 +58,16 @@ Finder get screen => find.byKey(const ValueKey('preview-screen'));
 
 void main() {
   group('pure helpers', () {
-    test('the phone is 390 x 844 and fits the window: never above 1, never below 0.45, larger view up to 1.25', () {
-      expect(previewScale(const Size(1920, 1200)), 1.0);
-      expect(previewScale(const Size(1920, 1200), large: true), 1.25);
+    test('the phone is 402 x 874 (iPhone 17 Pro) and fits the window: never above 1, never below 0.45, larger view up to 1.25', () {
+      expect(previewScale(const Size(1920, 1400)), 1.0);
+      expect(previewScale(const Size(1920, 1400), large: true), 1.25);
       expect(previewScale(const Size(1280, 700)), lessThan(1.0));
-      expect(previewScale(const Size(1280, 700)), closeTo((700 - 112) / (844 + 18), 1e-9));
+      expect(previewScale(const Size(1280, 700)), closeTo((700 - 112) / (874 + 24), 1e-9));
       expect(previewScale(const Size(300, 300)), 0.45);
       // the scaled frame always fits inside the window (when the floor does not apply)
       for (final h in [640.0, 720.0, 800.0, 900.0, 1080.0]) {
         final s = previewScale(Size(1440, h));
-        expect(844 * s + 18 * s, lessThanOrEqualTo(h - 112 + 1e-6), reason: '$h');
+        expect(874 * s + 24 * s, lessThanOrEqualTo(h - 112 + 1e-6), reason: '$h');
       }
     });
 
@@ -96,6 +97,14 @@ void main() {
       expect(isSignInPopupReturn(back, markerFresh: false), isFalse);
       expect(isSignInPopupReturn(Uri.parse('https://site.example/'), markerFresh: true), isFalse);
       expect(isSignInPopupReturn(Uri.parse('https://site.example/#/map'), markerFresh: true), isFalse);
+    });
+  });
+
+  group('the website footer', () {
+    test('shown on the website, not in the phone apps, and not in the phone preview (the phone app has no footer)', () {
+      expect(webFooterEnabledFor(web: true, embedded: false), isTrue);
+      expect(webFooterEnabledFor(web: false, embedded: false), isFalse);
+      expect(webFooterEnabledFor(web: true, embedded: true), isFalse);
     });
   });
 
@@ -134,17 +143,17 @@ void main() {
   });
 
   group('opening and closing', () {
-    testWidgets('opens a 390 x 844 phone showing the site in phone mode, and the desktop page stays', (tester) async {
-      final (_, spy) = await desktop(tester, size: const Size(1440, 1000));
+    testWidgets('opens a 402 x 874 phone showing the site in phone mode, and the desktop page stays', (tester) async {
+      final (_, spy) = await desktop(tester, size: const Size(1440, 1100));
       await openPreview(tester);
-      expect(tester.getSize(screen), const Size(390, 844)); // a big window: not scaled
+      expect(tester.getSize(screen), const Size(402, 874)); // a big window: not scaled
       expect(spy.last!.url, endsWith('/?embed=phone#/home'));
       expect(spy.last!.scale, 1.0);
       expect(find.byKey(const ValueKey('fake-iframe')), findsOneWidget);
       expect(find.byType(AppShell), findsOneWidget); // the page underneath is untouched
       // a bezel and rounded screen
       final frame = tester.getRect(find.byKey(const ValueKey('preview-frame')));
-      expect(frame.width, closeTo(390 + 18, 1));
+      expect(frame.width, closeTo(402 + 24, 1));
     });
 
     testWidgets('a small window scales the phone down to fit, a larger view scales up, and it fits both ways', (tester) async {
@@ -213,9 +222,18 @@ void main() {
     testWidgets('it reserves the status-bar and home-indicator areas like a phone and draws them, never catching the mouse', (tester) async {
       final h = await buildHarness(extraOverrides: [embeddedPreviewProvider.overrideWithValue(true), urlSyncEnabledProvider.overrideWithValue(false)]);
       await pumpApp(tester, h, home: Builder(builder: (c) => Text('${MediaQuery.paddingOf(c).top}/${MediaQuery.paddingOf(c).bottom}')));
-      expect(find.text('44.0/20.0'), findsOneWidget);
+      expect(find.text('62.0/34.0'), findsOneWidget);
       expect(find.byKey(const ValueKey('phone-island')), findsOneWidget);
       expect(find.byKey(const ValueKey('phone-home-bar')), findsOneWidget);
+      // the status bar of the simulator: the time (h:mm, 12-hour), with the island between it and the battery
+      expect(find.byKey(const ValueKey('phone-time')), findsOneWidget);
+      expect(RegExp(r'^\d{1,2}:\d{2}$').hasMatch(tester.widget<Text>(find.byKey(const ValueKey('phone-time'))).data!), isTrue);
+      expect(tester.widget<Text>(find.byKey(const ValueKey('phone-time'))).style!.decoration, TextDecoration.none);
+      expect(find.byIcon(Icons.wifi_rounded), findsOneWidget);
+      final island = tester.getRect(find.byKey(const ValueKey('phone-island')));
+      expect(island.size, const Size(125, 36));
+      expect(tester.getRect(find.byKey(const ValueKey('phone-time'))).right, lessThan(island.left));
+      expect(tester.getRect(find.byIcon(Icons.wifi_rounded)).left, greaterThan(island.right));
     });
 
     testWidgets('the real shell runs as the phone layout: bottom bar, no desktop header, safe areas kept clear', (tester) async {

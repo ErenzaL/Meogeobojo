@@ -2947,4 +2947,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatCardMatched => 'Suggested dishes';
+
+  @override
+  String get chatHint => 'Ask me what to eat today';
 }

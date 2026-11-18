@@ -922,5 +922,6 @@
   "chatCardNoMenu": "暂时没有登记菜单。",
   "chatCardPriceUnknown": "暂无价格",
   "chatCardSpiceUnrecorded": "没有辣度记录。名称带“辣”的菜品已排除。",
-  "chatCardMatched": "推荐菜品"
+  "chatCardMatched": "推荐菜品",
+  "chatHint": "问我今天吃什么"
 }

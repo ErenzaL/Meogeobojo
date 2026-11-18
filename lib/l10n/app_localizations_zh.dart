@@ -2810,4 +2810,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatCardMatched => '推荐菜品';
+
+  @override
+  String get chatHint => '问我今天吃什么';
 }

@@ -7,10 +7,14 @@ Code: `lib/features/recommendation/recommendation_score.dart` (formula), `home_r
 ranking for Home, the map, search and the recommendation screen), `review_signal_repository.dart` (R).
 
 ## Who qualifies (조건 판정, unchanged)
-Distance (straight line from the chosen start) and the budget decide this. With a budget, a place is a **match** when a
-one-person meal (식사 / 면류 / 분식) with a fixed price within the budget is on its menu; sides, drinks, desserts, shared
-sets and unpriced items never count. Missing prices or unclassified items make it **정보 미확인** (listed after the
-matches); a place whose meals are all over the budget is **dropped**.
+Distance (straight line from the chosen start) and the budget decide this. Menus are filed under four categories:
+**식사** (a one-person meal: noodles, rice, soup, burger, toast ...), **사이드** (add-ons and small sides), **음료** (every drink)
+and **기타** (shared dishes and 안주, pizza, whole chicken, sets for several people, desserts, bakery). With a budget, a
+place is a **match** when a priced, in-stock, currently served line that the place *offers* is within the budget
+(`MenuLine.isOffered`): at a restaurant every line except 음료 and 사이드, at a cafe (Kakao group CE7) the drinks too.
+Older categories (면류, 분식, 안주, 디저트) are still understood (면류 / 분식 count as meals). Missing prices or lines with
+no category make it **정보 미확인** (listed after the matches); a place whose offered lines are all over the budget is
+**dropped**. The matching-menus row under the top pick on Home lists the same lines, meals first.
 
 ## How they are ordered (V3)
 ```

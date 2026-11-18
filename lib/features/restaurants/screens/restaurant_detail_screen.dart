@@ -22,7 +22,6 @@ import '../../home/widgets/restaurant_art.dart';
 import '../../navigation/providers/shell_tab_provider.dart';
 import '../../origin/providers/origin_providers.dart';
 import '../../origin/widgets/origin_sheet.dart';
-import '../../recommendation/ai_review_summary.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../recommendation/restaurant_insight.dart';
@@ -209,10 +208,6 @@ class _RestaurantDetailScreenState
           : () => _open(Uri.parse(r.placeUrl!)),
     );
     final details = <Widget>[
-      AiReviewSummary(
-        kakaoId: r.kakaoId,
-        topGap: 16,
-      ), // nothing without a summary
       // Only say "not provided" when an admin has added nothing.
       if (description == null && menus.isEmpty) ...[
         const SizedBox(height: 10),

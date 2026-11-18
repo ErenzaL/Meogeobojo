@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/embed/embed_mode.dart';
 import '../../../core/l10n/app_language.dart';
 import '../../../core/l10n/language_controller.dart';
 import '../../../core/l10n/l10n.dart';
@@ -9,6 +10,7 @@ import '../../../core/theme/theme_controller.dart';
 import '../../content/widgets/notification_bell.dart';
 import '../../search/screens/search_screen.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../preview/preview_sync.dart';
 import '../providers/shell_tab_provider.dart';
 
 /// Desktop header (V5 `.whead`): brand, tabs with an underline on the active
@@ -138,7 +140,16 @@ class WebHeader extends ConsumerWidget {
           const SizedBox(width: 8),
           const SizedBox(width: 12),
           const _LanguageSwitch(),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          // not inside the preview itself (it would open a preview of a preview)
+          if (!ref.watch(embeddedPreviewProvider))
+            IconButton(
+              key: const ValueKey('phone-preview-button'),
+              tooltip: l10n.previewTooltip,
+              onPressed: () => showPhonePreview(context, ref),
+              icon: const Icon(Icons.smartphone_rounded),
+            ),
+          const SizedBox(width: 4),
           const NotificationBell(),
           IconButton(
             tooltip: dark ? l10n.themeLight : l10n.themeDark,

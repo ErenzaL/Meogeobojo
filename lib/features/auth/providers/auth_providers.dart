@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../../core/embed/embed_mode.dart';
 import '../../../core/l10n/app_language.dart';
 import '../../../core/l10n/language_controller.dart';
 import '../models/auth_failure.dart';
@@ -316,6 +317,10 @@ class AuthController extends Notifier<AuthSnapshot> {
       if (!opened) {
         _guestWithFailure(AuthFailure.unknown);
         return AuthFailure.unknown;
+      }
+      // The phone preview sends the login to a new tab, so this page never leaves: no spinner to wait on.
+      if (ref.read(embeddedPreviewProvider)) {
+        state = state.copyWith(status: AuthStatus.guest);
       }
       return null;
     } catch (e) {

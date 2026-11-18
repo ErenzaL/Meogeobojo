@@ -1,7 +1,12 @@
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
+
+import '../../../core/embed/embed_mode.dart';
+import '../../../core/embed/preview_bridge.dart';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart' show launchUrl;
 
 /// The one redirect target registered in Supabase Auth → URL Configuration
 /// and in the iOS / Android manifests. Trailing slash is significant: Supabase
@@ -102,6 +107,22 @@ class SupabaseAuthGateway implements AuthGateway {
       );
       await _auth.getSessionFromUrl(Uri.parse(callback));
       return true;
+    }
+    if (kIsWeb && isEmbeddedPhone) {
+      // Inside the website's phone preview: Kakao cannot be shown in a frame, so the login runs in a small popup window,
+      // exactly the website's own login (same redirect, same PKCE exchange). The popup closes itself when it is signed
+      // in (see closeSignInPopupWhenDone) and the preview picks the session up from the shared browser storage.
+      final res = await _auth.getOAuthSignInUrl(
+        provider: OAuthProvider.kakao,
+        redirectTo: _redirect(),
+      );
+      markLoginPopup();
+      if (openLoginPopup(res.url)) return true;
+      // popups blocked: a normal new tab does the same job
+      return launchUrl(
+        Uri.parse(res.url),
+        mode: LaunchMode.externalApplication,
+      );
     }
     // Android: in-app Custom Tab. The callback comes back through the
     // MainActivity intent filter and supabase_flutter's own observer (the same

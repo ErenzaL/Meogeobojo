@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/embed/embed_mode.dart';
 import 'core/l10n/language_controller.dart';
 import 'core/l10n/l10n.dart';
 import 'core/theme/app_theme.dart';
@@ -12,6 +13,7 @@ import 'core/widgets/responsive.dart';
 import 'features/auth/widgets/auth_flow_host.dart';
 import 'features/navigation/screens/app_shell.dart';
 import 'features/navigation/utils/url_sync.dart';
+import 'features/preview/embedded_phone_chrome.dart';
 import 'main.dart' show SplashScreen;
 
 class MeogeobojoApp extends ConsumerWidget {
@@ -54,9 +56,12 @@ class MeogeobojoApp extends ConsumerWidget {
         value: Theme.of(context).brightness == Brightness.dark
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
-        child: AppFrame(
-          fullWidth: fullWidth,
-          child: child ?? const SizedBox.shrink(),
+        child: EmbeddedPhoneChrome(
+          enabled: ref.watch(embeddedPreviewProvider),
+          child: AppFrame(
+            fullWidth: fullWidth,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
       locale: language.locale,

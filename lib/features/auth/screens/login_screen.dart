@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/config/app_assets.dart';
+import '../../../core/embed/embed_mode.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
@@ -92,7 +93,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         .read(authControllerProvider.notifier)
         .startKakaoSignIn();
     if (!mounted) return;
-    if (f != null) setState(() => _failure = f);
+    if (f != null) {
+      setState(() => _failure = f);
+    } else if (ref.read(embeddedPreviewProvider)) {
+      // the phone preview: the Kakao login is in another tab
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(context.l10n.previewLoginNewTab)),
+        );
+    }
   }
 
   @override

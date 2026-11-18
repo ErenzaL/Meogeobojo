@@ -2813,4 +2813,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatHint => '问我今天吃什么';
+
+  @override
+  String get previewTooltip => '移动应用预览';
+
+  @override
+  String get previewClose => '关闭预览';
+
+  @override
+  String get previewLarger => '放大查看';
+
+  @override
+  String get previewFit => '适应窗口';
+
+  @override
+  String get previewLoading => '正在加载应用';
+
+  @override
+  String get previewLoginNewTab => '登录窗口已打开。完成后，此预览会自动登录。';
 }

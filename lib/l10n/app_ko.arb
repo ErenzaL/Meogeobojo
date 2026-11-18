@@ -1869,5 +1869,11 @@
   "chatCardPriceUnknown": "가격 정보 없음",
   "chatCardSpiceUnrecorded": "맵기 정보는 기록되어 있지 않아요. 매운 이름의 메뉴는 뺐어요.",
   "chatCardMatched": "추천 메뉴",
-  "chatHint": "오늘 뭐 먹을지 물어보세요"
+  "chatHint": "오늘 뭐 먹을지 물어보세요",
+  "previewTooltip": "모바일 앱 미리보기",
+  "previewClose": "미리보기 닫기",
+  "previewLarger": "크게 보기",
+  "previewFit": "창에 맞추기",
+  "previewLoading": "앱을 불러오는 중이에요",
+  "previewLoginNewTab": "로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요."
 }

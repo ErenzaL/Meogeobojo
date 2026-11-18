@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/embed/embed_mode.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../restaurants/screens/restaurant_link_screen.dart';
 import '../../restaurants/utils/restaurant_link.dart';
@@ -15,8 +16,8 @@ const _tabPaths = ['/home', '/map', '/community', '/missions', '/profile'];
 
 String shellPathFor(int tab) => _tabPaths[tab.clamp(0, _tabPaths.length - 1)];
 
-/// Whether URL sync is active (the website). Overridable so tests can exercise it.
-final urlSyncEnabledProvider = Provider<bool>((_) => kIsWeb);
+/// Whether URL sync is active (the website; not inside the phone preview, which must not touch the parent's history). Overridable so tests can exercise it.
+final urlSyncEnabledProvider = Provider<bool>((_) => kIsWeb && !isEmbeddedPhone);
 
 /// Reports the address bar. `replace: true` rewrites the current history entry, false adds one.
 typedef UrlReporter = Future<void> Function(Uri uri, {required bool replace});

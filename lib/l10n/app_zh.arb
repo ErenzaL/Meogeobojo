@@ -923,5 +923,11 @@
   "chatCardPriceUnknown": "暂无价格",
   "chatCardSpiceUnrecorded": "没有辣度记录。名称带“辣”的菜品已排除。",
   "chatCardMatched": "推荐菜品",
-  "chatHint": "问我今天吃什么"
+  "chatHint": "问我今天吃什么",
+  "previewTooltip": "移动应用预览",
+  "previewClose": "关闭预览",
+  "previewLarger": "放大查看",
+  "previewFit": "适应窗口",
+  "previewLoading": "正在加载应用",
+  "previewLoginNewTab": "登录窗口已打开。完成后，此预览会自动登录。"
 }

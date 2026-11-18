@@ -6,7 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/embed/embed_mode.dart';
 import 'features/analytics/app_events.dart';
+import 'features/auth/services/sign_in_popup.dart';
 import 'features/university/providers/university_providers.dart';
 
 Future<void> main() async {
@@ -25,8 +27,11 @@ Future<void> main() async {
       authFlowType: AuthFlowType.pkce,
     ),
   );
+  // the sign-in popup of the website's phone preview closes itself once it is signed in
+  closeSignInPopupWhenDone(Supabase.instance.client);
   final prefs = await SharedPreferences.getInstance();
-  sendAppEvent(() => prefs, AppEvent.appOpen);
+  // the phone preview inside the website is not a separate app open
+  if (!isEmbeddedPhone) sendAppEvent(() => prefs, AppEvent.appOpen);
 
   runApp(
     ProviderScope(

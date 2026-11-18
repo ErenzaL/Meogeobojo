@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../embed/embed_mode.dart';
 import '../theme/app_palette.dart';
 
 /// Width classes. Phones (below [tablet]) are untouched; wider screens get
@@ -21,7 +22,7 @@ abstract final class Breakpoints {
 
 /// True on the website: the app uses the WHOLE browser width (header, page background, content and footer), with a
 /// gutter that grows with the window. Native apps keep the bounded column. Overridable so tests can exercise both.
-final webFullWidthProvider = Provider<bool>((_) => kIsWeb);
+final webFullWidthProvider = Provider<bool>((_) => kIsWeb && !isEmbeddedPhone);
 
 /// What the full-width website layout tells the pages: whether it is on, and the horizontal gutter for the window.
 /// Without an [AppFrame] above (a test mounting one screen) the layout is the classic bounded one.

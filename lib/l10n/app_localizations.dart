@@ -5079,6 +5079,42 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'오늘 뭐 먹을지 물어보세요'**
   String get chatHint;
+
+  /// No description provided for @previewTooltip.
+  ///
+  /// In ko, this message translates to:
+  /// **'모바일 앱 미리보기'**
+  String get previewTooltip;
+
+  /// No description provided for @previewClose.
+  ///
+  /// In ko, this message translates to:
+  /// **'미리보기 닫기'**
+  String get previewClose;
+
+  /// No description provided for @previewLarger.
+  ///
+  /// In ko, this message translates to:
+  /// **'크게 보기'**
+  String get previewLarger;
+
+  /// No description provided for @previewFit.
+  ///
+  /// In ko, this message translates to:
+  /// **'창에 맞추기'**
+  String get previewFit;
+
+  /// No description provided for @previewLoading.
+  ///
+  /// In ko, this message translates to:
+  /// **'앱을 불러오는 중이에요'**
+  String get previewLoading;
+
+  /// No description provided for @previewLoginNewTab.
+  ///
+  /// In ko, this message translates to:
+  /// **'로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.'**
+  String get previewLoginNewTab;
 }
 
 class _AppLocalizationsDelegate

@@ -2950,4 +2950,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatHint => 'Ask me what to eat today';
+
+  @override
+  String get previewTooltip => 'Mobile App Preview';
+
+  @override
+  String get previewClose => 'Close preview';
+
+  @override
+  String get previewLarger => 'Larger view';
+
+  @override
+  String get previewFit => 'Fit to window';
+
+  @override
+  String get previewLoading => 'Loading the app';
+
+  @override
+  String get previewLoginNewTab =>
+      'A sign-in window opened. When you finish, this preview signs in automatically.';
 }

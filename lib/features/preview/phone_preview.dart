@@ -8,13 +8,13 @@ import '../../core/embed/preview_bridge.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_palette.dart';
 
-/// The phone's size in logical pixels (an iPhone 14 / 15 class screen).
-const kPhoneWidth = 390.0;
-const kPhoneHeight = 844.0;
+/// The phone's size in logical pixels: an iPhone 17 Pro, the simulator the app is developed on.
+const kPhoneWidth = 402.0;
+const kPhoneHeight = 874.0;
 
 /// Corner radius of the screen, and the bezel around it, in the preview's own (unscaled) pixels.
-const kPhoneScreenRadius = 36.0;
-const kPhoneBezel = 9.0;
+const kPhoneScreenRadius = 55.0;
+const kPhoneBezel = 12.0;
 
 /// How much to shrink (or, in the larger view, enlarge) the phone so it fits the window. Never below 0.45, never above 1
 /// (1.25 in the larger view), always leaving room for the frame and the buttons.
@@ -133,72 +133,77 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
                   ),
                 ),
                 Center(
-                  child: DecoratedBox(
-                    key: const ValueKey('preview-frame'),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
-                      borderRadius: BorderRadius.circular(
-                        (kPhoneScreenRadius + kPhoneBezel) * s,
-                      ),
-                      border: Border.all(
-                        color: Colors.grey.shade700,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.4),
-                          blurRadius: 40,
-                          offset: const Offset(0, 16),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(kPhoneBezel * s),
-                      child: ClipRRect(
+                  child: _SideButtons(
+                    scale: s,
+                    child: DecoratedBox(
+                      key: const ValueKey('preview-frame'),
+                      decoration: BoxDecoration(
+                        color: Colors.black,
                         borderRadius: BorderRadius.circular(
-                          kPhoneScreenRadius * s,
+                          (kPhoneScreenRadius + kPhoneBezel) * s,
                         ),
-                        child: SizedBox(
-                          key: const ValueKey('preview-screen'),
-                          width: w,
-                          height: h,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ColoredBox(color: p.background),
-                              if (!_loaded)
-                                Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const SizedBox(
-                                        width: 26,
-                                        height: 26,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 3,
+                        border: Border.all(
+                          color: Colors.grey.shade800,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 40,
+                            offset: const Offset(0, 16),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(kPhoneBezel * s),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                            kPhoneScreenRadius * s,
+                          ),
+                          child: SizedBox(
+                            key: const ValueKey('preview-screen'),
+                            width: w,
+                            height: h,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ColoredBox(color: p.background),
+                                if (!_loaded)
+                                  Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const SizedBox(
+                                          width: 26,
+                                          height: 26,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 3,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        l10n.previewLoading,
-                                        style: TextStyle(
-                                          color: p.textSecondary,
-                                          fontSize: 13,
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          l10n.previewLoading,
+                                          style: TextStyle(
+                                            color: p.textSecondary,
+                                            fontSize: 13,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
+                                  ),
+                                build(
+                                  PreviewFrameConfig(
+                                    url: widget.url,
+                                    scale: s,
+                                    onLoaded: () {
+                                      if (mounted) {
+                                        setState(() => _loaded = true);
+                                      }
+                                    },
                                   ),
                                 ),
-                              build(
-                                PreviewFrameConfig(
-                                  url: widget.url,
-                                  scale: s,
-                                  onLoaded: () {
-                                    if (mounted) setState(() => _loaded = true);
-                                  },
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -259,4 +264,43 @@ class _RoundButton extends StatelessWidget {
     ),
     icon: Icon(icon),
   );
+}
+
+/// The hardware buttons on the phone's edge (action + volume on the left, power on the right), so it reads as a phone.
+class _SideButtons extends StatelessWidget {
+  const _SideButtons({required this.scale, required this.child});
+
+  final double scale;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget bar({
+      required double top,
+      required double height,
+      required bool left,
+    }) => Positioned(
+      top: (kPhoneBezel + top) * scale,
+      left: left ? -3.5 * scale : null,
+      right: left ? null : -3.5 * scale,
+      width: 4 * scale,
+      height: height * scale,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade800,
+          borderRadius: BorderRadius.circular(2 * scale),
+        ),
+      ),
+    );
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        child,
+        bar(top: 118, height: 30, left: true), // action button
+        bar(top: 170, height: 58, left: true), // volume up
+        bar(top: 240, height: 58, left: true), // volume down
+        bar(top: 200, height: 92, left: false), // side button
+      ],
+    );
+  }
 }

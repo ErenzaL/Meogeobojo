@@ -113,25 +113,11 @@ final reviewSignalSourceProvider = Provider<ReviewSignalSource>(
   (ref) => SupabaseReviewSignalSource(() => Supabase.instance.client),
 );
 
-/// R (the review signal of the V3 score) per place: from the visible student reviews, or else from the stored review
-/// insight (collected reviews). Empty when there are none.
+/// R (the review signal of the V3 score) per place, from the visible student reviews. Empty when there are none.
 final reviewSignalsProvider = FutureProvider<Map<String, double>>((ref) async {
   final reviews = await ref.watch(reviewSignalSourceProvider).visibleReviews();
-  final insights = await ref.watch(reviewInsightsProvider.future);
-  return mergeReviewSignals(
-    reviewSignalsFrom(reviews, DateTime.now()),
-    insights,
-  );
+  return reviewSignalsFrom(reviews, DateTime.now());
 });
-
-final reviewInsightSourceProvider = Provider<ReviewInsightSource>(
-  (ref) => SupabaseReviewInsightSource(() => Supabase.instance.client),
-);
-
-/// Stored review insights (R + AI review summary) per place, from the collected reviews. Empty when there are none.
-final reviewInsightsProvider = FutureProvider<Map<String, ReviewInsight>>(
-  (ref) => ref.watch(reviewInsightSourceProvider).visibleInsights(),
-);
 
 /// Whether places that CANNOT be confirmed against the chosen conditions ("정보 미확인": no price, hours or amenity data)
 /// are listed. Off: only places whose every chosen condition is confirmed are shown anywhere (Home, map, search,

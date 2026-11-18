@@ -2678,12 +2678,4 @@ class AppLocalizationsKo extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '조건에 맞는 메뉴 $count개';
   }
-
-  @override
-  String get aiReviewTitle => 'AI 리뷰 요약';
-
-  @override
-  String aiReviewSource(int count) {
-    return '리뷰 $count건을 AI가 요약했어요';
-  }
 }

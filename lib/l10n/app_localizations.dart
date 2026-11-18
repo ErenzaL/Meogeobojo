@@ -4821,18 +4821,6 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'조건에 맞는 메뉴 {count}개'**
   String homeMatchingMenus(int count);
-
-  /// No description provided for @aiReviewTitle.
-  ///
-  /// In ko, this message translates to:
-  /// **'AI 리뷰 요약'**
-  String get aiReviewTitle;
-
-  /// No description provided for @aiReviewSource.
-  ///
-  /// In ko, this message translates to:
-  /// **'리뷰 {count}건을 AI가 요약했어요'**
-  String aiReviewSource(int count);
 }
 
 class _AppLocalizationsDelegate

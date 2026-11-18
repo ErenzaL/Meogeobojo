@@ -880,7 +880,5 @@
   "relaxCategory": "Any food type: {count} places",
   "ignoredAmenity": "No place has {amenity} information yet, so this condition was not applied",
   "ignoredHours": "No place has opening hours yet, so \"open now\" was not applied",
-  "homeMatchingMenus": "{count} dishes that fit your conditions",
-  "aiReviewTitle": "AI review summary",
-  "aiReviewSource": "Summarized by AI from {count} reviews (written in Korean)"
+  "homeMatchingMenus": "{count} dishes that fit your conditions"
 }

@@ -1868,5 +1868,6 @@
   "chatCardNoMenu": "등록된 메뉴가 아직 없어요.",
   "chatCardPriceUnknown": "가격 정보 없음",
   "chatCardSpiceUnrecorded": "맵기 정보는 기록되어 있지 않아요. 매운 이름의 메뉴는 뺐어요.",
-  "chatCardMatched": "추천 메뉴"
+  "chatCardMatched": "추천 메뉴",
+  "chatHint": "오늘 뭐 먹을지 물어보세요"
 }

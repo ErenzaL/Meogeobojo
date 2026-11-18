@@ -922,5 +922,6 @@
   "chatCardNoMenu": "No menu is on record yet.",
   "chatCardPriceUnknown": "Price not on record",
   "chatCardSpiceUnrecorded": "Spice level is not on record. Dishes with spicy names are left out.",
-  "chatCardMatched": "Suggested dishes"
+  "chatCardMatched": "Suggested dishes",
+  "chatHint": "Ask me what to eat today"
 }

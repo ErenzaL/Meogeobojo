@@ -2825,4 +2825,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatCardMatched => '추천 메뉴';
+
+  @override
+  String get chatHint => '오늘 뭐 먹을지 물어보세요';
 }

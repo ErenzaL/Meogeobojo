@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +11,7 @@ import '../../navigation/providers/shell_tab_provider.dart';
 import '../../navigation/widgets/floating_nav_bar.dart';
 import '../providers/chat_controller.dart';
 import 'chat_fab.dart';
+import 'chat_hint.dart';
 import 'chat_panel.dart';
 
 /// Where the assistant sits, for a window of [size]: the mascot button's diameter and position, and the panel's frame.
@@ -172,13 +175,13 @@ class _ChatOverlayState extends ConsumerState<ChatOverlay>
         children: [
           widget.child,
           if (panel.everOpened) _panel(context, place, panel.open),
-          if (!hideFab) _fab(place, panel.open),
+          if (!hideFab) _fab(place, panel.open, mq.size.width),
         ],
       ),
     );
   }
 
-  Widget _fab(ChatPlacement place, bool open) => Positioned(
+  Widget _fab(ChatPlacement place, bool open, double screenWidth) => Positioned(
     right: place.fabRight,
     bottom: place.fabBottom,
     child: AnimatedBuilder(
@@ -189,13 +192,29 @@ class _ChatOverlayState extends ConsumerState<ChatOverlay>
           ignoring: open || v < 0.5,
           child: Opacity(
             opacity: v,
-            child: Transform.scale(scale: 0.6 + 0.4 * v, child: child),
+            child: Transform.scale(
+              scale: 0.6 + 0.4 * v,
+              alignment: Alignment.bottomRight,
+              child: child,
+            ),
           ),
         );
       },
-      child: ChatFab(
-        size: place.fabSize,
-        onTap: ref.read(chatPanelProvider.notifier).open,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          ChatHintBubble(
+            fabSize: place.fabSize,
+            maxWidth: math.min(250, screenWidth - place.fabRight - 16),
+            onTap: ref.read(chatPanelProvider.notifier).open,
+          ),
+          const SizedBox(height: 2),
+          ChatFab(
+            size: place.fabSize,
+            onTap: ref.read(chatPanelProvider.notifier).open,
+          ),
+        ],
       ),
     ),
   );

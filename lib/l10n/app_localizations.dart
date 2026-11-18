@@ -5073,6 +5073,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'추천 메뉴'**
   String get chatCardMatched;
+
+  /// No description provided for @chatHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 뭐 먹을지 물어보세요'**
+  String get chatHint;
 }
 
 class _AppLocalizationsDelegate

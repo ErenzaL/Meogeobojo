@@ -2828,4 +2828,22 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatHint => '오늘 뭐 먹을지 물어보세요';
+
+  @override
+  String get previewTooltip => '모바일 앱 미리보기';
+
+  @override
+  String get previewClose => '미리보기 닫기';
+
+  @override
+  String get previewLarger => '크게 보기';
+
+  @override
+  String get previewFit => '창에 맞추기';
+
+  @override
+  String get previewLoading => '앱을 불러오는 중이에요';
+
+  @override
+  String get previewLoginNewTab => '로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.';
 }

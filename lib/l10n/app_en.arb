@@ -923,5 +923,11 @@
   "chatCardPriceUnknown": "Price not on record",
   "chatCardSpiceUnrecorded": "Spice level is not on record. Dishes with spicy names are left out.",
   "chatCardMatched": "Suggested dishes",
-  "chatHint": "Ask me what to eat today"
+  "chatHint": "Ask me what to eat today",
+  "previewTooltip": "Mobile App Preview",
+  "previewClose": "Close preview",
+  "previewLarger": "Larger view",
+  "previewFit": "Fit to window",
+  "previewLoading": "Loading the app",
+  "previewLoginNewTab": "A sign-in window opened. When you finish, this preview signs in automatically."
 }

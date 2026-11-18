@@ -12,6 +12,21 @@ abstract final class AppAssets {
   static const mascotBoba = '$_mascot/mascot_drink_boba.png';
   static const mascotRunning = '$_mascot/mascot_running_side.png';
 
+  /// Every mascot picture in the folder. The floating assistant button shows one of these at random (see
+  /// `chatMascotProvider`); remove a line here to take a pose out of the rotation.
+  static const chatMascots = [
+    mascotHero,
+    mascotSearching,
+    mascotMapConfused,
+    mascotSleeping,
+    mascotSparkle,
+    mascotCheer,
+    mascotStanding,
+    mascotBurger,
+    mascotBoba,
+    mascotRunning,
+  ];
+
   /// The existing mascot artwork by the short keys the database stores for
   /// campaign banners and badges (no new art; unknown keys fall back).
   static String mascotByKey(String? key) => switch (key) {

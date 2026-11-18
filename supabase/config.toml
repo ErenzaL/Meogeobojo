@@ -1,1 +1,6 @@
 project_id = "meogeobojo"
+
+# The project uses publishable keys (not JWTs), so the gateway cannot verify them: the function authenticates the
+# caller itself (publishable key or user session) and rate-limits it. See functions/ai-restaurant-chat/core.ts.
+[functions.ai-restaurant-chat]
+verify_jwt = false

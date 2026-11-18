@@ -2787,4 +2787,164 @@ class AppLocalizationsEn extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '$count dishes that fit your conditions';
   }
+
+  @override
+  String get chatTitle => '먹어보조 AI';
+
+  @override
+  String get chatSubtitle => 'Let\'s pick today\'s meal';
+
+  @override
+  String get chatWelcome =>
+      'Hi! What are you in the mood for today? Tell me your budget, how far you want to go, or just how you feel.';
+
+  @override
+  String get chatInputHint => 'Tell me what you feel like eating';
+
+  @override
+  String get chatSend => 'Send';
+
+  @override
+  String get chatOpenLabel => 'Ask 먹어보조 AI';
+
+  @override
+  String get chatMinimize => 'Minimize';
+
+  @override
+  String get chatCloseClear => 'Close and clear the chat';
+
+  @override
+  String get chatNewChat => 'New chat';
+
+  @override
+  String get chatThinking => 'Thinking';
+
+  @override
+  String get chatFootnote =>
+      'Suggestions use the real menus and prices on record. Please check spice level and allergens with the restaurant.';
+
+  @override
+  String get chatShowMore => 'Show more';
+
+  @override
+  String get chatErrNetwork =>
+      'The connection looks unstable. Please try again in a moment.';
+
+  @override
+  String chatErrRateLimited(int seconds) {
+    return 'You\'re sending messages too quickly. Please try again in $seconds seconds.';
+  }
+
+  @override
+  String get chatErrGeneric => 'I couldn\'t get an answer. Please try again.';
+
+  @override
+  String get chatAiBusy =>
+      'The AI is busy right now, so I searched with your current filters.';
+
+  @override
+  String chatFoundCount(int count) {
+    return 'I found $count places that fit.';
+  }
+
+  @override
+  String get chatNoMore =>
+      'That\'s everything that fits right now. Change what you\'re after and I\'ll look again.';
+
+  @override
+  String get chatNoneGeneric =>
+      'I couldn\'t find a place that fits everything. Tell me what you\'d like to change.';
+
+  @override
+  String get chatNoneRaiseBudget =>
+      'Nothing fits everything. Shall I look with a slightly higher budget?';
+
+  @override
+  String get chatNoneWiderDistance =>
+      'Nothing fits everything. Shall I look a bit farther away?';
+
+  @override
+  String get chatNoneAnyCuisine =>
+      'Nothing fits everything. Shall I look at other kinds of food too?';
+
+  @override
+  String get chatNoneDropDish =>
+      'Nothing fits everything. Shall I look for other dishes?';
+
+  @override
+  String get chatHoursUnknown =>
+      '\"Open now\" was not applied because no opening hours are on record yet.';
+
+  @override
+  String get chatMenuNone =>
+      'Ask for a recommendation first, then I can show a menu or compare the places.';
+
+  @override
+  String chatMenuOpened(String name) {
+    return 'Here\'s the menu of $name.';
+  }
+
+  @override
+  String chatCheapest(String name, String price) {
+    return '$name is the cheapest, starting at $price won.';
+  }
+
+  @override
+  String chatClosest(String name, int minutes) {
+    return '$name is the closest, about $minutes minutes on foot.';
+  }
+
+  @override
+  String get chatNoPriceData =>
+      'There isn\'t enough price information to compare.';
+
+  @override
+  String chatReasonMenu(String menu, String price, int minutes) {
+    return '$menu $price won · about $minutes min walk';
+  }
+
+  @override
+  String chatReasonWalk(int minutes) {
+    return 'About $minutes minutes away on foot.';
+  }
+
+  @override
+  String chatReasonCategory(String category) {
+    return 'A $category restaurant.';
+  }
+
+  @override
+  String chatCardWalk(int minutes) {
+    return 'About $minutes min';
+  }
+
+  @override
+  String chatCardPriceFrom(String price) {
+    return 'From $price won';
+  }
+
+  @override
+  String get chatCardShowMenu => 'See menu';
+
+  @override
+  String get chatCardHideMenu => 'Hide menu';
+
+  @override
+  String get chatCardDetails => 'Details';
+
+  @override
+  String get chatCardDirections => 'Directions';
+
+  @override
+  String get chatCardNoMenu => 'No menu is on record yet.';
+
+  @override
+  String get chatCardPriceUnknown => 'Price not on record';
+
+  @override
+  String get chatCardSpiceUnrecorded =>
+      'Spice level is not on record. Dishes with spicy names are left out.';
+
+  @override
+  String get chatCardMatched => 'Suggested dishes';
 }

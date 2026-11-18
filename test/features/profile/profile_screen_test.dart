@@ -38,8 +38,14 @@ void main() {
       expect(find.text('로그인 / 회원가입'), findsOneWidget);
       expect(find.text('로그인 없이 계속 둘러보기 →'), findsOneWidget);
       expect(find.text('언어 설정'), findsOneWidget);
-      // exactly one mascot, no extra decoration
-      expect(find.byType(Image), findsOneWidget);
+      // exactly one mascot on the page, no extra decoration (the floating assistant button is the app's own overlay)
+      expect(
+        find.descendant(
+          of: find.byType(ProfileScreen),
+          matching: find.byType(Image),
+        ),
+        findsOneWidget,
+      );
       // account-only entries are not shown to guests
       expect(find.text('저장한 맛집'), findsNothing);
       expect(find.text('로그아웃'), findsNothing);

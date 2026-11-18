@@ -2678,4 +2678,151 @@ class AppLocalizationsKo extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '조건에 맞는 메뉴 $count개';
   }
+
+  @override
+  String get chatTitle => '먹어보조 AI';
+
+  @override
+  String get chatSubtitle => '오늘 뭐 먹을지 같이 골라요';
+
+  @override
+  String get chatWelcome => '안녕하세요! 오늘은 어떤 음식이 당겨요? 예산, 거리, 기분을 편하게 말해 주세요.';
+
+  @override
+  String get chatInputHint => '먹고 싶은 걸 편하게 말해 보세요';
+
+  @override
+  String get chatSend => '보내기';
+
+  @override
+  String get chatOpenLabel => '먹어보조 AI에게 물어보기';
+
+  @override
+  String get chatMinimize => '작게 줄이기';
+
+  @override
+  String get chatCloseClear => '닫고 대화 지우기';
+
+  @override
+  String get chatNewChat => '새 대화';
+
+  @override
+  String get chatThinking => '생각하는 중이에요';
+
+  @override
+  String get chatFootnote =>
+      '추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요.';
+
+  @override
+  String get chatShowMore => '더 보기';
+
+  @override
+  String get chatErrNetwork => '연결이 불안정해요. 잠시 후 다시 시도해 주세요.';
+
+  @override
+  String chatErrRateLimited(int seconds) {
+    return '메시지를 너무 빨리 보내고 있어요. $seconds초 뒤에 다시 시도해 주세요.';
+  }
+
+  @override
+  String get chatErrGeneric => '답을 가져오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get chatAiBusy => 'AI가 지금 바빠서, 현재 조건으로 찾았어요.';
+
+  @override
+  String chatFoundCount(int count) {
+    return '조건에 맞는 $count곳을 찾았어요.';
+  }
+
+  @override
+  String get chatNoMore => '지금 조건에 맞는 곳은 여기까지예요. 조건을 바꾸면 더 찾아볼게요.';
+
+  @override
+  String get chatNoneGeneric => '조건에 딱 맞는 곳을 찾지 못했어요. 조건을 바꿔서 다시 말해 주세요.';
+
+  @override
+  String get chatNoneRaiseBudget => '조건에 딱 맞는 곳이 없어요. 예산을 조금 올려서 볼까요?';
+
+  @override
+  String get chatNoneWiderDistance => '조건에 딱 맞는 곳이 없어요. 조금 더 먼 곳까지 볼까요?';
+
+  @override
+  String get chatNoneAnyCuisine => '조건에 딱 맞는 곳이 없어요. 다른 종류의 음식도 볼까요?';
+
+  @override
+  String get chatNoneDropDish => '조건에 딱 맞는 곳이 없어요. 다른 메뉴도 찾아볼까요?';
+
+  @override
+  String get chatHoursUnknown => '아직 영업시간 정보가 없어서 ‘지금 주문 가능’ 조건은 적용하지 못했어요.';
+
+  @override
+  String get chatMenuNone => '먼저 추천을 받아 보세요. 그러면 메뉴를 보여드리거나 비교해 드릴 수 있어요.';
+
+  @override
+  String chatMenuOpened(String name) {
+    return '$name의 메뉴예요.';
+  }
+
+  @override
+  String chatCheapest(String name, String price) {
+    return '가장 저렴한 곳은 $name이에요. $price원부터 시작해요.';
+  }
+
+  @override
+  String chatClosest(String name, int minutes) {
+    return '가장 가까운 곳은 $name이에요. 걸어서 약 $minutes분이에요.';
+  }
+
+  @override
+  String get chatNoPriceData => '가격 정보가 없어서 비교할 수 없어요.';
+
+  @override
+  String chatReasonMenu(String menu, String price, int minutes) {
+    return '$menu $price원 · 도보 약 $minutes분';
+  }
+
+  @override
+  String chatReasonWalk(int minutes) {
+    return '걸어서 약 $minutes분 거리예요.';
+  }
+
+  @override
+  String chatReasonCategory(String category) {
+    return '$category 식당이에요.';
+  }
+
+  @override
+  String chatCardWalk(int minutes) {
+    return '도보 약 $minutes분';
+  }
+
+  @override
+  String chatCardPriceFrom(String price) {
+    return '$price원부터';
+  }
+
+  @override
+  String get chatCardShowMenu => '메뉴 보기';
+
+  @override
+  String get chatCardHideMenu => '메뉴 닫기';
+
+  @override
+  String get chatCardDetails => '자세히 보기';
+
+  @override
+  String get chatCardDirections => '길찾기';
+
+  @override
+  String get chatCardNoMenu => '등록된 메뉴가 아직 없어요.';
+
+  @override
+  String get chatCardPriceUnknown => '가격 정보 없음';
+
+  @override
+  String get chatCardSpiceUnrecorded => '맵기 정보는 기록되어 있지 않아요. 매운 이름의 메뉴는 뺐어요.';
+
+  @override
+  String get chatCardMatched => '추천 메뉴';
 }

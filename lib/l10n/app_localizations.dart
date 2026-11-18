@@ -4821,6 +4821,258 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'조건에 맞는 메뉴 {count}개'**
   String homeMatchingMenus(int count);
+
+  /// No description provided for @chatTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹어보조 AI'**
+  String get chatTitle;
+
+  /// No description provided for @chatSubtitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'오늘 뭐 먹을지 같이 골라요'**
+  String get chatSubtitle;
+
+  /// No description provided for @chatWelcome.
+  ///
+  /// In ko, this message translates to:
+  /// **'안녕하세요! 오늘은 어떤 음식이 당겨요? 예산, 거리, 기분을 편하게 말해 주세요.'**
+  String get chatWelcome;
+
+  /// No description provided for @chatInputHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹고 싶은 걸 편하게 말해 보세요'**
+  String get chatInputHint;
+
+  /// No description provided for @chatSend.
+  ///
+  /// In ko, this message translates to:
+  /// **'보내기'**
+  String get chatSend;
+
+  /// No description provided for @chatOpenLabel.
+  ///
+  /// In ko, this message translates to:
+  /// **'먹어보조 AI에게 물어보기'**
+  String get chatOpenLabel;
+
+  /// No description provided for @chatMinimize.
+  ///
+  /// In ko, this message translates to:
+  /// **'작게 줄이기'**
+  String get chatMinimize;
+
+  /// No description provided for @chatCloseClear.
+  ///
+  /// In ko, this message translates to:
+  /// **'닫고 대화 지우기'**
+  String get chatCloseClear;
+
+  /// No description provided for @chatNewChat.
+  ///
+  /// In ko, this message translates to:
+  /// **'새 대화'**
+  String get chatNewChat;
+
+  /// No description provided for @chatThinking.
+  ///
+  /// In ko, this message translates to:
+  /// **'생각하는 중이에요'**
+  String get chatThinking;
+
+  /// No description provided for @chatFootnote.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요.'**
+  String get chatFootnote;
+
+  /// No description provided for @chatShowMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'더 보기'**
+  String get chatShowMore;
+
+  /// No description provided for @chatErrNetwork.
+  ///
+  /// In ko, this message translates to:
+  /// **'연결이 불안정해요. 잠시 후 다시 시도해 주세요.'**
+  String get chatErrNetwork;
+
+  /// No description provided for @chatErrRateLimited.
+  ///
+  /// In ko, this message translates to:
+  /// **'메시지를 너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.'**
+  String chatErrRateLimited(int seconds);
+
+  /// No description provided for @chatErrGeneric.
+  ///
+  /// In ko, this message translates to:
+  /// **'답을 가져오지 못했어요. 다시 시도해 주세요.'**
+  String get chatErrGeneric;
+
+  /// No description provided for @chatAiBusy.
+  ///
+  /// In ko, this message translates to:
+  /// **'AI가 지금 바빠서, 현재 조건으로 찾았어요.'**
+  String get chatAiBusy;
+
+  /// No description provided for @chatFoundCount.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 맞는 {count}곳을 찾았어요.'**
+  String chatFoundCount(int count);
+
+  /// No description provided for @chatNoMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 조건에 맞는 곳은 여기까지예요. 조건을 바꾸면 더 찾아볼게요.'**
+  String get chatNoMore;
+
+  /// No description provided for @chatNoneGeneric.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 딱 맞는 곳을 찾지 못했어요. 조건을 바꿔서 다시 말해 주세요.'**
+  String get chatNoneGeneric;
+
+  /// No description provided for @chatNoneRaiseBudget.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 딱 맞는 곳이 없어요. 예산을 조금 올려서 볼까요?'**
+  String get chatNoneRaiseBudget;
+
+  /// No description provided for @chatNoneWiderDistance.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 딱 맞는 곳이 없어요. 조금 더 먼 곳까지 볼까요?'**
+  String get chatNoneWiderDistance;
+
+  /// No description provided for @chatNoneAnyCuisine.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 딱 맞는 곳이 없어요. 다른 종류의 음식도 볼까요?'**
+  String get chatNoneAnyCuisine;
+
+  /// No description provided for @chatNoneDropDish.
+  ///
+  /// In ko, this message translates to:
+  /// **'조건에 딱 맞는 곳이 없어요. 다른 메뉴도 찾아볼까요?'**
+  String get chatNoneDropDish;
+
+  /// No description provided for @chatHoursUnknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'아직 영업시간 정보가 없어서 ‘지금 주문 가능’ 조건은 적용하지 못했어요.'**
+  String get chatHoursUnknown;
+
+  /// No description provided for @chatMenuNone.
+  ///
+  /// In ko, this message translates to:
+  /// **'먼저 추천을 받아 보세요. 그러면 메뉴를 보여드리거나 비교해 드릴 수 있어요.'**
+  String get chatMenuNone;
+
+  /// No description provided for @chatMenuOpened.
+  ///
+  /// In ko, this message translates to:
+  /// **'{name}의 메뉴예요.'**
+  String chatMenuOpened(String name);
+
+  /// No description provided for @chatCheapest.
+  ///
+  /// In ko, this message translates to:
+  /// **'가장 저렴한 곳은 {name}이에요. {price}원부터 시작해요.'**
+  String chatCheapest(String name, String price);
+
+  /// No description provided for @chatClosest.
+  ///
+  /// In ko, this message translates to:
+  /// **'가장 가까운 곳은 {name}이에요. 걸어서 약 {minutes}분이에요.'**
+  String chatClosest(String name, int minutes);
+
+  /// No description provided for @chatNoPriceData.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격 정보가 없어서 비교할 수 없어요.'**
+  String get chatNoPriceData;
+
+  /// No description provided for @chatReasonMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'{menu} {price}원 · 도보 약 {minutes}분'**
+  String chatReasonMenu(String menu, String price, int minutes);
+
+  /// No description provided for @chatReasonWalk.
+  ///
+  /// In ko, this message translates to:
+  /// **'걸어서 약 {minutes}분 거리예요.'**
+  String chatReasonWalk(int minutes);
+
+  /// No description provided for @chatReasonCategory.
+  ///
+  /// In ko, this message translates to:
+  /// **'{category} 식당이에요.'**
+  String chatReasonCategory(String category);
+
+  /// No description provided for @chatCardWalk.
+  ///
+  /// In ko, this message translates to:
+  /// **'도보 약 {minutes}분'**
+  String chatCardWalk(int minutes);
+
+  /// No description provided for @chatCardPriceFrom.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}원부터'**
+  String chatCardPriceFrom(String price);
+
+  /// No description provided for @chatCardShowMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'메뉴 보기'**
+  String get chatCardShowMenu;
+
+  /// No description provided for @chatCardHideMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'메뉴 닫기'**
+  String get chatCardHideMenu;
+
+  /// No description provided for @chatCardDetails.
+  ///
+  /// In ko, this message translates to:
+  /// **'자세히 보기'**
+  String get chatCardDetails;
+
+  /// No description provided for @chatCardDirections.
+  ///
+  /// In ko, this message translates to:
+  /// **'길찾기'**
+  String get chatCardDirections;
+
+  /// No description provided for @chatCardNoMenu.
+  ///
+  /// In ko, this message translates to:
+  /// **'등록된 메뉴가 아직 없어요.'**
+  String get chatCardNoMenu;
+
+  /// No description provided for @chatCardPriceUnknown.
+  ///
+  /// In ko, this message translates to:
+  /// **'가격 정보 없음'**
+  String get chatCardPriceUnknown;
+
+  /// No description provided for @chatCardSpiceUnrecorded.
+  ///
+  /// In ko, this message translates to:
+  /// **'맵기 정보는 기록되어 있지 않아요. 매운 이름의 메뉴는 뺐어요.'**
+  String get chatCardSpiceUnrecorded;
+
+  /// No description provided for @chatCardMatched.
+  ///
+  /// In ko, this message translates to:
+  /// **'추천 메뉴'**
+  String get chatCardMatched;
 }
 
 class _AppLocalizationsDelegate

@@ -1744,5 +1744,129 @@
         "type": "int"
       }
     }
-  }
+  },
+  "chatTitle": "먹어보조 AI",
+  "chatSubtitle": "오늘 뭐 먹을지 같이 골라요",
+  "chatWelcome": "안녕하세요! 오늘은 어떤 음식이 당겨요? 예산, 거리, 기분을 편하게 말해 주세요.",
+  "chatInputHint": "먹고 싶은 걸 편하게 말해 보세요",
+  "chatSend": "보내기",
+  "chatOpenLabel": "먹어보조 AI에게 물어보기",
+  "chatMinimize": "작게 줄이기",
+  "chatCloseClear": "닫고 대화 지우기",
+  "chatNewChat": "새 대화",
+  "chatThinking": "생각하는 중이에요",
+  "chatFootnote": "추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요.",
+  "chatShowMore": "더 보기",
+  "chatErrNetwork": "연결이 불안정해요. 잠시 후 다시 시도해 주세요.",
+  "chatErrRateLimited": "메시지를 너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.",
+  "@chatErrRateLimited": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "chatErrGeneric": "답을 가져오지 못했어요. 다시 시도해 주세요.",
+  "chatAiBusy": "AI가 지금 바빠서, 현재 조건으로 찾았어요.",
+  "chatFoundCount": "조건에 맞는 {count}곳을 찾았어요.",
+  "@chatFoundCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatNoMore": "지금 조건에 맞는 곳은 여기까지예요. 조건을 바꾸면 더 찾아볼게요.",
+  "chatNoneGeneric": "조건에 딱 맞는 곳을 찾지 못했어요. 조건을 바꿔서 다시 말해 주세요.",
+  "chatNoneRaiseBudget": "조건에 딱 맞는 곳이 없어요. 예산을 조금 올려서 볼까요?",
+  "chatNoneWiderDistance": "조건에 딱 맞는 곳이 없어요. 조금 더 먼 곳까지 볼까요?",
+  "chatNoneAnyCuisine": "조건에 딱 맞는 곳이 없어요. 다른 종류의 음식도 볼까요?",
+  "chatNoneDropDish": "조건에 딱 맞는 곳이 없어요. 다른 메뉴도 찾아볼까요?",
+  "chatHoursUnknown": "아직 영업시간 정보가 없어서 ‘지금 주문 가능’ 조건은 적용하지 못했어요.",
+  "chatMenuNone": "먼저 추천을 받아 보세요. 그러면 메뉴를 보여드리거나 비교해 드릴 수 있어요.",
+  "chatMenuOpened": "{name}의 메뉴예요.",
+  "@chatMenuOpened": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCheapest": "가장 저렴한 곳은 {name}이에요. {price}원부터 시작해요.",
+  "@chatCheapest": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatClosest": "가장 가까운 곳은 {name}이에요. 걸어서 약 {minutes}분이에요.",
+  "@chatClosest": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatNoPriceData": "가격 정보가 없어서 비교할 수 없어요.",
+  "chatReasonMenu": "{menu} {price}원 · 도보 약 {minutes}분",
+  "@chatReasonMenu": {
+    "placeholders": {
+      "menu": {
+        "type": "String"
+      },
+      "price": {
+        "type": "String"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReasonWalk": "걸어서 약 {minutes}분 거리예요.",
+  "@chatReasonWalk": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReasonCategory": "{category} 식당이에요.",
+  "@chatReasonCategory": {
+    "placeholders": {
+      "category": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCardWalk": "도보 약 {minutes}분",
+  "@chatCardWalk": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatCardPriceFrom": "{price}원부터",
+  "@chatCardPriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCardShowMenu": "메뉴 보기",
+  "chatCardHideMenu": "메뉴 닫기",
+  "chatCardDetails": "자세히 보기",
+  "chatCardDirections": "길찾기",
+  "chatCardNoMenu": "등록된 메뉴가 아직 없어요.",
+  "chatCardPriceUnknown": "가격 정보 없음",
+  "chatCardSpiceUnrecorded": "맵기 정보는 기록되어 있지 않아요. 매운 이름의 메뉴는 뺐어요.",
+  "chatCardMatched": "추천 메뉴"
 }

@@ -2664,4 +2664,150 @@ class AppLocalizationsZh extends AppLocalizations {
   String homeMatchingMenus(int count) {
     return '符合条件的菜品$count道';
   }
+
+  @override
+  String get chatTitle => '먹어보조 AI';
+
+  @override
+  String get chatSubtitle => '一起挑今天吃什么';
+
+  @override
+  String get chatWelcome => '你好！今天想吃点什么？可以告诉我预算、距离，或者你现在的心情。';
+
+  @override
+  String get chatInputHint => '说说你想吃什么';
+
+  @override
+  String get chatSend => '发送';
+
+  @override
+  String get chatOpenLabel => '向 먹어보조 AI 提问';
+
+  @override
+  String get chatMinimize => '最小化';
+
+  @override
+  String get chatCloseClear => '关闭并清除对话';
+
+  @override
+  String get chatNewChat => '新对话';
+
+  @override
+  String get chatThinking => '思考中';
+
+  @override
+  String get chatFootnote => '推荐基于已登记的真实菜单和价格。辣度和过敏原请向店家确认。';
+
+  @override
+  String get chatShowMore => '再看看';
+
+  @override
+  String get chatErrNetwork => '网络不太稳定，请稍后再试。';
+
+  @override
+  String chatErrRateLimited(int seconds) {
+    return '发送得太快了，请$seconds秒后再试。';
+  }
+
+  @override
+  String get chatErrGeneric => '没能得到回复，请再试一次。';
+
+  @override
+  String get chatAiBusy => 'AI 现在比较忙，所以按当前筛选条件为你查找。';
+
+  @override
+  String chatFoundCount(int count) {
+    return '找到了$count家符合条件的餐厅。';
+  }
+
+  @override
+  String get chatNoMore => '符合条件的就这些了。换个条件，我再帮你找。';
+
+  @override
+  String get chatNoneGeneric => '没有找到完全符合的餐厅。告诉我想调整什么吧。';
+
+  @override
+  String get chatNoneRaiseBudget => '没有完全符合的餐厅。要不要把预算放宽一点？';
+
+  @override
+  String get chatNoneWiderDistance => '没有完全符合的餐厅。要不要看看稍远一点的地方？';
+
+  @override
+  String get chatNoneAnyCuisine => '没有完全符合的餐厅。要不要也看看其他菜系？';
+
+  @override
+  String get chatNoneDropDish => '没有完全符合的餐厅。要不要找找别的菜品？';
+
+  @override
+  String get chatHoursUnknown => '目前还没有营业时间信息，所以没有应用“现在可点餐”条件。';
+
+  @override
+  String get chatMenuNone => '先让我推荐餐厅吧，这样我就能为你展示菜单或进行比较。';
+
+  @override
+  String chatMenuOpened(String name) {
+    return '这是$name的菜单。';
+  }
+
+  @override
+  String chatCheapest(String name, String price) {
+    return '最便宜的是$name，$price韩元起。';
+  }
+
+  @override
+  String chatClosest(String name, int minutes) {
+    return '最近的是$name，步行约$minutes分钟。';
+  }
+
+  @override
+  String get chatNoPriceData => '价格信息不足，无法比较。';
+
+  @override
+  String chatReasonMenu(String menu, String price, int minutes) {
+    return '$menu $price韩元 · 步行约$minutes分钟';
+  }
+
+  @override
+  String chatReasonWalk(int minutes) {
+    return '步行约$minutes分钟。';
+  }
+
+  @override
+  String chatReasonCategory(String category) {
+    return '$category餐厅。';
+  }
+
+  @override
+  String chatCardWalk(int minutes) {
+    return '步行约$minutes分钟';
+  }
+
+  @override
+  String chatCardPriceFrom(String price) {
+    return '$price韩元起';
+  }
+
+  @override
+  String get chatCardShowMenu => '查看菜单';
+
+  @override
+  String get chatCardHideMenu => '收起菜单';
+
+  @override
+  String get chatCardDetails => '查看详情';
+
+  @override
+  String get chatCardDirections => '导航';
+
+  @override
+  String get chatCardNoMenu => '暂时没有登记菜单。';
+
+  @override
+  String get chatCardPriceUnknown => '暂无价格';
+
+  @override
+  String get chatCardSpiceUnrecorded => '没有辣度记录。名称带“辣”的菜品已排除。';
+
+  @override
+  String get chatCardMatched => '推荐菜品';
 }

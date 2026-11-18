@@ -9,6 +9,7 @@ import '../../map/screens/map_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../missions/screens/mission_screen.dart';
 import '../../missions/widgets/mission_celebration_host.dart';
+import '../../chat/widgets/chat_overlay.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/sync/content_sync.dart';
 import '../../content/providers/app_content_providers.dart';
@@ -174,7 +175,9 @@ class _AppShellState extends ConsumerState<AppShell> {
         );
       }
     });
-    return MissionCelebrationHost(child: _shell(context));
+    return MissionCelebrationHost(
+      child: ChatOverlay(child: _shell(context)),
+    );
   }
 
   Widget _shell(BuildContext context) {

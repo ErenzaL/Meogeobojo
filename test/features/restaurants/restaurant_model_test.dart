@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:meogeobojo/features/preferences/models/user_preferences.dart';
+import 'package:meogeobojo/features/recommendation/preference_filter.dart';
 import 'package:meogeobojo/features/restaurants/models/food_category.dart';
 import 'package:meogeobojo/features/restaurants/models/restaurant.dart';
 
@@ -79,15 +81,29 @@ void main() {
         final bakery = fakeRestaurant('7', category: '음식점 > 간식 > 제과,베이커리');
         final buffet = fakeRestaurant('8', category: '음식점 > 뷔페');
         final fast = fakeRestaurant('9', category: '음식점 > 패스트푸드');
-        for (final r in [bakery, buffet]) {
-          expect(FoodCategory.etc.matches(r), isTrue, reason: r.categoryName);
-        }
-        // Asian / global places are listed under 세계 음식, never twice.
-        for (final r in [asian, chicken, fast, korean, cafe]) {
+        expect(FoodCategory.etc.matches(buffet), isTrue);
+        // Asian / global places are listed under 세계 음식, never twice;
+        // 간식 is 카페·디저트.
+        for (final r in [asian, bakery, chicken, fast, korean, cafe]) {
           expect(FoodCategory.etc.matches(r), isFalse, reason: r.categoryName);
         }
       },
     );
+
+    test('Kakao 간식 (bakery, ice cream, rice cake) is 카페·디저트, not 기타', () {
+      for (final path in [
+        '음식점 > 간식 > 제과,베이커리',
+        '음식점 > 간식 > 아이스크림',
+        '음식점 > 간식 > 떡,한과',
+      ]) {
+        final r = fakeRestaurant('s', category: path);
+        expect(FoodCategory.cafe.matches(r), isTrue, reason: path);
+        expect(FoodCategory.etc.matches(r), isFalse, reason: path);
+        expect(FoodCategory.snack.matches(r), isFalse, reason: path);
+        expect(cuisineMatches(r, Cuisine.cafe), isTrue, reason: path);
+        expect(cuisineMatches(r, Cuisine.snack), isFalse, reason: path);
+      }
+    });
 
     test('every food place has at most one specific category (plus 전체)', () {
       final samples = [
@@ -96,6 +112,7 @@ void main() {
         chicken,
         fakeRestaurant('a', category: '음식점 > 일식 > 초밥,롤'),
         fakeRestaurant('b', category: '음식점 > 분식 > 떡볶이'),
+        fakeRestaurant('g', category: '음식점 > 간식 > 제과,베이커리'),
         fakeRestaurant('c', category: '음식점 > 패스트푸드'),
         fakeRestaurant('d', category: '음식점 > 아시아음식'),
         fakeRestaurant('e', category: '음식점 > 중식 > 중국요리'),

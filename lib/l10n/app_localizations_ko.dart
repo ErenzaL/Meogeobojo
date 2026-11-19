@@ -1634,6 +1634,24 @@ class AppLocalizationsKo extends AppLocalizations {
   String get reviewAuthor => '학생';
 
   @override
+  String get reviewSourceKakao => '카카오맵';
+
+  @override
+  String get reviewSourceNaver => '네이버';
+
+  @override
+  String get reviewSourceBaemin => '배달의민족';
+
+  @override
+  String get reviewSourceCoupangEats => '쿠팡이츠';
+
+  @override
+  String get reviewSourceYogiyo => '요기요';
+
+  @override
+  String get reviewsShowMore => '리뷰 더 보기';
+
+  @override
   String get reviewEditorHint => '맛, 가격, 분위기를 알려 주세요 (선택)';
 
   @override

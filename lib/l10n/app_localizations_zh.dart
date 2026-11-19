@@ -1627,6 +1627,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reviewAuthor => '学生';
 
   @override
+  String get reviewSourceKakao => 'Kakao 地图';
+
+  @override
+  String get reviewSourceNaver => 'Naver';
+
+  @override
+  String get reviewSourceBaemin => 'Baemin';
+
+  @override
+  String get reviewSourceCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewSourceYogiyo => 'Yogiyo';
+
+  @override
+  String get reviewsShowMore => '查看更多评价';
+
+  @override
   String get reviewEditorHint => '说说味道、价格、氛围（可选）';
 
   @override

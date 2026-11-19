@@ -1,0 +1,12 @@
+kakao_place_id,name_ko,restaurant_address,naver_rating,kakao_rating,source,platform,record_type,rating,rating_status,review_text,review_date,source_place_id,source_review_id,source_url,review_count,source_file,naver_place_id,naver_name,naver_address,naver_place_url,naver_match_status,naver_match_basis,naver_candidate_names,naver_candidate_urls
+1046337753,15번가에비뉴,충남 아산시 신창면 창암황산길 2,,3.7,kakao,,review,1,verified_value,"불친절. 1인 2시간이라 정해주시네요..
+사람도 없는데 그런 카페는 처음입니다.",6/13/26 14:15,1046337753,15736070,,,kakao_reviews.csv,,,,,,,,
+1046337753,15번가에비뉴,,,,kakao,,review,3,verified_value,불친절. 인사도 잘 안하시네요.,5/30/26 11:10,,15625256,,,kakao_reviews.csv,,,,,,,,
+1046337753,15번가에비뉴,,,,kakao,,review,3,verified_value,불친절. 인사도 잘 안하시네요.,5/30/26 11:10,,15625256,,,kakao_reviews.csv,,,,,,,,
+1046337753,15번가에비뉴,,,,naver,,review,4.5,verified_value,커피가 정말 좋았어요.,25.12.8.월,,,,,,,,,,,,,
+1046337753,15번가에비뉴,,,,naver,,review,,verified_null_in_source,별점 없이 글만 있는 방문자 리뷰,10.29.목,,,,,,,,,,,,,
+1046337753,15번가에비뉴,,,,naver,,review,3.5,verified_value,,7.26.일,,,,,,,,,,,,,
+382170960,1구역,,,,lemong,BAEMIN,review,-,collected_value,배달 빨라요,6/30/26 12:27,,,,,,,,,,,,,
+382170960,1구역,,,,lemong,CPEATS,review,5,collected_value,,,,,,,,,,,,,,,
+382170960,1구역,,,,naver,,review,,verified_null_in_source,,7.1.수,,,,,,,,,,,,,
+461395703,VIP라운지바,,,,,,restaurant_only,,,,,,,,,,,,,,matched_existing,,,

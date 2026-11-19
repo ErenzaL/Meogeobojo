@@ -22,6 +22,7 @@ enum AuthFailure {
   linkExpired,
   rateLimited,
   network,
+  serverUnavailable,
   timeout,
   passwordResetFailed,
   profileLoadFailed,
@@ -44,6 +45,7 @@ enum AuthFailure {
     linkExpired => l10n.authErrLinkExpired,
     rateLimited => l10n.authErrRateLimited,
     network => l10n.authErrNetwork,
+    serverUnavailable => l10n.authErrServerUnavailable,
     timeout => l10n.authErrTimeout,
     passwordResetFailed => l10n.authErrPasswordReset,
     profileLoadFailed => l10n.authErrProfileLoad,
@@ -56,6 +58,7 @@ enum AuthFailure {
   /// Worth offering a "try again" button for.
   bool get retryable => switch (this) {
     network ||
+    serverUnavailable ||
     timeout ||
     rateLimited ||
     profileLoadFailed ||
@@ -70,7 +73,11 @@ enum AuthFailure {
 /// Never exposes the raw message to the UI (it may contain internals).
 AuthFailure authFailureFrom(Object error) {
   if (error is AuthWeakPasswordException) return AuthFailure.weakPassword;
-  if (error is AuthRetryableFetchException) return AuthFailure.network;
+  if (error is AuthRetryableFetchException) {
+    return (int.tryParse(error.statusCode ?? '') ?? 0) >= 500
+        ? AuthFailure.serverUnavailable
+        : AuthFailure.network;
+  }
   if (error is AuthPKCEGrantCodeExchangeError) {
     return AuthFailure.linkExpired;
   }

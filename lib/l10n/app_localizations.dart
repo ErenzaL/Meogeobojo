@@ -1246,10 +1246,16 @@ abstract class AppLocalizations {
   /// **'요청이 너무 많아요. 잠시 후 다시 시도해주세요.'**
   String get authErrRateLimited;
 
+  /// No description provided for @authErrServerUnavailable.
+  ///
+  /// In ko, this message translates to:
+  /// **'서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.'**
+  String get authErrServerUnavailable;
+
   /// No description provided for @authErrNetwork.
   ///
   /// In ko, this message translates to:
-  /// **'인터넷 연결을 확인하고 다시 시도해주세요.'**
+  /// **'서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'**
   String get authErrNetwork;
 
   /// No description provided for @authErrTimeout.

@@ -91,8 +91,8 @@ void main() {
           of: find.byType(FloatingNavBar),
           matching: find.byType(BackdropFilter),
         ),
-        findsNothing,
-        reason: 'no blur',
+        findsOneWidget,
+        reason: 'translucent: the page shows through, softly blurred',
       );
     });
 
@@ -566,12 +566,26 @@ void main() {
         expect(textColor(tester, '밥수다'), p.navSelectedFg);
       });
 
-      test('$name: idle and selected labels reach WCAG AA on the bar', () {
-        expect(contrast(p.navIdle, p.navSurface), greaterThanOrEqualTo(4.5));
-        expect(
-          contrast(p.navSelectedFg, p.navSurface),
-          greaterThanOrEqualTo(4.5),
-        );
+      test('$name: the bar is translucent and its labels stay legible', () {
+        expect(p.navSurface.a, inInclusiveRange(0.8, 0.95));
+        for (final fg in [p.navIdle, p.navSelectedFg]) {
+          // WCAG AA over the app's own page scrolling behind the bar ...
+          expect(
+            contrast(fg, over(p.navSurface, p.background)),
+            greaterThanOrEqualTo(4.5),
+          );
+          // ... and WCAG AA even over the worst case (a black or white photo,
+          // or the native map the browser cannot blur).
+          for (final behind in [
+            const Color(0xFF000000),
+            const Color(0xFFFFFFFF),
+          ]) {
+            expect(
+              contrast(fg, over(p.navSurface, behind)),
+              greaterThanOrEqualTo(4.5),
+            );
+          }
+        }
       });
     }
   });

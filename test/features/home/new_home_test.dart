@@ -493,6 +493,52 @@ void main() {
       expect(find.text('한 끼 예산'), findsNothing);
     });
 
+    for (final size in [const Size(390, 844), const Size(1440, 900)]) {
+      testWidgets('이 설정 초기화 resets every sort and chip at ${size.width}', (
+        tester,
+      ) async {
+        final h = await openHome(tester, size: size);
+        final bar = find.byType(HomeFilterBar);
+        if (size.width < 1000) {
+          await tester.drag(bar, const Offset(-700, 0));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.descendant(of: bar, matching: find.text('정렬')));
+        await tester.pumpAndSettle();
+        for (final (mode, label) in [
+          (SortMode.distance, '거리순'),
+          (SortMode.price, '가격순'),
+          (SortMode.rating, '평점순'),
+        ]) {
+          await tester.tap(find.widgetWithText(PillChip, label));
+          await tester.pumpAndSettle();
+          expect(h.container.read(conditionsProvider).sort, mode);
+          expect(
+            find.descendant(of: bar, matching: find.text(label)),
+            findsOne,
+          );
+
+          await tester.tap(find.text('이 설정 초기화'));
+          await tester.pumpAndSettle();
+          expect(
+            h.container.read(conditionsProvider).sort,
+            SortMode.recommended,
+          );
+          expect(
+            tester
+                .widget<PillChip>(find.widgetWithText(PillChip, '추천순'))
+                .selected,
+            isTrue,
+          );
+          expect(
+            find.descendant(of: bar, matching: find.text(label)),
+            findsNothing,
+          );
+          expect(find.descendant(of: bar, matching: find.text('정렬')), findsOne);
+        }
+      });
+    }
+
     testWidgets(
       'moon toggles dark mode; the bell opens the notification list',
       (tester) async {

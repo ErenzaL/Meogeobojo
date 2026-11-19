@@ -15,12 +15,21 @@ import 'review_editor_sheet.dart';
 
 /// Reviews on the restaurant page (V5): the summary box (average, stars, spread), the student's own review with its
 /// moderation status, the visible reviews, and the write / report actions.
-class ReviewsSection extends ConsumerWidget {
+class ReviewsSection extends ConsumerStatefulWidget {
   const ReviewsSection({super.key, required this.restaurant});
 
   final Restaurant restaurant;
 
+  /// Reviews listed at first, and added by each press of "show more" (a place can have hundreds of imported ones).
   static const maxShown = 10;
+
+  @override
+  ConsumerState<ReviewsSection> createState() => _ReviewsSectionState();
+}
+
+class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
+  Restaurant get restaurant => widget.restaurant;
+  int _shown = ReviewsSection.maxShown;
 
   Future<void> _write(
     BuildContext context,
@@ -43,7 +52,7 @@ class ReviewsSection extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final p = context.palette;
     final me = ref.watch(currentUserProvider)?.id;
@@ -51,7 +60,8 @@ class ReviewsSection extends ConsumerWidget {
     final all = reviews.value ?? const <StudentReview>[];
     StudentReview? mine;
     for (final r in all) {
-      if (r.userId == me) mine = r;
+      // imported reviews have no author, and a guest has no id: neither is ever "mine"
+      if (r.isMadeBy(me)) mine = r;
     }
     final summary = ReviewSummary.of(all);
     // The header action writes (or edits) once there is something to read; an empty section has its own button.
@@ -97,7 +107,7 @@ class ReviewsSection extends ConsumerWidget {
           data: (all) {
             final others = [
               for (final r in all)
-                if (r.isVisible && r.userId != me) r,
+                if (r.isVisible && !r.isMadeBy(me)) r,
             ];
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -112,10 +122,24 @@ class ReviewsSection extends ConsumerWidget {
                   ),
                 const SizedBox(height: 10),
                 if (mine != null) _MyReviewCard(review: mine),
-                for (final r in others.take(maxShown))
+                for (final r in others.take(_shown))
                   _ReviewTile(
                     review: r,
                     onReport: () => _report(context, ref, r.id),
+                  ),
+                if (others.length > _shown)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      key: const ValueKey('reviews-show-more'),
+                      onPressed: () => setState(
+                        () => _shown += ReviewsSection.maxShown,
+                      ),
+                      style: TextButton.styleFrom(
+                        foregroundColor: p.rustText,
+                      ),
+                      child: Text(l10n.reviewsShowMore),
+                    ),
                   ),
               ],
             );
@@ -124,6 +148,21 @@ class ReviewsSection extends ConsumerWidget {
       ],
     );
   }
+}
+
+/// Where an imported review was written: the delivery app when it came from one, else the site it was collected from.
+String _sourceLabel(AppLocalizations l10n, StudentReview r) {
+  return switch (r.platform?.toUpperCase()) {
+    'BAEMIN' => l10n.reviewSourceBaemin,
+    'CPEATS' => l10n.reviewSourceCoupangEats,
+    'YOGIYO' => l10n.reviewSourceYogiyo,
+    'NAVER' => l10n.reviewSourceNaver,
+    _ => switch (r.source) {
+      'kakao' => l10n.reviewSourceKakao,
+      'naver' => l10n.reviewSourceNaver,
+      _ => r.platform ?? r.source,
+    },
+  };
 }
 
 String _date(DateTime d) {
@@ -142,9 +181,25 @@ class _SummaryBox extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final p = context.palette;
+    if (summary.ratedCount == 0) {
+      // text-only reviews (imported): there is no average to show, only how many there are
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: p.fillMuted,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: Text(
+          l10n.reviewsCount(summary.count),
+          style: TextStyle(fontSize: 14, color: p.textSecondary),
+        ),
+      );
+    }
     final counts = List<int>.filled(6, 0);
     for (final r in reviews) {
-      if (r.isVisible) counts[r.rating]++;
+      final stars = r.rating;
+      if (r.isVisible && stars != null) counts[stars]++;
     }
     return Container(
       width: double.infinity,
@@ -195,7 +250,7 @@ class _SummaryBox extends StatelessWidget {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(99),
                             child: LinearProgressIndicator(
-                              value: counts[star] / summary.count,
+                              value: counts[star] / summary.ratedCount,
                               minHeight: 6,
                               color: p.starAmber,
                               backgroundColor: p.card,
@@ -301,13 +356,19 @@ class _ReviewTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              _Stars(review.rating),
-              const SizedBox(width: 8),
-              Text(
-                '${l10n.reviewAuthor} · ${_date(review.createdAt)}',
-                style: AppText.caption(context).copyWith(fontSize: 13),
+              if (review.rating != null) ...[
+                _Stars(review.rating!),
+                const SizedBox(width: 8),
+              ],
+              // takes the room the stars and the report button leave, and shortens if a long source name needs it
+              Expanded(
+                child: Text(
+                  '${review.isImported ? _sourceLabel(l10n, review) : l10n.reviewAuthor} · ${_date(review.createdAt)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.caption(context).copyWith(fontSize: 13),
+                ),
               ),
-              const Spacer(),
               TextButton(
                 onPressed: onReport,
                 style: TextButton.styleFrom(
@@ -361,8 +422,10 @@ class _MyReviewCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _Stars(review.rating),
-              const SizedBox(width: 8),
+              if (review.rating != null) ...[
+                _Stars(review.rating!),
+                const SizedBox(width: 8),
+              ],
               Text(
                 _date(review.createdAt),
                 style: AppText.caption(context).copyWith(fontSize: 13),

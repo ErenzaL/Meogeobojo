@@ -624,11 +624,14 @@ class _Head extends StatelessWidget {
                 Flexible(
                   child: Text(
                     [
-                      summary.count > 0
+                      summary.ratedCount > 0
                           ? l10n.detailRatingLine(
                               summary.average.toStringAsFixed(1),
                               summary.count,
                             )
+                          // text-only reviews: how many there are, no average
+                          : summary.count > 0
+                          ? l10n.reviewsCount(summary.count)
                           : l10n.detailNoReviews,
                       if (segments.isNotEmpty) segments.first,
                     ].join(' · '),

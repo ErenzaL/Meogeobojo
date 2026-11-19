@@ -2968,6 +2968,42 @@ abstract class AppLocalizations {
   /// **'학생'**
   String get reviewAuthor;
 
+  /// No description provided for @reviewSourceKakao.
+  ///
+  /// In ko, this message translates to:
+  /// **'카카오맵'**
+  String get reviewSourceKakao;
+
+  /// No description provided for @reviewSourceNaver.
+  ///
+  /// In ko, this message translates to:
+  /// **'네이버'**
+  String get reviewSourceNaver;
+
+  /// No description provided for @reviewSourceBaemin.
+  ///
+  /// In ko, this message translates to:
+  /// **'배달의민족'**
+  String get reviewSourceBaemin;
+
+  /// No description provided for @reviewSourceCoupangEats.
+  ///
+  /// In ko, this message translates to:
+  /// **'쿠팡이츠'**
+  String get reviewSourceCoupangEats;
+
+  /// No description provided for @reviewSourceYogiyo.
+  ///
+  /// In ko, this message translates to:
+  /// **'요기요'**
+  String get reviewSourceYogiyo;
+
+  /// No description provided for @reviewsShowMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 더 보기'**
+  String get reviewsShowMore;
+
   /// No description provided for @reviewEditorHint.
   ///
   /// In ko, this message translates to:

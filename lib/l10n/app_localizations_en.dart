@@ -1717,6 +1717,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reviewAuthor => 'Student';
 
   @override
+  String get reviewSourceKakao => 'Kakao Map';
+
+  @override
+  String get reviewSourceNaver => 'Naver';
+
+  @override
+  String get reviewSourceBaemin => 'Baemin';
+
+  @override
+  String get reviewSourceCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewSourceYogiyo => 'Yogiyo';
+
+  @override
+  String get reviewsShowMore => 'Show more reviews';
+
+  @override
   String get reviewEditorHint =>
       'Tell us about the food, price, atmosphere (optional)';
 

@@ -81,37 +81,41 @@ class NoticesScreen extends ConsumerWidget {
                 style: TextStyle(color: p.textSecondary),
               ),
             )
-          : ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              itemCount: notices.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final n = notices[i];
-                final link = n.linkUrl == null ? null : Uri.parse(n.linkUrl!);
-                return ExpansionTile(
-                  title: Text(
-                    n.title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: n.time == null
-                      ? null
-                      : Text(DateFormat.yMd(tag).format(n.time!.toLocal())),
-                  expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  children: [
-                    if (n.body != null) SelectableText(n.body!),
-                    if (link != null)
-                      TextButton.icon(
-                        onPressed: () => launchUrl(
-                          link,
-                          mode: LaunchMode.externalApplication,
+          // a mouse drag selects a notice's text rather than scrolling (app.dart lets lists drag with a mouse)
+          : ScrollConfiguration(
+              behavior: const MaterialScrollBehavior(),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: notices.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (context, i) {
+                  final n = notices[i];
+                  final link = n.linkUrl == null ? null : Uri.parse(n.linkUrl!);
+                  return ExpansionTile(
+                    title: Text(
+                      n.title,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: n.time == null
+                        ? null
+                        : Text(DateFormat.yMd(tag).format(n.time!.toLocal())),
+                    expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    children: [
+                      if (n.body != null) SelectableText(n.body!),
+                      if (link != null)
+                        TextButton.icon(
+                          onPressed: () => launchUrl(
+                            link,
+                            mode: LaunchMode.externalApplication,
+                          ),
+                          icon: const Icon(Icons.open_in_new, size: 18),
+                          label: Text(l10n.noticeOpenLink),
                         ),
-                        icon: const Icon(Icons.open_in_new, size: 18),
-                        label: Text(l10n.noticeOpenLink),
-                      ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
     );
   }
@@ -302,14 +306,18 @@ class LegalScreen extends StatelessWidget {
       body: FutureBuilder<String>(
         future: rootBundle.loadString('assets/legal/${doc.name}_ko.md'),
         builder: (context, snap) => snap.hasData
-            ? SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: SelectableText(
-                      snap.data!,
-                      style: const TextStyle(fontSize: 15, height: 1.6),
+            // a mouse drag selects the text rather than scrolling (app.dart lets lists drag with a mouse)
+            ? ScrollConfiguration(
+                behavior: const MaterialScrollBehavior(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: SelectableText(
+                        snap.data!,
+                        style: const TextStyle(fontSize: 15, height: 1.6),
+                      ),
                     ),
                   ),
                 ),

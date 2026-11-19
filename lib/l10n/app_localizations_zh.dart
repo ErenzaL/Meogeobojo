@@ -1511,6 +1511,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condAmenityLate => '营业到晚上10点';
 
   @override
+  String get condAmenityFastHint => '翻台快：上菜快、座位很快空出来，不用久等的餐厅。';
+
+  @override
   String get condSoft => '影响推荐顺序';
 
   @override

@@ -2752,6 +2752,12 @@ abstract class AppLocalizations {
   /// **'밤 10시까지'**
   String get condAmenityLate;
 
+  /// No description provided for @condAmenityFastHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'빠른 회전: 음식이 빨리 나오고 자리가 금방 나서 오래 기다리지 않는 식당이에요.'**
+  String get condAmenityFastHint;
+
   /// No description provided for @condSoft.
   ///
   /// In ko, this message translates to:

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/pill_chip.dart';
 import '../../conditions/models/conditions.dart';
 import '../../conditions/providers/conditions_providers.dart';
@@ -85,16 +86,24 @@ class _PanelBody extends ConsumerWidget {
       ),
       CondSection(
         title: l10n.condOps,
-        child: ChipWrap(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final a in Amenity.values)
-              PillChip(
-                label: amenityLabelOf(l10n, a),
-                icon: amenityIconOf(a),
-                selected: c.amenities.contains(a),
-                onTap: () =>
-                    set((x) => x.copyWith(amenities: toggled(x.amenities, a))),
-              ),
+            ChipWrap(
+              children: [
+                for (final a in Amenity.values)
+                  PillChip(
+                    label: amenityLabelOf(l10n, a),
+                    icon: amenityIconOf(a),
+                    selected: c.amenities.contains(a),
+                    onTap: () => set(
+                      (x) => x.copyWith(amenities: toggled(x.amenities, a)),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(l10n.condAmenityFastHint, style: AppText.caption(context)),
           ],
         ),
       ),

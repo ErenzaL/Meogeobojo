@@ -1422,10 +1422,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get originSheetTitle => '从哪里出发？';
 
   @override
-  String get originSheetDesc =>
-      '首页、地图和搜索会从这里重新按直线距离计算。位置以OpenStreetMap为准，建筑取的是建筑中心而非入口。';
-
-  @override
   String get originGroupGates => '正门·后门';
 
   @override
@@ -1489,10 +1485,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get condOpenNow => '仅显示现在可点单的店';
-
-  @override
-  String get condOpenNowHint =>
-      '预计到达时正在营业且未截止点单的店。营业开始与截止点单时间都确认后才算“符合条件”。不考虑排队时间。';
 
   @override
   String get condCuisine => '菜系';

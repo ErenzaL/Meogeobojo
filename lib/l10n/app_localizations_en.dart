@@ -1507,10 +1507,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get originSheetTitle => 'Where are you starting from?';
 
   @override
-  String get originSheetDesc =>
-      'Home, the map and search re-measure straight-line distances from here. Points follow OpenStreetMap; buildings use their centre, not the entrance.';
-
-  @override
   String get originGroupGates => 'Gates';
 
   @override
@@ -1576,10 +1572,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get condOpenNow => 'Only places I can order from now';
-
-  @override
-  String get condOpenNowHint =>
-      'Open and before last order at your estimated arrival. It counts as a match only when both opening time and last order are known. Waiting time is not included.';
 
   @override
   String get condCuisine => 'Cuisine';

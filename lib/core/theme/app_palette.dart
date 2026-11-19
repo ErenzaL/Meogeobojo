@@ -175,7 +175,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadowBlur: 16,
     error: Color(0xFFC62828),
     heart: Color(0xFFC62828),
-    navSurface: Color(0xFFFFFFFF),
+    navSurface: Color(0xF2FFFFFF), // ~95%: the page shows through, blurred
     navBorder: Color(0x171C1A17),
     navIdle: Color(0xFF6F6962),
     navSelectedBg: Color(0x00000000),
@@ -222,7 +222,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     shadowBlur: 12,
     error: Color(0xFFF07D72),
     heart: Color(0xFFF07D72),
-    navSurface: Color(0xFF1C1B19),
+    navSurface: Color(0xF21C1B19), // ~95%: the page shows through, blurred
     navBorder: Color(0x17EFEBE4),
     navIdle: Color(0xFF938D84),
     navSelectedBg: Color(0x00000000),

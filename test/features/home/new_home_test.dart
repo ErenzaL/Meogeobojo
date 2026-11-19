@@ -759,6 +759,8 @@ void main() {
       await revealInSheet(tester, find.text('지금 주문 가능한 곳만'));
       expect(find.text('정문 기준'), findsWidgets);
       expect(find.text('바꾸기 ›'), findsOneWidget);
+      // 빠른 회전 says what it means under the 운영·편의 chips.
+      await revealInSheet(tester, find.textContaining('빠른 회전: '));
       await tester.dragUntilVisible(
         find.text('추천 순서에 반영'),
         find.byType(Scrollable).last,

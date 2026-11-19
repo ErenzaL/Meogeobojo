@@ -1606,6 +1606,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get condAmenityLate => 'Open until 10 pm';
 
   @override
+  String get condAmenityFastHint =>
+      'Fast turnover: food comes out quickly and tables free up fast, so you won\'t wait long.';
+
+  @override
   String get condSoft => 'Shapes the order';
 
   @override

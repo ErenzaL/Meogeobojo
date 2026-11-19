@@ -985,6 +985,7 @@
   "condAmenityFast": "빠른 회전",
   "condAmenityTakeout": "포장 가능",
   "condAmenityLate": "밤 10시까지",
+  "condAmenityFastHint": "빠른 회전: 음식이 빨리 나오고 자리가 금방 나서 오래 기다리지 않는 식당이에요.",
   "condSoft": "추천 순서에 반영",
   "condParty": "몇 명이 먹나요?",
   "condPartyFew": "2~3명",

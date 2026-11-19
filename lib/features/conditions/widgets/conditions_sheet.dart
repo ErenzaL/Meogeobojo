@@ -148,16 +148,24 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
     final opsSection = CondSection(
       showTitle: widget.focus == null,
       title: l10n.condOps,
-      child: ChipWrap(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final a in Amenity.values)
-            PillChip(
-              label: amenityLabel(a),
-              icon: amenityIcon(a),
-              selected: c.amenities.contains(a),
-              onTap: () =>
-                  set((x) => x.copyWith(amenities: toggled(x.amenities, a))),
-            ),
+          ChipWrap(
+            children: [
+              for (final a in Amenity.values)
+                PillChip(
+                  label: amenityLabel(a),
+                  icon: amenityIcon(a),
+                  selected: c.amenities.contains(a),
+                  onTap: () => set(
+                    (x) => x.copyWith(amenities: toggled(x.amenities, a)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(l10n.condAmenityFastHint, style: AppText.caption(context)),
         ],
       ),
     );

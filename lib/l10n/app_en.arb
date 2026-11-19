@@ -479,6 +479,7 @@
   "condAmenityFast": "Fast turnover",
   "condAmenityTakeout": "Takeout",
   "condAmenityLate": "Open until 10 pm",
+  "condAmenityFastHint": "Fast turnover: food comes out quickly and tables free up fast, so you won't wait long.",
   "condSoft": "Shapes the order",
   "condParty": "How many are eating?",
   "condPartyFew": "2–3 people",

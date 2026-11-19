@@ -1526,6 +1526,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condAmenityLate => '밤 10시까지';
 
   @override
+  String get condAmenityFastHint =>
+      '빠른 회전: 음식이 빨리 나오고 자리가 금방 나서 오래 기다리지 않는 식당이에요.';
+
+  @override
   String get condSoft => '추천 순서에 반영';
 
   @override

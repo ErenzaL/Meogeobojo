@@ -10,6 +10,18 @@ const int kWebCampusInitialLevel = 4;
 /// The same campus zoom on the plugin's mobile scale (web level = 15 - mobile level), used by moveCamera.
 const int kWebCampusMoveLevel = 11;
 
+/// Phones (native SDK, higher = closer; 17 is street level): the campus and the walk around it, the same view the
+/// pin picker opens on. 14 showed a whole district.
+const int kNativeCampusInitialLevel = 15;
+
+/// The map's first zoom, centred on the origin (the user's 기준 위치, else the campus).
+int initialMapLevel({required bool web}) =>
+    web ? kWebCampusInitialLevel : kNativeCampusInitialLevel;
+
+/// Whether the first view zooms to fit the results around the origin: only a wide (desktop) web map. On a phone-sized
+/// map, fitting places up to [kFitRadiusMeters] away zooms far out, so it stays on the origin at the campus zoom.
+bool fitResultsOnStart({required bool web, required bool wide}) => web && wide;
+
 /// Restaurants farther than this from the origin do not stretch the view (a stray result must not zoom the map out
 /// to a whole region).
 const double kFitRadiusMeters = 2500;

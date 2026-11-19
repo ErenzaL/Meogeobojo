@@ -15,6 +15,24 @@ void main() {
     });
   });
 
+  group('first view', () {
+    test(
+      'starts zoomed in on the origin: campus-sized on web and on phones',
+      () {
+        expect(initialMapLevel(web: true), kWebCampusInitialLevel);
+        // native scale: higher = closer, 17 = street level; 14 showed a whole district
+        expect(initialMapLevel(web: false), inInclusiveRange(15, 17));
+      },
+    );
+
+    test('only a wide web map zooms out to fit the results; phone-sized maps stay on the origin', () {
+      expect(fitResultsOnStart(web: true, wide: true), isTrue);
+      expect(fitResultsOnStart(web: true, wide: false), isFalse);
+      expect(fitResultsOnStart(web: false, wide: true), isFalse);
+      expect(fitResultsOnStart(web: false, wide: false), isFalse);
+    });
+  });
+
   group('boundsToFit', () {
     const campus = GeoPoint(36.76999, 126.93150);
 

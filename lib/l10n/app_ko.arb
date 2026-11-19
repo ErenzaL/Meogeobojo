@@ -1875,5 +1875,7 @@
   "previewLarger": "크게 보기",
   "previewFit": "창에 맞추기",
   "previewLoading": "앱을 불러오는 중이에요",
-  "previewLoginNewTab": "로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요."
+  "previewLoginNewTab": "로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.",
+  "previewNote": "모바일 미리보기 화면입니다",
+  "previewInstallApp": "앱 설치하기"
 }

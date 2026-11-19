@@ -3,10 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/embed/preview_bridge.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_palette.dart';
+
+const kAppInstallUrl =
+    'https://drive.google.com/file/d/17tHEdIMju3Nt5JAWN4s1pi8eFL7uGxv2/view';
 
 /// The phone's size in logical pixels: an iPhone 17 Pro, the simulator the app is developed on.
 const kPhoneWidth = 402.0;
@@ -108,6 +112,24 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
   bool _large = false;
   bool _loaded = false;
 
+  Future<void> _install() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final failure = context.l10n.restaurantLinkOpenFailed;
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(kAppInstallUrl),
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: '_blank',
+      );
+    } catch (_) {}
+    if (!opened && mounted) {
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(failure)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -122,6 +144,34 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
           builder: (context, box) {
             final s = previewScale(box.biggest, large: _large);
             final w = kPhoneWidth * s, h = kPhoneHeight * s;
+            // the note and the install button sit right of the phone (the desktop header needs 960px, which leaves room)
+            final phoneRight = box.maxWidth / 2 + w / 2 + kPhoneBezel * s;
+            final installPanel = Column(
+              key: const ValueKey('preview-install-panel'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.previewNote,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  key: const ValueKey('preview-install'),
+                  onPressed: _install,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: p.card,
+                    foregroundColor: p.textPrimary,
+                  ),
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(l10n.previewInstallApp),
+                ),
+              ],
+            );
             return Stack(
               children: [
                 // a click on the dim area closes the preview
@@ -231,6 +281,16 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
                         onPressed: close,
                       ),
                     ],
+                  ),
+                ),
+                Positioned(
+                  left: phoneRight + 32,
+                  right: 24,
+                  top: 0,
+                  bottom: 0,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: installPanel,
                   ),
                 ),
               ],

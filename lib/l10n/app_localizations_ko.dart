@@ -2846,4 +2846,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get previewLoginNewTab => '로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.';
+
+  @override
+  String get previewNote => '모바일 미리보기 화면입니다';
+
+  @override
+  String get previewInstallApp => '앱 설치하기';
 }

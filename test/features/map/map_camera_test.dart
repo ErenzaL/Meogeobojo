@@ -50,4 +50,16 @@ void main() {
       expect(boundsToFit(campus, [GeoPoint(double.nan, 126.93)]), isNull);
     });
   });
+
+  group('a place from its detail page', () {
+    test(
+      'is shown closer than the campus view, on a valid plugin (mobile) level',
+      () {
+        expect(kWebPlaceMoveLevel, inInclusiveRange(6, 21));
+        // plugin: webLevel = 15 - mobileLevel; lower web level = closer
+        expect(15 - kWebPlaceMoveLevel, lessThan(kWebCampusInitialLevel));
+        expect(15 - kWebPlaceMoveLevel, greaterThanOrEqualTo(1));
+      },
+    );
+  });
 }

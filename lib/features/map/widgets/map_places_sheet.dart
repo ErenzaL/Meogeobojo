@@ -17,6 +17,7 @@ import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
+import 'map_overlay_shield.dart';
 
 /// V5 bottom sheet over the map: "조건에 맞는 식당 N곳", the sort, the
 /// confirmed matches (the same list and verdicts as Home), then the
@@ -36,31 +37,34 @@ class MapPlacesSheet extends ConsumerWidget {
       maxChildSize: 0.95,
       snap: true,
       snapSizes: const [0.16, 0.4, 0.95],
-      builder: (context, controller) => Container(
-        decoration: BoxDecoration(
-          color: p.background,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sheet),
+      // the sheet keeps wheel / drag to itself: scrolling the list never zooms the web map behind it
+      builder: (context, controller) => MapOverlayShield(
+        child: Container(
+          decoration: BoxDecoration(
+            color: p.background,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.sheet),
+            ),
+            border: Border(top: BorderSide(color: p.border)),
           ),
-          border: Border(top: BorderSide(color: p.border)),
-        ),
-        child: ListView(
-          controller: controller,
-          padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottom),
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: p.borderStrong,
-                  borderRadius: BorderRadius.circular(2),
+          child: ListView(
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottom),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: p.borderStrong,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            ..._placesChildren(context, ref),
-          ],
+              const SizedBox(height: 14),
+              ..._placesChildren(context, ref),
+            ],
+          ),
         ),
       ),
     );

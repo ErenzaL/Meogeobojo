@@ -929,5 +929,7 @@
   "previewLarger": "放大查看",
   "previewFit": "适应窗口",
   "previewLoading": "正在加载应用",
-  "previewLoginNewTab": "登录窗口已打开。完成后，此预览会自动登录。"
+  "previewLoginNewTab": "登录窗口已打开。完成后，此预览会自动登录。",
+  "previewNote": "这是移动端预览界面",
+  "previewInstallApp": "安装应用"
 }

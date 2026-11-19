@@ -180,7 +180,18 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
     ref.read(mapFocusProvider.notifier).clear();
     _fitPending = false;
-    unawaited(_focus(r));
+    _select(r);
+    if (!kIsWeb) {
+      unawaited(_focus(r, zoomIn: true));
+      return;
+    }
+    // The map tab is only now coming on screen and may have been hidden or created before it had its size: re-measure
+    // it first, or the centre and zoom are worked out for a stale size.
+    Timer(const Duration(milliseconds: 120), () {
+      if (!mounted) return;
+      relayoutKakaoMaps();
+      unawaited(_focus(r, zoomIn: true));
+    });
   }
 
   void _onMarkerTapped(LabelClickEvent e) {
@@ -401,26 +412,33 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
   }
 
-  /// A list row was chosen: select its pin's card and pan to it, keeping the current zoom.
-  Future<void> _focus(Restaurant r) async {
+  /// A list row was chosen: select its pin's card and pan to it, keeping the current zoom. With [zoomIn] (a place sent
+  /// from its detail page) it jumps to the place at street level, whatever the zoom was, and lifts it above the card.
+  Future<void> _focus(Restaurant r, {bool zoomIn = false}) async {
     _select(r);
     final c = _controller;
     if (c == null) return;
+    final at = LatLng(latitude: r.latitude, longitude: r.longitude);
     try {
       await c.moveCamera(
-        cameraUpdate: CameraUpdate(
-          position: LatLng(latitude: r.latitude, longitude: r.longitude),
-          type: 0,
-        ),
-        animation: const CameraAnimation(
-          duration: 400,
-          autoElevation: false,
-          isConsecutive: false,
-        ),
+        cameraUpdate: !zoomIn
+            ? CameraUpdate(position: at, type: 0)
+            : kIsWeb
+            ? CameraUpdate(position: at, type: 0, zoomLevel: kWebPlaceMoveLevel)
+            : CameraUpdate.fromLatLng(at),
+        // No animation with a zoom: on the web a pan still running when the level changes ends off target.
+        animation: zoomIn
+            ? null
+            : const CameraAnimation(
+                duration: 400,
+                autoElevation: false,
+                isConsecutive: false,
+              ),
       );
     } catch (e) {
       debugPrint('Map focus failed: $e');
     }
+    if (zoomIn) await _revealAboveCard(r);
   }
 
   /// Moves the map only: the selected place stays selected.

@@ -929,5 +929,15 @@
   "previewLarger": "放大查看",
   "previewFit": "适应窗口",
   "previewLoading": "正在加载应用",
-  "previewLoginNewTab": "登录窗口已打开。完成后，此预览会自动登录。"
+  "previewLoginNewTab": "登录窗口已打开。完成后，此预览会自动登录。",
+  "collectedReviewsTitle": "其他应用的评价",
+  "collectedReviewsNote": "收集自 Naver、Kakao 地图和外卖应用的评价。",
+  "collectedReviewsNoRating": "暂无评分",
+  "collectedReviewsRatedBasis": "评分基于 {rated} 条评价",
+  "collectedReviewsMore": "查看更多评价",
+  "reviewPlatformNaver": "Naver",
+  "reviewPlatformKakao": "Kakao 地图",
+  "reviewPlatformBaemin": "Baemin",
+  "reviewPlatformCoupangEats": "Coupang Eats",
+  "reviewPlatformYogiyo": "Yogiyo"
 }

@@ -2846,4 +2846,36 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get previewLoginNewTab => '로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.';
+
+  @override
+  String get collectedReviewsTitle => '다른 앱 리뷰';
+
+  @override
+  String get collectedReviewsNote => '네이버·카카오맵·배달앱에 올라온 리뷰를 모았어요.';
+
+  @override
+  String get collectedReviewsNoRating => '별점 없음';
+
+  @override
+  String collectedReviewsRatedBasis(int rated) {
+    return '별점은 $rated개 리뷰 기준';
+  }
+
+  @override
+  String get collectedReviewsMore => '리뷰 더 보기';
+
+  @override
+  String get reviewPlatformNaver => '네이버';
+
+  @override
+  String get reviewPlatformKakao => '카카오맵';
+
+  @override
+  String get reviewPlatformBaemin => '배달의민족';
+
+  @override
+  String get reviewPlatformCoupangEats => '쿠팡이츠';
+
+  @override
+  String get reviewPlatformYogiyo => '요기요';
 }

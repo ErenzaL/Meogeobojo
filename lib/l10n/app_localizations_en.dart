@@ -2969,4 +2969,37 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get previewLoginNewTab =>
       'A sign-in window opened. When you finish, this preview signs in automatically.';
+
+  @override
+  String get collectedReviewsTitle => 'Reviews from other apps';
+
+  @override
+  String get collectedReviewsNote =>
+      'Collected from Naver, Kakao Map and delivery apps.';
+
+  @override
+  String get collectedReviewsNoRating => 'No rating';
+
+  @override
+  String collectedReviewsRatedBasis(int rated) {
+    return 'Rating from $rated reviews';
+  }
+
+  @override
+  String get collectedReviewsMore => 'Show more reviews';
+
+  @override
+  String get reviewPlatformNaver => 'Naver';
+
+  @override
+  String get reviewPlatformKakao => 'Kakao Map';
+
+  @override
+  String get reviewPlatformBaemin => 'Baemin';
+
+  @override
+  String get reviewPlatformCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewPlatformYogiyo => 'Yogiyo';
 }

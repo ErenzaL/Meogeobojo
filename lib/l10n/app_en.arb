@@ -929,5 +929,15 @@
   "previewLarger": "Larger view",
   "previewFit": "Fit to window",
   "previewLoading": "Loading the app",
-  "previewLoginNewTab": "A sign-in window opened. When you finish, this preview signs in automatically."
+  "previewLoginNewTab": "A sign-in window opened. When you finish, this preview signs in automatically.",
+  "collectedReviewsTitle": "Reviews from other apps",
+  "collectedReviewsNote": "Collected from Naver, Kakao Map and delivery apps.",
+  "collectedReviewsNoRating": "No rating",
+  "collectedReviewsRatedBasis": "Rating from {rated} reviews",
+  "collectedReviewsMore": "Show more reviews",
+  "reviewPlatformNaver": "Naver",
+  "reviewPlatformKakao": "Kakao Map",
+  "reviewPlatformBaemin": "Baemin",
+  "reviewPlatformCoupangEats": "Coupang Eats",
+  "reviewPlatformYogiyo": "Yogiyo"
 }

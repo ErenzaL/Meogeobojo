@@ -8,6 +8,7 @@ import '../../../core/widgets/v5_widgets.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/widgets/auth_prompt.dart';
 import '../../restaurants/models/restaurant.dart';
+import '../models/collected_review.dart';
 import '../models/student_review.dart';
 import '../providers/review_providers.dart';
 import 'report_sheet.dart';
@@ -122,6 +123,195 @@ class ReviewsSection extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+/// Naver / Kakao Map / delivery-app reviews (read-only, collected offline): the average and the total, the count per
+/// app, and the newest reviews with text, a few at a time. Nothing at all for a place without any, while loading, or
+/// when the data cannot be read.
+class CollectedReviewsSection extends ConsumerStatefulWidget {
+  const CollectedReviewsSection({super.key, required this.restaurant});
+
+  final Restaurant restaurant;
+
+  static const firstShown = 5;
+  static const step = 10;
+
+  @override
+  ConsumerState<CollectedReviewsSection> createState() =>
+      _CollectedReviewsSectionState();
+}
+
+class _CollectedReviewsSectionState
+    extends ConsumerState<CollectedReviewsSection> {
+  var _shown = CollectedReviewsSection.firstShown;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final id = widget.restaurant.kakaoId;
+    final summary = ref.watch(collectedReviewSummaryProvider(id)).value;
+    if (summary == null || summary.count == 0) return const SizedBox.shrink();
+    final reviews =
+        ref.watch(collectedReviewsProvider(id)).value ??
+        const <CollectedReview>[];
+    return Padding(
+      padding: const EdgeInsets.only(top: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.collectedReviewsTitle, style: AppText.sectionTitle),
+          const SizedBox(height: 4),
+          Text(l10n.collectedReviewsNote, style: AppText.caption(context)),
+          const SizedBox(height: 10),
+          _CollectedSummaryBox(summary: summary),
+          const SizedBox(height: 6),
+          for (final r in reviews.take(_shown)) _CollectedTile(review: r),
+          if (reviews.length > _shown)
+            Center(
+              child: TextButton(
+                onPressed: () =>
+                    setState(() => _shown += CollectedReviewsSection.step),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.palette.rustText,
+                ),
+                child: Text(l10n.collectedReviewsMore),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String _platform(BuildContext context, String platform) {
+  final l10n = context.l10n;
+  return switch (platform) {
+    'naver' => l10n.reviewPlatformNaver,
+    'kakao' => l10n.reviewPlatformKakao,
+    'baemin' => l10n.reviewPlatformBaemin,
+    'coupangeats' => l10n.reviewPlatformCoupangEats,
+    'yogiyo' => l10n.reviewPlatformYogiyo,
+    _ => platform,
+  };
+}
+
+/// The average large (or "no rating"), its stars, the total, and how many reviews came from each app.
+class _CollectedSummaryBox extends StatelessWidget {
+  const _CollectedSummaryBox({required this.summary});
+
+  final CollectedReviewSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final avg = summary.average;
+    final small = TextStyle(fontSize: 12, color: p.textSecondary);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: p.fillMuted,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 112,
+            child: Column(
+              children: [
+                if (avg == null)
+                  Text(
+                    l10n.collectedReviewsNoRating,
+                    style: TextStyle(fontSize: 14, color: p.textSecondary),
+                  )
+                else ...[
+                  Text(
+                    avg.toStringAsFixed(1),
+                    style: AppText.numeric(size: 32, weight: FontWeight.w700),
+                  ),
+                  _Stars(avg),
+                ],
+                const SizedBox(height: 4),
+                Text(l10n.reviewsCount(summary.count), style: small),
+                if (avg != null && summary.ratedCount < summary.count)
+                  Text(
+                    l10n.collectedReviewsRatedBasis(summary.ratedCount),
+                    textAlign: TextAlign.center,
+                    style: small,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              children: [
+                for (final MapEntry(key: platform, value: n)
+                    in summary.byPlatform.entries)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _platform(context, platform),
+                            style: small.copyWith(fontSize: 13),
+                          ),
+                        ),
+                        Text('$n', style: AppText.numeric(size: 13)),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectedTile extends StatelessWidget {
+  const _CollectedTile({required this.review});
+
+  final CollectedReview review;
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = review.rating;
+    final day = review.reviewedOn;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.palette.hairline)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (rating != null) ...[_Stars(rating), const SizedBox(width: 8)],
+              Flexible(
+                child: Text(
+                  [
+                    _platform(context, review.platform),
+                    if (day != null) _date(day),
+                  ].join(' · '),
+                  style: AppText.caption(context).copyWith(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          if (review.body != null) ...[
+            const SizedBox(height: 4),
+            Text(review.body!, style: AppText.body),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -264,22 +454,30 @@ class _EmptyBox extends StatelessWidget {
 class _Stars extends StatelessWidget {
   const _Stars(this.rating);
 
-  final int rating;
+  /// Drawn to the nearest half star.
+  final num rating;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (var i = 1; i <= 5; i++)
-        Icon(
-          i <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
-          size: 16,
-          color: i <= rating
-              ? context.palette.starAmber
-              : context.palette.textMuted,
-        ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final r = (rating * 2).round() / 2;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 1; i <= 5; i++)
+          Icon(
+            r >= i
+                ? Icons.star_rounded
+                : r >= i - 0.5
+                ? Icons.star_half_rounded
+                : Icons.star_outline_rounded,
+            size: 16,
+            color: r >= i - 0.5
+                ? context.palette.starAmber
+                : context.palette.textMuted,
+          ),
+      ],
+    );
+  }
 }
 
 class _ReviewTile extends StatelessWidget {

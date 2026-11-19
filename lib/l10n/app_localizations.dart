@@ -5115,6 +5115,66 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.'**
   String get previewLoginNewTab;
+
+  /// No description provided for @collectedReviewsTitle.
+  ///
+  /// In ko, this message translates to:
+  /// **'다른 앱 리뷰'**
+  String get collectedReviewsTitle;
+
+  /// No description provided for @collectedReviewsNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'네이버·카카오맵·배달앱에 올라온 리뷰를 모았어요.'**
+  String get collectedReviewsNote;
+
+  /// No description provided for @collectedReviewsNoRating.
+  ///
+  /// In ko, this message translates to:
+  /// **'별점 없음'**
+  String get collectedReviewsNoRating;
+
+  /// No description provided for @collectedReviewsRatedBasis.
+  ///
+  /// In ko, this message translates to:
+  /// **'별점은 {rated}개 리뷰 기준'**
+  String collectedReviewsRatedBasis(int rated);
+
+  /// No description provided for @collectedReviewsMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 더 보기'**
+  String get collectedReviewsMore;
+
+  /// No description provided for @reviewPlatformNaver.
+  ///
+  /// In ko, this message translates to:
+  /// **'네이버'**
+  String get reviewPlatformNaver;
+
+  /// No description provided for @reviewPlatformKakao.
+  ///
+  /// In ko, this message translates to:
+  /// **'카카오맵'**
+  String get reviewPlatformKakao;
+
+  /// No description provided for @reviewPlatformBaemin.
+  ///
+  /// In ko, this message translates to:
+  /// **'배달의민족'**
+  String get reviewPlatformBaemin;
+
+  /// No description provided for @reviewPlatformCoupangEats.
+  ///
+  /// In ko, this message translates to:
+  /// **'쿠팡이츠'**
+  String get reviewPlatformCoupangEats;
+
+  /// No description provided for @reviewPlatformYogiyo.
+  ///
+  /// In ko, this message translates to:
+  /// **'요기요'**
+  String get reviewPlatformYogiyo;
 }
 
 class _AppLocalizationsDelegate

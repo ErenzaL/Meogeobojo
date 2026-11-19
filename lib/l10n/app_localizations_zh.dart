@@ -2831,4 +2831,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get previewLoginNewTab => '登录窗口已打开。完成后，此预览会自动登录。';
+
+  @override
+  String get collectedReviewsTitle => '其他应用的评价';
+
+  @override
+  String get collectedReviewsNote => '收集自 Naver、Kakao 地图和外卖应用的评价。';
+
+  @override
+  String get collectedReviewsNoRating => '暂无评分';
+
+  @override
+  String collectedReviewsRatedBasis(int rated) {
+    return '评分基于 $rated 条评价';
+  }
+
+  @override
+  String get collectedReviewsMore => '查看更多评价';
+
+  @override
+  String get reviewPlatformNaver => 'Naver';
+
+  @override
+  String get reviewPlatformKakao => 'Kakao 地图';
+
+  @override
+  String get reviewPlatformBaemin => 'Baemin';
+
+  @override
+  String get reviewPlatformCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewPlatformYogiyo => 'Yogiyo';
 }

@@ -31,6 +31,29 @@ echo "--- menu CSV import (cms_save_draft / cms_publish for restaurant_menus)"; 
 echo "--- notifications (app_content kind notification)"; P -f $HERE/notification_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- 문의 및 제안 (reports of type feedback)"; P -f $HERE/feedback_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- 사용 지표 (app_events)"; P -f $HERE/app_events_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+echo "--- collected reviews (Naver / Kakao Map / delivery apps, read-only)"; P -f $HERE/collected_reviews_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+CR=$WORK/collected; mkdir -p $CR
+cat > $CR/in.csv <<'CSV'
+kakao_place_id,source,platform,record_type,rating,review_text,review_date,source_review_id
+900001,naver,,review,,it's good,10.29.목,n1
+900001,naver,,review,,it's good,10.29.목,n1
+900001,lemong,BAEMIN,review,4.5,,2026-06-30 12:27:13,
+900002,kakao,,review,-,ok,,k1
+900003,naver,,review,5,a,10.8.수,n2
+900003,naver,,review,4,b,25.3.4.화,n3
+382170960,,,restaurant_only,,,,
+CSV
+python3 $HERE/../../scripts/collected_reviews/build_collected_reviews.py $CR/in.csv --out-dir $CR/sql --year 2026 2>/dev/null
+for i in 1 2; do for f in $CR/sql/*.sql; do P -f $f >/dev/null; done; done
+P -c "do \$\$ begin
+  assert (select count(*) from public.collected_reviews) = 5, 'count';
+  assert (select count(rating) from public.collected_reviews) = 3, 'rated';
+  assert exists (select 1 from public.collected_reviews where body = 'it''s good' and reviewed_on = '2026-10-29'), 'quote / this year';
+  assert (select reviewed_on from public.collected_reviews where body = 'a') = '2025-10-08', 'last year by weekday';
+  assert (select reviewed_on from public.collected_reviews where body = 'b') = '2025-03-04', 'two-digit year';
+  raise notice 'OK collected reviews CSV -> SQL, imported twice: duplicates and restaurant-only rows dropped, quotes and Naver dates kept';
+end \$\$" 2>&1 | grep -E "NOTICE:  OK|ERROR" | sed 's/^NOTICE:  //'
+P -c "delete from public.collected_reviews" >/dev/null
 echo "--- restaurant delete (super admin only)"; P -f $HERE/restaurant_delete_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- weekly cafeteria management"; P -f $HERE/cafeteria_weekly_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300 || true
 echo "--- cafeteria CSV import (server side)"; P -f $HERE/cafeteria_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320 || true

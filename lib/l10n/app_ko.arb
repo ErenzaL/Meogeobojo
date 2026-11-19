@@ -1875,5 +1875,22 @@
   "previewLarger": "크게 보기",
   "previewFit": "창에 맞추기",
   "previewLoading": "앱을 불러오는 중이에요",
-  "previewLoginNewTab": "로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요."
+  "previewLoginNewTab": "로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.",
+  "collectedReviewsTitle": "다른 앱 리뷰",
+  "collectedReviewsNote": "네이버·카카오맵·배달앱에 올라온 리뷰를 모았어요.",
+  "collectedReviewsNoRating": "별점 없음",
+  "collectedReviewsRatedBasis": "별점은 {rated}개 리뷰 기준",
+  "@collectedReviewsRatedBasis": {
+    "placeholders": {
+      "rated": {
+        "type": "int"
+      }
+    }
+  },
+  "collectedReviewsMore": "리뷰 더 보기",
+  "reviewPlatformNaver": "네이버",
+  "reviewPlatformKakao": "카카오맵",
+  "reviewPlatformBaemin": "배달의민족",
+  "reviewPlatformCoupangEats": "쿠팡이츠",
+  "reviewPlatformYogiyo": "요기요"
 }

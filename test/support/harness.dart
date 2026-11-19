@@ -71,6 +71,7 @@ Future<Harness> buildHarness({
   bool recsRequested = true,
   FakeAppContentRepository? content,
   FakeReviewRepository? reviews,
+  FakeCollectedReviewRepository? collectedReviews,
   FakeContributionRepository? contributions,
   FakePhotoPicker? photoPicker,
   UniversityRepository? universities,
@@ -115,6 +116,9 @@ Future<Harness> buildHarness({
       missionRepositoryProvider.overrideWithValue(mission),
       reviewRepositoryProvider.overrideWithValue(
         reviews ?? FakeReviewRepository(),
+      ),
+      collectedReviewRepositoryProvider.overrideWithValue(
+        collectedReviews ?? FakeCollectedReviewRepository(),
       ),
       contributionRepositoryProvider.overrideWithValue(
         contributions ?? FakeContributionRepository(),

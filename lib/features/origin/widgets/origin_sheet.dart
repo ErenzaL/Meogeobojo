@@ -118,11 +118,6 @@ class _OriginSheet extends ConsumerWidget {
           l10n.originSheetTitle,
           style: AppText.sectionTitle.copyWith(fontSize: 22),
         ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.originSheetDesc,
-          style: AppText.body.copyWith(color: context.palette.textSecondary),
-        ),
         const OriginReselectBanner(inSheet: true),
         group(l10n.originGroupGates, const {
           OriginKind.campusCenter,

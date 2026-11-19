@@ -175,7 +175,6 @@ class _PanelBody extends ConsumerWidget {
           const SizedBox(height: 8),
           CondSwitchRow(
             title: l10n.condOpenNow,
-            hint: l10n.condOpenNowHint,
             value: c.openNowOnly,
             onChanged: (v) => set((x) => x.copyWith(openNowOnly: v)),
           ),

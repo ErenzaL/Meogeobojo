@@ -177,7 +177,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
     );
     final openNowRow = CondSwitchRow(
       title: l10n.condOpenNow,
-      hint: l10n.condOpenNowHint,
       value: c.openNowOnly,
       onChanged: (v) => set((x) => x.copyWith(openNowOnly: v)),
     );

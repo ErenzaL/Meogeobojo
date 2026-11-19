@@ -48,8 +48,9 @@ class HomeCategoryNotifier extends Notifier<Set<FoodCategory>> {
   @override
   Set<FoodCategory> build() => const {};
 
-  /// Adds [c] or removes it if already chosen. 전체 clears the selection, and
-  /// un-choosing the last category falls back to 전체.
+  /// Adds [c] or removes it if already chosen. 전체 clears the selection,
+  /// un-choosing the last category falls back to 전체, and choosing every
+  /// category one by one is the same as 전체 (so it switches to it).
   void toggle(FoodCategory c) {
     if (c == FoodCategory.all) {
       state = const {};
@@ -57,7 +58,7 @@ class HomeCategoryNotifier extends Notifier<Set<FoodCategory>> {
     }
     final next = {...state};
     if (!next.remove(c)) next.add(c);
-    state = next;
+    state = next.length == FoodCategory.values.length - 1 ? const {} : next;
   }
 
   void clear() => state = const {};

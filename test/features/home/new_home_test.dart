@@ -464,6 +464,19 @@ void main() {
       expect(chosen(), isEmpty);
     });
 
+    test('choosing every category one by one switches to 전체', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final n = container.read(homeCategoryProvider.notifier);
+      final rest = FoodCategory.values.where((c) => c != FoodCategory.all);
+      for (final c in rest.skip(1)) {
+        n.toggle(c);
+      }
+      expect(container.read(homeCategoryProvider), hasLength(rest.length - 1));
+      n.toggle(rest.first); // the last missing one
+      expect(container.read(homeCategoryProvider), isEmpty);
+    });
+
     testWidgets('a filter chip opens only its own setting', (tester) async {
       await openHome(tester);
       await tester.tap(find.text('예산'));

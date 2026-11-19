@@ -505,6 +505,13 @@ void main() {
         }
         await tester.tap(find.descendant(of: bar, matching: find.text('정렬')));
         await tester.pumpAndSettle();
+        VoidCallback? reset() => tester
+            .widget<OutlinedButton>(
+              find.widgetWithText(OutlinedButton, '이 설정 초기화'),
+            )
+            .onPressed;
+        // already the default: nothing to reset
+        expect(reset(), isNull);
         for (final (mode, label) in [
           (SortMode.distance, '거리순'),
           (SortMode.price, '가격순'),
@@ -513,6 +520,7 @@ void main() {
           await tester.tap(find.widgetWithText(PillChip, label));
           await tester.pumpAndSettle();
           expect(h.container.read(conditionsProvider).sort, mode);
+          expect(reset(), isNotNull);
           expect(
             find.descendant(of: bar, matching: find.text(label)),
             findsOne,
@@ -535,6 +543,8 @@ void main() {
             findsNothing,
           );
           expect(find.descendant(of: bar, matching: find.text('정렬')), findsOne);
+          // the button itself shows the reset is done (no stuck hover/press look)
+          expect(reset(), isNull);
         }
       });
     }

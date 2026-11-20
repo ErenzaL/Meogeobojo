@@ -640,7 +640,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authErrRateLimited => '요청이 너무 많아요. 잠시 후 다시 시도해주세요.';
 
   @override
-  String get authErrNetwork => '인터넷 연결을 확인하고 다시 시도해주세요.';
+  String get authErrServerUnavailable => '서버에 일시적인 문제가 있어요. 잠시 후 다시 시도해주세요.';
+
+  @override
+  String get authErrNetwork => '서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.';
 
   @override
   String get authErrTimeout => '응답이 너무 늦어요. 잠시 후 다시 시도해주세요.';

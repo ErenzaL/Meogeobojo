@@ -74,6 +74,22 @@ void main() {
       expect(authFailureFrom(StateError('?')), AuthFailure.unknown);
     });
 
+    test(
+      'server outages are not reported as an internet connection problem',
+      () {
+        for (final status in ['500', '502', '503', '504']) {
+          final failure = authFailureFrom(
+            AuthRetryableFetchException(
+              message: 'internal',
+              statusCode: status,
+            ),
+          );
+          expect(failure, AuthFailure.serverUnavailable);
+          expect(failure.retryable, isTrue);
+        }
+      },
+    );
+
     test('closing the system auth sheet is a cancellation', () {
       expect(
         authFailureFrom(PlatformException(code: 'CANCELED')),

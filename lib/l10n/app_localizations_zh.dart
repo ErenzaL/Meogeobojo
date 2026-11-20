@@ -636,7 +636,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrRateLimited => '请求过于频繁，请稍后再试。';
 
   @override
-  String get authErrNetwork => '请检查网络连接后重试。';
+  String get authErrServerUnavailable => '服务器暂时出现问题，请稍后再试。';
+
+  @override
+  String get authErrNetwork => '无法连接服务器，请稍后再试。';
 
   @override
   String get authErrTimeout => '响应超时，请稍后再试。';

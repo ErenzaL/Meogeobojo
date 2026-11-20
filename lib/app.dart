@@ -1,3 +1,5 @@
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -53,6 +55,7 @@ class MeogeobojoApp extends ConsumerWidget {
       darkTheme: buildDarkTheme(),
       // System Default unless the user picked Light or Dark.
       themeMode: themeMode,
+      scrollBehavior: const _MouseDragScrollBehavior(),
       // Status-bar icons and the Kakao web map follow the resolved brightness (light icons, dark map on dark).
       builder: (context, child) {
         final dark = Theme.of(context).brightness == Brightness.dark;
@@ -79,6 +82,17 @@ class MeogeobojoApp extends ConsumerWidget {
       home: urlSync ? null : home,
     );
   }
+}
+
+// Allow mouse scrolling in the web preview; selectable-text pages opt out locally.
+class _MouseDragScrollBehavior extends MaterialScrollBehavior {
+  const _MouseDragScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    ...super.dragDevices,
+    PointerDeviceKind.mouse,
+  };
 }
 
 /// Shows the existing [SplashScreen] briefly, then the app shell wrapped in

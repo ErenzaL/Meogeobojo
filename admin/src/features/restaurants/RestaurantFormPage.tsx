@@ -14,6 +14,7 @@ import DeleteRestaurantsDialog from './DeleteRestaurantsDialog'
 import { KakaoField, KakaoIdCheck, KakaoLiveCard, liveText } from './KakaoLiveUi'
 import type { KakaoLive } from './kakaoLookup'
 import { useKakaoRestaurantDetails, useKakaoSubject } from './useKakaoRestaurantDetails'
+import ReviewsPanel from '../reviews/ReviewsPanel'
 import RestaurantPreview from './RestaurantPreview'
 import { useUniversities } from './RestaurantsPage'
 import { BUSINESS_LABEL, BUSINESS_STATUSES, VISIBILITIES, VISIBILITY_LABEL, emptyRestaurantForm, fromRow, restaurantSchema, snapshotFromForm, toRow, type RestaurantForm } from './schema'
@@ -182,6 +183,7 @@ function EditRestaurant({ id }: { id: string }) {
   const dirty = isDirty || editBase !== null
 
   return (
+    <>
     <form onSubmit={handleSubmit((v) => save.mutate(v))} onChange={() => setEditBase((b) => b ?? serverRev)} className="max-w-4xl space-y-6">
       <Link to="/restaurants" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft className="size-4" />식당 목록</Link>
       <PageHeader title={title} description="수정은 초안으로 저장돼요. 게시하기 전에는 앱 사용자에게 보이지 않아요." />
@@ -211,5 +213,13 @@ function EditRestaurant({ id }: { id: string }) {
         }} />)}
       {state && <RestaurantPreview open={previewing} live={state.live} draft={state.draft?.data ?? state.live} onClose={() => setPreviewing(false)} />}
     </form>
+    {/* outside the form: the search boxes and buttons here must never submit or dirty the restaurant's draft */}
+    <section aria-label="이 식당의 리뷰" className="mt-8 max-w-4xl">
+      <h2 className="mb-3 text-lg font-bold">리뷰</h2>
+      {identity.data?.kakao_place_id
+        ? <ReviewsPanel placeId={identity.data.kakao_place_id} canImport={can('admin')} />
+        : <p className="rounded-xl bg-page p-4 text-sm text-muted">카카오 장소 ID가 없는 식당은 리뷰를 불러올 수 없어요.</p>}
+    </section>
+    </>
   )
 }

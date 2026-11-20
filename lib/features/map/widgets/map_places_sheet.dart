@@ -17,6 +17,7 @@ import '../../restaurants/models/restaurant.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../restaurants/repositories/restaurant_repository.dart';
 import '../../restaurants/screens/restaurant_detail_screen.dart';
+import 'map_overlay_shield.dart';
 
 /// V5 bottom sheet over the map: "조건에 맞는 식당 N곳", the sort, the
 /// confirmed matches (the same list and verdicts as Home), then the
@@ -81,42 +82,45 @@ class _MapPlacesSheetState extends ConsumerState<MapPlacesSheet> {
       maxChildSize: _sizes.last,
       snap: true,
       snapSizes: _sizes,
-      builder: (context, controller) => Container(
-        decoration: BoxDecoration(
-          color: p.background,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(AppRadius.sheet),
+      // the sheet keeps wheel / drag to itself: scrolling the list never zooms the web map behind it
+      builder: (context, controller) => MapOverlayShield(
+        child: Container(
+          decoration: BoxDecoration(
+            color: p.background,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.sheet),
+            ),
+            border: Border(top: BorderSide(color: p.border)),
           ),
-          border: Border(top: BorderSide(color: p.border)),
-        ),
-        child: ListView(
-          controller: controller,
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + bottom),
-          children: [
-            ListenableBuilder(
-              listenable: _sheet,
-              builder: (context, _) => Semantics(
-                button: true,
-                label: _sheet.isAttached && _sheet.size >= _sizes.last - 0.05
-                    ? context.l10n.homeFiltersHide
-                    : context.l10n.noticesSeeAll,
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.grab,
-                  child: GestureDetector(
-                    key: const ValueKey('map-sheet-handle'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _toggle,
-                    onVerticalDragUpdate: _drag,
-                    onVerticalDragEnd: _settle,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 14),
-                      child: Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: p.borderStrong,
-                            borderRadius: BorderRadius.circular(2),
+          child: ListView(
+            controller: controller,
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + bottom),
+            children: [
+              ListenableBuilder(
+                listenable: _sheet,
+                builder: (context, _) => Semantics(
+                  button: true,
+                  label: _sheet.isAttached && _sheet.size >= _sizes.last - 0.05
+                      ? context.l10n.homeFiltersHide
+                      : context.l10n.noticesSeeAll,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: GestureDetector(
+                      key: const ValueKey('map-sheet-handle'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggle,
+                      onVerticalDragUpdate: _drag,
+                      onVerticalDragEnd: _settle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 14),
+                        child: Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: p.borderStrong,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
                       ),
@@ -124,9 +128,9 @@ class _MapPlacesSheetState extends ConsumerState<MapPlacesSheet> {
                   ),
                 ),
               ),
-            ),
-            ..._placesChildren(context, ref),
-          ],
+              ..._placesChildren(context, ref),
+            ],
+          ),
         ),
       ),
     );

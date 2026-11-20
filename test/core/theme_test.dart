@@ -140,6 +140,7 @@ void main() {
         () {
           // Translucent fills are judged on what they look like over a card.
           final soft = Color.alphaBlend(p.accentSoft, p.card);
+          final nav = Color.alphaBlend(p.navSurface, p.background);
           for (final (fg, bg, label) in [
             (p.textPrimary, p.background, 'text on page'),
             (p.textPrimary, p.card, 'text on card'),
@@ -155,8 +156,8 @@ void main() {
             (p.accentStrong, soft, 'accent text on accent tint'),
             (p.onRust, p.rust, 'button label on accent'),
             (p.chipSelectedFg, p.chipSelectedBg, 'selected chip'),
-            (p.navIdle, p.navSurface, 'nav idle'),
-            (p.navSelectedFg, p.navSurface, 'nav selected'),
+            (p.navIdle, nav, 'nav idle'),
+            (p.navSelectedFg, nav, 'nav selected'),
             (p.statusOpen, p.card, 'status green'),
             (p.error, p.background, 'error text'),
           ]) {

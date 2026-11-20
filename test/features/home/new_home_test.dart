@@ -464,6 +464,19 @@ void main() {
       expect(chosen(), isEmpty);
     });
 
+    test('choosing every category one by one switches to 전체', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final n = container.read(homeCategoryProvider.notifier);
+      final rest = FoodCategory.values.where((c) => c != FoodCategory.all);
+      for (final c in rest.skip(1)) {
+        n.toggle(c);
+      }
+      expect(container.read(homeCategoryProvider), hasLength(rest.length - 1));
+      n.toggle(rest.first); // the last missing one
+      expect(container.read(homeCategoryProvider), isEmpty);
+    });
+
     testWidgets('a filter chip opens only its own setting', (tester) async {
       await openHome(tester);
       await tester.tap(find.text('예산'));
@@ -492,6 +505,62 @@ void main() {
       expect(find.text('어디까지 갈까요?'), findsOneWidget);
       expect(find.text('한 끼 예산'), findsNothing);
     });
+
+    for (final size in [const Size(390, 844), const Size(1440, 900)]) {
+      testWidgets('이 설정 초기화 resets every sort and chip at ${size.width}', (
+        tester,
+      ) async {
+        final h = await openHome(tester, size: size);
+        final bar = find.byType(HomeFilterBar);
+        if (size.width < 1000) {
+          await tester.drag(bar, const Offset(-700, 0));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.descendant(of: bar, matching: find.text('정렬')));
+        await tester.pumpAndSettle();
+        VoidCallback? reset() => tester
+            .widget<OutlinedButton>(
+              find.widgetWithText(OutlinedButton, '이 설정 초기화'),
+            )
+            .onPressed;
+        // already the default: nothing to reset
+        expect(reset(), isNull);
+        for (final (mode, label) in [
+          (SortMode.distance, '거리순'),
+          (SortMode.price, '가격순'),
+          (SortMode.rating, '평점순'),
+        ]) {
+          await tester.tap(find.widgetWithText(PillChip, label));
+          await tester.pumpAndSettle();
+          expect(h.container.read(conditionsProvider).sort, mode);
+          expect(reset(), isNotNull);
+          expect(
+            find.descendant(of: bar, matching: find.text(label)),
+            findsOne,
+          );
+
+          await tester.tap(find.text('이 설정 초기화'));
+          await tester.pumpAndSettle();
+          expect(
+            h.container.read(conditionsProvider).sort,
+            SortMode.recommended,
+          );
+          expect(
+            tester
+                .widget<PillChip>(find.widgetWithText(PillChip, '추천순'))
+                .selected,
+            isTrue,
+          );
+          expect(
+            find.descendant(of: bar, matching: find.text(label)),
+            findsNothing,
+          );
+          expect(find.descendant(of: bar, matching: find.text('정렬')), findsOne);
+          // the button itself shows the reset is done (no stuck hover/press look)
+          expect(reset(), isNull);
+        }
+      });
+    }
 
     testWidgets(
       'moon toggles dark mode; the bell opens the notification list',
@@ -759,6 +828,8 @@ void main() {
       await revealInSheet(tester, find.text('지금 주문 가능한 곳만'));
       expect(find.text('정문 기준'), findsWidgets);
       expect(find.text('바꾸기 ›'), findsOneWidget);
+      // 빠른 회전 says what it means under the 운영·편의 chips.
+      await revealInSheet(tester, find.textContaining('빠른 회전: '));
       await tester.dragUntilVisible(
         find.text('추천 순서에 반영'),
         find.byType(Scrollable).last,

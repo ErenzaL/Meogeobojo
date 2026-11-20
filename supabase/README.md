@@ -166,3 +166,35 @@ select id, 'super_admin' from auth.users where email = 'you@example.com';
 **Data model notes**: restaurants are not stored; `restaurant_overrides` holds what we add or override per `kakao_place_id` (null for hand-made places). `visibility`: `draft` (admin only), `published`, `hidden` / `archived` (the app must hide the place). Deleting a university removes only its links. `cafeteria_meals.badge` carries labels such as `천원의 아침밥`, only when the source says so. Menu changes and moderation state are public through the existing read policies.
 
 **Tests**: `supabase/tests/admin_test.sql` (run by `run_local.sh`) covers anonymous, ordinary user, moderator, admin and super_admin, including negative cases (self-granting roles, writing data, calling privileged functions, editing moderation columns, reading the audit log).
+
+## Imported reviews: `20261128000100_review_import.sql` (NOT applied)
+
+Reviews collected from Kakao, Naver and delivery apps are imported from a CSV into the **same table** students write to,
+`public.student_reviews`. There is no second review table: the app, the website and the admin page read one list, so they
+cannot drift apart.
+
+| | student review (written in the app) | imported review |
+|---|---|---|
+| `source` | `app` | `kakao`, `naver`, `lemong`, ... |
+| `user_id` | the author | `NULL` (no account) |
+| `rating` | 1..5, required | 1..5 or `NULL` (text-only reviews are kept) |
+| `source_rating` | `NULL` | the original rating; a half star (4.5) is stored here, and `rating` is the nearest whole star (.5 rounds up) that the app and the ranking use |
+| `created_at` | when it was written | the review's own date (Naver's `10.29.목` gets the latest year whose calendar matches the weekday; no date: the import time) |
+| `platform`, `source_review_id` | `NULL` | e.g. `BAEMIN`, the source's own id |
+| `import_key` | `NULL` | md5 of source + place + source id (or of the content when the source has no id): importing the same file twice changes nothing |
+
+- **Who can write what.** Students keep the column grants they always had (`kakao_place_id, university_id, rating, body`), so
+  they can never set `source` or `import_key`. Imported rows get in only through `admin_import_reviews(p_rows, p_dry_run)`
+  (admin role; at most 1000 rows per call; a dry run counts without writing; audited as `import_reviews`).
+- **Existing rows are never touched.** A re-import leaves the text, the rating and the moderation state of a review that is
+  already there exactly as it is, so a review an admin hid stays hidden.
+- **Moderation** (hide / remove / show again, with a reason) works on imported reviews like on student reviews.
+- A review with neither a rating nor text is skipped. A student's review still needs an author and a rating
+  (`student_reviews_shape_check`).
+- `admin_mission_stats()` is redefined only to leave authorless reviews out of "active users".
+- **Admin page**: 리뷰·신고 → 리뷰 (all restaurants) and each restaurant's edit page (that restaurant only) both have
+  CSV 가져오기 (preview, then a server dry run, then save), CSV 양식 and CSV 내보내기 (authors are never written; the export
+  imports again). On a restaurant's page only that restaurant's lines of a file are imported.
+- **App / website**: imported reviews are listed with where they came from instead of "학생", text-only ones show no stars,
+  the average is taken over the reviews that have stars, and the ranking's review signal reads every page of ratings.
+- **Test**: `supabase/tests/review_import_test.sql` (run by `run_local.sh`).

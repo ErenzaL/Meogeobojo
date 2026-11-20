@@ -13,6 +13,8 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'core/widgets/responsive.dart';
 import 'features/auth/widgets/auth_flow_host.dart';
+import 'features/map/utils/kakao_dark_stub.dart'
+    if (dart.library.js_interop) 'features/map/utils/kakao_dark_web.dart';
 import 'features/navigation/screens/app_shell.dart';
 import 'features/navigation/utils/url_sync.dart';
 import 'features/preview/embedded_phone_chrome.dart';
@@ -54,19 +56,21 @@ class MeogeobojoApp extends ConsumerWidget {
       // System Default unless the user picked Light or Dark.
       themeMode: themeMode,
       scrollBehavior: const _MouseDragScrollBehavior(),
-      // Status-bar icons follow the resolved brightness (light icons on dark).
-      builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-        value: Theme.of(context).brightness == Brightness.dark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
-        child: EmbeddedPhoneChrome(
-          enabled: ref.watch(embeddedPreviewProvider),
-          child: AppFrame(
-            fullWidth: fullWidth,
-            child: child ?? const SizedBox.shrink(),
+      // Status-bar icons and the Kakao web map follow the resolved brightness (light icons, dark map on dark).
+      builder: (context, child) {
+        final dark = Theme.of(context).brightness == Brightness.dark;
+        setKakaoMapDark(dark);
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          child: EmbeddedPhoneChrome(
+            enabled: ref.watch(embeddedPreviewProvider),
+            child: AppFrame(
+              fullWidth: fullWidth,
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
-        ),
-      ),
+        );
+      },
       locale: language.locale,
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [

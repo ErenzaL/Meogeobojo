@@ -323,7 +323,7 @@ void main() {
         await tapCta(tester);
         await tester.pumpAndSettle();
 
-        expect(find.text('인터넷 연결을 확인하고 다시 시도해주세요.'), findsOneWidget);
+        expect(find.text('서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'), findsOneWidget);
         await tester.drag(find.byType(Scrollable).first, const Offset(0, 800));
         await tester.pumpAndSettle();
         expect(

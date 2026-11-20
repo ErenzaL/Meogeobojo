@@ -74,7 +74,7 @@ void main() {
         university: univ,
         category: FoodCategory.cafe,
       );
-      expect(queries, ['카페', '디저트']);
+      expect(queries, ['카페', '디저트', '간식']);
       expect(out.map((r) => r.kakaoId), ['1']);
     },
   );
@@ -141,7 +141,7 @@ void main() {
     'multi-keyword category returns partial results if one query fails',
     () async {
       final repo = KakaoRestaurantRepository((b) async {
-        if (b['query'] == '간식') {
+        if (b['query'] == '뷔페') {
           throw const RestaurantException(RestaurantErrorKind.upstream);
         }
         return {

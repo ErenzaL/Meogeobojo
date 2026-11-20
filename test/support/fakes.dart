@@ -6,9 +6,7 @@ import 'package:meogeobojo/features/campus_meals/repositories/campus_meal_reposi
 import 'package:meogeobojo/features/content/models/app_content.dart';
 import 'package:meogeobojo/features/contributions/models/contribution.dart';
 import 'package:meogeobojo/features/contributions/repositories/contribution_repository.dart';
-import 'package:meogeobojo/features/reviews/models/collected_review.dart';
 import 'package:meogeobojo/features/reviews/models/student_review.dart';
-import 'package:meogeobojo/features/reviews/repositories/collected_review_repository.dart';
 import 'package:meogeobojo/features/reviews/repositories/review_repository.dart';
 import 'package:meogeobojo/features/content/repositories/app_content_repository.dart';
 import 'package:meogeobojo/features/campus_meals/utils/seoul_date.dart';
@@ -568,26 +566,6 @@ class FakeAppContentRepository implements AppContentRepository {
     if (failing) throw TimeoutException('offline');
     return List.of(items);
   }
-}
-
-/// Collected reviews for a test: the summary (what `collected_review_stats` adds up to) and the newest reviews with
-/// text, per place. Empty by default.
-class FakeCollectedReviewRepository implements CollectedReviewRepository {
-  FakeCollectedReviewRepository({
-    this.summaries = const {},
-    this.reviews = const {},
-  });
-
-  final Map<String, CollectedReviewSummary> summaries;
-  final Map<String, List<CollectedReview>> reviews;
-
-  @override
-  Future<CollectedReviewSummary> summary(String kakaoId) async =>
-      summaries[kakaoId] ?? CollectedReviewSummary.empty;
-
-  @override
-  Future<List<CollectedReview>> latest(String kakaoId) async =>
-      reviews[kakaoId] ?? const [];
 }
 
 /// `student_reviews` for a test: rows are what row-level security would return

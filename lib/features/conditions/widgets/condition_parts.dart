@@ -76,13 +76,13 @@ class CondSwitchRow extends StatelessWidget {
   const CondSwitchRow({
     super.key,
     required this.title,
-    required this.hint,
+    this.hint,
     required this.value,
     required this.onChanged,
   });
 
   final String title;
-  final String hint;
+  final String? hint;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -105,11 +105,13 @@ class CondSwitchRow extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  hint,
-                  style: AppText.caption(context).copyWith(fontSize: 13.5),
-                ),
+                if (hint case final hint?) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    hint,
+                    style: AppText.caption(context).copyWith(fontSize: 13.5),
+                  ),
+                ],
               ],
             ),
           ),

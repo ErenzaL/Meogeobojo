@@ -24,6 +24,27 @@ StudentReview review(
   moderationStatus: status,
 );
 
+/// A review an administrator imported from a CSV: no author, maybe no stars.
+StudentReview imported(
+  String id, {
+  int? rating = 5,
+  String? body = '가져온 리뷰',
+  String source = 'naver',
+  String? platform,
+  String status = 'visible',
+  String place = 'a',
+}) => StudentReview(
+  id: id,
+  userId: null,
+  kakaoPlaceId: place,
+  rating: rating,
+  body: body,
+  createdAt: DateTime.utc(2026, 6, 13),
+  moderationStatus: status,
+  source: source,
+  platform: platform,
+);
+
 Future<(Harness, FakeReviewRepository, FakeMissionRepository)> open(
   WidgetTester tester, {
   List<StudentReview>? reviews,
@@ -86,6 +107,66 @@ void main() {
       },
     );
 
+    test('imported reviews: no author, maybe no stars, and where they came from', () {
+      final r = StudentReview.fromJson({
+        'id': 'x',
+        'user_id': null,
+        'kakao_place_id': 'p',
+        'rating': null,
+        'body': '별점 없는 글',
+        'created_at': '2026-06-13T00:00:00Z',
+        'source': 'lemong',
+        'platform': 'BAEMIN',
+      })!;
+      expect(r.userId, isNull);
+      expect(r.rating, isNull);
+      expect(r.isImported, isTrue);
+      expect(r.platform, 'BAEMIN');
+      // a guest (no id) never "wrote" it, and neither does anyone else
+      expect(r.isMadeBy(null), isFalse);
+      expect(r.isMadeBy('u'), isFalse);
+      // a student's review without an author or without stars is not valid, and an import needs stars or text
+      Map<String, dynamic> row(Map<String, dynamic> over) => {
+        'id': 'x',
+        'user_id': 'u',
+        'kakao_place_id': 'p',
+        'rating': 4,
+        'created_at': '2026-06-13T00:00:00Z',
+        ...over,
+      };
+      expect(StudentReview.fromJson(row({'rating': null})), isNull);
+      expect(StudentReview.fromJson(row({'user_id': null})), isNull);
+      expect(
+        StudentReview.fromJson(
+          row({'user_id': null, 'rating': null, 'source': 'naver'}),
+        ),
+        isNull,
+      );
+      expect(
+        StudentReview.fromJson(
+          row({'user_id': null, 'rating': 7, 'source': 'naver'}),
+        ),
+        isNull,
+      );
+      expect(StudentReview.fromJson(row({}))!.isImported, isFalse);
+    });
+
+    test('the average is over the reviews that have stars; the count is every visible review', () {
+      final s = ReviewSummary.of([
+        review('1', rating: 5),
+        imported('2', rating: 3),
+        imported('3', rating: null, body: '글만 있어요'),
+        imported('4', rating: 1, status: 'hidden'),
+      ]);
+      expect(s.count, 3);
+      expect(s.ratedCount, 2);
+      expect(s.average, 4.0);
+      final textOnly = ReviewSummary.of([imported('5', rating: null)]);
+      expect(textOnly.count, 1);
+      expect(textOnly.ratedCount, 0);
+      expect(textOnly.average, 0);
+    });
+
     test('the average counts only reviews other students can see', () {
       final s = ReviewSummary.of([
         review('1', rating: 5),
@@ -123,6 +204,87 @@ void main() {
         expect(find.textContaining('학생 ·'), findsNWidgets(2)); // never a name
       },
     );
+
+    testWidgets(
+      'imported reviews show to a guest too, labelled with where they came from (never "학생")',
+      (tester) async {
+        await open(
+          tester,
+          signedIn: false,
+          reviews: [
+            imported('1', rating: 4, body: '카카오 글', source: 'kakao'),
+            imported('2', rating: null, body: '별점 없는 네이버 글'),
+            imported(
+              '3',
+              rating: 5,
+              body: '배달 글',
+              source: 'lemong',
+              platform: 'BAEMIN',
+            ),
+            imported('4', body: '숨겨진 글', status: 'hidden'),
+          ],
+        );
+        expect(find.text('카카오 글'), findsOneWidget);
+        expect(find.text('별점 없는 네이버 글'), findsOneWidget);
+        expect(find.text('숨겨진 글'), findsNothing);
+        expect(find.textContaining('카카오맵 ·'), findsOneWidget);
+        expect(find.textContaining('네이버 ·'), findsOneWidget);
+        expect(find.textContaining('배달의민족 ·'), findsOneWidget);
+        expect(find.textContaining('학생 ·'), findsNothing);
+        expect(find.text('내 리뷰'), findsNothing); // none of them is "mine"
+        // 3 visible reviews, 2 with stars: (4 + 5) / 2
+        expect(find.text('4.5 · 리뷰 3개 · 한식'), findsOneWidget);
+      },
+    );
+
+    testWidgets('only text-only reviews: the count, no average', (tester) async {
+      await open(
+        tester,
+        reviews: [imported('1', rating: null), imported('2', rating: null)],
+      );
+      expect(find.text('리뷰 2개 · 한식'), findsOneWidget);
+      expect(find.text('리뷰 2개'), findsOneWidget); // the summary box
+      expect(find.text('0.0'), findsNothing);
+    });
+
+    testWidgets('a student review is still "학생", and mine is still mine, next to imported ones', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        reviews: [
+          review('1', user: 'other', body: '학생이 쓴 글'),
+          review('2', user: 'user-1', body: '내가 쓴 글'),
+          imported('3', body: '가져온 글'),
+        ],
+      );
+      expect(find.text('학생이 쓴 글'), findsOneWidget);
+      expect(find.text('가져온 글'), findsOneWidget);
+      expect(find.text('내 리뷰'), findsOneWidget);
+      expect(find.textContaining('학생 ·'), findsOneWidget);
+    });
+
+    testWidgets('a long list shows ten at first and more on request', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        reviews: [
+          for (var i = 0; i < 25; i++) imported('r$i', body: '글 번호 $i'),
+        ],
+      );
+      expect(find.textContaining('글 번호'), findsNWidgets(10));
+      final more = find.byKey(const ValueKey('reviews-show-more'));
+      await tester.ensureVisible(more);
+      await tester.tap(more);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('글 번호'), findsNWidgets(20));
+      await tester.ensureVisible(more);
+      await tester.tap(more);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('글 번호'), findsNWidgets(25));
+      expect(more, findsNothing);
+    });
 
     testWidgets('an empty restaurant invites the first review', (tester) async {
       await open(tester, reviews: []);

@@ -26,7 +26,6 @@ import '../../recommendation/home_ranking.dart';
 import '../../recommendation/providers/ranking_providers.dart';
 import '../../recommendation/restaurant_insight.dart';
 import '../../records/meal_records.dart';
-import '../../reviews/models/collected_review.dart';
 import '../../reviews/models/student_review.dart';
 import '../../reviews/providers/review_providers.dart';
 import '../../reviews/widgets/reviews_section.dart';
@@ -152,11 +151,6 @@ class _RestaurantDetailScreenState
         ref.watch(restaurantPhotosProvider(r.kakaoId)).value ?? const [];
     final reviews =
         ref.watch(restaurantReviewsProvider(r.kakaoId)).value ?? const [];
-    final totals = reviewTotals(
-      ReviewSummary.of(reviews),
-      ref.watch(collectedReviewSummaryProvider(r.kakaoId)).value ??
-          CollectedReviewSummary.empty,
-    );
     final origin = ref.watch(originProvider);
     final meters = metersFromOrigin(origin, r) ?? r.distanceMeters;
     final walk = walkMinutesFor(meters);
@@ -198,8 +192,7 @@ class _RestaurantDetailScreenState
       restaurant: r,
       insight: insight,
       status: status,
-      reviewCount: totals.count,
-      averageRating: totals.average,
+      summary: ReviewSummary.of(reviews),
       large: wide,
       onRating: _toReviews,
     );
@@ -242,13 +235,7 @@ class _RestaurantDetailScreenState
     final reviewsBlock = Padding(
       key: _reviewsKey,
       padding: const EdgeInsets.only(top: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ReviewsSection(restaurant: r),
-          CollectedReviewsSection(restaurant: r),
-        ],
-      ),
+      child: ReviewsSection(restaurant: r),
     );
     final contribute = Padding(
       padding: const EdgeInsets.only(top: 20),
@@ -579,8 +566,7 @@ class _Head extends StatelessWidget {
     required this.restaurant,
     required this.insight,
     required this.status,
-    required this.reviewCount,
-    required this.averageRating,
+    required this.summary,
     required this.large,
     required this.onRating,
   });
@@ -588,10 +574,7 @@ class _Head extends StatelessWidget {
   final Restaurant restaurant;
   final RestaurantInsight insight;
   final OrderStatus status;
-
-  /// Students' visible reviews plus the collected ones; the average is over those with a rating.
-  final int reviewCount;
-  final double? averageRating;
+  final ReviewSummary summary;
   final bool large;
   final VoidCallback onRating;
 
@@ -641,15 +624,15 @@ class _Head extends StatelessWidget {
                 Flexible(
                   child: Text(
                     [
-                      if (reviewCount == 0)
-                        l10n.detailNoReviews
-                      else if (averageRating == null)
-                        l10n.reviewsCount(reviewCount)
-                      else
-                        l10n.detailRatingLine(
-                          averageRating!.toStringAsFixed(1),
-                          reviewCount,
-                        ),
+                      summary.ratedCount > 0
+                          ? l10n.detailRatingLine(
+                              summary.average.toStringAsFixed(1),
+                              summary.count,
+                            )
+                          // text-only reviews: how many there are, no average
+                          : summary.count > 0
+                          ? l10n.reviewsCount(summary.count)
+                          : l10n.detailNoReviews,
                       if (segments.isNotEmpty) segments.first,
                     ].join(' · '),
                     maxLines: 1,

@@ -36,7 +36,11 @@ class SupabaseReviewRepository implements ReviewRepository {
   final SupabaseClient _db;
 
   static const _columns =
-      'id,user_id,kakao_place_id,rating,body,created_at,moderation_status';
+      'id,user_id,kakao_place_id,rating,body,created_at,moderation_status,source,platform';
+
+  /// The newest reviews of one place. Imported reviews can be many (the busiest place has close to a thousand), and the
+  /// average on the page is taken over what is returned, so this is as high as one request can go.
+  static const placeLimit = 1000;
 
   @override
   Future<List<StudentReview>> forPlace(String kakaoId) async {
@@ -45,7 +49,7 @@ class SupabaseReviewRepository implements ReviewRepository {
         .select(_columns)
         .eq('kakao_place_id', kakaoId)
         .order('created_at', ascending: false)
-        .limit(100)
+        .limit(placeLimit)
         .timeout(const Duration(seconds: 12));
     return [for (final r in rows) ?StudentReview.fromJson(r)];
   }

@@ -2400,6 +2400,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n★ $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return 'No $n★ reviews yet.';
+  }
+
+  @override
   String get searchRecentTitle => 'Recent searches';
 
   @override

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/pill_chip.dart';
 import '../../../core/widgets/v5_widgets.dart';
 import '../../auth/providers/auth_providers.dart';
 import '../../auth/widgets/auth_prompt.dart';
@@ -30,6 +31,14 @@ class ReviewsSection extends ConsumerStatefulWidget {
 class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
   Restaurant get restaurant => widget.restaurant;
   int _shown = ReviewsSection.maxShown;
+
+  /// The star rating the list is narrowed to; null shows every review.
+  int? _star;
+
+  void _filter(int? star) => setState(() {
+    _star = star;
+    _shown = ReviewsSection.maxShown;
+  });
 
   Future<void> _write(
     BuildContext context,
@@ -74,7 +83,19 @@ class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
         Row(
           children: [
             Expanded(
-              child: Text(l10n.reviewsTitle, style: AppText.sectionTitle),
+              child: Text.rich(
+                TextSpan(
+                  text: l10n.reviewsTitle,
+                  children: [
+                    if (summary.count > 0)
+                      TextSpan(
+                        text: ' ${summary.count}',
+                        style: TextStyle(color: p.textSecondary),
+                      ),
+                  ],
+                ),
+                style: AppText.sectionTitle,
+              ),
             ),
             if (headerAction)
               TextButton.icon(
@@ -109,6 +130,16 @@ class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
               for (final r in all)
                 if (r.isVisible && !r.isMadeBy(me)) r,
             ];
+            // how many visible reviews have each star (the same ones the summary counts, mine included)
+            final perStar = List<int>.filled(6, 0);
+            for (final r in all) {
+              final stars = r.rating;
+              if (r.isVisible && stars != null) perStar[stars]++;
+            }
+            final star = _star;
+            bool keep(StudentReview r) => star == null || r.rating == star;
+            final myShown = mine != null && keep(mine) ? mine : null;
+            final listed = others.where(keep).toList();
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -121,13 +152,42 @@ class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
                         : null,
                   ),
                 const SizedBox(height: 10),
-                if (mine != null) _MyReviewCard(review: mine),
-                for (final r in others.take(_shown))
+                if (summary.ratedCount > 0) ...[
+                  ChipWrap(
+                    children: [
+                      PillChip(
+                        key: const ValueKey('reviews-filter-all'),
+                        label: l10n.reviewsFilterAll(summary.count),
+                        selected: star == null,
+                        onTap: () => _filter(null),
+                      ),
+                      for (var s = 5; s >= 1; s--)
+                        PillChip(
+                          key: ValueKey('reviews-filter-$s'),
+                          label: l10n.reviewsFilterStar(s, perStar[s]),
+                          selected: star == s,
+                          onTap: () => _filter(s),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (myShown != null) _MyReviewCard(review: myShown),
+                for (final r in listed.take(_shown))
                   _ReviewTile(
                     review: r,
                     onReport: () => _report(context, ref, r.id),
                   ),
-                if (others.length > _shown)
+                if (star != null && myShown == null && listed.isEmpty)
+                  Padding(
+                    key: const ValueKey('reviews-filter-empty'),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      l10n.reviewsFilterEmpty(star),
+                      style: TextStyle(fontSize: 14, color: p.textSecondary),
+                    ),
+                  ),
+                if (listed.length > _shown)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(

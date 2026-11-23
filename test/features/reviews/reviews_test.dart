@@ -304,6 +304,48 @@ void main() {
       expect(find.text('다른 식당 글'), findsNothing);
     });
 
+    testWidgets('the total is in the title, and the list narrows to one star', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        reviews: [
+          review('1', rating: 5, body: '오점 하나'),
+          review('2', rating: 5, body: '오점 둘'),
+          imported('3', rating: 3, body: '삼점'),
+          imported('4', rating: null, body: '별점 없음'),
+        ],
+      );
+      expect(find.text('리뷰 4'), findsOneWidget);
+      expect(find.text('전체 4'), findsOneWidget);
+      expect(find.text('5점 2'), findsOneWidget);
+      expect(find.text('1점 0'), findsOneWidget);
+
+      Future<void> pick(int star) async {
+        final chip = find.byKey(ValueKey('reviews-filter-$star'));
+        await tester.ensureVisible(chip);
+        await tester.tap(chip);
+        await tester.pumpAndSettle();
+      }
+
+      await pick(5);
+      expect(find.text('오점 하나'), findsOneWidget);
+      expect(find.text('오점 둘'), findsOneWidget);
+      expect(find.text('삼점'), findsNothing);
+      expect(find.text('별점 없음'), findsNothing);
+
+      await pick(1);
+      expect(find.textContaining('오점'), findsNothing);
+      expect(find.text('1점 리뷰가 아직 없어요.'), findsOneWidget);
+
+      final all = find.byKey(const ValueKey('reviews-filter-all'));
+      await tester.ensureVisible(all);
+      await tester.tap(all);
+      await tester.pumpAndSettle();
+      expect(find.text('별점 없음'), findsOneWidget);
+      expect(find.text('삼점'), findsOneWidget);
+    });
+
     testWidgets(
       'the student\'s own hidden review is shown to them with its status',
       (tester) async {

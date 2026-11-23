@@ -1512,10 +1512,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get originSheetTitle => 'Where are you starting from?';
 
   @override
-  String get originSheetDesc =>
-      'Home, the map and search re-measure straight-line distances from here. Points follow OpenStreetMap; buildings use their centre, not the entrance.';
-
-  @override
   String get originGroupGates => 'Gates';
 
   @override
@@ -1583,10 +1579,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get condOpenNow => 'Only places I can order from now';
 
   @override
-  String get condOpenNowHint =>
-      'Open and before last order at your estimated arrival. It counts as a match only when both opening time and last order are known. Waiting time is not included.';
-
-  @override
   String get condCuisine => 'Cuisine';
 
   @override
@@ -1609,6 +1601,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get condAmenityLate => 'Open until 10 pm';
+
+  @override
+  String get condAmenityFastHint =>
+      'Fast turnover: food comes out quickly and tables free up fast, so you won\'t wait long.';
 
   @override
   String get condSoft => 'Shapes the order';
@@ -1720,6 +1716,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reviewAuthor => 'Student';
+
+  @override
+  String get reviewSourceKakao => 'Kakao Map';
+
+  @override
+  String get reviewSourceNaver => 'Naver';
+
+  @override
+  String get reviewSourceBaemin => 'Baemin';
+
+  @override
+  String get reviewSourceCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewSourceYogiyo => 'Yogiyo';
+
+  @override
+  String get reviewsShowMore => 'Show more reviews';
 
   @override
   String get reviewEditorHint =>

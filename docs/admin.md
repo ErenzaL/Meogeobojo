@@ -10,6 +10,8 @@ Security in the database** (`public.has_role`). Menu hiding in the UI is cosmeti
 |---|---|---|---|
 | 개요 (real COUNT queries) | ✔ | ✔ | ✔ |
 | 리뷰·신고 (moderate with a reason) | ✔ | ✔ | ✔ |
+| 리뷰 CSV 가져오기 / 가져온 리뷰 지우기 | | ✔ | ✔ |
+| 리뷰 CSV 내보내기 | ✔ | ✔ | ✔ |
 | 분석 (anonymous app events: visitors, returning visitors, views, directions, search words), 설정 | ✔ | ✔ | ✔ (+ role manager) |
 | 식당 (list, search, filters, edit, publish/hide, CSV import/export) | | ✔ | ✔ |
 | 메뉴·가격 (+ photo upload) | | ✔ | ✔ |

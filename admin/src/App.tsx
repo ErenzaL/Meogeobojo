@@ -12,6 +12,7 @@ import ModerationPage from '@/features/ModerationPage'
 import PhotosPage from '@/features/PhotosPage'
 import OverviewPage from '@/features/OverviewPage'
 import RecommendationsPage from '@/features/RecommendationsPage'
+import RestaurantReviewsPage from '@/features/reviews/RestaurantReviewsPage'
 import RestaurantFormPage from '@/features/restaurants/RestaurantFormPage'
 import RestaurantsPage from '@/features/restaurants/RestaurantsPage'
 import SettingsPage from '@/features/SettingsPage'
@@ -30,6 +31,7 @@ export function AppRoutes() {
         <Route index element={<OverviewPage />} />
         <Route element={<RequireRole min="moderator" />}>
           <Route path="moderation" element={<ModerationPage />} />
+          <Route path="moderation/reviews/:placeId" element={<RestaurantReviewsPage />} />
           <Route path="missions" element={<MissionsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />

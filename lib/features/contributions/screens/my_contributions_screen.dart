@@ -128,7 +128,7 @@ class _ReviewRow extends StatelessWidget {
             Row(
               children: [
                 Icon(Icons.star_rounded, size: 18, color: p.starAmber),
-                Text(' ${review.rating}'),
+                Text(' ${review.rating ?? '-'}'),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Align(

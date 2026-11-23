@@ -51,6 +51,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('advanced-filters')), findsOneWidget);
         expect(find.text('상세 조건'), findsOneWidget);
+        expect(find.textContaining('빠른 회전: '), findsOneWidget);
         expect(find.byType(BottomSheet), findsNothing);
         await tester.tap(find.text('접기'));
         await tester.pumpAndSettle();

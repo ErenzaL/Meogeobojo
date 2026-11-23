@@ -148,16 +148,24 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
     final opsSection = CondSection(
       showTitle: widget.focus == null,
       title: l10n.condOps,
-      child: ChipWrap(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final a in Amenity.values)
-            PillChip(
-              label: amenityLabel(a),
-              icon: amenityIcon(a),
-              selected: c.amenities.contains(a),
-              onTap: () =>
-                  set((x) => x.copyWith(amenities: toggled(x.amenities, a))),
-            ),
+          ChipWrap(
+            children: [
+              for (final a in Amenity.values)
+                PillChip(
+                  label: amenityLabel(a),
+                  icon: amenityIcon(a),
+                  selected: c.amenities.contains(a),
+                  onTap: () => set(
+                    (x) => x.copyWith(amenities: toggled(x.amenities, a)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(l10n.condAmenityFastHint, style: AppText.caption(context)),
         ],
       ),
     );
@@ -177,7 +185,6 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
     );
     final openNowRow = CondSwitchRow(
       title: l10n.condOpenNow,
-      hint: l10n.condOpenNowHint,
       value: c.openNowOnly,
       onChanged: (v) => set((x) => x.copyWith(openNowOnly: v)),
     );
@@ -213,7 +220,9 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
           _Footer(
             pool: widget.pool,
             resetLabel: l10n.condResetThis,
-            onClear: () => set((x) => _resetSetting(x, focus)),
+            onClear: _resetSetting(c, focus) == c
+                ? null
+                : () => set((x) => _resetSetting(x, focus)),
           ),
         ],
       );
@@ -279,7 +288,7 @@ class _ConditionsSheetState extends ConsumerState<_ConditionsSheet> {
         Expanded(child: body),
         _Footer(
           pool: widget.pool,
-          onClear: notifier.clear,
+          onClear: c == Conditions.defaults ? null : notifier.clear,
           onRestart: () => restartOnboarding(context, ref),
         ),
       ],
@@ -297,7 +306,10 @@ class _Footer extends ConsumerWidget {
   });
 
   final ProviderListenable<AsyncValue<List<RankedRestaurant>>> pool;
-  final VoidCallback onClear;
+
+  /// Null (button disabled) when there is nothing left to reset, so a reset
+  /// that just ran shows as done instead of a still-pressable button.
+  final VoidCallback? onClear;
 
   /// Null in a single-setting sheet (no start-over link there).
   final VoidCallback? onRestart;

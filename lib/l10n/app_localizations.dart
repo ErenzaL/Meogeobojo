@@ -2578,12 +2578,6 @@ abstract class AppLocalizations {
   /// **'어디서 출발하나요?'**
   String get originSheetTitle;
 
-  /// No description provided for @originSheetDesc.
-  ///
-  /// In ko, this message translates to:
-  /// **'고른 위치에서 직선거리로 홈·지도·검색의 거리와 추천을 다시 계산해요. 위치는 OpenStreetMap 기준이고, 건물은 출입구가 아닌 건물 중심이에요.'**
-  String get originSheetDesc;
-
   /// No description provided for @originGroupGates.
   ///
   /// In ko, this message translates to:
@@ -2710,12 +2704,6 @@ abstract class AppLocalizations {
   /// **'지금 주문 가능한 곳만'**
   String get condOpenNow;
 
-  /// No description provided for @condOpenNowHint.
-  ///
-  /// In ko, this message translates to:
-  /// **'도착 예상 시각에 영업 중이고 주문 마감 전인 곳이에요. 영업 시작과 주문 마감이 모두 확인돼야 ‘조건 충족’이에요. 대기 시간은 반영하지 않아요.'**
-  String get condOpenNowHint;
-
   /// No description provided for @condCuisine.
   ///
   /// In ko, this message translates to:
@@ -2763,6 +2751,12 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'밤 10시까지'**
   String get condAmenityLate;
+
+  /// No description provided for @condAmenityFastHint.
+  ///
+  /// In ko, this message translates to:
+  /// **'빠른 회전: 음식이 빨리 나오고 자리가 금방 나서 오래 기다리지 않는 식당이에요.'**
+  String get condAmenityFastHint;
 
   /// No description provided for @condSoft.
   ///
@@ -2967,6 +2961,42 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'학생'**
   String get reviewAuthor;
+
+  /// No description provided for @reviewSourceKakao.
+  ///
+  /// In ko, this message translates to:
+  /// **'카카오맵'**
+  String get reviewSourceKakao;
+
+  /// No description provided for @reviewSourceNaver.
+  ///
+  /// In ko, this message translates to:
+  /// **'네이버'**
+  String get reviewSourceNaver;
+
+  /// No description provided for @reviewSourceBaemin.
+  ///
+  /// In ko, this message translates to:
+  /// **'배달의민족'**
+  String get reviewSourceBaemin;
+
+  /// No description provided for @reviewSourceCoupangEats.
+  ///
+  /// In ko, this message translates to:
+  /// **'쿠팡이츠'**
+  String get reviewSourceCoupangEats;
+
+  /// No description provided for @reviewSourceYogiyo.
+  ///
+  /// In ko, this message translates to:
+  /// **'요기요'**
+  String get reviewSourceYogiyo;
+
+  /// No description provided for @reviewsShowMore.
+  ///
+  /// In ko, this message translates to:
+  /// **'리뷰 더 보기'**
+  String get reviewsShowMore;
 
   /// No description provided for @reviewEditorHint.
   ///

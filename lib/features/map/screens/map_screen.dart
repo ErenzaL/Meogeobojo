@@ -23,6 +23,7 @@ import '../utils/kakao_relayout.dart';
 import '../utils/marker_art.dart';
 import '../utils/map_camera.dart';
 import '../widgets/map_filter_bar.dart';
+import '../widgets/map_overlay_shield.dart';
 import '../widgets/map_places_sheet.dart';
 import '../../recommendation/home_ranking.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
@@ -659,12 +660,20 @@ class _MapScreenState extends ConsumerState<MapScreen>
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 520),
-                    child: MapPlaceCard(
-                      item: chosen,
-                      onClose: () => _select(null),
+                    child: MapOverlayShield(
+                      child: MapPlaceCard(
+                        item: chosen,
+                        onClose: () => _select(null),
+                      ),
                     ),
                   ),
                 ),
+              ),
+            // A sheet, menu or dialog is open over the map (조건, 정렬, 출발지 …): the map takes no wheel / drag
+            // meanwhile, so scrolling that sheet never zooms the map behind it.
+            if (kIsWeb && ModalRoute.isCurrentOf(context) == false)
+              const Positioned.fill(
+                child: MapOverlayShield(child: SizedBox.expand()),
               ),
           ],
         );

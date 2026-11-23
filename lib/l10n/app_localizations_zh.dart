@@ -1422,10 +1422,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get originSheetTitle => '从哪里出发？';
 
   @override
-  String get originSheetDesc =>
-      '首页、地图和搜索会从这里重新按直线距离计算。位置以OpenStreetMap为准，建筑取的是建筑中心而非入口。';
-
-  @override
   String get originGroupGates => '正门·后门';
 
   @override
@@ -1491,10 +1487,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get condOpenNow => '仅显示现在可点单的店';
 
   @override
-  String get condOpenNowHint =>
-      '预计到达时正在营业且未截止点单的店。营业开始与截止点单时间都确认后才算“符合条件”。不考虑排队时间。';
-
-  @override
   String get condCuisine => '菜系';
 
   @override
@@ -1517,6 +1509,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get condAmenityLate => '营业到晚上10点';
+
+  @override
+  String get condAmenityFastHint => '翻台快：上菜快、座位很快空出来，不用久等的餐厅。';
 
   @override
   String get condSoft => '影响推荐顺序';
@@ -1625,6 +1620,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reviewAuthor => '学生';
+
+  @override
+  String get reviewSourceKakao => 'Kakao 地图';
+
+  @override
+  String get reviewSourceNaver => 'Naver';
+
+  @override
+  String get reviewSourceBaemin => 'Baemin';
+
+  @override
+  String get reviewSourceCoupangEats => 'Coupang Eats';
+
+  @override
+  String get reviewSourceYogiyo => 'Yogiyo';
+
+  @override
+  String get reviewsShowMore => '查看更多评价';
 
   @override
   String get reviewEditorHint => '说说味道、价格、氛围（可选）';

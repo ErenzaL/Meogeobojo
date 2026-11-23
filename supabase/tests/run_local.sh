@@ -34,6 +34,7 @@ echo "--- 사용 지표 (app_events)"; P -f $HERE/app_events_test.sql 2>&1 | gre
 echo "--- restaurant delete (super admin only)"; P -f $HERE/restaurant_delete_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- weekly cafeteria management"; P -f $HERE/cafeteria_weekly_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300 || true
 echo "--- cafeteria CSV import (server side)"; P -f $HERE/cafeteria_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320 || true
+echo "--- imported reviews (student_reviews + admin_import_reviews)"; P -f $HERE/review_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320
 echo "--- live-update signal (content_sync)"; P -f $HERE/content_sync_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260 || true
 echo "--- preservation (migrations 20261112..18 on populated data)"; P -f $HERE/preservation_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
 echo "--- production read-only checklist (scratch DB has no pg_cron, so only scheduler rows may fail)"

@@ -24,7 +24,14 @@ enum FoodCategory {
   chinese(Icons.ramen_dining_rounded, ['중식'], image: AppAssets.categoryChinese),
   japanese(Icons.set_meal_rounded, ['일식'], image: AppAssets.categoryJapanese),
   snack(Icons.tapas_rounded, ['분식'], image: AppAssets.categorySnack),
-  cafe(Icons.local_cafe_rounded, ['카페', '디저트'], image: AppAssets.categoryCafe),
+
+  /// Also Kakao's 간식 (제과·베이커리, 떡·한과, 아이스크림, 도넛 ...): they are
+  /// desserts, not 기타.
+  cafe(Icons.local_cafe_rounded, [
+    '카페',
+    '디저트',
+    '간식',
+  ], image: AppAssets.categoryCafe),
   chicken(Icons.kebab_dining_rounded, [
     '치킨집',
     '양념치킨',
@@ -46,10 +53,10 @@ enum FoodCategory {
     '튀르키예음식',
   ], image: AppAssets.categoryGlobal),
 
-  /// Everything else Kakao lists under 음식점 (snacks & bakeries, buffet,
-  /// lunch boxes, salad ...): anything not covered above. Asian / global
+  /// Everything else Kakao lists under 음식점 (buffet, lunch boxes, salad
+  /// ...): anything not covered above. Asian / global
   /// places live under [global], so a place is never listed in both.
-  etc(Icons.more_horiz_rounded, ['간식', '뷔페', '샐러드', '도시락']);
+  etc(Icons.more_horiz_rounded, ['뷔페', '샐러드', '도시락']);
 
   const FoodCategory(this.icon, this.queries, {this.image});
 
@@ -89,6 +96,7 @@ enum FoodCategory {
     '패스트푸드',
     '카페',
     '디저트',
+    '간식',
     ...GlobalCuisine._kakaoSegments,
   ];
 
@@ -111,7 +119,10 @@ enum FoodCategory {
       case FoodCategory.snack:
         return has('분식');
       case FoodCategory.cafe:
-        return r.categoryGroupCode == 'CE7' || has('카페') || has('디저트');
+        return r.categoryGroupCode == 'CE7' ||
+            has('카페') ||
+            has('디저트') ||
+            has('간식');
       case FoodCategory.chicken:
         return has('치킨');
       case FoodCategory.fastFood:

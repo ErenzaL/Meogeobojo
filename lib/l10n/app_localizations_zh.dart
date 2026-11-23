@@ -2834,12 +2834,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get previewClose => '关闭预览';
 
   @override
-  String get previewLarger => '放大查看';
-
-  @override
-  String get previewFit => '适应窗口';
-
-  @override
   String get previewLoading => '正在加载应用';
 
   @override

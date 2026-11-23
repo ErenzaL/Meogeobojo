@@ -5122,18 +5122,6 @@ abstract class AppLocalizations {
   /// **'미리보기 닫기'**
   String get previewClose;
 
-  /// No description provided for @previewLarger.
-  ///
-  /// In ko, this message translates to:
-  /// **'크게 보기'**
-  String get previewLarger;
-
-  /// No description provided for @previewFit.
-  ///
-  /// In ko, this message translates to:
-  /// **'창에 맞추기'**
-  String get previewFit;
-
   /// No description provided for @previewLoading.
   ///
   /// In ko, this message translates to:

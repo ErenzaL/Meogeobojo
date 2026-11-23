@@ -2972,12 +2972,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get previewClose => 'Close preview';
 
   @override
-  String get previewLarger => 'Larger view';
-
-  @override
-  String get previewFit => 'Fit to window';
-
-  @override
   String get previewLoading => 'Loading the app';
 
   @override

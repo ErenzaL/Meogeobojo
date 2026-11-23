@@ -2850,12 +2850,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get previewClose => '미리보기 닫기';
 
   @override
-  String get previewLarger => '크게 보기';
-
-  @override
-  String get previewFit => '창에 맞추기';
-
-  @override
   String get previewLoading => '앱을 불러오는 중이에요';
 
   @override

@@ -58,9 +58,8 @@ Finder get screen => find.byKey(const ValueKey('preview-screen'));
 
 void main() {
   group('pure helpers', () {
-    test('the phone is 402 x 874 (iPhone 17 Pro) and fits the window: never above 1, never below 0.45, larger view up to 1.25', () {
+    test('the phone is 402 x 874 (iPhone 17 Pro) and fits the window: never above 1, never below 0.45', () {
       expect(previewScale(const Size(1920, 1400)), 1.0);
-      expect(previewScale(const Size(1920, 1400), large: true), 1.25);
       expect(previewScale(const Size(1280, 700)), lessThan(1.0));
       expect(previewScale(const Size(1280, 700)), closeTo((700 - 112) / (874 + 24), 1e-9));
       expect(previewScale(const Size(300, 300)), 0.45);
@@ -156,7 +155,7 @@ void main() {
       expect(frame.width, closeTo(402 + 24, 1));
     });
 
-    testWidgets('a small window scales the phone down to fit, a larger view scales up, and it fits both ways', (tester) async {
+    testWidgets('a small window scales the phone down to fit, with no size toggle (it always fits already)', (tester) async {
       final (_, spy) = await desktop(tester, size: const Size(1280, 640));
       await openPreview(tester);
       final small = tester.getRect(find.byKey(const ValueKey('preview-frame')));
@@ -164,14 +163,7 @@ void main() {
       expect(small.top, greaterThanOrEqualTo(0));
       expect(small.bottom, lessThanOrEqualTo(640));
       expect(tester.takeException(), isNull);
-      // "larger" never exceeds the window either
-      await tester.tap(find.byKey(const ValueKey('preview-size')));
-      await tester.pumpAndSettle();
-      final large = tester.getRect(find.byKey(const ValueKey('preview-frame')));
-      expect(large.bottom, lessThanOrEqualTo(640));
-      await tester.tap(find.byKey(const ValueKey('preview-size')));
-      await tester.pumpAndSettle();
-      expect(tester.getRect(find.byKey(const ValueKey('preview-frame'))).height, closeTo(small.height, 1));
+      expect(find.byKey(const ValueKey('preview-size')), findsNothing);
     });
 
     testWidgets('the close button, a click outside the phone, and Escape all close it', (tester) async {
@@ -214,7 +206,6 @@ void main() {
       await desktop(tester, language: 'en');
       await openPreview(tester);
       expect(tester.widget<IconButton>(find.descendant(of: find.byKey(const ValueKey('preview-close')), matching: find.byType(IconButton))).tooltip, 'Close preview');
-      expect(tester.widget<IconButton>(find.descendant(of: find.byKey(const ValueKey('preview-size')), matching: find.byType(IconButton))).tooltip, 'Larger view');
     });
   });
 

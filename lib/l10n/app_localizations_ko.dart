@@ -1429,10 +1429,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get originSheetTitle => '어디서 출발하나요?';
 
   @override
-  String get originSheetDesc =>
-      '고른 위치에서 직선거리로 홈·지도·검색의 거리와 추천을 다시 계산해요. 위치는 OpenStreetMap 기준이고, 건물은 출입구가 아닌 건물 중심이에요.';
-
-  @override
   String get originGroupGates => '정문·후문';
 
   @override
@@ -1498,10 +1494,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get condOpenNow => '지금 주문 가능한 곳만';
 
   @override
-  String get condOpenNowHint =>
-      '도착 예상 시각에 영업 중이고 주문 마감 전인 곳이에요. 영업 시작과 주문 마감이 모두 확인돼야 ‘조건 충족’이에요. 대기 시간은 반영하지 않아요.';
-
-  @override
   String get condCuisine => '음식 종류';
 
   @override
@@ -1524,6 +1516,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get condAmenityLate => '밤 10시까지';
+
+  @override
+  String get condAmenityFastHint =>
+      '빠른 회전: 음식이 빨리 나오고 자리가 금방 나서 오래 기다리지 않는 식당이에요.';
 
   @override
   String get condSoft => '추천 순서에 반영';
@@ -1632,6 +1628,24 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get reviewAuthor => '학생';
+
+  @override
+  String get reviewSourceKakao => '카카오맵';
+
+  @override
+  String get reviewSourceNaver => '네이버';
+
+  @override
+  String get reviewSourceBaemin => '배달의민족';
+
+  @override
+  String get reviewSourceCoupangEats => '쿠팡이츠';
+
+  @override
+  String get reviewSourceYogiyo => '요기요';
+
+  @override
+  String get reviewsShowMore => '리뷰 더 보기';
 
   @override
   String get reviewEditorHint => '맛, 가격, 분위기를 알려 주세요 (선택)';

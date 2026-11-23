@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
@@ -115,9 +116,9 @@ final _items = [
 /// Flat bottom navigation for the five tabs (V5 `.navbar`). Place it in a [Stack] with
 /// [Positioned] using [FloatingNavMetrics]; the shell does that.
 ///
-/// The blur is confined to the capsule, and the surface stays ~93% opaque, so
-/// it is legible over anything (including the native map) even where the
-/// platform cannot blur what is behind it.
+/// The surface is slightly translucent (~95%) over a blur confined to the bar,
+/// so the page shows through softly yet labels stay legible, including over the
+/// native map where the platform cannot blur what is behind it.
 class FloatingNavBar extends StatelessWidget {
   const FloatingNavBar({
     super.key,
@@ -143,33 +144,38 @@ class FloatingNavBar extends StatelessWidget {
       explicitChildNodes: true,
       child: SizedBox(
         height: metrics.height,
-        child: DecoratedBox(
-          // Flat, full width, hairline on top (V5 `.navbar`).
-          decoration: BoxDecoration(
-            color: p.surface,
-            border: Border(top: BorderSide(color: p.border)),
-          ),
-          // Labels keep scaling with the user's setting up to 1.3x; the bar
-          // height grows to match, then labels shrink to fit.
-          child: MediaQuery.withClampedTextScaling(
-            maxScaleFactor: FloatingNavMetrics._maxLabelScale,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: metrics.safeBottom),
-              child: Row(
-                children: [
-                  for (var i = 0; i < _items.length; i++)
-                    Expanded(
-                      child: _NavButton(
-                        label: _items[i].label(l10n),
-                        icon: _items[i].icon,
-                        activeIcon: _items[i].activeIcon,
-                        selected: i == index,
-                        palette: p,
-                        duration: duration,
-                        onTap: () => onTap(i),
-                      ),
-                    ),
-                ],
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            child: DecoratedBox(
+              // Flat, full width, hairline on top (V5 `.navbar`).
+              decoration: BoxDecoration(
+                color: p.surface,
+                border: Border(top: BorderSide(color: p.border)),
+              ),
+              // Labels keep scaling with the user's setting up to 1.3x; the bar
+              // height grows to match, then labels shrink to fit.
+              child: MediaQuery.withClampedTextScaling(
+                maxScaleFactor: FloatingNavMetrics._maxLabelScale,
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: metrics.safeBottom),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < _items.length; i++)
+                        Expanded(
+                          child: _NavButton(
+                            label: _items[i].label(l10n),
+                            icon: _items[i].icon,
+                            activeIcon: _items[i].activeIcon,
+                            selected: i == index,
+                            palette: p,
+                            duration: duration,
+                            onTap: () => onTap(i),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

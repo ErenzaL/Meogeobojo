@@ -44,6 +44,12 @@
     html { height: 100% }
     body { margin: 0; min-height: 100%; background-color: #F6F5F3; }
     @media (prefers-color-scheme: dark) { body { background-color: #121212; } }
+    /* Dark mode map: the app puts `map-dark` on <html> (kakao_dark_web.dart). Kakao has no dark style, so only its
+       tiles (http images) are inverted; our pins are data: images and keep their colours. */
+    html.map-dark [id^="map-container-"] { background: #1E1E1E !important; }
+    html.map-dark [id^="map-container-"] img:not([src^="data:"]) {
+      filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+    }
   </style>
   <script>
     // Kakao web map resize support. The Flutter plugin gives no way to re-measure the map after its container changes

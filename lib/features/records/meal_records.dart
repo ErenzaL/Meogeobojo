@@ -236,6 +236,6 @@ Future<void> writeReviewFor(
   await showReviewEditorSheet(
     nav.context,
     restaurant: r,
-    existing: reviews.where((x) => x.userId == me).firstOrNull,
+    existing: reviews.where((x) => x.isMadeBy(me)).firstOrNull,
   );
 }

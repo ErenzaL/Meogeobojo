@@ -27,7 +27,9 @@ bool cuisineMatches(Restaurant r, Cuisine cuisine) {
     Cuisine.snack => has('분식'),
     Cuisine.western => has('양식'),
     Cuisine.salad => has('샐러드'),
-    Cuisine.cafe => r.categoryGroupCode == 'CE7' || has('카페') || has('디저트'),
+    // Kakao's 간식 (bakery, ice cream, rice cake ...) is dessert, i.e. 카페·디저트.
+    Cuisine.cafe =>
+      r.categoryGroupCode == 'CE7' || has('카페') || has('디저트') || has('간식'),
     Cuisine.any => true,
   };
 }

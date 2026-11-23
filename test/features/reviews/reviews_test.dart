@@ -346,6 +346,34 @@ void main() {
       expect(find.text('삼점'), findsOneWidget);
     });
 
+    testWidgets('deleting the last rated review drops the star filter', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        reviews: [
+          review('mine', user: 'user-1', rating: 2, body: '내 이점'),
+          imported('i', rating: null, body: '별점 없음'),
+        ],
+      );
+      final two = find.byKey(const ValueKey('reviews-filter-2'));
+      await tester.ensureVisible(two);
+      await tester.tap(two);
+      await tester.pumpAndSettle();
+      expect(find.text('별점 없음'), findsNothing);
+
+      await tester.ensureVisible(find.text('내 리뷰 수정'));
+      await tester.tap(find.text('내 리뷰 수정'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('삭제'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('삭제').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('reviews-filter-all')), findsNothing);
+      expect(find.text('별점 없음'), findsOneWidget);
+    });
+
     testWidgets(
       'the student\'s own hidden review is shown to them with its status',
       (tester) async {

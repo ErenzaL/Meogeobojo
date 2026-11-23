@@ -136,7 +136,8 @@ class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
               final stars = r.rating;
               if (r.isVisible && stars != null) perStar[stars]++;
             }
-            final star = _star;
+            // no rated review left (e.g. the last one was just deleted): the chips are gone, so is the filter
+            final star = summary.ratedCount > 0 ? _star : null;
             bool keep(StudentReview r) => star == null || r.rating == star;
             final myShown = mine != null && keep(mine) ? mine : null;
             final listed = others.where(keep).toList();

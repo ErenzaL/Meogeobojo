@@ -2308,6 +2308,21 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return '전체 $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n점 $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return '$n점 리뷰가 아직 없어요.';
+  }
+
+  @override
   String get searchRecentTitle => '최근 검색';
 
   @override

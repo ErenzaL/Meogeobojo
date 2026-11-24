@@ -2295,6 +2295,21 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return '全部 $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n星 $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return '还没有$n星评价。';
+  }
+
+  @override
   String get searchRecentTitle => '最近搜索';
 
   @override

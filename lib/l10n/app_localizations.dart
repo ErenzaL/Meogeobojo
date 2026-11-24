@@ -4192,6 +4192,24 @@ abstract class AppLocalizations {
   /// **'{n}점'**
   String reviewsStarLabel(int n);
 
+  /// No description provided for @reviewsFilterAll.
+  ///
+  /// In ko, this message translates to:
+  /// **'전체 {count}'**
+  String reviewsFilterAll(int count);
+
+  /// No description provided for @reviewsFilterStar.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}점 {count}'**
+  String reviewsFilterStar(int n, int count);
+
+  /// No description provided for @reviewsFilterEmpty.
+  ///
+  /// In ko, this message translates to:
+  /// **'{n}점 리뷰가 아직 없어요.'**
+  String reviewsFilterEmpty(int n);
+
   /// No description provided for @searchRecentTitle.
   ///
   /// In ko, this message translates to:

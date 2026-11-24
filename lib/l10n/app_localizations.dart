@@ -4960,6 +4960,54 @@ abstract class AppLocalizations {
   /// **'AI가 지금 바빠서, 현재 조건으로 찾았어요.'**
   String get chatAiBusy;
 
+  /// No description provided for @chatFoundFor.
+  ///
+  /// In ko, this message translates to:
+  /// **'{criteria} 조건에 맞는 {count}곳을 찾았어요.'**
+  String chatFoundFor(String criteria, int count);
+
+  /// No description provided for @chatCritMaxPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}원 이하'**
+  String chatCritMaxPrice(String price);
+
+  /// No description provided for @chatCritMinPrice.
+  ///
+  /// In ko, this message translates to:
+  /// **'{price}원 이상'**
+  String chatCritMinPrice(String price);
+
+  /// No description provided for @chatCritWalk.
+  ///
+  /// In ko, this message translates to:
+  /// **'도보 {minutes}분 이내'**
+  String chatCritWalk(int minutes);
+
+  /// No description provided for @chatCritOpenNow.
+  ///
+  /// In ko, this message translates to:
+  /// **'지금 영업 중'**
+  String get chatCritOpenNow;
+
+  /// No description provided for @chatCritAvoidSpicy.
+  ///
+  /// In ko, this message translates to:
+  /// **'맵지 않은 메뉴'**
+  String get chatCritAvoidSpicy;
+
+  /// No description provided for @chatCritCheap.
+  ///
+  /// In ko, this message translates to:
+  /// **'저렴한 곳'**
+  String get chatCritCheap;
+
+  /// No description provided for @chatCritCloser.
+  ///
+  /// In ko, this message translates to:
+  /// **'가까운 곳'**
+  String get chatCritCloser;
+
   /// No description provided for @chatFoundCount.
   ///
   /// In ko, this message translates to:

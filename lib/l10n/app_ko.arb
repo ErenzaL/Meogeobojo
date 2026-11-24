@@ -1775,6 +1775,45 @@
   },
   "chatErrGeneric": "답을 가져오지 못했어요. 다시 시도해 주세요.",
   "chatAiBusy": "AI가 지금 바빠서, 현재 조건으로 찾았어요.",
+  "chatFoundFor": "{criteria} 조건에 맞는 {count}곳을 찾았어요.",
+  "@chatFoundFor": {
+    "placeholders": {
+      "criteria": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatCritMaxPrice": "{price}원 이하",
+  "@chatCritMaxPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCritMinPrice": "{price}원 이상",
+  "@chatCritMinPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCritWalk": "도보 {minutes}분 이내",
+  "@chatCritWalk": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatCritOpenNow": "지금 영업 중",
+  "chatCritAvoidSpicy": "맵지 않은 메뉴",
+  "chatCritCheap": "저렴한 곳",
+  "chatCritCloser": "가까운 곳",
   "chatFoundCount": "조건에 맞는 {count}곳을 찾았어요.",
   "@chatFoundCount": {
     "placeholders": {

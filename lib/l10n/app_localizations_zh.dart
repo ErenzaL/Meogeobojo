@@ -651,6 +651,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrUnknown => '出了点问题，请稍后再试。';
 
   @override
+  String get authErrAppConfig => '应用配置有误，暂时无法完成此操作。请更新到最新版本。';
+
+  @override
+  String get authErrSignUp => '未能完成注册，请稍后再试。';
+
+  @override
   String get nicknameSetupTitle => '我们该怎么称呼你？';
 
   @override

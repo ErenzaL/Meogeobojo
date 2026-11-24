@@ -704,6 +704,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrUnknown => 'Something went wrong. Please try again.';
 
   @override
+  String get authErrAppConfig =>
+      'The app isn\'t set up correctly for this. Please update to the latest version.';
+
+  @override
+  String get authErrSignUp =>
+      'Couldn\'t create your account. Please try again in a moment.';
+
+  @override
   String get nicknameSetupTitle => 'What should we call you?';
 
   @override

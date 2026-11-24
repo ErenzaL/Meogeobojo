@@ -224,6 +224,8 @@
   "authErrPasswordReset": "Couldn't reset the password. Please try again.",
   "authErrProfileLoad": "Couldn't load your profile. Please try again.",
   "authErrUnknown": "Something went wrong. Please try again.",
+  "authErrAppConfig": "The app isn't set up correctly for this. Please update to the latest version.",
+  "authErrSignUp": "Couldn't create your account. Please try again in a moment.",
   "nicknameSetupTitle": "What should we call you?",
   "nicknameSetupSubtitle": "Choose a nickname to use in 먹어보조.",
   "nicknameLabel": "Nickname",

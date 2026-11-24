@@ -655,6 +655,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authErrUnknown => '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
 
   @override
+  String get authErrAppConfig =>
+      '앱 설정에 문제가 있어 이 작업을 할 수 없어요. 앱을 최신 버전으로 업데이트해주세요.';
+
+  @override
+  String get authErrSignUp => '회원가입을 완료하지 못했어요. 잠시 후 다시 시도해주세요.';
+
+  @override
   String get nicknameSetupTitle => '어떻게 불러드릴까요?';
 
   @override

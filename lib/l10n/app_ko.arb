@@ -393,6 +393,8 @@
   "authErrPasswordReset": "비밀번호 재설정에 실패했어요. 다시 시도해주세요.",
   "authErrProfileLoad": "내 정보를 불러오지 못했어요. 다시 시도해주세요.",
   "authErrUnknown": "문제가 생겼어요. 잠시 후 다시 시도해주세요.",
+  "authErrAppConfig": "앱 설정에 문제가 있어 이 작업을 할 수 없어요. 앱을 최신 버전으로 업데이트해주세요.",
+  "authErrSignUp": "회원가입을 완료하지 못했어요. 잠시 후 다시 시도해주세요.",
   "nicknameSetupTitle": "어떻게 불러드릴까요?",
   "nicknameSetupSubtitle": "먹어보조에서 사용할 닉네임을 정해주세요.",
   "nicknameLabel": "닉네임",

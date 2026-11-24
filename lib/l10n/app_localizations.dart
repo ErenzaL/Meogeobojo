@@ -1276,6 +1276,18 @@ abstract class AppLocalizations {
   /// **'문제가 생겼어요. 잠시 후 다시 시도해주세요.'**
   String get authErrUnknown;
 
+  /// No description provided for @authErrAppConfig.
+  ///
+  /// In ko, this message translates to:
+  /// **'앱 설정에 문제가 있어 이 작업을 할 수 없어요. 앱을 최신 버전으로 업데이트해주세요.'**
+  String get authErrAppConfig;
+
+  /// No description provided for @authErrSignUp.
+  ///
+  /// In ko, this message translates to:
+  /// **'회원가입을 완료하지 못했어요. 잠시 후 다시 시도해주세요.'**
+  String get authErrSignUp;
+
   /// No description provided for @nicknameSetupTitle.
   ///
   /// In ko, this message translates to:

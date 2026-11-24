@@ -47,6 +47,29 @@ void main() {
     expect(chat(h).busy, isFalse);
   });
 
+  test('the reply is worded for THE QUESTION: the user\'s message reaches the explain step, a "more" tap sends none', () async {
+    final (h, api) = await setup(language: 'ko');
+    await ctl(h).send('비 오는데 뜨끈한 국물 먹고 싶어');
+    expect(api.questions, ['비 오는데 뜨끈한 국물 먹고 싶어']);
+    await ctl(h).showMore();
+    expect(api.questions.last, isNull);
+  });
+
+  test('the line the app writes itself (AI worded nothing) carries what was asked, not just a count', () async {
+    final (h, api) = await setup();
+    api.explainError = const ChatApiException(ChatFailure.quota);
+    api.onInterpret = (msg, _) => const Interpretation(
+      intent: ChatIntent.search,
+      prefs: ChatPrefs(dishKeywords: ['국밥'], maxPriceKrw: 10000),
+    );
+    await ctl(h).send('soup under 10000');
+    final note = lastAssistant(h).notes.firstWhere(
+      (n) => n.kind == NoteKind.foundCount,
+    );
+    expect(note.prefs?.dishKeywords, ['국밥']);
+    expect(note.prefs?.maxPriceKrw, 10000);
+  });
+
   test('the language follows the app: Korean app, Chinese app', () async {
     for (final (code, want) in [('ko', 'ko'), ('zh-Hans', 'zh-Hans')]) {
       final (h, api) = await setup(language: code);

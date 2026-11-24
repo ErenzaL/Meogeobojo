@@ -54,6 +54,8 @@ android {
 
     buildTypes {
         release {
+            // R8 would otherwise strip classes the Kakao map SDK reads via JNI; see proguard-rules.pro.
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (hasReleaseKey) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
         }
     }

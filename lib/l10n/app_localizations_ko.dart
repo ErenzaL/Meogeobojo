@@ -2767,6 +2767,38 @@ class AppLocalizationsKo extends AppLocalizations {
   String get chatAiBusy => 'AI가 지금 바빠서, 현재 조건으로 찾았어요.';
 
   @override
+  String chatFoundFor(String criteria, int count) {
+    return '$criteria 조건에 맞는 $count곳을 찾았어요.';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return '$price원 이하';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return '$price원 이상';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return '도보 $minutes분 이내';
+  }
+
+  @override
+  String get chatCritOpenNow => '지금 영업 중';
+
+  @override
+  String get chatCritAvoidSpicy => '맵지 않은 메뉴';
+
+  @override
+  String get chatCritCheap => '저렴한 곳';
+
+  @override
+  String get chatCritCloser => '가까운 곳';
+
+  @override
   String chatFoundCount(int count) {
     return '조건에 맞는 $count곳을 찾았어요.';
   }

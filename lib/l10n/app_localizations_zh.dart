@@ -2750,6 +2750,38 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatAiBusy => 'AI 现在比较忙，所以按当前筛选条件为你查找。';
 
   @override
+  String chatFoundFor(String criteria, int count) {
+    return '找到了$count家符合“$criteria”的餐厅。';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return '$price韩元以下';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return '$price韩元以上';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return '步行$minutes分钟内';
+  }
+
+  @override
+  String get chatCritOpenNow => '正在营业';
+
+  @override
+  String get chatCritAvoidSpicy => '不辣';
+
+  @override
+  String get chatCritCheap => '实惠';
+
+  @override
+  String get chatCritCloser => '离得近';
+
+  @override
   String chatFoundCount(int count) {
     return '找到了$count家符合条件的餐厅。';
   }

@@ -2880,6 +2880,38 @@ class AppLocalizationsEn extends AppLocalizations {
       'The AI is busy right now, so I searched with your current filters.';
 
   @override
+  String chatFoundFor(String criteria, int count) {
+    return 'I found $count places for $criteria.';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return 'under $price won';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return 'from $price won';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return 'within a $minutes-min walk';
+  }
+
+  @override
+  String get chatCritOpenNow => 'open now';
+
+  @override
+  String get chatCritAvoidSpicy => 'not spicy';
+
+  @override
+  String get chatCritCheap => 'cheap';
+
+  @override
+  String get chatCritCloser => 'close by';
+
+  @override
   String chatFoundCount(int count) {
     return 'I found $count places that fit.';
   }

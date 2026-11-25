@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_palette.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../restaurants/models/restaurant.dart';
+import '../../restaurants/providers/restaurant_providers.dart';
+import '../../restaurants/screens/restaurant_detail_screen.dart';
 import '../../reviews/models/student_review.dart';
 import '../../reviews/providers/review_providers.dart';
 import '../models/contribution.dart';
@@ -32,6 +36,11 @@ class MyContributionsScreen extends ConsumerWidget {
     final loading = reviews.isLoading || photos.isLoading;
     final rv = reviews.value ?? const <StudentReview>[];
     final ph = photos.value ?? const <Contribution>[];
+    // Store names come from the places already loaded around the campus (like 저장한 맛집 / 나의 기록).
+    final places = {
+      for (final r in ref.watch(allNearbyRestaurantsProvider).value ?? const [])
+        r.kakaoId: r,
+    };
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.myContribTitle)),
@@ -65,13 +74,15 @@ class MyContributionsScreen extends ConsumerWidget {
             if (rv.isNotEmpty) ...[
               Text(l10n.myContribReviews, style: AppText.title),
               const SizedBox(height: 8),
-              for (final r in rv) _ReviewRow(review: r),
+              for (final r in rv)
+                _ReviewRow(review: r, place: places[r.kakaoPlaceId]),
               const SizedBox(height: 20),
             ],
             if (ph.isNotEmpty) ...[
               Text(l10n.myContribPhotos, style: AppText.title),
               const SizedBox(height: 8),
-              for (final c in ph) _PhotoRow(contribution: c),
+              for (final c in ph)
+                _PhotoRow(contribution: c, place: places[c.kakaoPlaceId]),
             ],
           ],
         ),
@@ -104,10 +115,47 @@ class _StatusPill extends StatelessWidget {
   );
 }
 
+/// The store's name (opens its page) and when it was written, in local time: `2026.11.23 21:05`.
+/// A place that is not in the loaded list (another campus) shows the time only.
+class _PlaceAndTime extends StatelessWidget {
+  const _PlaceAndTime({required this.place, required this.at});
+
+  final Restaurant? place;
+  final DateTime at;
+
+  @override
+  Widget build(BuildContext context) {
+    final time = Text(
+      DateFormat('yyyy.MM.dd HH:mm').format(at.toLocal()),
+      style: AppText.caption(context).copyWith(fontSize: 13),
+    );
+    final r = place;
+    if (r == null) return time;
+    return Row(
+      children: [
+        Flexible(
+          child: InkWell(
+            onTap: () => openRestaurantDetail(context, r),
+            child: Text(
+              r.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        time,
+      ],
+    );
+  }
+}
+
 class _ReviewRow extends StatelessWidget {
-  const _ReviewRow({required this.review});
+  const _ReviewRow({required this.review, this.place});
 
   final StudentReview review;
+  final Restaurant? place;
 
   @override
   Widget build(BuildContext context) {
@@ -125,6 +173,8 @@ class _ReviewRow extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _PlaceAndTime(place: place, at: review.createdAt),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Icon(Icons.star_rounded, size: 18, color: p.starAmber),
@@ -150,9 +200,10 @@ class _ReviewRow extends StatelessWidget {
 }
 
 class _PhotoRow extends ConsumerWidget {
-  const _PhotoRow({required this.contribution});
+  const _PhotoRow({required this.contribution, this.place});
 
   final Contribution contribution;
+  final Restaurant? place;
 
   Future<void> _withdraw(BuildContext context, WidgetRef ref) async {
     final l10n = context.l10n;
@@ -202,6 +253,8 @@ class _PhotoRow extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _PlaceAndTime(place: place, at: c.createdAt),
+            const SizedBox(height: 6),
             Row(
               children: [
                 Icon(Icons.photo_outlined, size: 18, color: p.textSecondary),

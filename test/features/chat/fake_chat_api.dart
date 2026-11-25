@@ -18,6 +18,7 @@ class FakeChatApi implements ChatApi {
   Explanation Function(List<ExplainItem> items)? onExplain;
   final interprets = <InterpretCall>[];
   final explains = <List<ExplainItem>>[];
+  final questions = <String?>[];
   Object? interpretError;
   Object? explainError;
 
@@ -43,7 +44,9 @@ class FakeChatApi implements ChatApi {
     required List<ExplainItem> items,
     required ChatPrefs prefs,
     required bool hasMore,
+    String? question,
   }) async {
+    questions.add(question);
     explains.add(items);
     if (explainError != null) throw explainError!;
     return onExplain?.call(items) ??

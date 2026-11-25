@@ -14,6 +14,7 @@ import '../../recommendation/providers/ranking_providers.dart';
 import '../../restaurants/providers/restaurant_providers.dart';
 import '../../university/providers/university_providers.dart';
 import '../data/chat_api.dart';
+import '../data/chat_history.dart';
 import '../logic/chat_engine.dart';
 import '../models/chat_models.dart';
 import '../models/chat_prefs.dart';
@@ -228,6 +229,10 @@ class ChatController extends Notifier<ChatState> {
   // ---- one turn -----------------------------------------------------------------------------------------------
 
   Future<void> _answer(String text) async {
+    // For the 챗봇 기록 (admin history): where this turn's answer starts, and how the message was understood.
+    final from = state.messages.length;
+    Interpretation? understood;
+    var understoodByAi = false;
     try {
       final api = ref.read(chatApiProvider);
       Interpretation? ai;
@@ -248,7 +253,9 @@ class ChatController extends Notifier<ChatState> {
         }
         aiDown = true;
       }
+      understoodByAi = ai != null;
       ai ??= _fallbackInterpretation(text);
+      understood = ai;
       await _act(ai, aiDown: aiDown, original: text);
     } on ChatApiException catch (e) {
       _fail(text, e);
@@ -257,6 +264,82 @@ class ChatController extends Notifier<ChatState> {
       _fail(text, const ChatApiException(ChatFailure.network));
     } finally {
       state = state.copyWith(busy: false);
+      _record(text, from, understood, byAi: understoodByAi);
+    }
+  }
+
+  static final _noResultKinds = {
+    NoteKind.noMore.name,
+    NoteKind.noneGeneric.name,
+    NoteKind.noneRaiseBudget.name,
+    NoteKind.noneWiderDistance.name,
+    NoteKind.noneAnyCuisine.name,
+    NoteKind.noneDropDish.name,
+  };
+
+  /// Hands the finished turn (the question and everything the chat answered since [from]) to the history logger.
+  /// It must never disturb the chat: any problem here is swallowed.
+  void _record(
+    String question,
+    int from,
+    Interpretation? understood, {
+    required bool byAi,
+  }) {
+    try {
+      final added = [
+        for (final m in state.messages.skip(from))
+          if (m.role == ChatRole.assistant) m,
+      ];
+      if (added.isEmpty) return;
+      final hits = [for (final m in added) ...m.hits];
+      final notes = [
+        for (final m in added)
+          for (final n in m.notes) n.kind.name,
+      ];
+      final failed = added.where((m) => m.failed).firstOrNull;
+      final intent = understood?.intent;
+      final outcome = failed != null
+          ? 'error'
+          : intent == ChatIntent.chitchat
+          ? 'chitchat'
+          : intent == ChatIntent.clarify
+          ? 'clarify'
+          : hits.isEmpty && notes.any(_noResultKinds.contains)
+          ? 'no_result'
+          : 'answered';
+      final prefs = understood?.prefs;
+      ref.read(chatHistoryLoggerProvider)(
+        ChatTurnLog(
+          language: ref.read(appLanguageProvider).code,
+          question: question,
+          intent: intent?.name,
+          prefs: prefs == null || prefs.isEmpty ? null : prefs.toJson(),
+          outcome: outcome,
+          aiStatus: !byAi
+              ? 'down'
+              : notes.contains(NoteKind.aiBusy.name)
+              ? 'busy'
+              : 'ok',
+          reply: added.map((m) => m.text).whereType<String>().firstOrNull,
+          restaurants: [
+            for (final h in hits.take(10))
+              {
+                'id': h.id,
+                'name': h.ranked.restaurant.name,
+                if (h.reason != null && h.reason!.isNotEmpty)
+                  'reason': h.reason!,
+              },
+          ],
+          notes: notes,
+          failure: failed == null
+              ? null
+              : failed.notes.isEmpty
+              ? 'unknown'
+              : failed.notes.first.kind.name,
+        ),
+      );
+    } catch (e) {
+      debugPrint('chat turn not recorded: ${e.runtimeType}');
     }
   }
 

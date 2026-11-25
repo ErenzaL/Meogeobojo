@@ -167,6 +167,22 @@ select id, 'super_admin' from auth.users where email = 'you@example.com';
 
 **Tests**: `supabase/tests/admin_test.sql` (run by `run_local.sh`) covers anonymous, ordinary user, moderator, admin and super_admin, including negative cases (self-granting roles, writing data, calling privileged functions, editing moderation columns, reading the audit log).
 
+## 챗봇 기록: `20261129000100_chat_history.sql` (applied to production 2026-11-25)
+
+The admin 챗봇 기록 page shows every question a user typed into the AI chat and what the chat answered. This is free text
+people wrote, so the table is closed: `chat_turns` has RLS on, **no policy and no grant** for `anon` / `authenticated`.
+
+| | |
+|---|---|
+| write | only `log_chat_turn(...)` (anon + authenticated may execute). It trims and validates everything, takes the account from `auth.uid()`, caps one account or device at 60 turns an hour, and **never raises** (returns `false`), so logging cannot break the chat |
+| read | only `admin_chat_turns(...)` and `admin_chat_stats(...)`, `admin` and up (**not** moderators). The first page of every read inserts an `audit_log` row `view_chat_history` (who, when, which filters; never the search words) |
+| stored | question (400), language, intent, interpreted conditions, outcome, AI status, AI sentence (600), up to 10 restaurants (id / name / reason), the kinds of app-written lines; `user_id` for signed-in users, the random device id for everyone |
+| not stored | email, IP address, device details |
+| retention | rows older than 90 days are deleted on ~2% of inserts; `user_id` is `ON DELETE CASCADE` |
+
+On a project where it is not applied yet, the app's call fails silently and the admin page shows an error with a retry. Tests:
+`supabase/tests/chat_history_test.sql` (14 checks, run by `run_local.sh`).
+
 ## Imported reviews: `20261128000100_review_import.sql` (NOT applied)
 
 Reviews collected from Kakao, Naver and delivery apps are imported from a CSV into the **same table** students write to,

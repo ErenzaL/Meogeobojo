@@ -19,6 +19,7 @@ Security in the database** (`public.has_role`). Menu hiding in the UI is cosmeti
 | 학식 (조식 incl. 천원의 아침밥, 중식, 석식) | | ✔ | ✔ |
 | 사용자 (limited profile data, suspend with reason) | | ✔ | ✔ |
 | 앱 콘텐츠 (announcements, banners, featured) | | ✔ | ✔ |
+| 챗봇 기록 (every AI-chat question and what the chat answered; 90 days; opening it is audited) | | ✔ | ✔ |
 | 활동 기록 (audit log) | | ✔ | ✔ |
 
 ## Run locally

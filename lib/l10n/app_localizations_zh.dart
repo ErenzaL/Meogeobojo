@@ -2730,7 +2730,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatThinking => '思考中';
 
   @override
-  String get chatFootnote => '推荐基于已登记的真实菜单和价格。辣度和过敏原请向店家确认。';
+  String get chatFootnote => '推荐基于已登记的真实菜单和价格。辣度和过敏原请向店家确认。你的提问和回答会被保存，用于改进服务。';
 
   @override
   String get chatShowMore => '再看看';

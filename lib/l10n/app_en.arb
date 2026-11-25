@@ -901,7 +901,7 @@
   "chatCloseClear": "Close and clear the chat",
   "chatNewChat": "New chat",
   "chatThinking": "Thinking",
-  "chatFootnote": "Suggestions use the real menus and prices on record. Please check spice level and allergens with the restaurant.",
+  "chatFootnote": "Suggestions use the real menus and prices on record. Please check spice level and allergens with the restaurant. Your questions and the answers are saved to improve the service.",
   "chatShowMore": "Show more",
   "chatErrNetwork": "The connection looks unstable. Please try again in a moment.",
   "chatErrRateLimited": "You're sending messages too quickly. Please try again in {seconds} seconds.",

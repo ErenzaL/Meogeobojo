@@ -1,4 +1,4 @@
-import { BarChart3, Bell, Images, BookOpen, Sparkles, Building2, ClipboardList, Flag, LayoutDashboard, LogOut, Megaphone, Settings, Store, Trophy, Users, UtensilsCrossed } from 'lucide-react'
+import { BarChart3, Bell, MessagesSquare, Images, BookOpen, Sparkles, Building2, ClipboardList, Flag, LayoutDashboard, LogOut, Megaphone, Settings, Store, Trophy, Users, UtensilsCrossed } from 'lucide-react'
 import { NavLink, Navigate, Outlet } from 'react-router-dom'
 import { Spinner } from '@/components/ui'
 import { useAuth } from '@/lib/auth'
@@ -17,6 +17,7 @@ const NAV: { to: string; label: string; icon: typeof Store; min: Role }[] = [
   { to: '/missions', label: '미션 관리', icon: Trophy, min: 'moderator' },
   { to: '/notifications', label: '알림', icon: Bell, min: 'admin' },
   { to: '/content', label: '앱 콘텐츠', icon: Megaphone, min: 'admin' },
+  { to: '/chat-history', label: '챗봇 기록', icon: MessagesSquare, min: 'admin' },
   { to: '/audit', label: '활동 기록', icon: ClipboardList, min: 'admin' },
   { to: '/recommendations', label: '추천', icon: Sparkles, min: 'admin' },
   { to: '/analytics', label: '분석', icon: BarChart3, min: 'moderator' },

@@ -2843,7 +2843,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatFootnote =>
-      'Suggestions use the real menus and prices on record. Please check spice level and allergens with the restaurant.';
+      'Suggestions use the real menus and prices on record. Please check spice level and allergens with the restaurant. Your questions and the answers are saved to improve the service.';
 
   @override
   String get chatShowMore => 'Show more';

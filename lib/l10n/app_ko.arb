@@ -1762,7 +1762,7 @@
   "chatCloseClear": "닫고 대화 지우기",
   "chatNewChat": "새 대화",
   "chatThinking": "생각하는 중이에요",
-  "chatFootnote": "추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요.",
+  "chatFootnote": "추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요. 질문과 답변은 서비스 개선을 위해 저장돼요.",
   "chatShowMore": "더 보기",
   "chatErrNetwork": "연결이 불안정해요. 잠시 후 다시 시도해 주세요.",
   "chatErrRateLimited": "메시지를 너무 빨리 보내고 있어요. {seconds}초 뒤에 다시 시도해 주세요.",

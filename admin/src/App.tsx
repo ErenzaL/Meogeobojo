@@ -4,6 +4,7 @@ import { RequireAdmin, RequireRole } from '@/layouts'
 import AnalyticsPage from '@/features/AnalyticsPage'
 import AuditPage from '@/features/AuditPage'
 import CafeteriaPage from '@/features/CafeteriaPage'
+import ChatHistoryPage from '@/features/ChatHistoryPage'
 import ContentPage from '@/features/ContentPage'
 import NotificationsPage from '@/features/NotificationsPage'
 import MenusPage from '@/features/MenusPage'
@@ -48,6 +49,7 @@ export function AppRoutes() {
           <Route path="content" element={<ContentPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="audit" element={<AuditPage />} />
+          <Route path="chat-history" element={<ChatHistoryPage />} />
           <Route path="recommendations" element={<RecommendationsPage />} />
         </Route>
         <Route path="*" element={<div className="p-8 text-sm text-muted">페이지를 찾을 수 없어요.</div>} />

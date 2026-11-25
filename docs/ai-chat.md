@@ -38,6 +38,7 @@ budget, a wider distance, other food types, other dishes); it is applied only wh
 |---|---|
 | `supabase/functions/ai-restaurant-chat/{index,core,core_test}.ts` | the function (`deno task test`) |
 | `supabase/migrations/20261127000100_ai_chat_rate_limit.sql` | optional daily counters (service role only) |
+| `supabase/migrations/20261129000100_chat_history.sql` | 챗봇 기록: `chat_turns`, `log_chat_turn`, admin read functions |
 | `lib/features/chat/` | models, API client, search adapter, controller, widgets |
 | `test/features/chat/` | adapter, controller and UI tests (13 screen sizes) |
 
@@ -52,7 +53,15 @@ budget, a wider distance, other food types, other dishes); it is applied only wh
   user or IP and 1,200/day overall (database counters; tune with `AI_CHAT_PER_MINUTE`, `AI_CHAT_PER_DAY`,
   `AI_CHAT_GLOBAL_PER_DAY`). Messages are cut to 400 characters, history to 6 turns, output to 2,048 tokens, requests time out
   after 12 s, and the same question within two minutes is answered from memory.
-* Conversation state lives in the app session only. Nothing is stored server-side except the counters (no text, no IP).
+* Conversation state lives in the app session only. The Edge Function stores nothing but the counters (no text, no IP).
+* **챗봇 기록 (history for admins).** After each typed question the app itself records the finished turn through
+  `log_chat_turn()` (`chat_turns`, migration `20261129000100`; `lib/features/chat/data/chat_history.dart`): the question,
+  how it was understood, the restaurants shown (id, name, the one-line reason), the AI sentence or the kinds of the
+  app-written lines, and whether the AI answered. The account comes from the session (guests: only the random device id
+  of the usage events); no email, no IP. Only admins read it (admin 챗봇 기록 page, `admin_chat_turns` /
+  `admin_chat_stats`; opening it is written to the audit log), rows are deleted after 90 days and with the account, one
+  account or device records at most 60 turns an hour, and the phone preview records nothing. The chat's footnote tells
+  the user that questions and answers are saved. **The privacy policy must say so too** (it lives outside this repo).
 
 ## What is NOT in the data (so the chat never claims it)
 
@@ -68,4 +77,5 @@ budget, a wider distance, other food types, other dishes); it is applied only wh
 supabase link --project-ref jnnofemlolwdyonfhzje        # already linked
 supabase functions deploy ai-restaurant-chat --no-verify-jwt   # confirm the production prompt
 # optional, in the SQL editor: supabase/migrations/20261127000100_ai_chat_rate_limit.sql
+# for the admin 챗봇 기록 page, in the SQL editor: supabase/migrations/20261129000100_chat_history.sql
 ```

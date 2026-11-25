@@ -4927,7 +4927,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatFootnote.
   ///
   /// In ko, this message translates to:
-  /// **'추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요.'**
+  /// **'추천은 등록된 실제 메뉴·가격을 바탕으로 해요. 맵기와 알레르기는 매장에 확인해 주세요. 질문과 답변은 서비스 개선을 위해 저장돼요.'**
   String get chatFootnote;
 
   /// No description provided for @chatShowMore.

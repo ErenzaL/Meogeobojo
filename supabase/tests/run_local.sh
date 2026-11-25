@@ -37,6 +37,7 @@ echo "--- cafeteria CSV import (server side)"; P -f $HERE/cafeteria_import_test.
 echo "--- imported reviews (student_reviews + admin_import_reviews)"; P -f $HERE/review_import_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-320
 echo "--- live-update signal (content_sync)"; P -f $HERE/content_sync_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-260 || true
 echo "--- preservation (migrations 20261112..18 on populated data)"; P -f $HERE/preservation_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-300
+echo "--- 챗봇 기록 (chat_turns, log_chat_turn, admin_chat_turns)"; P -f $HERE/chat_history_test.sql 2>&1 | grep -E "NOTICE:  OK|ERROR|DETAIL|CONTEXT" | sed 's/^psql:[^ ]* NOTICE:  //' | cut -c1-200
 echo "--- production read-only checklist (scratch DB has no pg_cron, so only scheduler rows may fail)"
 P -f $HERE/../../scripts/prod_readonly_checks.sql > $WORK/checks.out 2>&1 || true
 grep -E "ERROR" $WORK/checks.out || true

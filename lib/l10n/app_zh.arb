@@ -898,7 +898,7 @@
   "chatCloseClear": "关闭并清除对话",
   "chatNewChat": "新对话",
   "chatThinking": "思考中",
-  "chatFootnote": "推荐基于已登记的真实菜单和价格。辣度和过敏原请向店家确认。",
+  "chatFootnote": "推荐基于已登记的真实菜单和价格。辣度和过敏原请向店家确认。你的提问和回答会被保存，用于改进服务。",
   "chatShowMore": "再看看",
   "chatErrNetwork": "网络不太稳定，请稍后再试。",
   "chatErrRateLimited": "发送得太快了，请{seconds}秒后再试。",

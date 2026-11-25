@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Network access. Without INTERNET a RELEASE build cannot open a single connection (Supabase, Kakao, images): the
+         debug and profile manifests declare it for the tooling, so debug builds worked while the release APK failed
+         every request locally, before anything reached the server. ACCESS_NETWORK_STATE lets plugins check the link. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
     <application
         android:label="먹어보조"
         android:name="${applicationName}"

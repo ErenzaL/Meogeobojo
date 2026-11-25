@@ -25,7 +25,18 @@ const _requestTimeout = Duration(seconds: 20);
 String authRedirectUrl({required bool web, required String origin}) =>
     web ? (origin.endsWith('/') ? origin : '$origin/') : kAuthRedirectUrl;
 
-String _redirect() => authRedirectUrl(web: kIsWeb, origin: Uri.base.origin);
+/// The redirect for the platform this code is running on.
+///
+/// `Uri.base.origin` is only ever read on the web. On a phone `Uri.base` is a `file://` URI and `.origin` THROWS a
+/// StateError ("Origin is only applicable schemes http and https"). It used to be evaluated as an argument of every call
+/// that needs a redirect, so on iOS and Android the call (sign-up, resend, password reset, Android Kakao login) was
+/// aborted before any request was made and the app showed the generic error. [web] and [base] exist for tests.
+String currentAuthRedirectUrl({bool? web, Uri? base}) {
+  if (!(web ?? kIsWeb)) return kAuthRedirectUrl;
+  return authRedirectUrl(web: true, origin: (base ?? Uri.base).origin);
+}
+
+String _redirect() => currentAuthRedirectUrl();
 
 /// Thin seam over `Supabase.instance.client.auth` so the controller and the
 /// screens can be tested without a network. Deep links are NOT handled here:

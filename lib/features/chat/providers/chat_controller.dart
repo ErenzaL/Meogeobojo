@@ -344,6 +344,7 @@ class ChatController extends Notifier<ChatState> {
           excludeShown: ai.intent == ChatIntent.more ||
               ai.intent == ChatIntent.different,
           ai: aiDown ? false : true,
+          question: original,
         );
     }
   }
@@ -436,6 +437,7 @@ class ChatController extends Notifier<ChatState> {
     required int count,
     required bool excludeShown,
     required bool? ai,
+    String? question,
   }) async {
     final ctx = await ref.read(chatContextLoaderProvider)();
     final exclude = {...state.rejected, if (excludeShown) ...state.shown};
@@ -480,6 +482,7 @@ class ChatController extends Notifier<ChatState> {
           ],
           prefs: prefs,
           hasMore: remaining > 0,
+          question: question,
         );
       } on ChatApiException catch (e) {
         if (!e.canFallBack) rethrow;
@@ -505,7 +508,11 @@ class ChatController extends Notifier<ChatState> {
       notes: [
         if (aiFailed && ai != null) const ChatNote(NoteKind.aiBusy),
         if (text == null)
-          ChatNote(NoteKind.foundCount, number: shownHits.length),
+          ChatNote(
+            NoteKind.foundCount,
+            number: shownHits.length,
+            prefs: prefs,
+          ),
         if (prefs.openNow && result.hoursIgnored)
           const ChatNote(NoteKind.hoursUnknown),
       ],

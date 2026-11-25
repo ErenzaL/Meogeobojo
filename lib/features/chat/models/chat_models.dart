@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../recommendation/home_ranking.dart';
 import '../../restaurants/models/restaurant_override.dart';
+import 'chat_prefs.dart';
 
 enum ChatRole { user, assistant }
 
@@ -29,12 +30,15 @@ enum NoteKind {
 
 @immutable
 class ChatNote {
-  const ChatNote(this.kind, {this.name, this.number, this.price});
+  const ChatNote(this.kind, {this.name, this.number, this.price, this.prefs});
 
   final NoteKind kind;
   final String? name;
   final int? number;
   final int? price;
+
+  /// What the user asked, so a line like "N places found" can say WHAT they were found for.
+  final ChatPrefs? prefs;
 }
 
 /// One recommended restaurant in the chat. Everything shown on its card comes from the database; [reason] is the one

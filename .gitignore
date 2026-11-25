@@ -58,3 +58,6 @@ supabase/.temp/
 # Release snapshots / DB dumps (docs/publishing-deployment.md); keep them local
 /before.json
 *.dump
+
+# Versioned release APKs from scripts/build_android_release.sh
+/dist/

@@ -167,11 +167,13 @@ abstract interface class ChatApi {
     required int shownCount,
   });
 
+  /// [question] is what the user just asked: the reply is worded to answer THAT (null for a "show more" tap).
   Future<Explanation> explain({
     required String language,
     required List<ExplainItem> items,
     required ChatPrefs prefs,
     required bool hasMore,
+    String? question,
   });
 }
 
@@ -271,10 +273,12 @@ class SupabaseChatApi implements ChatApi {
     required List<ExplainItem> items,
     required ChatPrefs prefs,
     required bool hasMore,
+    String? question,
   }) async {
     final data = await _call({
       'action': 'explain',
       'language': language,
+      'question': question ?? '',
       'items': [for (final i in items) i.toJson()],
       'asked': {
         'max_price_krw': prefs.maxPriceKrw,

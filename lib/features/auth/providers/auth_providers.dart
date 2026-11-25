@@ -260,6 +260,7 @@ class AuthController extends Notifier<AuthSnapshot> {
       return null;
     } catch (e) {
       final f = authFailureFrom(e);
+      logAuthFailure('signInWithPassword', e, f);
       _guestWithFailure(f);
       return f;
     }
@@ -283,8 +284,8 @@ class AuthController extends Notifier<AuthSnapshot> {
       }
       final user = res.user;
       if (user == null) {
-        _guestWithFailure(AuthFailure.unknown);
-        return AuthFailure.unknown;
+        _guestWithFailure(AuthFailure.signUpFailed);
+        return AuthFailure.signUpFailed;
       }
       // With "Confirm email" on, Supabase hides that an address is taken by
       // returning a user with no identities and no session.
@@ -298,7 +299,10 @@ class AuthController extends Notifier<AuthSnapshot> {
       );
       return null;
     } catch (e) {
-      final f = authFailureFrom(e);
+      final known = authFailureFrom(e);
+      // anything unrecognised while creating an account says so, instead of the generic message
+      final f = known == AuthFailure.unknown ? AuthFailure.signUpFailed : known;
+      logAuthFailure('signUp', e, f);
       _guestWithFailure(f);
       return f;
     }
@@ -325,6 +329,7 @@ class AuthController extends Notifier<AuthSnapshot> {
       return null;
     } catch (e) {
       final f = authFailureFrom(e);
+      logAuthFailure('kakaoSignIn', e, f);
       _guestWithFailure(f);
       return f;
     } finally {
@@ -365,7 +370,9 @@ class AuthController extends Notifier<AuthSnapshot> {
       );
       return null;
     } catch (e) {
-      return authFailureFrom(e);
+      final f = authFailureFrom(e);
+      logAuthFailure('resendSignupEmail', e, f);
+      return f;
     }
   }
 
@@ -381,6 +388,7 @@ class AuthController extends Notifier<AuthSnapshot> {
       return null;
     } catch (e) {
       final f = authFailureFrom(e);
+      logAuthFailure('sendPasswordReset', e, f);
       return f == AuthFailure.unknown ? AuthFailure.passwordResetFailed : f;
     }
   }
@@ -391,6 +399,7 @@ class AuthController extends Notifier<AuthSnapshot> {
       return null;
     } catch (e) {
       final f = authFailureFrom(e);
+      logAuthFailure('updatePassword', e, f);
       return f == AuthFailure.unknown ? AuthFailure.passwordResetFailed : f;
     }
   }

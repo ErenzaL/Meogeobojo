@@ -17,6 +17,14 @@ user message
   → Flutter cards (photo, name, category, campus, walk, real price, reason) → tap → the real menu → details / directions
 ```
 
+**The reply answers the question first.** `explain` also receives the user's own message (`question`, cleaned, 300
+characters, treated as data). The prompt makes the first sentence the answer itself: the top pick by name, plus the one fact
+that makes it fit THIS request (the dish and its price for a mood or a dish, the walking minutes for "close", the price for
+"cheap"). No greeting, no "here are N places". The function then drops any reply that names neither a shown restaurant nor a
+matched dish (`isSpecific`), because such a sentence fits every question. When the AI is unreachable or its sentence is
+dropped, the app's own line states the criteria instead of a bare count ("국밥 · 8,000원 이하 · 도보 10분 이내 조건에 맞는 3곳을
+찾았어요.", `chatCriteria` in `chat_text.dart`).
+
 Why the ranking is not in the Edge Function: the recommendation engine is Dart code in the app. Re-implementing it in
 TypeScript would create a second engine that drifts from Home. The function therefore does language (interpret / explain),
 verification and protection; the app ranks.

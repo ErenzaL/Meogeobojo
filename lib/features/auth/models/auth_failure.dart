@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -28,6 +29,13 @@ enum AuthFailure {
   permissionDenied,
   nicknameInvalid,
   nicknameSaveFailed,
+
+  /// The app itself is not set up for the call (missing configuration, a redirect that cannot be built). Not the
+  /// user's fault and not retryable: the build is wrong, so the fix is a newer version.
+  appConfig,
+
+  /// Creating the account failed for a reason that is none of the known ones.
+  signUpFailed,
   unknown;
 
   String message(AppLocalizations l10n) => switch (this) {
@@ -50,6 +58,8 @@ enum AuthFailure {
     permissionDenied => l10n.errPermissionDenied,
     nicknameInvalid => l10n.nicknameErrInvalidChars,
     nicknameSaveFailed => l10n.nicknameSaveFailed,
+    appConfig => l10n.authErrAppConfig,
+    signUpFailed => l10n.authErrSignUp,
     unknown => l10n.authErrUnknown,
   };
 
@@ -61,6 +71,7 @@ enum AuthFailure {
     profileLoadFailed ||
     kakaoCancelled ||
     deepLinkMissing ||
+    signUpFailed ||
     unknown => true,
     _ => false,
   };
@@ -157,6 +168,12 @@ AuthFailure authFailureFrom(Object error) {
     if (error.code == '23514') return AuthFailure.nicknameInvalid;
     return AuthFailure.profileLoadFailed;
   }
+  // A configuration / redirect problem inside the app itself (see currentAuthRedirectUrl, Env._require).
+  if (error is StateError &&
+      (error.message.startsWith('Missing ') ||
+          error.message.contains('Origin is only applicable'))) {
+    return AuthFailure.appConfig;
+  }
   final name = error.runtimeType.toString();
   if (name.contains('SocketException') ||
       name.contains('ClientException') ||
@@ -164,4 +181,27 @@ AuthFailure authFailureFrom(Object error) {
     return AuthFailure.network;
   }
   return AuthFailure.unknown;
+}
+
+/// Writes ONE line about a failed auth step to the console / logcat, so the real cause of a generic message can be
+/// found from a device log: which step, what it was mapped to, the exception type, and for Supabase errors the code
+/// and status. The message text is shortened and scrubbed of e-mail addresses, tokens and keys; passwords and e-mail
+/// addresses are never passed in. Safe to leave on in release builds.
+void logAuthFailure(String step, Object error, AuthFailure mapped) {
+  final b = StringBuffer('[auth] $step failed -> ${mapped.name} | ${error.runtimeType}');
+  if (error is AuthException) {
+    b.write(' code=${error.code} status=${error.statusCode}');
+  }
+  b.write(' | ${redactForLog(error.toString())}');
+  debugPrint(b.toString());
+}
+
+/// First line only, at most 200 characters, with anything that could identify a person or unlock an account removed.
+String redactForLog(String text) {
+  var t = text.split('\n').first;
+  t = t.replaceAll(RegExp(r'[\w.+-]+@[\w-]+(\.[\w-]+)+'), '<email>');
+  t = t.replaceAll(RegExp(r'eyJ[\w-]{10,}(\.[\w-]+){0,2}'), '<token>');
+  t = t.replaceAll(RegExp(r'sb_(publishable|secret)_\w+'), '<key>');
+  t = t.replaceAll(RegExp(r'(?<=[?&](code|token|access_token|refresh_token)=)[^&\s]+'), '<redacted>');
+  return t.length > 200 ? '${t.substring(0, 200)}…' : t;
 }

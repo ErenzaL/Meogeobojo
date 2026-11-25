@@ -305,6 +305,45 @@ void main() {
       },
     );
 
+    testWidgets('shows the store name and when it was written', (tester) async {
+      // the harness's nearby list has 국수집1 (id '1'); 'a' is not loaded
+      final at = DateTime(2026, 11, 23, 21, 5);
+      await open(
+        tester,
+        photos: [
+          Contribution(
+            id: 'p1',
+            kind: ContributionKind.menuPhoto,
+            kakaoPlaceId: '1',
+            status: 'pending',
+            createdAt: DateTime(2026, 11, 22, 9, 30),
+          ),
+        ],
+        reviews: [
+          StudentReview(
+            id: 'r1',
+            userId: 'user-1',
+            kakaoPlaceId: '1',
+            rating: 4,
+            body: '맛있어요',
+            createdAt: at,
+          ),
+          StudentReview(
+            id: 'r2',
+            userId: 'user-1',
+            kakaoPlaceId: 'a',
+            rating: 3,
+            createdAt: DateTime(2026, 11, 20, 8, 0),
+          ),
+        ],
+      );
+      expect(find.text('국수집1'), findsNWidgets(2));
+      expect(find.text('2026.11.23 21:05'), findsOneWidget);
+      expect(find.text('2026.11.22 09:30'), findsOneWidget);
+      // unknown place: the time alone, no crash
+      expect(find.text('2026.11.20 08:00'), findsOneWidget);
+    });
+
     testWidgets(
       'only a pending submission can be withdrawn, after confirming',
       (tester) async {

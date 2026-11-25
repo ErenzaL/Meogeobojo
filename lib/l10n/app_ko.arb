@@ -394,6 +394,8 @@
   "authErrPasswordReset": "비밀번호 재설정에 실패했어요. 다시 시도해주세요.",
   "authErrProfileLoad": "내 정보를 불러오지 못했어요. 다시 시도해주세요.",
   "authErrUnknown": "문제가 생겼어요. 잠시 후 다시 시도해주세요.",
+  "authErrAppConfig": "앱 설정에 문제가 있어 이 작업을 할 수 없어요. 앱을 최신 버전으로 업데이트해주세요.",
+  "authErrSignUp": "회원가입을 완료하지 못했어요. 잠시 후 다시 시도해주세요.",
   "nicknameSetupTitle": "어떻게 불러드릴까요?",
   "nicknameSetupSubtitle": "먹어보조에서 사용할 닉네임을 정해주세요.",
   "nicknameLabel": "닉네임",
@@ -1435,6 +1437,33 @@
       }
     }
   },
+  "reviewsFilterAll": "전체 {count}",
+  "@reviewsFilterAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsFilterStar": "{n}점 {count}",
+  "@reviewsFilterStar": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewsFilterEmpty": "{n}점 리뷰가 아직 없어요.",
+  "@reviewsFilterEmpty": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "searchRecentTitle": "최근 검색",
   "searchRecentEmpty": "최근 검색어가 없어요",
   "searchRecentClear": "지우기",
@@ -1774,6 +1803,45 @@
   },
   "chatErrGeneric": "답을 가져오지 못했어요. 다시 시도해 주세요.",
   "chatAiBusy": "AI가 지금 바빠서, 현재 조건으로 찾았어요.",
+  "chatFoundFor": "{criteria} 조건에 맞는 {count}곳을 찾았어요.",
+  "@chatFoundFor": {
+    "placeholders": {
+      "criteria": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatCritMaxPrice": "{price}원 이하",
+  "@chatCritMaxPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCritMinPrice": "{price}원 이상",
+  "@chatCritMinPrice": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "chatCritWalk": "도보 {minutes}분 이내",
+  "@chatCritWalk": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chatCritOpenNow": "지금 영업 중",
+  "chatCritAvoidSpicy": "맵지 않은 메뉴",
+  "chatCritCheap": "저렴한 곳",
+  "chatCritCloser": "가까운 곳",
   "chatFoundCount": "조건에 맞는 {count}곳을 찾았어요.",
   "@chatFoundCount": {
     "placeholders": {

@@ -709,6 +709,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrUnknown => 'Something went wrong. Please try again.';
 
   @override
+  String get authErrAppConfig =>
+      'The app isn\'t set up correctly for this. Please update to the latest version.';
+
+  @override
+  String get authErrSignUp =>
+      'Couldn\'t create your account. Please try again in a moment.';
+
+  @override
   String get nicknameSetupTitle => 'What should we call you?';
 
   @override
@@ -2405,6 +2413,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n★ $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return 'No $n★ reviews yet.';
+  }
+
+  @override
   String get searchRecentTitle => 'Recent searches';
 
   @override
@@ -2860,6 +2883,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get chatAiBusy =>
       'The AI is busy right now, so I searched with your current filters.';
+
+  @override
+  String chatFoundFor(String criteria, int count) {
+    return 'I found $count places for $criteria.';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return 'under $price won';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return 'from $price won';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return 'within a $minutes-min walk';
+  }
+
+  @override
+  String get chatCritOpenNow => 'open now';
+
+  @override
+  String get chatCritAvoidSpicy => 'not spicy';
+
+  @override
+  String get chatCritCheap => 'cheap';
+
+  @override
+  String get chatCritCloser => 'close by';
 
   @override
   String chatFoundCount(int count) {

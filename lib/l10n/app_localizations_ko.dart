@@ -658,6 +658,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get authErrUnknown => '문제가 생겼어요. 잠시 후 다시 시도해주세요.';
 
   @override
+  String get authErrAppConfig =>
+      '앱 설정에 문제가 있어 이 작업을 할 수 없어요. 앱을 최신 버전으로 업데이트해주세요.';
+
+  @override
+  String get authErrSignUp => '회원가입을 완료하지 못했어요. 잠시 후 다시 시도해주세요.';
+
+  @override
   String get nicknameSetupTitle => '어떻게 불러드릴까요?';
 
   @override
@@ -2304,6 +2311,21 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return '전체 $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n점 $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return '$n점 리뷰가 아직 없어요.';
+  }
+
+  @override
   String get searchRecentTitle => '최근 검색';
 
   @override
@@ -2746,6 +2768,38 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get chatAiBusy => 'AI가 지금 바빠서, 현재 조건으로 찾았어요.';
+
+  @override
+  String chatFoundFor(String criteria, int count) {
+    return '$criteria 조건에 맞는 $count곳을 찾았어요.';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return '$price원 이하';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return '$price원 이상';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return '도보 $minutes분 이내';
+  }
+
+  @override
+  String get chatCritOpenNow => '지금 영업 중';
+
+  @override
+  String get chatCritAvoidSpicy => '맵지 않은 메뉴';
+
+  @override
+  String get chatCritCheap => '저렴한 곳';
+
+  @override
+  String get chatCritCloser => '가까운 곳';
 
   @override
   String chatFoundCount(int count) {

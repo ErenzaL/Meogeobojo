@@ -654,6 +654,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrUnknown => '出了点问题，请稍后再试。';
 
   @override
+  String get authErrAppConfig => '应用配置有误，暂时无法完成此操作。请更新到最新版本。';
+
+  @override
+  String get authErrSignUp => '未能完成注册，请稍后再试。';
+
+  @override
   String get nicknameSetupTitle => '我们该怎么称呼你？';
 
   @override
@@ -2292,6 +2298,21 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String reviewsFilterAll(int count) {
+    return '全部 $count';
+  }
+
+  @override
+  String reviewsFilterStar(int n, int count) {
+    return '$n星 $count';
+  }
+
+  @override
+  String reviewsFilterEmpty(int n) {
+    return '还没有$n星评价。';
+  }
+
+  @override
   String get searchRecentTitle => '最近搜索';
 
   @override
@@ -2730,6 +2751,38 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatAiBusy => 'AI 现在比较忙，所以按当前筛选条件为你查找。';
+
+  @override
+  String chatFoundFor(String criteria, int count) {
+    return '找到了$count家符合“$criteria”的餐厅。';
+  }
+
+  @override
+  String chatCritMaxPrice(String price) {
+    return '$price韩元以下';
+  }
+
+  @override
+  String chatCritMinPrice(String price) {
+    return '$price韩元以上';
+  }
+
+  @override
+  String chatCritWalk(int minutes) {
+    return '步行$minutes分钟内';
+  }
+
+  @override
+  String get chatCritOpenNow => '正在营业';
+
+  @override
+  String get chatCritAvoidSpicy => '不辣';
+
+  @override
+  String get chatCritCheap => '实惠';
+
+  @override
+  String get chatCritCloser => '离得近';
 
   @override
   String chatFoundCount(int count) {

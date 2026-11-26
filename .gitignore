@@ -66,4 +66,6 @@ supabase/.temp/
 /.vscode/
 /docs/
 /design_references/
+/recommendation-api/
 /scripts/
+/test/

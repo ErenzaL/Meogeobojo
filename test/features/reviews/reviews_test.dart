@@ -264,6 +264,52 @@ void main() {
       expect(find.textContaining('학생 ·'), findsOneWidget);
     });
 
+    testWidgets(
+      'the summary says how many visible reviews came from each app, the most first',
+      (tester) async {
+        await open(
+          tester,
+          reviews: [
+            imported('1', body: '네이버 글 1'),
+            imported('2', rating: null, body: '네이버 글 2'),
+            imported(
+              '3',
+              body: '네이버 배달 글',
+              source: 'lemong',
+              platform: 'NAVER',
+            ),
+            imported('4', source: 'kakao'),
+            imported('5', source: 'lemong', platform: 'BAEMIN'),
+            imported('6', body: '숨겨진 글', status: 'hidden'),
+            review('7', body: '학생이 쓴 글'),
+          ],
+        );
+        // collected and delivery-app Naver reviews count together
+        expect(find.text('네이버 3'), findsOneWidget);
+        expect(find.text('카카오맵 1'), findsOneWidget);
+        expect(find.text('배달의민족 1'), findsOneWidget);
+        expect(find.text('학생 1'), findsOneWidget);
+        expect(
+          tester.getTopLeft(find.text('네이버 3')).dx,
+          lessThan(tester.getTopLeft(find.text('카카오맵 1')).dx),
+        );
+      },
+    );
+
+    testWidgets('students\' reviews alone: no per-app counts', (tester) async {
+      await open(tester, reviews: [review('1'), review('2')]);
+      expect(find.text('학생 2'), findsNothing);
+    });
+
+    testWidgets('the average is drawn to the nearest half star', (
+      tester,
+    ) async {
+      await open(tester, reviews: [review('1', rating: 5), review('2')]);
+      expect(find.text('4.5'), findsOneWidget);
+      // the summary's 4.5; each review keeps whole stars
+      expect(find.byIcon(Icons.star_half_rounded), findsOneWidget);
+    });
+
     testWidgets('a long list shows ten at first and more on request', (
       tester,
     ) async {

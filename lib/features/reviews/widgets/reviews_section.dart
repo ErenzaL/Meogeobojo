@@ -144,9 +144,10 @@ class _ReviewsSectionState extends ConsumerState<ReviewsSection> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (summary.count > 0)
-                  _SummaryBox(summary: summary, reviews: all)
-                else
+                if (summary.count > 0) ...[
+                  _SummaryBox(summary: summary, reviews: all),
+                  _SourceCounts(reviews: all),
+                ] else
                   _EmptyBox(
                     onWrite: mine == null
                         ? () => _write(context, ref, null)
@@ -279,7 +280,7 @@ class _SummaryBox extends StatelessWidget {
                   summary.average.toStringAsFixed(1),
                   style: AppText.numeric(size: 32, weight: FontWeight.w700),
                 ),
-                _Stars(summary.average.round()),
+                _Stars(summary.average),
                 const SizedBox(height: 4),
                 Text(
                   l10n.reviewsCount(summary.count),
@@ -377,25 +378,78 @@ class _EmptyBox extends StatelessWidget {
   }
 }
 
+/// How many of the visible reviews came from each place (네이버, 카카오맵, a delivery app, students in the app), the
+/// most first. Only when some were imported: with students' reviews alone it would say nothing new.
+class _SourceCounts extends StatelessWidget {
+  const _SourceCounts({required this.reviews});
+
+  final List<StudentReview> reviews;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final p = context.palette;
+    final visible = reviews.where((r) => r.isVisible);
+    if (!visible.any((r) => r.isImported)) return const SizedBox.shrink();
+    final counts = <String, int>{};
+    for (final r in visible) {
+      final label = r.isImported ? _sourceLabel(l10n, r) : l10n.reviewAuthor;
+      counts[label] = (counts[label] ?? 0) + 1;
+    }
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final e in sorted)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: p.card,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: p.border),
+              ),
+              child: Text(
+                '${e.key} ${e.value}',
+                style: TextStyle(fontSize: 13, color: p.textSecondary),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Stars extends StatelessWidget {
   const _Stars(this.rating);
 
-  final int rating;
+  /// Drawn to the nearest half star (an average such as 4.5 shows four and a half).
+  final num rating;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (var i = 1; i <= 5; i++)
-        Icon(
-          i <= rating ? Icons.star_rounded : Icons.star_outline_rounded,
-          size: 16,
-          color: i <= rating
-              ? context.palette.starAmber
-              : context.palette.textMuted,
-        ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final r = (rating * 2).round() / 2;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 1; i <= 5; i++)
+          Icon(
+            r >= i
+                ? Icons.star_rounded
+                : r >= i - 0.5
+                ? Icons.star_half_rounded
+                : Icons.star_outline_rounded,
+            size: 16,
+            color: r >= i - 0.5
+                ? context.palette.starAmber
+                : context.palette.textMuted,
+          ),
+      ],
+    );
+  }
 }
 
 class _ReviewTile extends StatelessWidget {

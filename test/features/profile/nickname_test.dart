@@ -309,7 +309,7 @@ void main() {
       await tester.enterText(nicknameField(), '맛집왕');
       await tester.tap(find.text('다음'));
       await settle(tester);
-      expect(find.text('인터넷 연결을 확인하고 다시 시도해주세요.'), findsOneWidget);
+      expect(find.text('서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'), findsOneWidget);
       expect(tester.widget<TextField>(nicknameField()).controller!.text, '맛집왕');
       expect(find.byType(NicknameSetupScreen), findsOneWidget);
       expect(
@@ -491,7 +491,7 @@ void main() {
       await tester.tap(find.text('저장'));
       await tester.pumpAndSettle();
 
-      expect(find.text('인터넷 연결을 확인하고 다시 시도해주세요.'), findsOneWidget);
+      expect(find.text('서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.'), findsOneWidget);
       expect(
         h.container.read(authControllerProvider).profile?.nickname,
         '맛집왕',

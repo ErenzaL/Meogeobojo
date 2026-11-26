@@ -687,7 +687,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Too many attempts. Please try again in a moment.';
 
   @override
-  String get authErrNetwork => 'Check your connection and try again.';
+  String get authErrServerUnavailable =>
+      'The server is having trouble. Please try again in a moment.';
+
+  @override
+  String get authErrNetwork =>
+      'Couldn\'t reach the server. Please try again in a moment.';
 
   @override
   String get authErrTimeout => 'This is taking too long. Please try again.';

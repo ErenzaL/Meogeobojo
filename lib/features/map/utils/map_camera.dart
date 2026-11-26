@@ -69,3 +69,7 @@ GeoBounds? boundsToFit(GeoPoint origin, Iterable<GeoPoint> places) {
   }
   return GeoBounds(south: south, west: west, north: north, east: east);
 }
+
+/// One place shown up close (the detail page's 지도 button), on the plugin's mobile scale: web level 3, the place and
+/// the streets right around it. Phones use the plugin's street level (17).
+const int kWebPlaceMoveLevel = 12;

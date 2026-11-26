@@ -377,11 +377,16 @@ class _MapScreenState extends ConsumerState<MapScreen>
     }
   }
 
-  /// Web only, once per campus: show the campus and the restaurants around it. With no results nothing happens
-  /// (the map stays on the campus, never on a whole country).
+  /// Wide web map only, once per campus: show the campus and the restaurants around it. With no results nothing
+  /// happens (the map stays on the campus, never on a whole country). Phone-sized maps stay on the origin.
   Future<void> _fitResultsOnce(Origin origin, List<Restaurant> items) async {
     final c = _controller;
-    if (c == null || !_fitPending || !mounted) return;
+    if (c == null ||
+        !_fitPending ||
+        !fitResultsOnStart(web: kIsWeb, wide: _wasWide ?? false) ||
+        !mounted) {
+      return;
+    }
     final box = boundsToFit(GeoPoint(origin.latitude, origin.longitude), [
       for (final r in items) GeoPoint(r.latitude, r.longitude),
     ]);
@@ -631,7 +636,7 @@ class _MapScreenState extends ConsumerState<MapScreen>
                             latitude: origin?.latitude ?? univ.latitude,
                             longitude: origin?.longitude ?? univ.longitude,
                           ),
-                          initialLevel: kIsWeb ? kWebCampusInitialLevel : 14,
+                          initialLevel: initialMapLevel(web: kIsWeb),
                         ),
                       ),
               ),

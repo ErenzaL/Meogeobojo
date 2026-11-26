@@ -74,35 +74,43 @@ class _ChatPanelState extends ConsumerState<ChatPanel> {
         _Header(onMinimize: widget.onMinimize, onClose: widget.onClose),
         Divider(height: 1, color: p.border),
         Expanded(
-          child: ListView(
-            controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
-            children: [
-              if (chat.messages.isEmpty)
-                _Bubble(text: l10n.chatWelcome, assistant: true, avatar: true),
-              for (var i = 0; i < chat.messages.length; i++)
-                _MessageView(
-                  key: ValueKey('chat-msg-${chat.messages[i].id}'),
-                  message: chat.messages[i],
-                  onRetry: ref.read(chatControllerProvider.notifier).retry,
-                ),
-              if (chat.busy) const _Typing(),
-              if (showMore)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: OutlinedButton.icon(
-                      key: const ValueKey('chat-more'),
-                      onPressed: ref
-                          .read(chatControllerProvider.notifier)
-                          .showMore,
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text(l10n.chatShowMore),
+          // a mouse drag selects an answer's text rather than scrolling (app.dart lets lists drag with a mouse)
+          child: ScrollConfiguration(
+            behavior: const MaterialScrollBehavior(),
+            child: ListView(
+              controller: _scroll,
+              padding: const EdgeInsets.fromLTRB(12, 14, 12, 8),
+              children: [
+                if (chat.messages.isEmpty)
+                  _Bubble(
+                    text: l10n.chatWelcome,
+                    assistant: true,
+                    avatar: true,
+                  ),
+                for (var i = 0; i < chat.messages.length; i++)
+                  _MessageView(
+                    key: ValueKey('chat-msg-${chat.messages[i].id}'),
+                    message: chat.messages[i],
+                    onRetry: ref.read(chatControllerProvider.notifier).retry,
+                  ),
+                if (chat.busy) const _Typing(),
+                if (showMore)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: OutlinedButton.icon(
+                        key: const ValueKey('chat-more'),
+                        onPressed: ref
+                            .read(chatControllerProvider.notifier)
+                            .showMore,
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text(l10n.chatShowMore),
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         Padding(

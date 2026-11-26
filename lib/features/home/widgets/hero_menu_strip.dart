@@ -1,6 +1,3 @@
-import 'dart:ui' show PointerDeviceKind;
-
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -50,27 +47,16 @@ class HeroMenuStrip extends ConsumerWidget {
           const SizedBox(height: 10),
           SizedBox(
             height: 148,
-            // drag with a mouse on the website too, not only a finger
-            child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(context).copyWith(
-                dragDevices: {
-                  PointerDeviceKind.touch,
-                  PointerDeviceKind.mouse,
-                  PointerDeviceKind.trackpad,
-                  PointerDeviceKind.stylus,
-                },
-              ),
-              child: ListView.separated(
-                key: const ValueKey('hero-menu-list'),
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                itemCount: items.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, i) => _MenuTile(
-                  item: items[i],
-                  p: p,
-                  onTap: () => openRestaurantDetail(context, hero.restaurant),
-                ),
+            child: ListView.separated(
+              key: const ValueKey('hero-menu-list'),
+              scrollDirection: Axis.horizontal,
+              clipBehavior: Clip.none,
+              itemCount: items.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, i) => _MenuTile(
+                item: items[i],
+                p: p,
+                onTap: () => openRestaurantDetail(context, hero.restaurant),
               ),
             ),
           ),

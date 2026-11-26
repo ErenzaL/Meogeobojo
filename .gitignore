@@ -61,3 +61,8 @@ supabase/.temp/
 
 # Versioned release APKs from scripts/build_android_release.sh
 /dist/
+
+# Internal development files
+/.vscode/
+/docs/
+/design_references/

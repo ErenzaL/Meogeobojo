@@ -947,5 +947,7 @@
   "previewLarger": "Larger view",
   "previewFit": "Fit to window",
   "previewLoading": "Loading the app",
-  "previewLoginNewTab": "A sign-in window opened. When you finish, this preview signs in automatically."
+  "previewLoginNewTab": "A sign-in window opened. When you finish, this preview signs in automatically.",
+  "previewNote": "This is the mobile preview",
+  "previewInstallApp": "Install the app"
 }

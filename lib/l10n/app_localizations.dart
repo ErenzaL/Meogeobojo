@@ -5223,6 +5223,18 @@ abstract class AppLocalizations {
   /// In ko, this message translates to:
   /// **'로그인 창이 열렸어요. 로그인을 마치면 이 미리보기도 자동으로 로그인돼요.'**
   String get previewLoginNewTab;
+
+  /// No description provided for @previewNote.
+  ///
+  /// In ko, this message translates to:
+  /// **'모바일 미리보기 화면입니다'**
+  String get previewNote;
+
+  /// No description provided for @previewInstallApp.
+  ///
+  /// In ko, this message translates to:
+  /// **'앱 설치하기'**
+  String get previewInstallApp;
 }
 
 class _AppLocalizationsDelegate

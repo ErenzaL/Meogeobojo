@@ -2897,4 +2897,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get previewLoginNewTab => '登录窗口已打开。完成后，此预览会自动登录。';
+
+  @override
+  String get previewNote => '这是移动端预览界面';
+
+  @override
+  String get previewInstallApp => '安装应用';
 }

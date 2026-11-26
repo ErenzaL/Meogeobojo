@@ -210,6 +210,54 @@ void main() {
       expect(find.text('앱을 불러오는 중이에요'), findsNothing);
     });
 
+    testWidgets('right of the phone: the note "모바일 미리보기 화면입니다" with the "앱 설치하기" button under it', (tester) async {
+      await desktop(tester);
+      await openPreview(tester);
+      final phone = tester.getRect(find.byKey(const ValueKey('preview-frame')));
+      final note = tester.getRect(find.text('모바일 미리보기 화면입니다'));
+      final install = tester.getRect(find.byKey(const ValueKey('preview-install')));
+      expect(find.text('앱 설치하기'), findsOneWidget);
+      expect(note.left, greaterThan(phone.right));
+      expect(install.top, greaterThan(note.bottom));
+      expect(install.right, lessThanOrEqualTo(1280));
+      // a click on it does not close the preview
+      await tester.tap(find.byKey(const ValueKey('preview-install-panel')));
+      await tester.pumpAndSettle();
+      expect(screen, findsOneWidget);
+    });
+
+    testWidgets('at the narrowest desktop width, in English, the note and button still fit beside the phone', (tester) async {
+      await desktop(tester, language: 'en', size: const Size(960, 700));
+      await openPreview(tester);
+      expect(tester.takeException(), isNull);
+      final note = tester.getRect(find.text('This is the mobile preview'));
+      expect(note.left, greaterThan(tester.getRect(find.byKey(const ValueKey('preview-frame'))).right));
+      expect(note.right, lessThanOrEqualTo(960));
+      expect(tester.getRect(find.byKey(const ValueKey('preview-install'))).right, lessThanOrEqualTo(960));
+    });
+
+    for (final result in ['success', 'false', 'exception']) {
+      testWidgets('install link opens externally and handles $result', (tester) async {
+        MethodCall? launch;
+        const channel = MethodChannel('plugins.flutter.io/url_launcher');
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+          launch = call;
+          if (result == 'exception') throw PlatformException(code: 'failed');
+          return result == 'success';
+        });
+        addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null));
+        await desktop(tester);
+        await openPreview(tester);
+        await tester.tap(find.byKey(const ValueKey('preview-install')));
+        await tester.pump();
+        expect(launch, isNotNull);
+        expect(launch!.arguments['url'], kAppInstallUrl);
+        expect(screen, findsOneWidget);
+        expect(find.byType(SnackBar), result == 'success' ? findsNothing : findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
     testWidgets('the controls speak the app language', (tester) async {
       await desktop(tester, language: 'en');
       await openPreview(tester);

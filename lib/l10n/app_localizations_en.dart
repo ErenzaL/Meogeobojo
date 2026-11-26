@@ -3038,4 +3038,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get previewLoginNewTab =>
       'A sign-in window opened. When you finish, this preview signs in automatically.';
+
+  @override
+  String get previewNote => 'This is the mobile preview';
+
+  @override
+  String get previewInstallApp => 'Install the app';
 }

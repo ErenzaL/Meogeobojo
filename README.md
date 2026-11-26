@@ -132,4 +132,4 @@ To run it locally: `cd admin && cp .env.example .env && npm ci && npm run dev`.
 
 ## License
 
-No license has been specified yet. All rights reserved by the author until one is added.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.

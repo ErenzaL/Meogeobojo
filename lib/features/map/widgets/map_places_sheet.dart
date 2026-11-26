@@ -23,20 +23,65 @@ import 'map_overlay_shield.dart';
 /// confirmed matches (the same list and verdicts as Home), then the
 /// "가격·운영정보 미확인" ones apart. Walking times are straight-line
 /// estimates and the sheet says so.
-class MapPlacesSheet extends ConsumerWidget {
+class MapPlacesSheet extends ConsumerStatefulWidget {
   const MapPlacesSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MapPlacesSheet> createState() => _MapPlacesSheetState();
+}
+
+class _MapPlacesSheetState extends ConsumerState<MapPlacesSheet> {
+  static const _sizes = [0.16, 0.4, 0.95];
+  final _sheet = DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _sheet.dispose();
+    super.dispose();
+  }
+
+  // The handle moves the sheet itself: a mouse (the website's phone preview) cannot drag the list, and a tap
+  // opens it fully or brings it back to the middle.
+  void _toggle() =>
+      _snapTo(_sheet.size < _sizes.last - 0.05 ? _sizes.last : _sizes[1]);
+
+  void _drag(DragUpdateDetails d) => _sheet.jumpTo(
+    (_sheet.size - _sheet.pixelsToSize(d.delta.dy)).clamp(
+      _sizes.first,
+      _sizes.last,
+    ),
+  );
+
+  void _settle(DragEndDetails d) {
+    final s = _sheet.size;
+    final v = d.primaryVelocity ?? 0; // > 0: downwards
+    _snapTo(
+      v < -300
+          ? _sizes.firstWhere((x) => x > s + 0.01, orElse: () => _sizes.last)
+          : v > 300
+          ? _sizes.lastWhere((x) => x < s - 0.01, orElse: () => _sizes.first)
+          : _sizes.reduce((a, b) => (a - s).abs() <= (b - s).abs() ? a : b),
+    );
+  }
+
+  void _snapTo(double size) => _sheet.animateTo(
+    size,
+    duration: const Duration(milliseconds: 250),
+    curve: Curves.easeOutCubic,
+  );
+
+  @override
+  Widget build(BuildContext context) {
     final p = context.palette;
     final bottom = MediaQuery.paddingOf(context).bottom;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.4,
-      minChildSize: 0.16,
-      maxChildSize: 0.95,
+      controller: _sheet,
+      initialChildSize: _sizes[1],
+      minChildSize: _sizes.first,
+      maxChildSize: _sizes.last,
       snap: true,
-      snapSizes: const [0.16, 0.4, 0.95],
+      snapSizes: _sizes,
       // the sheet keeps wheel / drag to itself: scrolling the list never zooms the web map behind it
       builder: (context, controller) => MapOverlayShield(
         child: Container(
@@ -49,19 +94,40 @@ class MapPlacesSheet extends ConsumerWidget {
           ),
           child: ListView(
             controller: controller,
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + bottom),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 24 + bottom),
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: p.borderStrong,
-                    borderRadius: BorderRadius.circular(2),
+              ListenableBuilder(
+                listenable: _sheet,
+                builder: (context, _) => Semantics(
+                  button: true,
+                  label: _sheet.isAttached && _sheet.size >= _sizes.last - 0.05
+                      ? context.l10n.homeFiltersHide
+                      : context.l10n.noticesSeeAll,
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.grab,
+                    child: GestureDetector(
+                      key: const ValueKey('map-sheet-handle'),
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggle,
+                      onVerticalDragUpdate: _drag,
+                      onVerticalDragEnd: _settle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 14),
+                        child: Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: p.borderStrong,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
               ..._placesChildren(context, ref),
             ],
           ),

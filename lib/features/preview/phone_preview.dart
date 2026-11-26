@@ -16,13 +16,13 @@ const kPhoneHeight = 874.0;
 const kPhoneScreenRadius = 55.0;
 const kPhoneBezel = 12.0;
 
-/// How much to shrink (or, in the larger view, enlarge) the phone so it fits the window. Never below 0.45, never above 1
-/// (1.25 in the larger view), always leaving room for the frame and the buttons.
-double previewScale(Size window, {bool large = false}) {
+/// How much to shrink the phone so it fits the window. Never below 0.45, never above 1, always leaving room for the
+/// frame and the buttons.
+double previewScale(Size window) {
   const marginY = 2 * 56.0, marginX = 2 * 24.0;
   final fitH = (window.height - marginY) / (kPhoneHeight + 2 * kPhoneBezel);
   final fitW = (window.width - marginX) / (kPhoneWidth + 2 * kPhoneBezel);
-  return math.max(0.45, math.min(large ? 1.25 : 1.0, math.min(fitH, fitW)));
+  return math.max(0.45, math.min(1.0, math.min(fitH, fitW)));
 }
 
 /// The page the preview shows: THE SAME website, in its phone mode. Same origin, so the Supabase session, the language
@@ -105,7 +105,6 @@ class PhonePreviewDialog extends ConsumerStatefulWidget {
 }
 
 class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
-  bool _large = false;
   bool _loaded = false;
 
   @override
@@ -120,7 +119,7 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
         autofocus: true,
         child: LayoutBuilder(
           builder: (context, box) {
-            final s = previewScale(box.biggest, large: _large);
+            final s = previewScale(box.biggest);
             final w = kPhoneWidth * s, h = kPhoneHeight * s;
             return Stack(
               children: [
@@ -215,15 +214,6 @@ class _PhonePreviewDialogState extends ConsumerState<PhonePreviewDialog> {
                   right: 16,
                   child: Row(
                     children: [
-                      _RoundButton(
-                        key: const ValueKey('preview-size'),
-                        tooltip: _large ? l10n.previewFit : l10n.previewLarger,
-                        icon: _large
-                            ? Icons.fullscreen_exit_rounded
-                            : Icons.fullscreen_rounded,
-                        onPressed: () => setState(() => _large = !_large),
-                      ),
-                      const SizedBox(width: 8),
                       _RoundButton(
                         key: const ValueKey('preview-close'),
                         tooltip: l10n.previewClose,
